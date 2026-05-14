@@ -1,0 +1,187 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`RegisterForm renders initial state 1`] = `
+<div>
+  <h2
+    class="font-poppins text-2xl font-bold text-agrisas-dark mb-6"
+  >
+    Crear cuenta
+  </h2>
+  <form
+    class="flex flex-col gap-4"
+    novalidate=""
+  >
+    <div
+      class="flex flex-col gap-1"
+    >
+      <label
+        class="text-sm font-medium text-gray-700"
+        for="name"
+      >
+        Nombre completo
+      </label>
+      <input
+        aria-invalid="false"
+        autocomplete="name"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        id="name"
+        name="name"
+        type="text"
+        value=""
+      />
+    </div>
+    <div
+      class="flex flex-col gap-1"
+    >
+      <label
+        class="text-sm font-medium text-gray-700"
+        for="email"
+      >
+        Correo electrónico
+      </label>
+      <input
+        aria-invalid="false"
+        autocomplete="email"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        id="email"
+        name="email"
+        type="email"
+        value=""
+      />
+    </div>
+    <div
+      class="flex flex-col gap-1"
+    >
+      <label
+        class="text-sm font-medium text-gray-700"
+        for="password"
+      >
+        Contraseña
+      </label>
+      <input
+        aria-invalid="false"
+        autocomplete="new-password"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        id="password"
+        name="password"
+        type="password"
+        value=""
+      />
+    </div>
+    <button
+      aria-busy="false"
+      class="inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 primary w-full mt-2"
+      type="submit"
+    >
+      Crear cuenta
+    </button>
+  </form>
+  <p
+    class="mt-4 text-center text-sm text-gray-600"
+  >
+    ¿Ya tienes cuenta?
+     
+    <a
+      href="/auth/login"
+    >
+      Inicia sesión
+    </a>
+  </p>
+</div>
+`;
+
+exports[`RegisterForm renders with formError 1`] = `
+<div>
+  <h2
+    class="font-poppins text-2xl font-bold text-agrisas-dark mb-6"
+  >
+    Crear cuenta
+  </h2>
+  <form
+    class="flex flex-col gap-4"
+    novalidate=""
+  >
+    <div
+      class="flex flex-col gap-1"
+    >
+      <label
+        class="text-sm font-medium text-gray-700"
+        for="name"
+      >
+        Nombre completo
+      </label>
+      <input
+        aria-invalid="false"
+        autocomplete="name"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        id="name"
+        name="name"
+        type="text"
+        value="Ana"
+      />
+    </div>
+    <div
+      class="flex flex-col gap-1"
+    >
+      <label
+        class="text-sm font-medium text-gray-700"
+        for="email"
+      >
+        Correo electrónico
+      </label>
+      <input
+        aria-invalid="false"
+        autocomplete="email"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        id="email"
+        name="email"
+        type="email"
+        value="ana@test.com"
+      />
+    </div>
+    <div
+      class="flex flex-col gap-1"
+    >
+      <label
+        class="text-sm font-medium text-gray-700"
+        for="password"
+      >
+        Contraseña
+      </label>
+      <input
+        aria-invalid="false"
+        autocomplete="new-password"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        id="password"
+        name="password"
+        type="password"
+        value="123456"
+      />
+    </div>
+    <p
+      class="text-sm text-red-500"
+      role="alert"
+    >
+      Este correo ya está registrado
+    </p>
+    <button
+      aria-busy="false"
+      class="inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 primary w-full mt-2"
+      type="submit"
+    >
+      Crear cuenta
+    </button>
+  </form>
+  <p
+    class="mt-4 text-center text-sm text-gray-600"
+  >
+    ¿Ya tienes cuenta?
+     
+    <a
+      href="/auth/login"
+    >
+      Inicia sesión
+    </a>
+  </p>
+</div>
+`;

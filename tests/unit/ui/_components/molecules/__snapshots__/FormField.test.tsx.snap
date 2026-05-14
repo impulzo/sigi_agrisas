@@ -1,0 +1,45 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`FormField renders label + input + error 1`] = `
+<div
+  class="flex flex-col gap-1"
+>
+  <label
+    class="text-sm font-medium text-gray-700"
+    for="email"
+  >
+    Correo
+  </label>
+  <input
+    aria-invalid="true"
+    class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150 error"
+    id="email"
+    name="email"
+  />
+  <span
+    class="errorMessage"
+    role="alert"
+  >
+    Requerido
+  </span>
+</div>
+`;
+
+exports[`FormField renders without error 1`] = `
+<div
+  class="flex flex-col gap-1"
+>
+  <label
+    class="text-sm font-medium text-gray-700"
+    for="name"
+  >
+    Nombre
+  </label>
+  <input
+    aria-invalid="false"
+    class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+    id="name"
+    name="name"
+  />
+</div>
+`;

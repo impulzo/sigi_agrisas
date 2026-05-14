@@ -1,0 +1,10 @@
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.leftPanel {
+  background: linear-gradient(135deg, #1a4d42, #2a6b5f, #1a4d42);
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+}

@@ -1,0 +1,53 @@
+import { RegisterUseCase } from "@/modules/auth/application/use-cases/RegisterUseCase";
+import { InMemoryUserRepository } from "@/modules/auth/infrastructure/repositories/InMemoryUserRepository";
+import { PasswordHasher } from "@/modules/auth/application/ports/PasswordHasher";
+import { EmailAlreadyInUseError } from "@/modules/auth/domain/errors/EmailAlreadyInUseError";
+
+const fakeHasher: PasswordHasher = {
+  hash: async (p) => `hashed:${p}`,
+  compare: async (p, h) => h === `hashed:${p}`,
+};
+
+describe("RegisterUseCase", () => {
+  let repo: InMemoryUserRepository;
+  let useCase: RegisterUseCase;
+
+  beforeEach(() => {
+    repo = new InMemoryUserRepository();
+    useCase = new RegisterUseCase(repo, fakeHasher);
+  });
+
+  it("registers a new user successfully", async () => {
+    const result = await useCase.execute({
+      email: "user@example.com",
+      password: "password1",
+    });
+    expect(result.user.email).toBe("user@example.com");
+    expect(result.user.id).toBeDefined();
+  });
+
+  it("throws EmailAlreadyInUseError for duplicate email", async () => {
+    await useCase.execute({ email: "dup@example.com", password: "password1" });
+    await expect(
+      useCase.execute({ email: "dup@example.com", password: "password2" })
+    ).rejects.toThrow(EmailAlreadyInUseError);
+  });
+
+  it("throws on invalid email format", async () => {
+    await expect(
+      useCase.execute({ email: "bad-email", password: "password1" })
+    ).rejects.toThrow("Invalid email");
+  });
+
+  it("throws on password shorter than 8 chars", async () => {
+    await expect(
+      useCase.execute({ email: "a@b.com", password: "short" })
+    ).rejects.toThrow("at least 8");
+  });
+
+  it("stores hashed password, not plain text", async () => {
+    await useCase.execute({ email: "a@b.com", password: "securepass" });
+    const user = await repo.findByEmail("a@b.com");
+    expect(user?.passwordHash).toBe("hashed:securepass");
+  });
+});

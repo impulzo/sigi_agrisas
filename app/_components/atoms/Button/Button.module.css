@@ -1,0 +1,13 @@
+.primary {
+  background-color: #1a4d42;
+  color: #d4f1e9;
+}
+
+.primary:hover:not(:disabled) {
+  background-color: #2a6b5f;
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

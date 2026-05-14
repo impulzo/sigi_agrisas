@@ -1,0 +1,50 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Button renders disabled 1`] = `
+<button
+  aria-busy="false"
+  class="inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 primary"
+  disabled=""
+>
+  Guardar
+</button>
+`;
+
+exports[`Button renders primary variant 1`] = `
+<button
+  aria-busy="false"
+  class="inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 primary"
+>
+  Guardar
+</button>
+`;
+
+exports[`Button renders with loading=true 1`] = `
+<button
+  aria-busy="true"
+  class="inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 primary"
+  disabled=""
+>
+  <svg
+    aria-hidden="true"
+    class="animate-spin text-current w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <circle
+      class="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      stroke-width="4"
+    />
+    <path
+      class="opacity-75"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      fill="currentColor"
+    />
+  </svg>
+  Guardar
+</button>
+`;
