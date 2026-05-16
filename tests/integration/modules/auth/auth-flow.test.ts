@@ -26,7 +26,7 @@ describe("Auth flow integration (InMemoryUserRepository + real services)", () =>
     repo = new InMemoryUserRepository();
     hasher = new BcryptPasswordHasher();
     tokenService = new JwtTokenService();
-    registerUseCase = new RegisterUseCase(repo, hasher);
+    registerUseCase = new RegisterUseCase(repo, hasher, tokenService);
     loginUseCase = new LoginUseCase(repo, hasher, tokenService);
     refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
     logoutUseCase = new LogoutUseCase();
@@ -34,11 +34,14 @@ describe("Auth flow integration (InMemoryUserRepository + real services)", () =>
 
   it("completes the full register → login → refresh → logout flow", async () => {
     const registered = await registerUseCase.execute({
+      name: "Alice",
       email: "user@example.com",
       password: "password123",
     });
     expect(registered.user.email).toBe("user@example.com");
     expect(registered.user.id).toBeDefined();
+    expect(registered.accessToken).toBeDefined();
+    expect(registered.refreshToken).toBeDefined();
 
     const loginResult = await loginUseCase.execute({
       email: "user@example.com",
@@ -60,7 +63,7 @@ describe("Auth flow integration (InMemoryUserRepository + real services)", () =>
   }, 15_000);
 
   it("rejects login with wrong password", async () => {
-    await registerUseCase.execute({ email: "a@b.com", password: "correctpass" });
+    await registerUseCase.execute({ name: "Alice", email: "a@b.com", password: "correctpass" });
     await expect(
       loginUseCase.execute({ email: "a@b.com", password: "wrongpass" })
     ).rejects.toThrow(InvalidCredentialsError);
@@ -73,9 +76,9 @@ describe("Auth flow integration (InMemoryUserRepository + real services)", () =>
   });
 
   it("rejects registration with duplicate email", async () => {
-    await registerUseCase.execute({ email: "dup@example.com", password: "password1" });
+    await registerUseCase.execute({ name: "Alice", email: "dup@example.com", password: "password1" });
     await expect(
-      registerUseCase.execute({ email: "dup@example.com", password: "password2" })
+      registerUseCase.execute({ name: "Bob", email: "dup@example.com", password: "password2" })
     ).rejects.toThrow(EmailAlreadyInUseError);
   }, 15_000);
 

@@ -15,6 +15,7 @@ import {
 } from "./cookieOptions";
 
 const registerSchema = z.object({
+  name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(8),
 });
@@ -49,8 +50,13 @@ export class AuthController {
     }
 
     try {
-      const result = await this.registerUseCase.execute(parsed.data);
-      return NextResponse.json(result, { status: 201 });
+      const { refreshToken, ...publicResult } = await this.registerUseCase.execute(parsed.data);
+      const response = NextResponse.json(publicResult, { status: 201 });
+      response.headers.set(
+        "Set-Cookie",
+        serialize(REFRESH_TOKEN_COOKIE, refreshToken, refreshCookieOptions)
+      );
+      return response;
     } catch (err) {
       if (err instanceof EmailAlreadyInUseError) {
         return NextResponse.json({ error: err.message }, { status: 409 });

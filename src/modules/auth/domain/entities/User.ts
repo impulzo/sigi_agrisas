@@ -1,6 +1,7 @@
 import { Entity } from "@/shared/domain/Entity";
 
 interface UserProps {
+  name?: string;
   email: string;
   passwordHash: string;
   createdAt: Date;
@@ -17,6 +18,10 @@ export class User extends Entity<string> {
 
   static create(id: string, props: UserProps): User {
     return new User(id, props);
+  }
+
+  get name(): string | undefined {
+    return this.props.name;
   }
 
   get email(): string {

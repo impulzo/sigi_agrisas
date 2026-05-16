@@ -9,7 +9,7 @@ export function useAuthRedirect() {
   useEffect(() => {
     const token = sessionStorage.getItem("accessToken");
     if (token) {
-      router.replace("/");
+      router.replace("/dashboard");
     }
   }, [router]);
 }

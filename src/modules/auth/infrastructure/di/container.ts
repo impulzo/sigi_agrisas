@@ -12,7 +12,7 @@ const userRepo = new UserPrismaRepository(prisma);
 const tokenService = new JwtTokenService();
 const hasher = new BcryptPasswordHasher();
 
-const registerUseCase = new RegisterUseCase(userRepo, hasher);
+const registerUseCase = new RegisterUseCase(userRepo, hasher, tokenService);
 const loginUseCase = new LoginUseCase(userRepo, hasher, tokenService);
 const refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
 const logoutUseCase = new LogoutUseCase();

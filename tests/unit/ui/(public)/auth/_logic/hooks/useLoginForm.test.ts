@@ -50,7 +50,7 @@ describe("useLoginForm", () => {
         target: { name: "password", value: "abc" },
       } as React.FocusEvent<HTMLInputElement>);
     });
-    expect(result.current.errors.password).toBe("Mínimo 6 caracteres");
+    expect(result.current.errors.password).toBe("Mínimo 8 caracteres");
   });
 
   it("sets isSubmitting during submit", async () => {
@@ -58,13 +58,13 @@ describe("useLoginForm", () => {
     const { result } = renderHook(() => useLoginForm());
     act(() => {
       result.current.handleChange({ target: { name: "email", value: "a@b.com" } } as React.ChangeEvent<HTMLInputElement>);
-      result.current.handleChange({ target: { name: "password", value: "secret" } } as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleChange({ target: { name: "password", value: "secret123" } } as React.ChangeEvent<HTMLInputElement>);
     });
     await act(async () => {
       await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent);
     });
-    expect(loginMock).toHaveBeenCalledWith({ email: "a@b.com", password: "secret" });
-    expect(mockReplace).toHaveBeenCalledWith("/");
+    expect(loginMock).toHaveBeenCalledWith({ email: "a@b.com", password: "secret123" });
+    expect(mockReplace).toHaveBeenCalledWith("/dashboard");
   });
 
   it("sets formError on InvalidCredentialsError", async () => {
@@ -72,7 +72,7 @@ describe("useLoginForm", () => {
     const { result } = renderHook(() => useLoginForm());
     act(() => {
       result.current.handleChange({ target: { name: "email", value: "a@b.com" } } as React.ChangeEvent<HTMLInputElement>);
-      result.current.handleChange({ target: { name: "password", value: "secret" } } as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleChange({ target: { name: "password", value: "secret123" } } as React.ChangeEvent<HTMLInputElement>);
     });
     await act(async () => {
       await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent);
@@ -85,7 +85,7 @@ describe("useLoginForm", () => {
     const { result } = renderHook(() => useLoginForm());
     act(() => {
       result.current.handleChange({ target: { name: "email", value: "a@b.com" } } as React.ChangeEvent<HTMLInputElement>);
-      result.current.handleChange({ target: { name: "password", value: "secret" } } as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleChange({ target: { name: "password", value: "secret123" } } as React.ChangeEvent<HTMLInputElement>);
     });
     await act(async () => {
       await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent);

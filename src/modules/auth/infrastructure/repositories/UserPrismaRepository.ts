@@ -34,10 +34,12 @@ export class UserPrismaRepository implements UserRepository {
         where: { id: user.id },
         create: {
           id: user.id,
+          name: user.name,
           email: user.email,
           passwordHash: user.passwordHash,
         },
         update: {
+          name: user.name,
           email: user.email,
           passwordHash: user.passwordHash,
         },

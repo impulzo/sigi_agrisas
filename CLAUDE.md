@@ -168,5 +168,5 @@ npx prisma generate  # Regenerar tipos de Prisma Client
 
 Workflow activo: `opsx:propose` → `opsx:apply` → `opsx:verify` → `opsx:archive`.
 
-Change en curso: **add-login-ui** (scaffold frontend + UI de login/register).
-Change archivado: **create-auth-api** (backend de autenticación, completado el 2026-05-10).
+Change en curso: ninguno.
+Changes archivados: **create-auth-api** (2026-05-10), **add-login-ui** (2026-05-14), **fix-login** (2026-05-14), **emit-token-on-register** (2026-05-15), **panel-front** (2026-05-15).

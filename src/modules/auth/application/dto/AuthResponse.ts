@@ -3,13 +3,7 @@ export interface AuthResponse {
   refreshToken: string;
   user: {
     id: string;
-    email: string;
-  };
-}
-
-export interface RegisterResponse {
-  user: {
-    id: string;
+    name?: string;
     email: string;
   };
 }

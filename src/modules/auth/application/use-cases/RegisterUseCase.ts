@@ -1,8 +1,9 @@
 import { User } from "@/modules/auth/domain/entities/User";
 import { UserRepository } from "@/modules/auth/application/ports/UserRepository";
 import { PasswordHasher } from "@/modules/auth/application/ports/PasswordHasher";
+import { TokenService } from "@/modules/auth/application/ports/TokenService";
 import { RegisterRequest } from "@/modules/auth/application/dto/RegisterRequest";
-import { RegisterResponse } from "@/modules/auth/application/dto/AuthResponse";
+import { AuthResponse } from "@/modules/auth/application/dto/AuthResponse";
 import { EmailAlreadyInUseError } from "@/modules/auth/domain/errors/EmailAlreadyInUseError";
 import { Email } from "@/modules/auth/domain/value-objects/Email";
 import { Password } from "@/modules/auth/domain/value-objects/Password";
@@ -11,10 +12,11 @@ import { randomUUID } from "crypto";
 export class RegisterUseCase {
   constructor(
     private readonly userRepo: UserRepository,
-    private readonly hasher: PasswordHasher
+    private readonly hasher: PasswordHasher,
+    private readonly tokenService: TokenService
   ) {}
 
-  async execute(req: RegisterRequest): Promise<RegisterResponse> {
+  async execute(req: RegisterRequest): Promise<AuthResponse> {
     const email = Email.create(req.email);
     Password.create(req.password);
 
@@ -24,6 +26,7 @@ export class RegisterUseCase {
     const hash = await this.hasher.hash(req.password);
     const now = new Date();
     const user = User.create(randomUUID(), {
+      name: req.name,
       email: email.value,
       passwordHash: hash,
       createdAt: now,
@@ -32,6 +35,14 @@ export class RegisterUseCase {
 
     await this.userRepo.save(user);
 
-    return { user: { id: user.id, email: user.email } };
+    const payload = { sub: user.id, email: user.email };
+    const accessToken = this.tokenService.generateAccessToken(payload);
+    const refreshToken = this.tokenService.generateRefreshToken(payload);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: { id: user.id, name: user.name, email: user.email },
+    };
   }
 }
