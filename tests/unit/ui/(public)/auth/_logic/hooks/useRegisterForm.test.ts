@@ -45,13 +45,13 @@ describe("useRegisterForm", () => {
     act(() => {
       result.current.handleChange({ target: { name: "name", value: "Ana" } } as React.ChangeEvent<HTMLInputElement>);
       result.current.handleChange({ target: { name: "email", value: "ana@b.com" } } as React.ChangeEvent<HTMLInputElement>);
-      result.current.handleChange({ target: { name: "password", value: "secret1" } } as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleChange({ target: { name: "password", value: "secret123" } } as React.ChangeEvent<HTMLInputElement>);
     });
     await act(async () => {
       await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent);
     });
-    expect(registerMock).toHaveBeenCalledWith({ name: "Ana", email: "ana@b.com", password: "secret1" });
-    expect(mockReplace).toHaveBeenCalledWith("/");
+    expect(registerMock).toHaveBeenCalledWith({ name: "Ana", email: "ana@b.com", password: "secret123" });
+    expect(mockReplace).toHaveBeenCalledWith("/dashboard");
   });
 
   it("sets formError on EmailAlreadyExistsError", async () => {
@@ -60,7 +60,7 @@ describe("useRegisterForm", () => {
     act(() => {
       result.current.handleChange({ target: { name: "name", value: "Ana" } } as React.ChangeEvent<HTMLInputElement>);
       result.current.handleChange({ target: { name: "email", value: "ana@b.com" } } as React.ChangeEvent<HTMLInputElement>);
-      result.current.handleChange({ target: { name: "password", value: "secret1" } } as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleChange({ target: { name: "password", value: "secret123" } } as React.ChangeEvent<HTMLInputElement>);
     });
     await act(async () => {
       await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent);
@@ -74,7 +74,7 @@ describe("useRegisterForm", () => {
     act(() => {
       result.current.handleChange({ target: { name: "name", value: "Ana" } } as React.ChangeEvent<HTMLInputElement>);
       result.current.handleChange({ target: { name: "email", value: "ana@b.com" } } as React.ChangeEvent<HTMLInputElement>);
-      result.current.handleChange({ target: { name: "password", value: "secret1" } } as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleChange({ target: { name: "password", value: "secret123" } } as React.ChangeEvent<HTMLInputElement>);
     });
     await act(async () => {
       await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent);

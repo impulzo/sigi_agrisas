@@ -1,0 +1,176 @@
+## ADDED Requirements
+
+### Requirement: Implementación fiel del diseño frontend de Stitch (MCP)
+El panel privado SHALL implementar el design system Material 3 "Agro-Systemic" generado en el proyecto Stitch `5227157529282603342` (*Agrisas Admin & POS Dashboard*), accesible vía el servidor MCP de Stitch. Los tokens visuales (paleta semántica, escala tipográfica Inter, escala de spacing 8px, border-radius), la iconografía (Material Symbols Outlined) y la composición de pantallas (NavigationRail + TopAppBar + bento grid del Dashboard) SHALL coincidir con los artefactos exportados desde Stitch. NO MUST introducirse tokens, componentes visuales o icon sets ajenos al sistema durante este change.
+
+#### Scenario: Paleta deriva de Stitch
+- **WHEN** se inspecciona `tailwind.config.ts`
+- **THEN** los valores de `primary`, `primary-container`, `secondary`, `tertiary`, `surface`, `surface-container-*`, `outline`, `outline-variant`, `error` y sus pares `on-*` corresponden a los valores Material 3 "Agro-Systemic" del proyecto Stitch `5227157529282603342`
+
+#### Scenario: Tipografía deriva de Stitch
+- **WHEN** se inspecciona `tailwind.config.ts`
+- **THEN** la escala incluye al menos `display-lg`, `headline-lg`, `title-md`, `body-lg`, `body-md`, `label-lg`, `label-sm` con tamaños, line-height, letter-spacing y peso alineados con el design system de Stitch, sobre la fuente Inter
+
+#### Scenario: Iconografía Material Symbols
+- **WHEN** se inspecciona el HTML renderizado de cualquier ruta bajo `(private)`
+- **THEN** los iconos se renderizan como `<span className="material-symbols-outlined">` con la fuente Material Symbols Outlined cargada desde Google Fonts; NO se importan SVGs ajenos al set ni librerías como `lucide-react` o `@mui/icons-material`
+
+#### Scenario: Composición de pantalla fiel a Stitch
+- **WHEN** se compara la página `/dashboard` con el HTML exportado por Stitch
+- **THEN** el shell muestra NavigationRail (80px) a la izquierda, TopAppBar (64px) arriba y un bento grid con los 6 bloques (Header, SalesCard, InventoryCard, LowStockAlerts, ActivityFeed, LogisticsMap) en las proporciones definidas por el diseño
+
+---
+
+### Requirement: Alineación con la arquitectura frontend del proyecto
+El panel SHALL cumplir las convenciones de arquitectura frontend documentadas en `CLAUDE.md`: **Atomic Design** (`app/_components/{atoms,molecules,organisms}`), **Route Groups** (`(public)` y `(private)`) y **`_logic/` por feature** (`hooks/`, `services/`, `schemas/`, `types/`). Los componentes en `_components/` y los bloques en `_blocks/` SHALL ser **presentational puros**: NO MUST contener `fetch`, `axios`, `sessionStorage`, `localStorage`, `document`, ni `useRouter().push/replace`. Toda lógica de red, navegación imperativa o validación vive en `_logic/`.
+
+#### Scenario: Estructura por route group
+- **WHEN** se inspecciona el árbol del proyecto
+- **THEN** todas las páginas del panel viven bajo `app/(private)/` y las páginas de auth bajo `app/(public)/auth/`, con sus layouts respectivos
+
+#### Scenario: Atomic Design en `_components/`
+- **WHEN** se inspecciona `app/_components/`
+- **THEN** existen subcarpetas `atoms/`, `molecules/` y `organisms/`, cada componente en su propia carpeta `Nombre/Nombre.tsx`
+
+#### Scenario: `_logic/` por feature
+- **WHEN** se inspecciona `app/(private)/dashboard/`
+- **THEN** existe `_logic/` con subcarpetas `services/`, `types/` (y opcionalmente `hooks/`, `schemas/`) que encapsulan toda la lógica del feature
+
+#### Scenario: Componentes presentational puros
+- **WHEN** se hace `grep -E "fetch\\(|sessionStorage|localStorage|useRouter\\(\\)\\.(push|replace)|document\\." app/_components/ app/(private)/dashboard/_blocks/`
+- **THEN** no aparece ninguna coincidencia (toda esa lógica vive en `_logic/`)
+
+#### Scenario: Página orquesta, no implementa
+- **WHEN** se inspecciona `app/(private)/dashboard/page.tsx`
+- **THEN** llama a los services del feature (`getDashboardKpis`, `getLowStockAlerts`, `getRecentActivity`) y pasa los datos por props a los bloques; no contiene fetch inline ni JSX de tarjetas individuales
+
+---
+
+### Requirement: El panel carga después de iniciar sesión o registrarse
+Tras un submit exitoso de login o registro, el usuario SHALL aterrizar directamente en `/dashboard`. Los hooks `useLoginForm`, `useRegisterForm` y `useAuthRedirect` (rebote de usuarios ya autenticados en `/auth/*`) SHALL invocar `router.replace("/dashboard")` con la ruta hardcodeada, evitando saltos intermedios (`/` → `/dashboard`) y open-redirects derivados de query params.
+
+#### Scenario: Login exitoso aterriza en `/dashboard`
+- **WHEN** un usuario envía credenciales válidas desde `/auth/login`
+- **THEN** `useLoginForm` invoca `router.replace("/dashboard")` después de persistir el access token en `sessionStorage`
+
+#### Scenario: Registro exitoso aterriza en `/dashboard`
+- **WHEN** un usuario envía un registro válido desde `/auth/register`
+- **THEN** `useRegisterForm` invoca `router.replace("/dashboard")` tras la respuesta 201 del backend
+
+#### Scenario: Usuario ya autenticado que cae en `/auth/*`
+- **WHEN** un usuario con sesión activa navega a `/auth/login` o `/auth/register`
+- **THEN** `useAuthRedirect` invoca `router.replace("/dashboard")` durante el primer render
+
+#### Scenario: Sin salto intermedio por root
+- **WHEN** se inspeccionan los hooks de auth
+- **THEN** ningún hook llama `router.replace("/")` ni `router.push("/")` como destino post-éxito; el destino es literalmente `"/dashboard"`
+
+---
+
+### Requirement: No se puede acceder al panel sin sesión iniciada
+Cualquier ruta bajo el route group `(private)` SHALL ser inaccesible sin la cookie `refreshToken` válida. La protección es **doble** para evitar cualquier flash de UI privada:
+1. **Capa middleware**: `middleware.ts` delega en `AuthMiddlewareAdapter`, que redirige a `/auth/login` con HTTP 307/302 cuando la cookie falta o es inválida en rutas de página privadas.
+2. **Capa layout**: `app/(private)/layout.tsx` (Server Component) vuelve a leer `cookies().get("refreshToken")` y llama `redirect("/auth/login")` antes de renderizar el shell, como defensa en profundidad si el middleware fuera modificado o evadido.
+
+Además, `app/page.tsx` (root) SHALL redirigir según presencia de cookie: `/dashboard` si hay sesión, `/auth/login` si no.
+
+#### Scenario: Acceso sin cookie a `/dashboard`
+- **WHEN** un usuario sin cookie `refreshToken` navega directamente a `/dashboard`
+- **THEN** la respuesta es un redirect server-side a `/auth/login` (el HTML del shell privado NO MUST aparecer en ningún momento)
+
+#### Scenario: Acceso sin cookie a cualquier ruta de `(private)`
+- **WHEN** un usuario sin cookie navega a `/pos`, `/inventory`, `/billing`, `/settings` o cualquier ruta futura bajo `(private)`
+- **THEN** el middleware redirige a `/auth/login` antes de invocar el layout
+
+#### Scenario: Cookie inválida o expirada
+- **WHEN** un usuario navega a una ruta privada con una cookie `refreshToken` que no pasa la verificación JWT
+- **THEN** el middleware trata el caso como sin sesión y redirige a `/auth/login`
+
+#### Scenario: Defensa en profundidad del layout
+- **WHEN** un request alcanza `app/(private)/layout.tsx` sin cookie `refreshToken`
+- **THEN** el layout invoca `redirect("/auth/login")` antes de renderizar `<NavigationRail />` o `<TopAppBar />`
+
+#### Scenario: Root sin sesión
+- **WHEN** un usuario sin cookie navega a `/`
+- **THEN** `app/page.tsx` invoca `redirect("/auth/login")`
+
+#### Scenario: Root con sesión
+- **WHEN** un usuario con cookie válida navega a `/`
+- **THEN** `app/page.tsx` invoca `redirect("/dashboard")`
+
+---
+
+### Requirement: Route group `(private)` para todas las rutas autenticadas
+Todas las páginas del panel autenticado SHALL vivir bajo el route group `app/(private)/`. El segmento `(private)` no aparece en la URL pública. Cualquier ruta nueva del panel (POS, Inventario, Facturación) SHALL crearse dentro de este route group para heredar el layout compartido.
+
+#### Scenario: Estructura de carpetas
+- **WHEN** se inspecciona el árbol del proyecto
+- **THEN** existe `app/(private)/layout.tsx` y `app/(private)/dashboard/page.tsx`, y NO existen páginas del panel fuera del route group
+
+#### Scenario: URL pública sin segmento privado
+- **WHEN** un usuario navega a `/dashboard`
+- **THEN** Next.js resuelve `app/(private)/dashboard/page.tsx` sin mostrar `(private)` en la URL
+
+---
+
+### Requirement: Layout compartido del panel privado con NavigationRail y TopAppBar
+`app/(private)/layout.tsx` SHALL ser un Server Component que envuelve todas las páginas autenticadas con: `<NavigationRail />` fijo a la izquierda (80px), `<TopAppBar />` fijo arriba (64px), un `<main>` con `pl-[80px] pt-16` y la carga del CSS de Material Symbols Outlined. El layout MUST leer la cookie `refreshToken` con `cookies()` de `next/headers` y llamar `redirect("/auth/login")` si no existe (defensa en profundidad sobre el middleware). NO MUST contener la directiva `"use client"`.
+
+#### Scenario: Layout es Server Component
+- **WHEN** se inspecciona `app/(private)/layout.tsx`
+- **THEN** no contiene `"use client"` en su primera línea y exporta `default function PrivateLayout({ children })`
+
+#### Scenario: Renderiza el shell cuando hay cookie
+- **WHEN** un usuario con cookie `refreshToken` válida navega a `/dashboard`
+- **THEN** el HTML resultante contiene `<aside>` del NavigationRail, `<header>` del TopAppBar y `<main>` con el contenido de `page.tsx`
+
+#### Scenario: Carga Material Symbols Outlined
+- **WHEN** se inspecciona el layout privado `app/(private)/layout.tsx`
+- **THEN** incluye el componente `<MaterialSymbolsLoader />` (cliente, `useEffect`) que inyecta dinámicamente `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">` en `document.head` una única vez; la fuente NO se carga en el layout público para no penalizar `/auth/*`
+
+---
+
+### Requirement: NavigationRail organism con destinos primarios y secundarios
+`app/_components/organisms/NavigationRail/NavigationRail.tsx` SHALL renderizar una barra vertical fija de 80px de ancho, alto completo, con: logo Agrisas arriba, 4 destinos primarios (`Inicio`, `POS`, `Inventario`, `Facturación`) en el centro, 2 destinos secundarios (`Soporte`, `Cuenta`) abajo. Cada destino es un `<Link>` (Next.js) con icono Material Symbols + label `label-sm`. El active state SHALL aplicar `bg-primary-container text-on-primary-container rounded-xl scale-90` al destino cuya ruta coincida con `usePathname()`. Por usar `usePathname`, el componente SHALL ser client component (`"use client"`).
+
+#### Scenario: Destinos primarios renderizados
+- **WHEN** se inspecciona el HTML del NavigationRail
+- **THEN** contiene exactamente 4 enlaces con `href` `/dashboard`, `/pos`, `/inventory`, `/billing` y sus respectivos iconos `dashboard`, `point_of_sale`, `inventory_2`, `receipt_long`
+
+#### Scenario: Destinos secundarios en la parte inferior
+- **WHEN** se inspecciona el HTML del NavigationRail
+- **THEN** contiene enlaces a `/support` y `/account` con iconos `contact_support` y `account_circle` ubicados con `mt-auto`
+
+#### Scenario: Active state en la ruta actual
+- **WHEN** el usuario está en `/dashboard`
+- **THEN** el enlace al Dashboard tiene clases `bg-primary-container text-on-primary-container` y los otros destinos no
+
+#### Scenario: Navegación con click
+- **WHEN** el usuario hace click en el destino "POS"
+- **THEN** el router navega a `/pos` usando `next/link`
+
+#### Scenario: NavigationRail no hace fetch ni accede a storage
+- **WHEN** se inspecciona el archivo
+- **THEN** no importa `fetch`, `axios`, `localStorage`, `sessionStorage` ni `document`
+
+---
+
+### Requirement: TopAppBar organism con título, búsqueda, acciones y avatar
+`app/_components/organisms/TopAppBar/TopAppBar.tsx` SHALL renderizar una barra superior fija de 64px de alto, con `pl-24 pr-8`, conteniendo: título "Agrisas" (`text-headline-lg text-primary`), `SearchInput` (oculto en `<md`), `IconButton` de notificaciones, ayuda y settings, y un `Avatar` final. El componente acepta `userName: string`, `userEmail: string`, `avatarUrl?: string` como props y NO hace fetch.
+
+#### Scenario: Renderiza con props
+- **WHEN** `<TopAppBar userName="Admin" userEmail="admin@agrisas.com" />` se renderiza
+- **THEN** el HTML muestra "Agrisas", el SearchInput, los 3 IconButton y el Avatar con `fallbackInitials="A"` (primera letra de `userName`)
+
+#### Scenario: Avatar con src
+- **WHEN** se pasa `avatarUrl="https://example.com/u.jpg"`
+- **THEN** el Avatar renderiza `<img src="https://example.com/u.jpg" alt="...">`
+
+#### Scenario: SearchInput oculto en móvil
+- **WHEN** el viewport es <768px
+- **THEN** el `SearchInput` tiene la clase `hidden md:flex` y no es visible
+
+#### Scenario: TopAppBar es presentational
+- **WHEN** se inspecciona el archivo
+- **THEN** no contiene `fetch`, `useRouter().push`, `useEffect` con efectos secundarios ni accesos a storage
+

@@ -1,3 +1,7 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
 export default function Home() {
-  return <main>Agrisas Panel</main>;
+  const refreshToken = cookies().get("refreshToken")?.value;
+  redirect(refreshToken ? "/dashboard" : "/auth/login");
 }

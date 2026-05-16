@@ -69,7 +69,7 @@ export function useLoginForm(): UseLoginFormReturn {
     try {
       const { accessToken } = await login(values);
       sessionStorage.setItem("accessToken", accessToken);
-      router.replace("/");
+      router.replace("/dashboard");
     } catch (err) {
       if (err instanceof InvalidCredentialsError) {
         setFormError("Credenciales inválidas");

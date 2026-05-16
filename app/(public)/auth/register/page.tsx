@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function RegisterPage() {
   const cookieStore = cookies();
   if (cookieStore.get("refreshToken")) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   return <RegisterForm />;
