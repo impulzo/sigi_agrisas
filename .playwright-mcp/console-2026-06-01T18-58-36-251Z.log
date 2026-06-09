@@ -1,6 +1,0 @@
-[      56ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
-[     257ms] [LOG] [Fast Refresh] done in 200ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
-[     424ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
-[   31286ms] TypeError: body.map is not a function
-    at getProductPrices (webpack-internal:///(app-pages-browser)/./app/(private)/pos/_logic/services/getProductPrices.ts:17:25)
-    at async handleAddProduct (webpack-internal:///(app-pages-browser)/./app/(private)/pos/_blocks/PosPage.tsx:131:24)

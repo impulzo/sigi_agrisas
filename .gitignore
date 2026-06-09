@@ -61,6 +61,7 @@ Thumbs.db
 
 # playwright & e2e
 .playwright/
+.playwright-mcp/
 .test-cache/
 
 # cache & temp
