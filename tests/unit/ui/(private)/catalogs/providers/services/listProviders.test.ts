@@ -1,0 +1,126 @@
+import { listProviders } from "../../../../../../../app/(private)/catalogs/providers/_logic/services/listProviders";
+import { UnauthenticatedError, ForbiddenError, NetworkError } from "../../../../../../../app/_lib/authFetch";
+
+const baseDto = {
+  id: "1",
+  code: "PROV_001",
+  name: "Semillas ACME",
+  rfc: "SAC120101A12",
+  legalName: "Semillas ACME S.A. de C.V.",
+  taxRegime: "601",
+  cfdiUse: "G03",
+  taxZipCode: "06600",
+  email: "contacto@acme.com",
+  phone: "555-1234",
+  address: "Av. Reforma 123",
+  contactName: "Juan Pérez",
+  notes: null,
+  isActive: true,
+  createdAt: "2024-01-01T00:00:00.000Z",
+  updatedAt: "2024-01-01T00:00:00.000Z",
+};
+
+describe("listProviders", () => {
+  it("returns items with Date instances on success 200", async () => {
+    const mockFetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ items: [baseDto], total: 1, page: 1, pageSize: 20 }),
+    } as Response);
+
+    const result = await listProviders({ page: 1, pageSize: 20 }, mockFetch);
+
+    expect(result.total).toBe(1);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].createdAt).toBeInstanceOf(Date);
+    expect(result.items[0].updatedAt).toBeInstanceOf(Date);
+    expect(result.items[0].rfc).toBe("SAC120101A12");
+  });
+
+  it("includes includeInactive=true in URL when set", async () => {
+    const mockFetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ items: [], total: 0, page: 1, pageSize: 20 }),
+    } as Response);
+
+    await listProviders({ page: 1, pageSize: 20, includeInactive: true }, mockFetch);
+
+    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("includeInactive=true");
+  });
+
+  it("includes search in URL when 2+ chars", async () => {
+    const mockFetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ items: [], total: 0, page: 1, pageSize: 20 }),
+    } as Response);
+
+    await listProviders({ page: 1, pageSize: 20, search: "acme" }, mockFetch);
+
+    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("search=acme");
+  });
+
+  it("omits search when single character", async () => {
+    const mockFetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ items: [], total: 0, page: 1, pageSize: 20 }),
+    } as Response);
+
+    await listProviders({ page: 1, pageSize: 20, search: "a" }, mockFetch);
+
+    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    expect(calledUrl).not.toContain("search=");
+  });
+
+  it("omits search when whitespace-only", async () => {
+    const mockFetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ items: [], total: 0, page: 1, pageSize: 20 }),
+    } as Response);
+
+    await listProviders({ page: 1, pageSize: 20, search: "   " }, mockFetch);
+
+    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    expect(calledUrl).not.toContain("search=");
+  });
+
+  it("throws UnauthenticatedError on 401", async () => {
+    const mockFetch = jest.fn().mockRejectedValueOnce(new UnauthenticatedError());
+
+    await expect(listProviders({ page: 1, pageSize: 20 }, mockFetch)).rejects.toBeInstanceOf(UnauthenticatedError);
+  });
+
+  it("throws ForbiddenError on 403", async () => {
+    const mockFetch = jest.fn().mockRejectedValueOnce(new ForbiddenError("providers:read"));
+
+    await expect(listProviders({ page: 1, pageSize: 20 }, mockFetch)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("throws NetworkError on network failure", async () => {
+    const mockFetch = jest.fn().mockRejectedValueOnce(new NetworkError());
+
+    await expect(listProviders({ page: 1, pageSize: 20 }, mockFetch)).rejects.toBeInstanceOf(NetworkError);
+  });
+
+  it("handles nullable optional fields in response", async () => {
+    const mockFetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        items: [{ ...baseDto, legalName: null, taxRegime: null, cfdiUse: null }],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      }),
+    } as Response);
+
+    const result = await listProviders({ page: 1, pageSize: 20 }, mockFetch);
+    expect(result.items[0].legalName).toBeNull();
+    expect(result.items[0].taxRegime).toBeNull();
+  });
+});

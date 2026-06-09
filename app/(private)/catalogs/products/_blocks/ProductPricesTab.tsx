@@ -1,0 +1,238 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { useProductPrices } from "../_logic/hooks/useProductPrices";
+import { DuplicatePriceNameError, DuplicateDefaultPriceError } from "../_logic/errors";
+import { ConfirmDialog } from "../../../../_components/molecules/ConfirmDialog/ConfirmDialog";
+import { Badge } from "../../../../_components/atoms/Badge/Badge";
+import { Icon } from "../../../../_components/atoms/Icon/Icon";
+import { Skeleton } from "../../../../_components/atoms/Skeleton/Skeleton";
+import type { ProductPrice } from "../_logic/types/domain";
+import type { CreatePriceBody, UpdatePriceBody } from "../_logic/types/api";
+
+interface ProductPricesTabProps {
+  productId: string;
+  canWrite: boolean;
+}
+
+interface PriceModalState {
+  mode: "create" | "edit";
+  entity: ProductPrice | null;
+}
+
+function PriceModal({
+  open,
+  mode,
+  entity,
+  isSaving,
+  nameError,
+  defaultError,
+  onSave,
+  onClose,
+}: {
+  open: boolean;
+  mode: "create" | "edit";
+  entity: ProductPrice | null;
+  isSaving: boolean;
+  nameError: string | null;
+  defaultError: string | null;
+  onSave: (data: CreatePriceBody | UpdatePriceBody) => void;
+  onClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [minQuantity, setMinQuantity] = useState("1");
+  const [discountPct, setDiscountPct] = useState("");
+  const [isDefault, setIsDefault] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open) dialog.showModal(); else dialog.close();
+  }, [open]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const h = (e: Event) => { e.preventDefault(); onClose(); };
+    dialog.addEventListener("cancel", h);
+    return () => dialog.removeEventListener("cancel", h);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (mode === "create") { setName(""); setPrice(""); setMinQuantity("1"); setDiscountPct(""); setIsDefault(false); }
+    else if (entity) {
+      setName(entity.name);
+      setPrice(String(entity.price));
+      setMinQuantity(String(entity.minQuantity));
+      setDiscountPct(entity.discountPct != null ? String(entity.discountPct) : "");
+      setIsDefault(entity.isDefault);
+    }
+    setErrors({});
+  }, [open, mode, entity]);
+
+  const buildDiff = (): UpdatePriceBody => {
+    if (!entity) return {};
+    const d: UpdatePriceBody = {};
+    if (name !== entity.name) d.name = name;
+    const p = parseFloat(price);
+    if (!isNaN(p) && p !== entity.price) d.price = p;
+    const mq = parseInt(minQuantity);
+    if (!isNaN(mq) && mq !== entity.minQuantity) d.minQuantity = mq;
+    const dp = discountPct.trim() ? parseFloat(discountPct) : null;
+    if (dp !== entity.discountPct) d.discountPct = dp;
+    if (isDefault !== entity.isDefault) d.isDefault = isDefault;
+    return d;
+  };
+
+  const isDiffEmpty = mode === "edit" && Object.keys(buildDiff()).length === 0;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!name.trim()) errs.name = "El nombre es obligatorio.";
+    const p = parseFloat(price);
+    if (isNaN(p) || p < 0) errs.price = "El precio debe ser 0 o mayor.";
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    if (mode === "create") {
+      onSave({ name: name.trim(), price: p, minQuantity: parseInt(minQuantity) || 1, discountPct: discountPct.trim() ? parseFloat(discountPct) : null, isDefault });
+    } else {
+      onSave(buildDiff());
+    }
+  };
+
+  const fieldClass = "w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md focus:outline-none focus:ring-2 focus:ring-primary";
+
+  return (
+    <dialog ref={dialogRef} className="rounded-2xl shadow-xl bg-surface p-0 w-full max-w-md backdrop:bg-black/40">
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="px-6 pt-6 pb-4 border-b border-outline-variant">
+          <h2 className="text-title-md font-semibold text-on-surface">{mode === "create" ? "Nuevo precio" : "Editar precio"}</h2>
+        </div>
+        <div className="px-6 py-4 space-y-4">
+          <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1">Nombre *</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className={fieldClass} />
+            {(nameError || errors.name) && <p className="text-label-sm text-error mt-1">{nameError ?? errors.name}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-label-lg text-on-surface-variant mb-1">Precio *</label>
+              <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} min={0} step={0.01} className={fieldClass} />
+              {errors.price && <p className="text-label-sm text-error mt-1">{errors.price}</p>}
+            </div>
+            <div>
+              <label className="block text-label-lg text-on-surface-variant mb-1">Cant. mín.</label>
+              <input type="number" value={minQuantity} onChange={(e) => setMinQuantity(e.target.value)} min={1} step={1} className={fieldClass} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1">Descuento (%)</label>
+            <input type="number" value={discountPct} onChange={(e) => setDiscountPct(e.target.value)} min={0} max={100} placeholder="—" className={fieldClass} />
+          </div>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} className="w-4 h-4 rounded" />
+            <span className="text-label-lg text-on-surface-variant">Precio default</span>
+          </label>
+          {defaultError && <p className="text-label-sm text-error">{defaultError}</p>}
+        </div>
+        <div className="px-6 pb-6 pt-2 flex justify-end gap-3 border-t border-outline-variant">
+          <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 rounded-xl text-label-lg text-on-surface-variant hover:bg-surface-container transition-colors">Cancelar</button>
+          <button type="submit" disabled={isSaving || isDiffEmpty} className="px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 disabled:opacity-50">{isSaving ? "Guardando…" : mode === "create" ? "Crear" : "Guardar"}</button>
+        </div>
+      </form>
+    </dialog>
+  );
+}
+
+export function ProductPricesTab({ productId, canWrite }: ProductPricesTabProps) {
+  const { prices, isLoading, error, isSaving, saveError, clearSaveError, refresh, createOne, updateOne, deleteOne } = useProductPrices(productId);
+  const [modal, setModal] = useState<PriceModalState | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [defaultError, setDefaultError] = useState<string | null>(null);
+
+  const handleSave = async (data: CreatePriceBody | UpdatePriceBody) => {
+    setNameError(null); setDefaultError(null);
+    try {
+      if (modal?.mode === "create") await createOne(data as CreatePriceBody);
+      else if (modal?.entity) await updateOne(modal.entity.id, data as UpdatePriceBody);
+      setModal(null);
+    } catch (err) {
+      if (err instanceof DuplicatePriceNameError) setNameError("Ya existe un precio con ese nombre.");
+      else if (err instanceof DuplicateDefaultPriceError) setDefaultError("El producto ya tiene un precio default.");
+    }
+  };
+
+  if (isLoading) return <div className="space-y-2 p-4">{Array.from({length:3}).map((_,i) => <Skeleton key={i} className="h-10 w-full rounded-xl" />)}</div>;
+  if (error) return <p className="p-4 text-error text-label-lg">{error}</p>;
+
+  return (
+    <div className="space-y-4">
+      {!canWrite && <p className="text-label-sm text-on-surface-variant px-1">Solo lectura — requiere products:write</p>}
+      {saveError && <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-xl">{saveError}</p>}
+
+      <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+        <div className="px-4 py-3 border-b border-outline-variant flex items-center justify-between">
+          <span className="text-label-lg font-medium text-on-surface">Precios</span>
+          {canWrite && (
+            <button type="button" onClick={() => { setNameError(null); setDefaultError(null); setModal({mode:"create", entity:null}); }} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-on-primary text-label-sm font-medium hover:opacity-90">
+              <Icon name="add" size={14} />Nuevo precio
+            </button>
+          )}
+        </div>
+        {prices.length === 0 ? (
+          <p className="p-6 text-center text-on-surface-variant text-body-md">Sin precios configurados.</p>
+        ) : (
+          <table className="w-full text-left text-body-md">
+            <thead>
+              <tr className="text-label-lg text-on-surface-variant border-b border-outline-variant">
+                <th className="px-4 py-2 font-medium">Nombre</th>
+                <th className="px-4 py-2 font-medium text-right">Precio</th>
+                <th className="px-4 py-2 font-medium text-right">Cant. mín.</th>
+                <th className="px-4 py-2 font-medium text-right">Descuento</th>
+                <th className="px-4 py-2 font-medium">Default</th>
+                {canWrite && <th className="px-4 py-2 font-medium">Acciones</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {prices.map((p) => (
+                <tr key={p.id} className="border-b border-outline-variant hover:bg-surface-container-low">
+                  <td className="px-4 py-2">{p.name}</td>
+                  <td className="px-4 py-2 text-right">${p.price.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right">{p.minQuantity}</td>
+                  <td className="px-4 py-2 text-right">{p.discountPct != null ? `${p.discountPct}%` : "—"}</td>
+                  <td className="px-4 py-2">{p.isDefault && <Badge variant="read">Default</Badge>}</td>
+                  {canWrite && (
+                    <td className="px-4 py-2">
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => { setNameError(null); setDefaultError(null); setModal({mode:"edit", entity:p}); }} className="p-1 rounded-lg hover:bg-surface-container text-on-surface-variant" title="Editar"><Icon name="edit" size={14}/></button>
+                        <button type="button" onClick={() => setConfirmDeleteId(p.id)} className="p-1 rounded-lg hover:bg-error/10 text-error" title="Eliminar"><Icon name="delete" size={14}/></button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {modal && (
+        <PriceModal open mode={modal.mode} entity={modal.entity} isSaving={isSaving} nameError={nameError} defaultError={defaultError} onSave={handleSave} onClose={() => setModal(null)} />
+      )}
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="¿Eliminar precio?"
+        description="Esta acción es permanente."
+        confirmLabel="Eliminar"
+        onConfirm={async () => { if (confirmDeleteId) { await deleteOne(confirmDeleteId); setConfirmDeleteId(null); } }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+    </div>
+  );
+}

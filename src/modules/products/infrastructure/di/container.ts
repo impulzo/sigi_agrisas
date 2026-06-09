@@ -1,0 +1,48 @@
+import { prisma } from "@/shared/infrastructure/prisma/client";
+import { PrismaDepartmentRepository } from "@/modules/departments/infrastructure/repositories/PrismaDepartmentRepository";
+import { PrismaProductRepository } from "@/modules/products/infrastructure/repositories/PrismaProductRepository";
+import { PrismaProductPriceRepository } from "@/modules/products/infrastructure/repositories/PrismaProductPriceRepository";
+import { PrismaProductDosificationRepository } from "@/modules/products/infrastructure/repositories/PrismaProductDosificationRepository";
+import { ListProductsUseCase } from "@/modules/products/application/use-cases/ListProductsUseCase";
+import { GetProductUseCase } from "@/modules/products/application/use-cases/GetProductUseCase";
+import { CreateProductUseCase } from "@/modules/products/application/use-cases/CreateProductUseCase";
+import { UpdateProductUseCase } from "@/modules/products/application/use-cases/UpdateProductUseCase";
+import { SoftDeleteProductUseCase } from "@/modules/products/application/use-cases/SoftDeleteProductUseCase";
+import { ListProductPricesUseCase } from "@/modules/products/application/use-cases/ListProductPricesUseCase";
+import { CreateProductPriceUseCase } from "@/modules/products/application/use-cases/CreateProductPriceUseCase";
+import { UpdateProductPriceUseCase } from "@/modules/products/application/use-cases/UpdateProductPriceUseCase";
+import { DeleteProductPriceUseCase } from "@/modules/products/application/use-cases/DeleteProductPriceUseCase";
+import { ListProductDosificationsUseCase } from "@/modules/products/application/use-cases/ListProductDosificationsUseCase";
+import { CreateProductDosificationUseCase } from "@/modules/products/application/use-cases/CreateProductDosificationUseCase";
+import { UpdateProductDosificationUseCase } from "@/modules/products/application/use-cases/UpdateProductDosificationUseCase";
+import { SoftDeleteProductDosificationUseCase } from "@/modules/products/application/use-cases/SoftDeleteProductDosificationUseCase";
+import { ProductsController } from "@/modules/products/infrastructure/http/ProductsController";
+import { ProductPricesController } from "@/modules/products/infrastructure/http/ProductPricesController";
+import { ProductDosificationsController } from "@/modules/products/infrastructure/http/ProductDosificationsController";
+
+const departmentRepo = new PrismaDepartmentRepository(prisma);
+const productRepo = new PrismaProductRepository(prisma);
+const priceRepo = new PrismaProductPriceRepository(prisma);
+const dosificationRepo = new PrismaProductDosificationRepository(prisma);
+
+export const productsController = new ProductsController(
+  new ListProductsUseCase(productRepo),
+  new GetProductUseCase(productRepo),
+  new CreateProductUseCase(productRepo, departmentRepo),
+  new UpdateProductUseCase(productRepo, departmentRepo),
+  new SoftDeleteProductUseCase(productRepo)
+);
+
+export const productPricesController = new ProductPricesController(
+  new ListProductPricesUseCase(productRepo, priceRepo),
+  new CreateProductPriceUseCase(productRepo, priceRepo),
+  new UpdateProductPriceUseCase(priceRepo),
+  new DeleteProductPriceUseCase(priceRepo)
+);
+
+export const productDosificationsController = new ProductDosificationsController(
+  new ListProductDosificationsUseCase(productRepo, priceRepo, dosificationRepo),
+  new CreateProductDosificationUseCase(productRepo, priceRepo, dosificationRepo),
+  new UpdateProductDosificationUseCase(priceRepo, dosificationRepo),
+  new SoftDeleteProductDosificationUseCase(dosificationRepo)
+);

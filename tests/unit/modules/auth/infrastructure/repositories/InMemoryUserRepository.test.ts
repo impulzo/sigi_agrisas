@@ -5,6 +5,8 @@ const makeUser = (id = "id-1", email = "a@b.com") =>
   User.create(id, {
     email,
     passwordHash: "hash",
+    roles: [],
+    branchId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   });

@@ -1,0 +1,66 @@
+export interface CustomerProps {
+  id: string;
+  code: string;
+  name: string;
+  rfc: string;
+  legalName: string | null;
+  taxRegime: string | null;
+  cfdiUse: string | null;
+  taxZipCode: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  contactName: string | null;
+  notes: string | null;
+  creditLimit: number | null;
+  currentBalance: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export class Customer {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly rfc: string;
+  readonly legalName: string | null;
+  readonly taxRegime: string | null;
+  readonly cfdiUse: string | null;
+  readonly taxZipCode: string | null;
+  readonly email: string | null;
+  readonly phone: string | null;
+  readonly address: string | null;
+  readonly contactName: string | null;
+  readonly notes: string | null;
+  readonly creditLimit: number | null;
+  readonly currentBalance: number;
+  readonly isActive: boolean;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+
+  private constructor(props: CustomerProps) {
+    this.id = props.id;
+    this.code = props.code;
+    this.name = props.name;
+    this.rfc = props.rfc;
+    this.legalName = props.legalName;
+    this.taxRegime = props.taxRegime;
+    this.cfdiUse = props.cfdiUse;
+    this.taxZipCode = props.taxZipCode;
+    this.email = props.email;
+    this.phone = props.phone;
+    this.address = props.address;
+    this.contactName = props.contactName;
+    this.notes = props.notes;
+    this.creditLimit = props.creditLimit;
+    this.currentBalance = props.currentBalance;
+    this.isActive = props.isActive;
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
+  }
+
+  static create(props: CustomerProps): Customer {
+    return new Customer(props);
+  }
+}
