@@ -1,0 +1,123 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]: A
+      - navigation "Primary" [ref=e5]:
+        - link "Inicio" [ref=e6] [cursor=pointer]:
+          - /url: /dashboard
+          - generic [ref=e7]: dashboard
+          - generic [ref=e8]: Inicio
+        - link "POS" [ref=e9] [cursor=pointer]:
+          - /url: /pos
+          - generic [ref=e10]: point_of_sale
+          - generic [ref=e11]: POS
+        - link "Inventory" [ref=e12] [cursor=pointer]:
+          - /url: /inventory
+          - generic [ref=e13]: inventory_2
+          - generic [ref=e14]: Inventory
+        - link "Billing" [ref=e15] [cursor=pointer]:
+          - /url: /billing
+          - generic [ref=e16]: receipt_long
+          - generic [ref=e17]: Billing
+        - link "Usuarios" [ref=e47] [cursor=pointer]:
+          - /url: /users
+          - generic [ref=e48]: group
+          - generic [ref=e49]: Usuarios
+        - link "Roles" [ref=e50] [cursor=pointer]:
+          - /url: /roles
+          - generic [ref=e51]: shield_person
+          - generic [ref=e52]: Roles
+      - generic [ref=e18]:
+        - link "Support" [ref=e19] [cursor=pointer]:
+          - /url: /support
+          - generic [ref=e20]: contact_support
+          - generic [ref=e21]: Support
+        - link "Account" [ref=e22] [cursor=pointer]:
+          - /url: /account
+          - generic [ref=e23]: account_circle
+          - generic [ref=e24]: Account
+    - banner [ref=e25]:
+      - generic [ref=e26]:
+        - heading "Agrisas" [level=1] [ref=e27]
+        - generic [ref=e28]:
+          - generic [ref=e29]: search
+          - searchbox "Search data..." [ref=e30]
+      - generic [ref=e31]:
+        - button "Notificaciones" [ref=e32] [cursor=pointer]:
+          - generic [ref=e33]: notifications
+        - button "Ayuda" [ref=e34] [cursor=pointer]:
+          - generic [ref=e35]: help_outline
+        - button "Ajustes" [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]: settings
+        - img "admin" [ref=e38]: A
+    - main [ref=e39]:
+      - generic [ref=e41]:
+        - generic [ref=e54]:
+          - heading "Administración de Usuarios" [level=1] [ref=e55]
+          - paragraph [ref=e56]: Gestiona los usuarios registrados en el sistema
+        - generic [ref=e57]:
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - generic:
+                - generic: search
+              - textbox "Buscar por nombre o email" [ref=e61]
+            - generic [ref=e62]:
+              - button "Todos" [ref=e63] [cursor=pointer]
+              - button "admin" [ref=e64] [cursor=pointer]
+              - button "viewer" [active] [ref=e65] [cursor=pointer]
+          - table [ref=e650]:
+            - rowgroup [ref=e651]:
+              - row "Usuario Email Roles Creado Acciones" [ref=e652]:
+                - columnheader "Usuario" [ref=e653]
+                - columnheader "Email" [ref=e654]
+                - columnheader "Roles" [ref=e655]
+                - columnheader "Creado" [ref=e656]
+                - columnheader "Acciones" [ref=e657]
+            - rowgroup [ref=e658]:
+              - row "Admin Test Admin Test admin@agrisas.test viewer admin Hoy" [ref=e659]:
+                - cell "Admin Test Admin Test" [ref=e660]:
+                  - generic [ref=e661]:
+                    - img "Admin Test" [ref=e663]
+                    - generic [ref=e664]: Admin Test
+                - cell "admin@agrisas.test" [ref=e665]
+                - cell "viewer admin" [ref=e666]:
+                  - generic [ref=e667]:
+                    - generic [ref=e668]: viewer
+                    - generic [ref=e669]: admin
+                - cell "Hoy" [ref=e670]
+                - cell [ref=e671]:
+                  - generic [ref=e672]:
+                    - button "Editar usuario" [ref=e673] [cursor=pointer]:
+                      - generic [ref=e674]: edit
+                    - button "Eliminar usuario" [ref=e675] [cursor=pointer]:
+                      - generic [ref=e676]: delete
+              - row "Updated by Admin Updated by Admin rbac-test-1779077816@agrisas.test viewer Hoy" [ref=e677]:
+                - cell "Updated by Admin Updated by Admin" [ref=e678]:
+                  - generic [ref=e679]:
+                    - img "Updated by Admin" [ref=e681]
+                    - generic [ref=e682]: Updated by Admin
+                - cell "rbac-test-1779077816@agrisas.test" [ref=e683]
+                - cell "viewer" [ref=e684]:
+                  - generic [ref=e686]: viewer
+                - cell "Hoy" [ref=e687]
+                - cell [ref=e688]:
+                  - generic [ref=e689]:
+                    - button "Editar usuario" [ref=e690] [cursor=pointer]:
+                      - generic [ref=e691]: edit
+                    - button "Eliminar usuario" [ref=e692] [cursor=pointer]:
+                      - generic [ref=e693]: delete
+          - generic [ref=e247]:
+            - generic [ref=e248]: Mostrando 1–2 de 9 usuarios
+            - generic [ref=e249]:
+              - generic [ref=e250]:
+                - generic [ref=e251]: "Por página:"
+                - combobox "Por página:" [ref=e252]:
+                  - option "10"
+                  - option "20" [selected]
+                  - option "50"
+              - generic [ref=e253]:
+                - button "Página anterior" [disabled] [ref=e254]:
+                  - generic [ref=e255]: chevron_left
+                - button "Página siguiente" [ref=e256] [cursor=pointer]:
+                  - generic [ref=e257]: chevron_right
+  - alert [ref=e258]

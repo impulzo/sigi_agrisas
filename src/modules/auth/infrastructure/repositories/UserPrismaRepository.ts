@@ -17,13 +17,19 @@ export class UserPrismaRepository implements UserRepository {
   constructor(private readonly db: PrismaClient) {}
 
   async findByEmail(email: string): Promise<User | null> {
-    const row = await this.db.user.findUnique({ where: { email } });
+    const row = await this.db.user.findUnique({
+      where: { email },
+      include: { roles: { include: { role: true } } },
+    });
     if (!row) return null;
     return UserMapper.toDomain(row);
   }
 
   async findById(id: string): Promise<User | null> {
-    const row = await this.db.user.findUnique({ where: { id } });
+    const row = await this.db.user.findUnique({
+      where: { id },
+      include: { roles: { include: { role: true } } },
+    });
     if (!row) return null;
     return UserMapper.toDomain(row);
   }

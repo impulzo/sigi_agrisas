@@ -1,0 +1,241 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useCurrentUser } from "../../../_hooks/useCurrentUser";
+import { useQuoteDetail } from "../_logic/hooks/useQuoteDetail";
+import { useQuoteMutations } from "../_logic/hooks/useQuoteMutations";
+import { QuoteStatusBadge } from "./QuoteStatusBadge";
+import { QuoteItemsTable } from "./QuoteItemsTable";
+import { QuoteActionsBar } from "./QuoteActionsBar";
+import { AuthorizeQuoteModal } from "./AuthorizeQuoteModal";
+import { CancelQuoteModal } from "./CancelQuoteModal";
+import { ConvertQuoteModal } from "./ConvertQuoteModal";
+import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
+import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
+import { Icon } from "../../../_components/atoms/Icon/Icon";
+
+const MX = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  minimumFractionDigits: 2,
+});
+function fmt(n: number) { return MX.format(n); }
+function fmtDate(d: Date | null | undefined) {
+  if (!d) return "—";
+  return new Intl.DateTimeFormat("es-MX", { dateStyle: "long", timeStyle: "short" }).format(d);
+}
+
+type Modal = "authorize" | "cancel" | "convert" | null;
+
+interface QuoteDetailPageProps {
+  id: string;
+}
+
+export function QuoteDetailPage({ id }: QuoteDetailPageProps) {
+  const { can } = useCurrentUser();
+  const { quote, isLoading, error, refresh } = useQuoteDetail(id);
+  const { isSaving, authorize, cancel, convert } = useQuoteMutations();
+  const [modal, setModal] = useState<Modal>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (error || !quote) {
+    return (
+      <EmptyState
+        icon="warning"
+        title="No se encontró la cotización"
+        description={error?.message ?? "La cotización no existe o no tienes acceso."}
+        action={
+          <Link href="/quotes" className="text-primary hover:underline text-body-sm">
+            Volver a cotizaciones
+          </Link>
+        }
+      />
+    );
+  }
+
+  const folioLabel = quote.folioPrefix
+    ? `${quote.folioPrefix}-${quote.folioNumber}`
+    : String(quote.folioNumber);
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <Link href="/quotes" className="text-on-surface-variant hover:text-on-surface">
+              <Icon name="arrow_back" className="text-[20px]" />
+            </Link>
+            <h1 className="text-headline-md font-semibold text-on-surface">
+              Cotización {folioLabel}
+            </h1>
+            <QuoteStatusBadge
+              status={quote.status as "draft" | "authorized" | "converted" | "cancelled"}
+              isExpired={quote.isExpired}
+            />
+          </div>
+          <p className="text-body-sm text-on-surface-variant pl-9">
+            Creada {fmtDate(quote.createdAt)}
+          </p>
+        </div>
+
+        <div className="text-right">
+          <div className="text-display-sm font-bold text-on-surface tabular-nums">
+            {fmt(quote.total)}
+          </div>
+          <div className="text-body-sm text-on-surface-variant">Total cotización</div>
+        </div>
+      </div>
+
+      {/* Expired banner */}
+      {quote.isExpired && (
+        <div className="flex items-center gap-2 bg-error-container text-on-error-container rounded-xl px-4 py-3">
+          <Icon name="warning" className="text-[20px]" />
+          <span className="text-body-sm font-medium">
+            Esta cotización venció el {fmtDate(quote.expiresAt)}.
+            Las acciones Autorizar y Convertir están deshabilitadas.
+          </span>
+        </div>
+      )}
+
+      {/* Cancelled banner */}
+      {quote.status === "cancelled" && quote.cancellationReason && (
+        <div className="bg-surface-container-high rounded-xl px-4 py-3">
+          <p className="text-label-sm text-on-surface-variant">Motivo de cancelación</p>
+          <p className="text-body-sm text-on-surface mt-1">{quote.cancellationReason}</p>
+        </div>
+      )}
+
+      {/* Converted banner */}
+      {quote.status === "converted" && quote.convertedSaleId && (
+        <div className="flex items-center gap-2 bg-primary-container text-on-primary-container rounded-xl px-4 py-3">
+          <Icon name="task_alt" className="text-[20px]" />
+          <span className="text-body-sm font-medium">
+            Convertida a venta.{" "}
+            <Link href={`/sales/${quote.convertedSaleId}`} className="underline">
+              Ver venta generada
+            </Link>
+          </span>
+        </div>
+      )}
+
+      {/* Action bar */}
+      <QuoteActionsBar
+        quote={quote}
+        can={can}
+        isSaving={isSaving}
+        onAuthorize={() => setModal("authorize")}
+        onCancel={() => setModal("cancel")}
+        onConvert={() => setModal("convert")}
+      />
+
+      {/* Metadata grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-surface-container-low rounded-2xl p-4">
+        <div>
+          <p className="text-label-sm text-on-surface-variant">Cliente</p>
+          <p className="text-body-md text-on-surface">{quote.customerName ?? "—"}</p>
+        </div>
+        <div>
+          <p className="text-label-sm text-on-surface-variant">Sucursal</p>
+          <p className="text-body-md text-on-surface">{quote.branchName ?? "—"}</p>
+        </div>
+        <div>
+          <p className="text-label-sm text-on-surface-variant">Vendedor</p>
+          <p className="text-body-md text-on-surface">{quote.creatorName ?? "—"}</p>
+        </div>
+        <div>
+          <p className="text-label-sm text-on-surface-variant">Vencimiento</p>
+          <p className="text-body-md text-on-surface">{fmtDate(quote.expiresAt)}</p>
+        </div>
+        {quote.authorizedAt && (
+          <div>
+            <p className="text-label-sm text-on-surface-variant">Autorizada por</p>
+            <p className="text-body-md text-on-surface">{quote.authorizedByName ?? "—"}</p>
+          </div>
+        )}
+        {quote.notes && (
+          <div className="col-span-2 md:col-span-3">
+            <p className="text-label-sm text-on-surface-variant">Notas</p>
+            <p className="text-body-md text-on-surface">{quote.notes}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Items */}
+      <div className="bg-surface-container-low rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-outline-variant">
+          <h2 className="text-title-md font-semibold text-on-surface">Artículos</h2>
+        </div>
+        <QuoteItemsTable items={quote.items} />
+      </div>
+
+      {/* Totals */}
+      <div className="flex justify-end">
+        <div className="space-y-1 text-right min-w-[240px]">
+          <div className="flex justify-between gap-8">
+            <span className="text-body-sm text-on-surface-variant">Subtotal</span>
+            <span className="tabular-nums">{fmt(quote.subtotal)}</span>
+          </div>
+          <div className="flex justify-between gap-8">
+            <span className="text-body-sm text-on-surface-variant">Impuestos</span>
+            <span className="tabular-nums">{fmt(quote.taxTotal)}</span>
+          </div>
+          <div className="flex justify-between gap-8 border-t border-outline-variant pt-1 mt-1">
+            <span className="text-body-md font-semibold text-on-surface">Total</span>
+            <span className="tabular-nums font-bold text-title-md">{fmt(quote.total)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {modal === "authorize" && (
+        <AuthorizeQuoteModal
+          quote={quote}
+          onClose={() => setModal(null)}
+          onSuccess={() => { setModal(null); refresh(); }}
+          onError={showToast}
+          authorize={authorize}
+          isSaving={isSaving}
+        />
+      )}
+      {modal === "cancel" && (
+        <CancelQuoteModal
+          quote={quote}
+          onClose={() => setModal(null)}
+          onSuccess={() => { setModal(null); refresh(); }}
+          onError={showToast}
+          cancel={cancel}
+          isSaving={isSaving}
+        />
+      )}
+      {modal === "convert" && (
+        <ConvertQuoteModal
+          quote={quote}
+          onClose={() => setModal(null)}
+          onError={showToast}
+          convert={convert}
+          isSaving={isSaving}
+        />
+      )}
+
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 bg-error-container text-on-error-container rounded-xl px-4 py-3 text-body-sm shadow-lg max-w-sm">
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -16,6 +16,7 @@ const config: Config = {
       transform: {
         "^.+\\.tsx?$": ["ts-jest", { tsconfig: "tsconfig.json" }],
       },
+      setupFilesAfterEnv: ["<rootDir>/jest.setup.backend.ts"],
     },
     {
       displayName: "ui",

@@ -1,0 +1,131 @@
+import { StyleSheet } from "@react-pdf/renderer";
+
+export const pdfStyles = StyleSheet.create({
+  page: {
+    fontFamily: "Helvetica",
+    fontSize: 9,
+    paddingTop: 30,
+    paddingBottom: 40,
+    paddingHorizontal: 30,
+    color: "#111",
+  },
+  header: {
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+    paddingBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 4,
+  },
+  headerMeta: {
+    fontSize: 8,
+    color: "#555",
+  },
+  section: {
+    marginBottom: 12,
+  },
+  branchTitle: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    backgroundColor: "#f0f0f0",
+    padding: "4 6",
+    marginBottom: 4,
+  },
+  departmentTitle: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    marginTop: 6,
+    marginBottom: 2,
+    paddingLeft: 4,
+    color: "#333",
+  },
+  tableHeader: {
+    flexDirection: "row",
+    backgroundColor: "#e0e0e0",
+    padding: "3 4",
+    fontFamily: "Helvetica-Bold",
+    fontSize: 8,
+  },
+  tableRow: {
+    flexDirection: "row",
+    padding: "2 4",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#eee",
+  },
+  tableRowAlt: {
+    flexDirection: "row",
+    padding: "2 4",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#eee",
+    backgroundColor: "#fafafa",
+  },
+  cell: {
+    flex: 1,
+    fontSize: 8,
+  },
+  cellNarrow: {
+    width: 50,
+    fontSize: 8,
+  },
+  cellWide: {
+    flex: 2,
+    fontSize: 8,
+  },
+  subtotal: {
+    flexDirection: "row",
+    padding: "2 4",
+    backgroundColor: "#f5f5f5",
+    borderTopWidth: 0.5,
+    borderTopColor: "#ccc",
+    marginBottom: 4,
+    fontFamily: "Helvetica-Bold",
+    fontSize: 8,
+  },
+  totals: {
+    marginTop: 12,
+    padding: "6 8",
+    backgroundColor: "#e8e8e8",
+    borderTopWidth: 1,
+    borderTopColor: "#999",
+    fontFamily: "Helvetica-Bold",
+    fontSize: 9,
+  },
+  totalsRow: {
+    flexDirection: "row",
+    marginBottom: 2,
+  },
+  totalsLabel: {
+    flex: 1,
+  },
+  totalsValue: {
+    width: 80,
+    textAlign: "right",
+  },
+  footer: {
+    position: "absolute",
+    bottom: 20,
+    left: 30,
+    right: 30,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    fontSize: 8,
+    color: "#888",
+    borderTopWidth: 0.5,
+    borderTopColor: "#ccc",
+    paddingTop: 4,
+  },
+  emptyMessage: {
+    marginTop: 24,
+    textAlign: "center",
+    color: "#888",
+    fontSize: 11,
+  },
+  badge: {
+    fontSize: 7,
+    color: "#c00",
+    fontFamily: "Helvetica-Bold",
+  },
+});

@@ -30,6 +30,8 @@ describe("LoginUseCase", () => {
       User.create("user-1", {
         email: "user@example.com",
         passwordHash: "hashed:correctpass",
+        roles: [],
+        branchId: null,
         createdAt: now,
         updatedAt: now,
       })

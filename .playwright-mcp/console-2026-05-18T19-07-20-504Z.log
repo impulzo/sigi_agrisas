@@ -1,0 +1,22 @@
+[   55401ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[   55441ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/favicon.ico:0
+[  250831ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  251009ms] [LOG] [Fast Refresh] done in 178ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  255654ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  255813ms] [LOG] [Fast Refresh] done in 160ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  255987ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[  473235ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[  476974ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ chrome-error://chromewebdata/:0
+[  479911ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[  495930ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[  496189ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:3002/api/v1/admin/roles:0
+[  496195ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:3002/api/v1/admin/roles:0
+[  630517ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[  636049ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[  644586ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:3002/api/v1/admin/users/e9db513d-ae07-421d-94b3-4d3b512dcb54/permissions:0
+[  653827ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[  653858ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:3002/api/v1/admin/users?page=1&pageSize=20:0
+[  653861ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:3002/api/v1/admin/users/e9db513d-ae07-421d-94b3-4d3b512dcb54/permissions:0
+[  653863ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:3002/api/v1/admin/roles:0
+[  653868ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:3002/api/v1/admin/users?page=1&pageSize=20:0
+[  653870ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:3002/api/v1/admin/roles:0

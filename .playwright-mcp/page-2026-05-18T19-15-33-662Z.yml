@@ -1,0 +1,121 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e28]: Inicio | Agrisas
+  - generic [ref=e29]:
+    - complementary [ref=e30]:
+      - generic [ref=e31]: A
+      - navigation "Primary" [ref=e32]:
+        - link "Inicio" [ref=e33] [cursor=pointer]:
+          - /url: /dashboard
+          - generic [ref=e34]: dashboard
+          - generic [ref=e35]: Inicio
+        - link "POS" [ref=e36] [cursor=pointer]:
+          - /url: /pos
+          - generic [ref=e37]: point_of_sale
+          - generic [ref=e38]: POS
+        - link "Inventory" [ref=e39] [cursor=pointer]:
+          - /url: /inventory
+          - generic [ref=e40]: inventory_2
+          - generic [ref=e41]: Inventory
+        - link "Billing" [ref=e42] [cursor=pointer]:
+          - /url: /billing
+          - generic [ref=e43]: receipt_long
+          - generic [ref=e44]: Billing
+        - link "Usuarios" [ref=e45] [cursor=pointer]:
+          - /url: /users
+          - generic [ref=e46]: group
+          - generic [ref=e47]: Usuarios
+      - generic [ref=e48]:
+        - link "Support" [ref=e49] [cursor=pointer]:
+          - /url: /support
+          - generic [ref=e50]: contact_support
+          - generic [ref=e51]: Support
+        - link "Account" [ref=e52] [cursor=pointer]:
+          - /url: /account
+          - generic [ref=e53]: account_circle
+          - generic [ref=e54]: Account
+    - banner [ref=e55]:
+      - generic [ref=e56]:
+        - heading "Agrisas" [level=1] [ref=e57]
+        - generic [ref=e58]:
+          - generic [ref=e59]: search
+          - searchbox "Search data..." [ref=e60]
+      - generic [ref=e61]:
+        - button "Notificaciones" [ref=e62] [cursor=pointer]:
+          - generic [ref=e63]: notifications
+        - button "Ayuda" [ref=e64] [cursor=pointer]:
+          - generic [ref=e65]: help_outline
+        - button "Ajustes" [ref=e66] [cursor=pointer]:
+          - generic [ref=e67]: settings
+        - img "viewer" [ref=e68]: V
+    - main [ref=e69]:
+      - generic [ref=e70]:
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - paragraph [ref=e73]: Operational Overview
+            - heading "Welcome back, viewer" [level=2] [ref=e74]
+          - link "Nueva venta" [ref=e75] [cursor=pointer]:
+            - /url: /pos
+            - generic [ref=e76]: add
+            - text: Nueva venta
+        - generic [ref=e77]:
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - paragraph [ref=e82]: Total Sales Today
+              - heading "$24,850.00" [level=3] [ref=e83]
+            - generic [ref=e84]:
+              - generic [ref=e85]: trending_up
+              - generic [ref=e86]: +12.4%
+          - generic [ref=e97]:
+            - generic [ref=e98]:
+              - generic [ref=e99]: agriculture
+              - heading "Inventory Status" [level=4] [ref=e100]
+              - paragraph [ref=e101]: 1,240 Items
+            - generic [ref=e102]:
+              - generic [ref=e104]:
+                - generic [ref=e105]: Seeds
+                - generic [ref=e106]: 450kg
+              - generic [ref=e110]:
+                - generic [ref=e111]: Fertilizers
+                - generic [ref=e112]: 790kg
+          - generic [ref=e116]:
+            - generic [ref=e117]:
+              - heading "Low Stock Alerts" [level=4] [ref=e118]
+              - generic [ref=e119]: warning
+            - generic [ref=e120]:
+              - generic [ref=e121]:
+                - generic [ref=e123]: grain
+                - generic [ref=e124]:
+                  - paragraph [ref=e125]: Wheat Seeds (Organic)
+                  - paragraph [ref=e126]: Only 5 bags remaining
+                - button "Restock" [ref=e127] [cursor=pointer]
+              - generic [ref=e128]:
+                - generic [ref=e130]: science
+                - generic [ref=e131]:
+                  - paragraph [ref=e132]: NPK 15-15-15
+                  - paragraph [ref=e133]: Below 15% threshold
+                - button "Restock" [ref=e134] [cursor=pointer]
+              - generic [ref=e135]:
+                - generic [ref=e137]: energy_savings_leaf
+                - generic [ref=e138]:
+                  - paragraph [ref=e139]: Bio-Pesticide G1
+                  - paragraph [ref=e140]: 12 units remaining
+                - button "Restock" [ref=e141] [cursor=pointer]
+          - generic [ref=e143]:
+            - generic [ref=e144]:
+              - heading "Recent Activity" [level=4] [ref=e145]
+              - button "View All" [ref=e146] [cursor=pointer]
+            - generic [ref=e147]:
+              - generic [ref=e151]:
+                - paragraph [ref=e152]: New sale recorded by Cashier 04
+                - paragraph [ref=e153]: "2 minutes ago • Invoice #AG-9821"
+              - generic [ref=e157]:
+                - paragraph [ref=e158]: Inventory restocked - Corn Hybrid A
+                - paragraph [ref=e159]: 45 minutes ago • Warehouse B
+              - generic [ref=e163]:
+                - paragraph [ref=e164]: New supplier registered - EcoGrow Systems
+                - paragraph [ref=e165]: 3 hours ago • Verified by Admin
+          - generic [ref=e167]:
+            - img "Mapa de Main Logistics Hub" [ref=e168]
+            - generic [ref=e169]:
+              - paragraph [ref=e170]: Main Logistics Hub
+              - paragraph [ref=e173]: All systems operational

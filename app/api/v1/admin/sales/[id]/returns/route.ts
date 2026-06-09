@@ -1,0 +1,9 @@
+import { NextRequest } from "next/server";
+import { requirePermission } from "@/modules/rbac/infrastructure/http/requirePermission";
+import { returnsController } from "@/modules/returns/infrastructure/di/container";
+
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const guard = await requirePermission(req, "returns:read");
+  if (guard) return guard;
+  return returnsController.listBySale(req, params.id);
+}

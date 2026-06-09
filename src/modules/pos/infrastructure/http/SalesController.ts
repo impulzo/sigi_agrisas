@@ -1,0 +1,255 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { ListSalesUseCase } from "../../application/use-cases/ListSalesUseCase";
+import { GetSaleUseCase } from "../../application/use-cases/GetSaleUseCase";
+import { CreateSaleUseCase } from "../../application/use-cases/CreateSaleUseCase";
+import { CancelSaleUseCase } from "../../application/use-cases/CancelSaleUseCase";
+import { EditCompletedSaleUseCase } from "../../application/use-cases/EditCompletedSaleUseCase";
+import { SaleNotFoundError } from "../../domain/errors/SaleNotFoundError";
+import { EmptySaleError } from "../../domain/errors/EmptySaleError";
+import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
+import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
+import { CancelledSaleNotEditableError } from "../../domain/errors/CancelledSaleNotEditableError";
+import { SaleNotEditableHereError } from "../../domain/errors/SaleNotEditableHereError";
+import { QuoteLinkInvalidError } from "../../domain/errors/QuoteLinkInvalidError";
+import { SaleStatus } from "../../domain/entities/Sale";
+import { SaleHasActivePaymentsError } from "@/modules/payments/domain/errors/SaleHasActivePaymentsError";
+import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
+import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
+import {
+  enforceBranchScope,
+  resolveScopedBranchId,
+} from "@/modules/rbac/infrastructure/http/enforceBranchScope";
+import { requirePermission } from "@/modules/rbac/infrastructure/http/requirePermission";
+import { BranchRepository } from "@/modules/branches/application/ports/BranchRepository";
+import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
+import { PosLookupService } from "../../application/ports/PosLookups";
+
+const uuidSchema = z.string().uuid("Invalid sale ID format");
+
+const STATUS_VALUES: SaleStatus[] = ["completed", "cancelled", "edited"];
+
+const listQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
+  branchId: z.string().uuid().optional(),
+  customerId: z.string().uuid().optional(),
+  status: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  search: z
+    .string()
+    .optional()
+    .transform((v) => v?.trim() || undefined)
+    .pipe(z.string().min(2, "search must be at least 2 characters").optional()),
+});
+
+const saleItemSchema = z.object({
+  productId: z.string().uuid(),
+  productPriceId: z.string().uuid(),
+  quantity: z.number().positive("quantity must be > 0"),
+});
+
+const createSaleSchema = z.object({
+  branchId: z.string().uuid(),
+  customerId: z.string().uuid(),
+  paymentMethodId: z.string().uuid(),
+  folioId: z.string().uuid(),
+  notes: z.string().max(1000).nullable().optional(),
+  quoteId: z.string().uuid().nullable().optional(),
+  items: z.array(saleItemSchema).min(1, "Sale must include at least one item"),
+});
+
+const cancelSaleSchema = z.object({
+  reason: z.string().max(500).nullable().optional(),
+});
+
+const editSaleSchema = z.object({
+  customerId: z.string().uuid().optional(),
+  paymentMethodId: z.string().uuid().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+  items: z.array(saleItemSchema).min(1, "Sale must include at least one item"),
+});
+
+export class SalesController {
+  constructor(
+    private readonly listUseCase: ListSalesUseCase,
+    private readonly getUseCase: GetSaleUseCase,
+    private readonly createUseCase: CreateSaleUseCase,
+    private readonly cancelUseCase: CancelSaleUseCase,
+    private readonly editUseCase: EditCompletedSaleUseCase,
+    private readonly branchRepo: BranchRepository,
+    private readonly lookups: PosLookupService,
+    private readonly authzService: AuthorizationService
+  ) {}
+
+  async list(req: NextRequest): Promise<NextResponse> {
+    const { searchParams } = new URL(req.url);
+    const parsed = listQuerySchema.safeParse({
+      page: searchParams.get("page") ?? undefined,
+      pageSize: searchParams.get("pageSize") ?? undefined,
+      branchId: searchParams.get("branchId") ?? undefined,
+      customerId: searchParams.get("customerId") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+      from: searchParams.get("from") ?? undefined,
+      to: searchParams.get("to") ?? undefined,
+      search: searchParams.get("search") ?? undefined,
+    });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    // Resolve branch scoping
+    const scoped = await resolveScopedBranchId(req, parsed.data.branchId, this.authzService);
+    if (scoped instanceof NextResponse) return scoped;
+
+    const statuses = parsed.data.status
+      ? parsed.data.status
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s): s is SaleStatus => (STATUS_VALUES as string[]).includes(s))
+      : undefined;
+
+    const result = await this.listUseCase.execute({
+      page: parsed.data.page,
+      pageSize: parsed.data.pageSize,
+      branchId: scoped.branchId,
+      customerId: parsed.data.customerId,
+      statuses,
+      from: parsed.data.from ? new Date(parsed.data.from) : undefined,
+      to: parsed.data.to ? new Date(parsed.data.to) : undefined,
+      search: parsed.data.search,
+    });
+    return NextResponse.json(result);
+  }
+
+  async getById(req: NextRequest, id: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(id);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+    try {
+      const { dto, branchId } = await this.getUseCase.execute(idParsed.data);
+      const scope = await enforceBranchScope(req, branchId, this.authzService);
+      if (scope) return scope;
+      return NextResponse.json(dto);
+    } catch (err) {
+      if (err instanceof SaleNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      throw err;
+    }
+  }
+
+  async create(req: NextRequest): Promise<NextResponse> {
+    const body = await req.json().catch(() => ({}));
+    const parsed = createSaleSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+    const scope = await enforceBranchScope(req, parsed.data.branchId, this.authzService);
+    if (scope) return scope;
+
+    // Check sales:create_credit BEFORE invoking the use case when using a credit method
+    const pm = await this.lookups.getPaymentMethod(parsed.data.paymentMethodId);
+    if (pm?.isCredit) {
+      const permCheck = await requirePermission(req, "sales:create_credit", this.authzService);
+      if (permCheck) return permCheck;
+    }
+
+    const cashierId = req.headers.get("x-user-id") ?? "";
+    try {
+      const { dto } = await this.createUseCase.execute(parsed.data, cashierId);
+      return NextResponse.json(dto, { status: 201 });
+    } catch (err) {
+      if (err instanceof EmptySaleError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof ProductPriceMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof InactiveResourceError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof QuoteLinkInvalidError) {
+        return NextResponse.json({ error: err.message, reason: err.reason }, { status: 400 });
+      }
+      if (err instanceof CustomerHasNoCreditLineError) {
+        return NextResponse.json({ error: err.message }, { status: 409 });
+      }
+      if (err instanceof CreditLimitExceededError) {
+        return NextResponse.json({ error: err.message, available: err.available }, { status: 409 });
+      }
+      throw err;
+    }
+  }
+
+  async cancel(req: NextRequest, id: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(id);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+    const body = await req.json().catch(() => ({}));
+    const parsed = cancelSaleSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+    try {
+      // Resolve sale first to extract branchId for scope check
+      const existing = await this.getUseCase.execute(idParsed.data);
+      const scope = await enforceBranchScope(req, existing.branchId, this.authzService);
+      if (scope) return scope;
+      const { dto } = await this.cancelUseCase.execute(idParsed.data, parsed.data);
+      return NextResponse.json(dto);
+    } catch (err) {
+      if (err instanceof SaleNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      if (err instanceof SaleHasActivePaymentsError) {
+        return NextResponse.json({ error: "SaleHasActivePayments", paymentIds: err.paymentIds }, { status: 409 });
+      }
+      throw err;
+    }
+  }
+
+  async edit(req: NextRequest, id: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(id);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+    const body = await req.json().catch(() => ({}));
+    const parsed = editSaleSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    // HQ guard: bypass or x-user-branch-id === headquarters.id
+    const userId = req.headers.get("x-user-id") ?? "";
+    const bypass = await this.authzService.userCan(userId, "branches:access_all");
+    if (!bypass) {
+      const userBranchId = req.headers.get("x-user-branch-id") ?? "";
+      const hq = await this.branchRepo.findHeadquarters();
+      if (!hq || userBranchId === "" || userBranchId !== hq.id) {
+        return NextResponse.json(
+          { error: "Sales can only be edited from the headquarters branch" },
+          { status: 403 }
+        );
+      }
+    }
+
+    // If changing to a credit payment method, require sales:create_credit
+    if (parsed.data.paymentMethodId) {
+      const pm = await this.lookups.getPaymentMethod(parsed.data.paymentMethodId);
+      if (pm?.isCredit) {
+        const permCheck = await requirePermission(req, "sales:create_credit", this.authzService);
+        if (permCheck) return permCheck;
+      }
+    }
+
+    try {
+      const { dto } = await this.editUseCase.execute(idParsed.data, parsed.data);
+      return NextResponse.json(dto);
+    } catch (err) {
+      if (err instanceof SaleNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      if (err instanceof CancelledSaleNotEditableError) return NextResponse.json({ error: err.message }, { status: 409 });
+      if (err instanceof SaleNotEditableHereError) return NextResponse.json({ error: err.message }, { status: 403 });
+      if (err instanceof EmptySaleError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof ProductPriceMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof InactiveResourceError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof SaleHasActivePaymentsError) {
+        return NextResponse.json({ error: "SaleHasActivePayments", paymentIds: err.paymentIds }, { status: 409 });
+      }
+      throw err;
+    }
+  }
+}

@@ -1,0 +1,108 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]: A
+      - navigation "Primary" [ref=e5]:
+        - link "Inicio" [ref=e6] [cursor=pointer]:
+          - /url: /dashboard
+          - generic [ref=e7]: dashboard
+          - generic [ref=e8]: Inicio
+      - generic [ref=e9]:
+        - link "Support" [ref=e10] [cursor=pointer]:
+          - /url: /support
+          - generic [ref=e11]: contact_support
+          - generic [ref=e12]: Support
+        - link "Account" [ref=e13] [cursor=pointer]:
+          - /url: /account
+          - generic [ref=e14]: account_circle
+          - generic [ref=e15]: Account
+        - button "Cerrar sesión" [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]: logout
+          - generic [ref=e18]: Salir
+    - banner [ref=e19]:
+      - generic [ref=e20]:
+        - heading "Agrisas" [level=1] [ref=e21]
+        - generic [ref=e22]:
+          - generic [ref=e23]: search
+          - searchbox "Search data..." [ref=e24]
+      - generic [ref=e25]:
+        - button "Notificaciones" [ref=e26] [cursor=pointer]:
+          - generic [ref=e27]: notifications
+        - button "Ayuda" [ref=e28] [cursor=pointer]:
+          - generic [ref=e29]: help_outline
+        - button "Ajustes" [ref=e30] [cursor=pointer]:
+          - generic [ref=e31]: settings
+        - img "adminqa" [ref=e32]: A
+    - main [ref=e33]:
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - paragraph [ref=e37]: Operational Overview
+            - heading "Welcome back, adminqa" [level=2] [ref=e38]
+          - link "Nueva venta" [ref=e39] [cursor=pointer]:
+            - /url: /pos
+            - generic [ref=e40]: add
+            - text: Nueva venta
+        - generic [ref=e41]:
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - paragraph [ref=e46]: Total Sales Today
+              - heading "$24,850.00" [level=3] [ref=e47]
+            - generic [ref=e48]:
+              - generic [ref=e49]: trending_up
+              - generic [ref=e50]: +12.4%
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - generic [ref=e63]: agriculture
+              - heading "Inventory Status" [level=4] [ref=e64]
+              - paragraph [ref=e65]: 1,240 Items
+            - generic [ref=e66]:
+              - generic [ref=e68]:
+                - generic [ref=e69]: Seeds
+                - generic [ref=e70]: 450kg
+              - generic [ref=e74]:
+                - generic [ref=e75]: Fertilizers
+                - generic [ref=e76]: 790kg
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - heading "Low Stock Alerts" [level=4] [ref=e82]
+              - generic [ref=e83]: warning
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - generic [ref=e87]: grain
+                - generic [ref=e88]:
+                  - paragraph [ref=e89]: Wheat Seeds (Organic)
+                  - paragraph [ref=e90]: Only 5 bags remaining
+                - button "Restock" [ref=e91] [cursor=pointer]
+              - generic [ref=e92]:
+                - generic [ref=e94]: science
+                - generic [ref=e95]:
+                  - paragraph [ref=e96]: NPK 15-15-15
+                  - paragraph [ref=e97]: Below 15% threshold
+                - button "Restock" [ref=e98] [cursor=pointer]
+              - generic [ref=e99]:
+                - generic [ref=e101]: energy_savings_leaf
+                - generic [ref=e102]:
+                  - paragraph [ref=e103]: Bio-Pesticide G1
+                  - paragraph [ref=e104]: 12 units remaining
+                - button "Restock" [ref=e105] [cursor=pointer]
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - heading "Recent Activity" [level=4] [ref=e109]
+              - button "View All" [ref=e110] [cursor=pointer]
+            - generic [ref=e111]:
+              - generic [ref=e115]:
+                - paragraph [ref=e116]: New sale recorded by Cashier 04
+                - paragraph [ref=e117]: "2 minutes ago • Invoice #AG-9821"
+              - generic [ref=e121]:
+                - paragraph [ref=e122]: Inventory restocked - Corn Hybrid A
+                - paragraph [ref=e123]: 45 minutes ago • Warehouse B
+              - generic [ref=e127]:
+                - paragraph [ref=e128]: New supplier registered - EcoGrow Systems
+                - paragraph [ref=e129]: 3 hours ago • Verified by Admin
+          - generic [ref=e131]:
+            - img "Mapa de Main Logistics Hub" [ref=e132]
+            - generic [ref=e133]:
+              - paragraph [ref=e134]: Main Logistics Hub
+              - paragraph [ref=e137]: All systems operational
+  - alert [ref=e138]

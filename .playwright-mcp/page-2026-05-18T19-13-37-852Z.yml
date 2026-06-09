@@ -1,0 +1,276 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]: A
+      - navigation "Primary" [ref=e5]:
+        - link "Inicio" [ref=e6] [cursor=pointer]:
+          - /url: /dashboard
+          - generic [ref=e7]: dashboard
+          - generic [ref=e8]: Inicio
+        - link "POS" [ref=e9] [cursor=pointer]:
+          - /url: /pos
+          - generic [ref=e10]: point_of_sale
+          - generic [ref=e11]: POS
+        - link "Inventory" [ref=e12] [cursor=pointer]:
+          - /url: /inventory
+          - generic [ref=e13]: inventory_2
+          - generic [ref=e14]: Inventory
+        - link "Billing" [ref=e15] [cursor=pointer]:
+          - /url: /billing
+          - generic [ref=e16]: receipt_long
+          - generic [ref=e17]: Billing
+        - link "Usuarios" [ref=e47] [cursor=pointer]:
+          - /url: /users
+          - generic [ref=e48]: group
+          - generic [ref=e49]: Usuarios
+        - link "Roles" [ref=e50] [cursor=pointer]:
+          - /url: /roles
+          - generic [ref=e51]: shield_person
+          - generic [ref=e52]: Roles
+      - generic [ref=e18]:
+        - link "Support" [ref=e19] [cursor=pointer]:
+          - /url: /support
+          - generic [ref=e20]: contact_support
+          - generic [ref=e21]: Support
+        - link "Account" [ref=e22] [cursor=pointer]:
+          - /url: /account
+          - generic [ref=e23]: account_circle
+          - generic [ref=e24]: Account
+    - banner [ref=e25]:
+      - generic [ref=e26]:
+        - heading "Agrisas" [level=1] [ref=e27]
+        - generic [ref=e28]:
+          - generic [ref=e29]: search
+          - searchbox "Search data..." [ref=e30]
+      - generic [ref=e31]:
+        - button "Notificaciones" [ref=e32] [cursor=pointer]:
+          - generic [ref=e33]: notifications
+        - button "Ayuda" [ref=e34] [cursor=pointer]:
+          - generic [ref=e35]: help_outline
+        - button "Ajustes" [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]: settings
+        - img "admin" [ref=e38]: A
+    - main [ref=e39]:
+      - generic [ref=e41]:
+        - generic [ref=e54]:
+          - heading "Administración de Usuarios" [level=1] [ref=e55]
+          - paragraph [ref=e56]: Gestiona los usuarios registrados en el sistema
+        - generic [ref=e57]:
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - generic:
+                - generic: search
+              - textbox "Buscar por nombre o email" [ref=e61]
+            - generic [ref=e62]:
+              - button "Todos" [ref=e63] [cursor=pointer]
+              - button "admin" [ref=e64] [cursor=pointer]
+              - button "viewer" [ref=e65] [cursor=pointer]
+          - table [ref=e430]:
+            - rowgroup [ref=e431]:
+              - row "Usuario Email Roles Creado Acciones" [ref=e432]:
+                - columnheader "Usuario" [ref=e433]
+                - columnheader "Email" [ref=e434]
+                - columnheader "Roles" [ref=e435]
+                - columnheader "Creado" [ref=e436]
+                - columnheader "Acciones" [ref=e437]
+            - rowgroup [ref=e438]:
+              - row "Admin Test Admin Test admin@agrisas.test viewer admin Hoy" [ref=e439]:
+                - cell "Admin Test Admin Test" [ref=e440]:
+                  - generic [ref=e441]:
+                    - img "Admin Test" [ref=e443]
+                    - generic [ref=e444]: Admin Test
+                - cell "admin@agrisas.test" [ref=e445]
+                - cell "viewer admin" [ref=e446]:
+                  - generic [ref=e447]:
+                    - generic [ref=e448]: viewer
+                    - generic [ref=e449]: admin
+                - cell "Hoy" [ref=e450]
+                - cell [ref=e451]:
+                  - generic [ref=e452]:
+                    - button "Editar usuario" [ref=e453] [cursor=pointer]:
+                      - generic [ref=e454]: edit
+                    - button "Eliminar usuario" [ref=e455] [cursor=pointer]:
+                      - generic [ref=e456]: delete
+              - row "Updated by Admin Updated by Admin rbac-test-1779077816@agrisas.test viewer Hoy" [ref=e457]:
+                - cell "Updated by Admin Updated by Admin" [ref=e458]:
+                  - generic [ref=e459]:
+                    - img "Updated by Admin" [ref=e461]
+                    - generic [ref=e462]: Updated by Admin
+                - cell "rbac-test-1779077816@agrisas.test" [ref=e463]
+                - cell "viewer" [ref=e464]:
+                  - generic [ref=e466]: viewer
+                - cell "Hoy" [ref=e467]
+                - cell [ref=e468]:
+                  - generic [ref=e469]:
+                    - button "Editar usuario" [ref=e470] [cursor=pointer]:
+                      - generic [ref=e471]: edit
+                    - button "Eliminar usuario" [ref=e472] [cursor=pointer]:
+                      - generic [ref=e473]: delete
+              - row "Carlos Report Editado Carlos Report Editado test_report_1778755621@agrisas-test.com — Hace 4 días" [ref=e474]:
+                - cell "Carlos Report Editado Carlos Report Editado" [ref=e475]:
+                  - generic [ref=e476]:
+                    - img "Carlos Report Editado" [ref=e478]
+                    - generic [ref=e479]: Carlos Report Editado
+                - cell "test_report_1778755621@agrisas-test.com" [ref=e480]
+                - cell "—" [ref=e481]:
+                  - generic [ref=e483]: —
+                - cell "Hace 4 días" [ref=e484]
+                - cell [ref=e485]:
+                  - generic [ref=e486]:
+                    - button "Editar usuario" [ref=e487] [cursor=pointer]:
+                      - generic [ref=e488]: edit
+                    - button "Eliminar usuario" [ref=e489] [cursor=pointer]:
+                      - generic [ref=e490]: delete
+              - row "Test Emit Test Emit test_emit_1778754693@agrisas-test.com — Hace 4 días" [ref=e491]:
+                - cell "Test Emit Test Emit" [ref=e492]:
+                  - generic [ref=e493]:
+                    - img "Test Emit" [ref=e495]
+                    - generic [ref=e496]: Test Emit
+                - cell "test_emit_1778754693@agrisas-test.com" [ref=e497]
+                - cell "—" [ref=e498]:
+                  - generic [ref=e500]: —
+                - cell "Hace 4 días" [ref=e501]
+                - cell [ref=e502]:
+                  - generic [ref=e503]:
+                    - button "Editar usuario" [ref=e504] [cursor=pointer]:
+                      - generic [ref=e505]: edit
+                    - button "Eliminar usuario" [ref=e506] [cursor=pointer]:
+                      - generic [ref=e507]: delete
+              - row "Carlos Test Carlos Test test_1778752307@agrisas-test.com — Hace 4 días" [ref=e508]:
+                - cell "Carlos Test Carlos Test" [ref=e509]:
+                  - generic [ref=e510]:
+                    - img "Carlos Test" [ref=e512]
+                    - generic [ref=e513]: Carlos Test
+                - cell "test_1778752307@agrisas-test.com" [ref=e514]
+                - cell "—" [ref=e515]:
+                  - generic [ref=e517]: —
+                - cell "Hace 4 días" [ref=e518]
+                - cell [ref=e519]:
+                  - generic [ref=e520]:
+                    - button "Editar usuario" [ref=e521] [cursor=pointer]:
+                      - generic [ref=e522]: edit
+                    - button "Eliminar usuario" [ref=e523] [cursor=pointer]:
+                      - generic [ref=e524]: delete
+              - row "admin@example.com — admin@example.com admin Hace 4 días" [ref=e525]:
+                - cell "admin@example.com —" [ref=e526]:
+                  - generic [ref=e527]:
+                    - img "admin@example.com" [ref=e529]
+                    - generic [ref=e530]: —
+                - cell "admin@example.com" [ref=e531]
+                - cell "admin" [ref=e532]:
+                  - generic [ref=e534]: admin
+                - cell "Hace 4 días" [ref=e535]
+                - cell [ref=e536]:
+                  - generic [ref=e537]:
+                    - button "No puedes editar tu propia cuenta" [disabled] [ref=e538]:
+                      - generic [ref=e539]: edit
+                    - button "No puedes eliminar tu propia cuenta" [disabled] [ref=e540]:
+                      - generic [ref=e541]: delete
+              - row "e2e@agrisas.test — e2e@agrisas.test — Hace 6 días" [ref=e542]:
+                - cell "e2e@agrisas.test —" [ref=e543]:
+                  - generic [ref=e544]:
+                    - img "e2e@agrisas.test" [ref=e546]
+                    - generic [ref=e547]: —
+                - cell "e2e@agrisas.test" [ref=e548]
+                - cell "—" [ref=e549]:
+                  - generic [ref=e551]: —
+                - cell "Hace 6 días" [ref=e552]
+                - cell [ref=e553]:
+                  - generic [ref=e554]:
+                    - button "Editar usuario" [ref=e555] [cursor=pointer]:
+                      - generic [ref=e556]: edit
+                    - button "Eliminar usuario" [ref=e557] [cursor=pointer]:
+                      - generic [ref=e558]: delete
+              - row "flow_test@agrisas.com — flow_test@agrisas.com — Hace 8 días" [ref=e559]:
+                - cell "flow_test@agrisas.com —" [ref=e560]:
+                  - generic [ref=e561]:
+                    - img "flow_test@agrisas.com" [ref=e563]
+                    - generic [ref=e564]: —
+                - cell "flow_test@agrisas.com" [ref=e565]
+                - cell "—" [ref=e566]:
+                  - generic [ref=e568]: —
+                - cell "Hace 8 días" [ref=e569]
+                - cell [ref=e570]:
+                  - generic [ref=e571]:
+                    - button "Editar usuario" [ref=e572] [cursor=pointer]:
+                      - generic [ref=e573]: edit
+                    - button "Eliminar usuario" [ref=e574] [cursor=pointer]:
+                      - generic [ref=e575]: delete
+              - row "test_e2e@agrisas.com — test_e2e@agrisas.com — Hace 8 días" [ref=e576]:
+                - cell "test_e2e@agrisas.com —" [ref=e577]:
+                  - generic [ref=e578]:
+                    - img "test_e2e@agrisas.com" [ref=e580]
+                    - generic [ref=e581]: —
+                - cell "test_e2e@agrisas.com" [ref=e582]
+                - cell "—" [ref=e583]:
+                  - generic [ref=e585]: —
+                - cell "Hace 8 días" [ref=e586]
+                - cell [ref=e587]:
+                  - generic [ref=e588]:
+                    - button "Editar usuario" [ref=e589] [cursor=pointer]:
+                      - generic [ref=e590]: edit
+                    - button "Eliminar usuario" [ref=e591] [cursor=pointer]:
+                      - generic [ref=e592]: delete
+              - row "Usuario de Prueba Usuario de Prueba test_updated@agrisas.test — Hace 9 días" [ref=e593]:
+                - cell "Usuario de Prueba Usuario de Prueba" [ref=e594]:
+                  - generic [ref=e595]:
+                    - img "Usuario de Prueba" [ref=e597]
+                    - generic [ref=e598]: Usuario de Prueba
+                - cell "test_updated@agrisas.test" [ref=e599]
+                - cell "—" [ref=e600]:
+                  - generic [ref=e602]: —
+                - cell "Hace 9 días" [ref=e603]
+                - cell [ref=e604]:
+                  - generic [ref=e605]:
+                    - button "Editar usuario" [ref=e606] [cursor=pointer]:
+                      - generic [ref=e607]: edit
+                    - button "Eliminar usuario" [ref=e608] [cursor=pointer]:
+                      - generic [ref=e609]: delete
+          - generic [ref=e247]:
+            - generic [ref=e248]: Mostrando 1–10 de 10 usuarios
+            - generic [ref=e249]:
+              - generic [ref=e250]:
+                - generic [ref=e251]: "Por página:"
+                - combobox "Por página:" [ref=e252]:
+                  - option "10"
+                  - option "20" [selected]
+                  - option "50"
+              - generic [ref=e253]:
+                - button "Página anterior" [disabled] [ref=e254]:
+                  - generic [ref=e255]: chevron_left
+                - button "Página siguiente" [disabled] [ref=e256]:
+                  - generic [ref=e257]: chevron_right
+        - dialog [ref=e610]:
+          - generic [ref=e611]:
+            - heading "Editar Usuario" [level=2] [ref=e612]
+            - button [active] [ref=e613] [cursor=pointer]:
+              - generic [ref=e614]: close
+          - generic [ref=e615]:
+            - generic [ref=e616]:
+              - img "Test Emit" [ref=e618]
+              - generic [ref=e619]:
+                - paragraph [ref=e620]: Foto de perfil (URL)
+                - textbox "https://example.com/photo.jpg" [ref=e621]
+                - button "Resetear a Gravatar" [ref=e622] [cursor=pointer]
+            - generic [ref=e623]:
+              - generic [ref=e624]: Nombre
+              - textbox "Nombre" [ref=e625]: Test Emit
+            - generic [ref=e626]:
+              - generic [ref=e627]: Email
+              - textbox "Email" [ref=e628]: test_emit_1778754693@agrisas-test.com
+            - generic [ref=e629]:
+              - paragraph [ref=e630]: Roles
+              - generic [ref=e631]:
+                - generic [ref=e632] [cursor=pointer]:
+                  - checkbox "admin" [ref=e633]
+                  - generic [ref=e634]: admin
+                - generic [ref=e635] [cursor=pointer]:
+                  - checkbox "operator" [ref=e636]
+                  - generic [ref=e637]: operator
+                - generic [ref=e638] [cursor=pointer]:
+                  - checkbox "viewer" [ref=e639]
+                  - generic [ref=e640]: viewer
+          - generic [ref=e641]:
+            - button "Cancelar" [ref=e642] [cursor=pointer]
+            - button "Guardar Cambios" [disabled] [ref=e643]
+  - alert [ref=e258]

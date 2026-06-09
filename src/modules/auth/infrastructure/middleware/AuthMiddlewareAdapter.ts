@@ -29,11 +29,16 @@ function extractBearerToken(req: NextRequest): string | null {
 
 function propagateIdentity(
   req: NextRequest,
-  payload: { sub?: unknown; email?: unknown }
+  payload: { sub?: unknown; email?: unknown; roles?: unknown; branchId?: unknown }
 ): NextResponse {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-user-id", (payload.sub as string) ?? "");
   requestHeaders.set("x-user-email", (payload.email as string) ?? "");
+  requestHeaders.set(
+    "x-user-roles",
+    Array.isArray(payload.roles) ? (payload.roles as string[]).join(",") : ""
+  );
+  requestHeaders.set("x-user-branch-id", (payload.branchId as string) ?? "");
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 

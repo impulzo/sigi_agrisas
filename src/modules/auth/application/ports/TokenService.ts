@@ -1,6 +1,8 @@
 export interface TokenPayload {
   sub: string;
   email: string;
+  roles?: string[];
+  branchId?: string | null;
 }
 
 export interface TokenService {

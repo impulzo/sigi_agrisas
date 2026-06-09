@@ -1,0 +1,238 @@
+"use client";
+
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useCurrentUser } from "../../../../_hooks/useCurrentUser";
+import { useDebounce } from "../../../../_hooks/useDebounce";
+import { useProducts } from "../_logic/hooks/useProducts";
+import { useProductMutations } from "../_logic/hooks/useProductMutations";
+import { useDepartmentsOptions } from "../_logic/hooks/useDepartmentsOptions";
+import { ProductsTable } from "./ProductsTable";
+import { ProductEditModal } from "./ProductEditModal";
+import { CatalogShell } from "../../_blocks/CatalogShell";
+import { CatalogToolbar } from "../../_blocks/CatalogToolbar";
+import { CatalogPagination } from "../../_blocks/CatalogPagination";
+import { CatalogEmpty } from "../../_blocks/CatalogEmpty";
+import { CatalogError } from "../../_blocks/CatalogError";
+import { ConfirmDialog } from "../../../../_components/molecules/ConfirmDialog/ConfirmDialog";
+import { Skeleton } from "../../../../_components/atoms/Skeleton/Skeleton";
+import { EmptyState } from "../../../../_components/molecules/EmptyState/EmptyState";
+import { ProductCodeAlreadyInUseError, ProductDepartmentInvalidError } from "../_logic/errors";
+import type { Product } from "../_logic/types/domain";
+import type { CreateProductBody, UpdateProductBody } from "../_logic/types/api";
+
+type ModalMode = "create" | "edit";
+
+interface ModalState {
+  mode: ModalMode;
+  entity: Product | null;
+}
+
+export function ProductsPage() {
+  const router = useRouter();
+  const { can } = useCurrentUser();
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 300);
+  const trimmedSearch = debouncedSearch.trim();
+  const effectiveSearch = trimmedSearch.length >= 2 ? trimmedSearch : undefined;
+  const [departmentId, setDepartmentId] = useState<string | undefined>(undefined);
+  const [includeInactive, setIncludeInactive] = useState(false);
+  const [modalState, setModalState] = useState<ModalState | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [deptError, setDeptError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  const { items, total, isLoading, error, refresh } = useProducts({
+    page,
+    pageSize,
+    search: effectiveSearch,
+    departmentId,
+    includeInactive,
+  });
+
+  const { isSaving, createOne, updateOne, softDeleteOne, reactivateOne, clearError } = useProductMutations();
+  const { options: deptOptions, isLoading: deptLoading } = useDepartmentsOptions();
+
+  const canRead = can("products:read");
+  const canWrite = can("products:write");
+
+  const handleSearchChange = useCallback((val: string) => {
+    setSearchInput(val);
+    setPage(1);
+  }, []);
+
+  const handleDepartmentChange = useCallback((val: string) => {
+    setDepartmentId(val || undefined);
+    setPage(1);
+  }, []);
+
+  const handleIncludeInactiveChange = useCallback((val: boolean) => {
+    setIncludeInactive(val);
+    setPage(1);
+  }, []);
+
+  const handleCreate = useCallback(() => {
+    setCodeError(null);
+    setDeptError(null);
+    setMutationError(null);
+    clearError();
+    setModalState({ mode: "create", entity: null });
+  }, [clearError]);
+
+  const handleEdit = useCallback((entity: Product) => {
+    setCodeError(null);
+    setDeptError(null);
+    setMutationError(null);
+    clearError();
+    setModalState({ mode: "edit", entity });
+  }, [clearError]);
+
+  const handleManage = useCallback((entity: Product) => {
+    router.push(`/catalogs/products/${entity.id}`);
+  }, [router]);
+
+  const handleSave = useCallback(async (data: CreateProductBody | UpdateProductBody) => {
+    setCodeError(null);
+    setDeptError(null);
+    setMutationError(null);
+    try {
+      if (modalState?.mode === "create") {
+        await createOne(data as CreateProductBody);
+      } else if (modalState?.entity) {
+        await updateOne(modalState.entity.id, data as UpdateProductBody);
+      }
+      setModalState(null);
+      refresh();
+    } catch (err) {
+      if (err instanceof ProductCodeAlreadyInUseError) {
+        setCodeError("Este código ya está en uso.");
+      } else if (err instanceof ProductDepartmentInvalidError) {
+        setDeptError("El departamento no existe o está inactivo.");
+      } else {
+        setMutationError((err as Error).message ?? "Error al guardar.");
+      }
+    }
+  }, [modalState, createOne, updateOne, refresh]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!confirmDeleteId) return;
+    const ok = await softDeleteOne(confirmDeleteId);
+    if (ok) {
+      setConfirmDeleteId(null);
+      refresh();
+    }
+  }, [confirmDeleteId, softDeleteOne, refresh]);
+
+  const handleReactivate = useCallback(async (entity: Product) => {
+    await reactivateOne(entity.id);
+    refresh();
+  }, [reactivateOne, refresh]);
+
+  if (canRead === false) {
+    return (
+      <EmptyState
+        icon="lock"
+        title="Sin acceso"
+        description="No tienes permiso para ver el catálogo de productos."
+      />
+    );
+  }
+
+  const toolbar = (
+    <div className="flex flex-col gap-3">
+      <CatalogToolbar
+        canWrite={canWrite === true}
+        onCreate={handleCreate}
+        searchValue={searchInput}
+        onSearchChange={handleSearchChange}
+        includeInactive={includeInactive}
+        onIncludeInactiveChange={handleIncludeInactiveChange}
+        searchPlaceholder="Buscar productos..."
+        searchScope="server"
+        createButtonLabel="Nuevo producto"
+      />
+      <div className="flex items-center gap-3">
+        <select
+          value={departmentId ?? ""}
+          onChange={(e) => handleDepartmentChange(e.target.value)}
+          disabled={deptLoading}
+          className="rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value="">Todos los departamentos</option>
+          {deptOptions.map((d) => (
+            <option key={d.id} value={d.id}>{d.name}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <CatalogShell
+        title="Productos"
+        description="Gestiona el catálogo de productos, precios y dosificaciones."
+        toolbar={toolbar}
+      >
+        {isLoading ? (
+          <div className="p-6 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : error ? (
+          <CatalogError onRetry={refresh} />
+        ) : total === 0 ? (
+          <CatalogEmpty canWrite={canWrite === true} onCreate={canWrite === true ? () => setModalState({ mode: "create", entity: null }) : undefined} />
+        ) : (
+          <>
+            <ProductsTable
+              items={items}
+              canWrite={canWrite === true}
+              onEdit={handleEdit}
+              onManage={handleManage}
+              onDelete={(entity) => setConfirmDeleteId(entity.id)}
+              onReactivate={handleReactivate}
+            />
+            <CatalogPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              count={items.length}
+              onPageChange={setPage}
+              onPageSizeChange={(ps) => { setPageSize(ps); setPage(1); }}
+            />
+          </>
+        )}
+      </CatalogShell>
+
+      {modalState && (
+        <ProductEditModal
+          open
+          mode={modalState.mode}
+          entity={modalState.entity}
+          isSaving={isSaving}
+          codeError={codeError}
+          deptError={deptError}
+          mutationError={mutationError}
+          deptOptions={deptOptions}
+          onSave={handleSave}
+          onClose={() => setModalState(null)}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="¿Desactivar este producto?"
+        description="El producto quedará inactivo. Puedes reactivarlo más tarde."
+        confirmLabel="Desactivar"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+    </>
+  );
+}
