@@ -6,6 +6,12 @@
 
 # testing
 /coverage
+test-results/
+playwright-report/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 
 # next.js
 /.next/
@@ -24,7 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
+.env
+.env.local
+.env.*.local
 
 # vercel
 .vercel
@@ -32,3 +40,56 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# linters & tools
+.eslintcache
+.turbo/
+
+# OS
+Thumbs.db
+
+# prisma
+.env.prisma
+
+# playwright & e2e
+.playwright/
+.playwright-mcp/
+.test-cache/
+
+# cache & temp
+.cache/
+.npm/
+.yarn/cache/
+.pnpm-store/
+dist/
+*.tgz
+
+# logs & debugging
+lerna-debug.log*
+*.log
+
+# OS specific
+.AppleDouble
+.LSOverride
+*.suo
+*.ntvs*
+.cph/
+
+# database
+.db
+.sqlite
+.sqlite3
+
+# miscellaneous
+.tern-port
+.previewjs/
+.contentlayer/
+.react-email/

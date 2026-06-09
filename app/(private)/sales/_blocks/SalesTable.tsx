@@ -1,0 +1,109 @@
+"use client";
+
+import Link from "next/link";
+import { SaleStatusBadge } from "./SaleStatusBadge";
+import { SalePaymentStatusBadge } from "./SalePaymentStatusBadge";
+import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
+import type { SaleSummary } from "../_logic/types/domain";
+
+const MX_NUMBER = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  minimumFractionDigits: 2,
+});
+
+function fmt(n: number) { return MX_NUMBER.format(n); }
+
+function fmtDate(d: Date) {
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(d);
+}
+
+interface SalesTableProps {
+  items: SaleSummary[];
+  isLoading: boolean;
+}
+
+export function SalesTable({ items, isLoading }: SalesTableProps) {
+  if (isLoading) {
+    return (
+      <div className="p-4 space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} height={40} width="100%" />
+        ))}
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="py-8 text-center text-body-sm text-on-surface-variant">
+        Sin ventas registradas
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-body-sm">
+        <thead>
+          <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
+            <th className="px-4 py-3 text-left font-medium">Folio</th>
+            <th className="px-4 py-3 text-left font-medium">Estado</th>
+            <th className="px-4 py-3 text-left font-medium">Cobro</th>
+            <th className="px-4 py-3 text-left font-medium">Cliente</th>
+            <th className="px-4 py-3 text-left font-medium">Cajero</th>
+            <th className="px-4 py-3 text-left font-medium">Sucursal</th>
+            <th className="px-4 py-3 text-right font-medium">Total</th>
+            <th className="px-4 py-3 text-left font-medium">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((sale) => {
+            const folioLabel = sale.folioPrefix
+              ? `${sale.folioPrefix}-${sale.folioNumber}`
+              : String(sale.folioNumber);
+            return (
+              <tr
+                key={sale.id}
+                className="border-b border-outline-variant/40 hover:bg-surface-container-low transition-colors"
+              >
+                <td className="px-4 py-3">
+                  <Link
+                    href={`/sales/${sale.id}`}
+                    className="font-mono text-primary hover:text-primary/80 underline"
+                  >
+                    {folioLabel}
+                  </Link>
+                </td>
+                <td className="px-4 py-3">
+                  <SaleStatusBadge status={sale.status} />
+                </td>
+                <td className="px-4 py-3">
+                  <SalePaymentStatusBadge status={sale.paymentStatus} isCredit={sale.isCredit} />
+                </td>
+                <td className="px-4 py-3 max-w-[160px] truncate text-on-surface-variant">
+                  {sale.customerName ?? "—"}
+                </td>
+                <td className="px-4 py-3 max-w-[140px] truncate text-on-surface-variant">
+                  {sale.cashierName ?? sale.cashierId.slice(0, 8)}
+                </td>
+                <td className="px-4 py-3 max-w-[140px] truncate text-on-surface-variant">
+                  {sale.branchName ?? "—"}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums font-medium">
+                  {fmt(sale.total)}
+                </td>
+                <td className="px-4 py-3 text-on-surface-variant tabular-nums">
+                  {fmtDate(sale.createdAt)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}

@@ -4,6 +4,8 @@ interface UserProps {
   name?: string;
   email: string;
   passwordHash: string;
+  roles: string[];
+  branchId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +32,14 @@ export class User extends Entity<string> {
 
   get passwordHash(): string {
     return this.props.passwordHash;
+  }
+
+  get roles(): string[] {
+    return this.props.roles;
+  }
+
+  get branchId(): string | null {
+    return this.props.branchId;
   }
 
   get createdAt(): Date {

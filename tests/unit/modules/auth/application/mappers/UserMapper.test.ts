@@ -30,6 +30,8 @@ describe("UserMapper", () => {
       name: "Alice",
       email: "test@example.com",
       passwordHash: "$2b$10$somehash",
+      roles: [],
+      branchId: null,
       createdAt: new Date("2026-01-01"),
       updatedAt: new Date("2026-01-02"),
     });

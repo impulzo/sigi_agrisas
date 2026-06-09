@@ -1,0 +1,42 @@
+import { authFetch, NetworkError, UnauthenticatedError, ForbiddenError } from "../../../../../_lib/authFetch";
+import type { ListFoliosResponse, FolioDto } from "../types/api";
+import type { Folio } from "../types/domain";
+
+function toFolio(dto: FolioDto): Folio {
+  return {
+    id: dto.id,
+    code: dto.code,
+    name: dto.name,
+    prefix: dto.prefix,
+    currentNumber: dto.currentNumber,
+    isActive: dto.isActive,
+    createdAt: new Date(dto.createdAt),
+    updatedAt: new Date(dto.updatedAt),
+  };
+}
+
+export { toFolio };
+
+export async function listFolios(
+  { page, pageSize, includeInactive }: { page: number; pageSize: number; includeInactive?: boolean },
+  fetchImpl = authFetch
+): Promise<{ items: Folio[]; total: number; page: number; pageSize: number }> {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (includeInactive) params.set("includeInactive", "true");
+
+  let res: Response;
+  try {
+    res = await fetchImpl(`/api/v1/admin/folios?${params.toString()}`);
+  } catch (err) {
+    if (err instanceof NetworkError || err instanceof UnauthenticatedError || err instanceof ForbiddenError) throw err;
+    throw new NetworkError();
+  }
+  if (!res.ok) throw new NetworkError();
+  const body = (await res.json()) as ListFoliosResponse;
+  return {
+    items: body.items.map(toFolio),
+    total: body.total,
+    page: body.page,
+    pageSize: body.pageSize,
+  };
+}

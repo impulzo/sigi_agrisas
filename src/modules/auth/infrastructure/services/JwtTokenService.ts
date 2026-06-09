@@ -21,28 +21,38 @@ export class JwtTokenService implements TokenService {
   }
 
   generateAccessToken(payload: TokenPayload): string {
-    return jwt.sign({ email: payload.email }, this.accessSecret, {
-      algorithm: "HS256",
-      expiresIn: "15m",
-      subject: payload.sub,
-    });
+    return jwt.sign(
+      { email: payload.email, roles: payload.roles ?? [], branchId: payload.branchId ?? null },
+      this.accessSecret,
+      { algorithm: "HS256", expiresIn: "15m", subject: payload.sub }
+    );
   }
 
   generateRefreshToken(payload: TokenPayload): string {
-    return jwt.sign({ email: payload.email }, this.refreshSecret, {
-      algorithm: "HS256",
-      expiresIn: "7d",
-      subject: payload.sub,
-    });
+    return jwt.sign(
+      { email: payload.email, roles: payload.roles ?? [], branchId: payload.branchId ?? null },
+      this.refreshSecret,
+      { algorithm: "HS256", expiresIn: "7d", subject: payload.sub }
+    );
   }
 
   verifyAccessToken(token: string): TokenPayload {
     const decoded = jwt.verify(token, this.accessSecret) as jwt.JwtPayload;
-    return { sub: decoded.sub as string, email: decoded.email as string };
+    return {
+      sub: decoded.sub as string,
+      email: decoded.email as string,
+      roles: Array.isArray(decoded.roles) ? decoded.roles : [],
+      branchId: (decoded.branchId as string | null) ?? null,
+    };
   }
 
   verifyRefreshToken(token: string): TokenPayload {
     const decoded = jwt.verify(token, this.refreshSecret) as jwt.JwtPayload;
-    return { sub: decoded.sub as string, email: decoded.email as string };
+    return {
+      sub: decoded.sub as string,
+      email: decoded.email as string,
+      roles: Array.isArray(decoded.roles) ? decoded.roles : [],
+      branchId: (decoded.branchId as string | null) ?? null,
+    };
   }
 }

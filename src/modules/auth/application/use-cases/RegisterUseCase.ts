@@ -29,13 +29,15 @@ export class RegisterUseCase {
       name: req.name,
       email: email.value,
       passwordHash: hash,
+      roles: [],
+      branchId: null,
       createdAt: now,
       updatedAt: now,
     });
 
     await this.userRepo.save(user);
 
-    const payload = { sub: user.id, email: user.email };
+    const payload = { sub: user.id, email: user.email, roles: user.roles, branchId: user.branchId };
     const accessToken = this.tokenService.generateAccessToken(payload);
     const refreshToken = this.tokenService.generateRefreshToken(payload);
 

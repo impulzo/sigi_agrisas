@@ -4,6 +4,8 @@ describe("User entity", () => {
   const props = {
     email: "test@example.com",
     passwordHash: "hashed",
+    roles: [],
+    branchId: null,
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
   };

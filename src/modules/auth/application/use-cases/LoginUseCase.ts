@@ -19,7 +19,7 @@ export class LoginUseCase {
     const valid = await this.hasher.compare(req.password, user.passwordHash);
     if (!valid) throw new InvalidCredentialsError();
 
-    const payload = { sub: user.id, email: user.email };
+    const payload = { sub: user.id, email: user.email, roles: user.roles, branchId: user.branchId };
     const accessToken = this.tokenService.generateAccessToken(payload);
     const refreshToken = this.tokenService.generateRefreshToken(payload);
 

@@ -2,6 +2,8 @@
 
 Panel de administración agrícola. Next.js 14 App Router + TypeScript + Arquitectura Hexagonal + Supabase Postgres.
 
+> Las reglas finas por módulo (endpoints, campos, regex, scenarios) viven en `openspec/specs/<capability>/spec.md`. Este archivo conserva sólo la guía transversal que un agente necesita antes de tocar código.
+
 ## Idioma
 
 Responde siempre en español.
@@ -17,100 +19,63 @@ Responde siempre en español.
 | ORM | Prisma 5 |
 | Base de datos | Supabase Postgres — proyecto `agrisas` (`qzzjpyepggwautckqeex`) |
 | Tests | Jest + ts-jest (node) — RTL + jsdom para UI |
-| Estilos | Tailwind CSS v3 + PostCSS (decisión explícita tomada en `add-login-ui`) |
+| Estilos | Tailwind CSS v3 + PostCSS |
 
-## Arquitectura Hexagonal
+## Arquitectura Hexagonal (`src/`)
 
 ```
 src/modules/<módulo>/
-├── domain/
-│   ├── entities/       # Entidades de dominio puro
-│   ├── value-objects/  # Value objects inmutables
-│   └── errors/         # Errores de dominio tipados
-├── application/
-│   ├── ports/          # Interfaces (UserRepository, TokenService, PasswordHasher)
-│   ├── use-cases/      # Casos de uso — única lógica de negocio
-│   ├── dto/            # DTOs de entrada/salida
-│   └── mappers/        # Conversión dominio ↔ infraestructura
-└── infrastructure/
-    ├── repositories/   # Implementaciones de puertos (Prisma, InMemory)
-    ├── services/       # Jwt, Bcrypt, etc.
-    ├── http/           # AuthController + cookieOptions
-    ├── middleware/     # AuthMiddlewareAdapter
-    └── di/             # Container de inyección de dependencias
+├── domain/         # entities, value-objects, errors (puros, sin Next/Prisma)
+├── application/    # ports (interfaces), use-cases, dto, mappers
+└── infrastructure/ # repositories (Prisma/InMemory), services, http (controller), di
 
-src/shared/domain/      # Entity.ts, ValueObject.ts, Result.ts
-app/api/v1/auth/        # Route handlers versionados → delegan a AuthController vía DI container
-middleware.ts           # Entry point Next.js → delega a AuthMiddlewareAdapter
+src/shared/domain/                       # Entity, ValueObject, Result
+src/shared/infrastructure/prisma/client.ts  # singleton PrismaClient
+src/shared/infrastructure/http/parseListQuery.ts  # page/pageSize/includeInactive Zod
+app/api/v1/<...>/route.ts                # delegan a <módulo>Controller vía DI
+middleware.ts                            # delega a AuthMiddlewareAdapter
 ```
+
+Módulos hexagonales activos: `auth`, `rbac`, `users`, `payment-methods`, `folios`, `departments`, `branches`, `providers`, `products`, `inventory`, `customers`, `pos`, `quotes`, `returns`, `payments`.
 
 **Reglas de capas (backend):**
 - El dominio no importa nada de infraestructura ni de Next.js.
 - Los use cases reciben ports (interfaces), nunca implementaciones concretas.
 - Los route handlers de `app/api/v1/` no contienen lógica; delegan al controller.
-- Validación Zod ocurre en `AuthController`, antes de llegar a los use cases.
+- Validación Zod ocurre en el controller, antes de los use cases.
+- **Orden en handlers scoped por sucursal**: validar UUID + body (Zod → 400) → `enforceBranchScope` (401/403) → use case. No invertir; preserva los códigos HTTP esperados.
 
 ## Arquitectura Frontend (`app/`)
 
-Convención **Atomic Design + Route Groups + `_logic` por feature**. El árbol vive bajo `app/` (no bajo `src/`, que queda exclusivo del backend hexagonal).
+Convención: **Atomic Design + Route Groups + `_logic/` por feature**. Todo lo de UI vive bajo `app/`; `src/` es exclusivo del backend hexagonal.
 
 ```
 app/
-├── api/v1/                   # Route Handlers versionados — delegan a src/ vía DI
-│   ├── auth/{login,register,refresh,logout}/route.ts
-│   └── health/route.ts
-│
-├── _components/              # Atomic Design — UI genérica, 0 lógica de negocio
-│   ├── atoms/                # Button, Input, Spinner, Label
-│   ├── molecules/            # FormField, SearchBar
-│   └── organisms/            # Header, Footer
-│
-├── _hooks/                   # Hooks globales reutilizables en ≥2 módulos
-│   ├── useDebounce.ts
-│   ├── useLocalStorage.ts
-│   └── useMediaQuery.ts
-│
-├── _lib/                     # Utilidades puras (sin React, sin fetch)
-│   ├── cn.ts                 # merge de clases tailwind
-│   ├── formatters.ts
-│   └── validators.ts         # validadores genéricos (email, phone, …)
-│
-├── (public)/                 # Route group — no requiere autenticación
-│   └── auth/
-│       ├── layout.tsx        # AuthLayout split-panel
-│       ├── _logic/           # Lógica del feature auth
-│       │   ├── hooks/        # useLoginForm, useRegisterForm
-│       │   ├── services/     # login.ts, register.ts (fetch a /api/v1)
-│       │   ├── schemas/      # Zod schemas (login.schema.ts)
-│       │   └── types/        # api.ts (DTOs HTTP) + domain.ts (User, Session)
-│       ├── _blocks/          # Bloques específicos del feature (no reutilizables fuera)
-│       │   ├── LoginForm.tsx
-│       │   └── RegisterForm.tsx
-│       ├── login/page.tsx    # Solo orquestación
-│       └── register/page.tsx
-│
-├── (private)/                # Route group — requiere autenticación
-│   ├── dashboard/
-│   │   ├── layout.tsx
-│   │   ├── _logic/{hooks,services,types}/
-│   │   ├── _blocks/
-│   │   └── page.tsx
-│   └── settings/page.tsx
-│
-└── layout.tsx                # Root layout: providers, fuentes, metadata global
+├── api/v1/                # Route Handlers versionados → delegan a src/ vía DI
+├── _components/           # Atomic Design — UI genérica, 0 lógica de negocio
+│   ├── atoms/             # Button, Input, Spinner, Switch, Badge, Skeleton
+│   ├── molecules/         # FormField, SearchBar, Combobox, ConfirmDialog,
+│   │                      # EmptyState, RailFlyout, SegmentedButton
+│   └── organisms/         # NavigationRail, TopAppBar
+├── _hooks/                # Hooks globales reutilizables en ≥2 módulos
+│   ├── useCurrentUser.ts useHeadquarters.ts useFoliosOptions.ts
+│   └── usePaymentMethodsOptions.ts useDebounce.ts useMediaQuery.ts ...
+├── _lib/                  # Utilidades puras: cn, formatters, validators, jwt, authFetch
+├── (public)/auth/         # /auth/login, /auth/register — split-panel
+└── (private)/             # dashboard, pos, sales, quotes, inventory, catalogs,
+                           # users, roles, settings
 ```
 
 **Reglas de capas (frontend):**
-- **`_components/` y `_blocks/` son presentational**: NO contienen `fetch`, `sessionStorage`, `localStorage`, `useRouter().push/replace`, ni lógica de validación inline. Pueden tener `useState` para inputs controlados.
-- **`_hooks/` (global)**: framework-agnostic o React genérico; no importa de `app/`; reutilizable en ≥2 módulos. Ej.: `useDebounce`, `useLocalStorage`, `useMediaQuery`.
-- **`_logic/hooks/` (módulo)**: acoplado al feature; importa de `_logic/services/`; orquesta estado, validación, llamada HTTP y navegación. Ej.: `useLoginForm`, `useDashboardStats`.
-- **`_logic/services/`**: encapsulan `fetch` a `/api/v1/...`, normalizan errores HTTP a errores tipados del módulo, aceptan `fetchImpl` inyectado para tests. Nunca devuelven `Response` crudo.
-- **`_logic/schemas/`**: validación Zod pura del lado cliente; el backend mantiene sus propios schemas en `src/modules/`.
-- **`_logic/types/`**: `api.ts` para DTOs request/response del cliente HTTP; `domain.ts` para tipos de dominio del frontend (`User`, `Session`).
-- **Páginas (`page.tsx`)**: Server Components por defecto, exportan `metadata`, leen cookies con `next/headers` para redirección server-side, importan layout + `_blocks/`. Nunca llevan `"use client"`.
-- **Atomic Design en `_components/`**: `atoms/` (Button, Input, Spinner), `molecules/` (FormField, SearchBar — composición de átomos), `organisms/` (Header, Footer — secciones reutilizables sin lógica de negocio). Cada componente: `Nombre/Nombre.tsx` (+ `Nombre.module.css` opcional).
-- **Naming**: carpetas `_components` / `_hooks` / `_lib` / `_logic` / `_blocks` usan prefijo `_` para que Next.js las trate como privadas (no enrutables).
-- **Imports**: el alias `@/*` apunta a `src/*`; para `app/` usar rutas relativas o `app/*` según convenga. Los `_blocks` consumen `_components` vía `app/_components/...`.
+- **`_components/` y `_blocks/` son presentational**: NO `fetch`, `sessionStorage`, `localStorage`, `useRouter().push/replace`, ni validación inline. Sólo `useState` para inputs controlados.
+- **`_hooks/` (global)**: React/framework-agnostic; no importa de `app/(private)/(public)`; reutilizable en ≥2 módulos.
+- **`_logic/hooks/` (módulo)**: acoplado al feature; importa de `_logic/services/`; orquesta estado + validación + HTTP + navegación.
+- **`_logic/services/`**: encapsulan `fetch` a `/api/v1/...`, normalizan errores HTTP a errores tipados del módulo, aceptan `fetchImpl?: typeof fetch` para tests. Nunca devuelven `Response` crudo.
+- **`_logic/schemas/`**: validación Zod cliente; el backend mantiene sus propios schemas.
+- **`_logic/types/`**: `api.ts` (DTOs HTTP) + `domain.ts` (tipos de dominio del frontend).
+- **Páginas (`page.tsx`)**: Server Components por defecto, exportan `metadata`, leen cookies con `next/headers`. Nunca llevan `"use client"`.
+- **Naming**: el prefijo `_` (en `_components`, `_hooks`, `_lib`, `_logic`, `_blocks`) marca carpetas privadas no enrutables para Next.js.
+- **Imports**: `@/*` apunta a `src/*`; para `app/` usar rutas relativas o `app/*`.
 
 ## Prisma y Supabase
 
@@ -119,54 +84,383 @@ DATABASE_URL  → pooler PgBouncer puerto 6543 (runtime)
 DIRECT_URL    → conexión directa puerto 5432 (migraciones)
 ```
 
-- Migraciones: `npx prisma migrate dev --name <descripción>` en desarrollo.
-- Deploy: `npx prisma migrate deploy` en CI/CD usando `DIRECT_URL`.
-- El singleton de `PrismaClient` vive en `src/shared/infrastructure/prisma/client.ts`.
+- Migraciones: `npx prisma migrate dev --name <descripción>` (dev), `npx prisma migrate deploy` (CI/CD).
+- **FKs en `TEXT`, no `uuid`**. Los IDs son `String @id @default(uuid())` → columna `TEXT`. Las FKs (`department_id`, `product_id`, `branch_id`, etc.) son `TEXT` para coincidir con la PK; un `@db.Uuid` rompería la FK por mismatch. La validación Zod sí usa `z.string().uuid()` porque los **valores** son UUIDs.
+- Modelos: `User, Role, Permission, RolePermission, UserRole, PaymentMethod, Folio, Department, Branch, Provider, Product, ProductPrice, ProductDosification, BranchInventory, Customer, Sale, SaleItem, Quote, QuoteItem`.
 
 ## Comandos frecuentes
 
 ```bash
 npm run dev          # Servidor de desarrollo
-npm run build        # Build de producción (verifica tipos TS)
-npm test             # Ejecutar todos los tests
-npm run test:watch   # Tests en modo watch
-npx prisma studio    # GUI de base de datos
-npx prisma generate  # Regenerar tipos de Prisma Client
+npm run build        # Build de producción (verifica tipos)
+npm test             # Todos los tests
+npm run test:watch   # Watch
+npm run seed         # Seed RBAC idempotente
+npx prisma studio    # GUI de BD
+npx prisma generate  # Regenerar Prisma Client
 ```
 
 ## Alias de rutas
 
-`@/*` → `src/*` (configurado en `tsconfig.json` y `jest.config.ts`)
+`@/*` → `src/*` (configurado en `tsconfig.json` y `jest.config.ts`).
 
 ## Convenciones de tests
 
 - Tests unitarios backend: `tests/unit/modules/<módulo>/...` — `testEnvironment: "node"`.
 - Tests unitarios frontend: `tests/unit/ui/...` — `testEnvironment: "jsdom"` con React Testing Library.
 - Tests de integración: `tests/integration/modules/<módulo>/...`.
-- Tests E2E: `tests/e2e/` (carpeta reservada, aún sin runner configurado).
-- Los tests de use cases usan `InMemoryUserRepository`, nunca mock de BD real.
-- `jest.config.ts` usa `projects` para separar entornos `node` (backend) y `jsdom` (UI) sin colisión.
+- E2E: `tests/e2e/` (sin runner aún).
+- Los use cases se prueban con `InMemory<Repo>`, nunca mock de BD real.
+- `jest.config.ts` usa `projects` para separar `node` (backend) y `jsdom` (UI).
 
 ## JWT
 
-- **Access token**: HS256, TTL 15 min, enviado en header `Authorization: Bearer`.
-- **Refresh token**: HS256, TTL 7 días, cookie `refreshToken` HttpOnly + SameSite=Strict.
-- Secrets: `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` — fallar en startup si no están definidos.
+- **Access token**: HS256, TTL 15 min, `Authorization: Bearer`. Claims: `sub`, `email`, `roles[]`, `branchId` (string | null).
+- **Refresh token**: HS256, TTL 7 días, cookie `refreshToken` HttpOnly + SameSite=Strict. Claims: `sub`, `email`, `branchId`.
+- Secrets: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` — fallar en startup si no están.
+- **`branchId`**: sucursal asignada (`null` para admins). Cambiar `branchId` en BD NO invalida tokens activos; el refresh propaga el viejo. Para efecto inmediato, re-loguearse.
 
 ## Middleware de autenticación
 
-- `middleware.ts` (raíz) usa el matcher `"/((?!_next/static|_next/image|favicon.ico).*)"`, así que estáticos de Next y favicon **ni siquiera entran** al adaptador.
-- Dentro de `AuthMiddlewareAdapter` además hay lista propia de rutas públicas (defensa en profundidad):
-  - Exactas: `/api/v1/auth/login`, `/api/v1/auth/register`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`, `/auth/login`, `/auth/register`, `/favicon.ico`.
+- `middleware.ts` (raíz) usa matcher `"/((?!_next/static|_next/image|favicon.ico).*)"`.
+- `AuthMiddlewareAdapter` mantiene lista propia de rutas públicas (defensa en profundidad):
+  - Exactas: `/api/v1/auth/{login,register,refresh,logout}`, `/auth/{login,register}`, `/favicon.ico`.
   - Prefijo: `/_next/`.
-- Sin token en `/api/**` → 401 JSON.
-- Token expirado en `/api/**` → 401 `{"error": "Token expired"}`.
+- Sin token en `/api/**` → 401 JSON. Token expirado → 401 `{"error":"Token expired"}`.
 - Sin token en rutas de página → redirect 302 a `/auth/login`.
-- Con token válido → propaga `x-user-id` y `x-user-email` como headers de request.
+- Con token válido → propaga `x-user-id`, `x-user-email`, `x-user-roles` (coma) y `x-user-branch-id` (cadena vacía si null).
+
+## Autorización (RBAC)
+
+Módulo `src/modules/rbac/` — modelo `users → roles → permissions`.
+
+- Tablas: `roles`, `permissions`, `role_permissions`, `user_roles` (migración `add_rbac_tables`).
+- `PermissionKey`: `^[a-z][a-z0-9_]{0,31}:[a-z][a-z0-9_]{0,31}$` (ej. `users:write`).
+- **Guard**: `requirePermission(req, "resource:action")` en `src/modules/rbac/infrastructure/http/requirePermission.ts` — 401 si falta `x-user-id`, 403 si `userCan` es false.
+- `AuthorizationService.userCan(userId, key)` — caché en memoria 60 s; `invalidate(userId)` e `invalidateByRole(roleId)` para invalidación explícita.
+- **JWT** lleva `roles: string[]` (nombres), no permisos. Los permisos se resuelven en backend.
+- **Seed**: `npm run seed` idempotente; 39 permisos, 3 roles base (`admin`, `operator`, `viewer`). `RBAC_DEFAULT_ROLE=viewer` al registrar.
+- Detalle de qué permisos otorga cada rol → `openspec/specs/rbac/spec.md`.
+
+## Branch scoping (transversal)
+
+`users.branch_id` (nullable) asocia a un operador con una sucursal. El claim `branchId` del JWT y el header `x-user-branch-id` lo propagan. Cada handler que opere sobre `:branchId` aplica:
+
+```ts
+const bypass = await authz.userCan(userId, "branches:access_all");
+if (!bypass && resourceBranchId !== req.headers.get("x-user-branch-id")) return 403;
+```
+
+Helpers: `enforceBranchScope(req, resourceBranchId)` y `resolveScopedBranchId(req, requestedBranchId)` en `src/modules/rbac/infrastructure/http/enforceBranchScope.ts`. El permiso `branches:access_all` (sólo `admin`) es el único bypass.
+
+## Sucursal matriz (HQ)
+
+`branches.is_headquarters BOOLEAN DEFAULT FALSE` con índice único parcial `branches_hq_idx ON branches(is_headquarters) WHERE is_headquarters = TRUE`. Crear/editar a `true` cuando ya hay otra → 409 `{"error":"Another branch is already marked as headquarters"}`. Cero matrices está permitido (sólo bloquea editar tickets completados).
+
+Helper: `branchRepo.findHeadquarters(): Promise<Branch | null>`.
+
+## Cliente HTTP autenticado y RBAC en UI
+
+### `authFetch` (`app/_lib/authFetch.ts`)
+
+Wrapper sobre `fetch` para peticiones autenticadas.
+- Inyecta `Authorization: Bearer <token>` desde `sessionStorage.accessToken`; `init.skipAuth === true` lo omite.
+- Errores tipados: `UnauthenticatedError` (401), `ForbiddenError(required?: string)` (403, `err.required` = permiso faltante), `NetworkError`.
+- Devuelve `Response` crudo; el caller parsea según su dominio.
+- Los services aceptan `fetchImpl?: typeof fetch` para tests.
+
+### `useCurrentUser` (`app/_hooks/useCurrentUser.ts`)
+
+```ts
+const { userId, email, roles, branchId, isLoading, can, refresh } = useCurrentUser();
+```
+
+- Decodifica el JWT desde `sessionStorage` con `decodeJwtPayload` (sin verificar firma); `branchId === ""` se normaliza a `null`.
+- `can(permission): boolean | "loading"` — consulta `/api/v1/admin/users/:id/permissions`. Caché de módulo `Map<userId, { permissions, expiresAt, promise }>` TTL 60 000 ms con dedupe de promesa.
+- `refresh()` invalida la entrada y fuerza re-fetch.
+- **NavigationRail** filtra items con `requires` usando `can()`: muestra optimistamente durante `"loading"`, oculta cuando es `false`.
+
+### Hooks globales reutilizables
+
+- `useHeadquarters` — consulta `GET /api/v1/admin/branches?pageSize=100`, filtra `isHeadquarters===true`, caché 60 s.
+- `useFoliosOptions`, `usePaymentMethodsOptions` — listas activas con caché 60 s (consumidos por POS y Cotizaciones).
+
+## Capacidades CRUD admin (visión general)
+
+Cada módulo CRUD admin sigue el mismo patrón hexagonal y la misma forma de endpoints. Los detalles (campos, regex, paginación, errores) viven en su spec.
+
+| Módulo | Permisos | Spec |
+|---|---|---|
+| Users | `users:read` / `users:write` | `admin-users` |
+| Payment Methods | `payment_methods:read` / `payment_methods:write` | `admin-payment-methods` |
+| Folios | `folios:read` / `folios:write` | `admin-folios` |
+| Departments | `departments:read` / `departments:write` | `admin-departments` |
+| Branches | `branches:read` / `branches:write` (+ `branches:access_all`) | `admin-branches` |
+| Providers | `providers:read` / `providers:write` | `admin-providers` |
+| Products | `products:read` / `products:write` | `products-api` |
+| Inventory | `inventory:read` / `inventory:write` | `inventory-api` |
+| Customers | `customers:read` / `customers:write` | `customers-api` |
+
+**Reglas comunes (todos):**
+- `code`: `^[A-Z0-9_]{1,32}$` — inmutable tras creación, único; uppercase+trim normalizado; duplicado → 409. `code` en PATCH se ignora.
+- Soft delete vía `isActive=false`; GET `?includeInactive=true` para incluirlos.
+- `pageSize` máximo 100; `PATCH` requiere ≥1 campo (body vacío → 400); no encontrado → 404.
+- Helper `parseListQuery` en `src/shared/infrastructure/http/`.
+
+**Reglas específicas a recordar:**
+- **Users**: admin no puede editar/eliminar su propia cuenta (403); `avatarUrl` jamás `null` en respuesta (fallback Gravatar md5(email)); `PATCH avatarUrl: null` resetea a Gravatar; hard delete.
+- **Providers / Customers**: `rfc` regex `^([A-ZÑ&]{3,4}\d{6}[A-Z\d]{3})$` único, editable, upper-normalizado (409 si duplicado). Datos fiscales MX con regex: `taxRegime` `^\d{3}$`, `cfdiUse` `^[A-Z]\d{2}$`, `taxZipCode` `^\d{5}$`.
+- **Customers**: `currentBalance` read-only (no se mueve desde POST/PATCH/sales — diferido a futuro `add-customer-credit`). `creditLimit >= 0` o `null`.
+- **Products**: `iva_rate`/`ieps_rate` decimal `0–1` nullable; el controller normaliza valores `> 1` dividiendo entre 100 (acepta `16` → `0.16`). `sat_product_code` `^\d{8}$`. `department_id` FK obligatoria a depto **activo** (sino 400).
+  - **Prices**: `name` único por producto; máximo un `is_default=true` (partial unique index `product_default_price_idx`); en PATCH `isDefault:true` desactiva el default previo atómicamente. Hard delete.
+  - **Dosifications**: `name` único por producto; `num_parts >= 2`. Soft delete. `computedUnitPrice = basePrice / numParts * 1.07` (recargo fijo 7%, `DOSIFICATION_SURCHARGE_PCT = 7.0`). Sin precio default → `computedUnitPrice: null`, `requiresDefaultPrice: true`.
+- **Inventory**: rutas bajo `/api/v1/admin/branches/[id]/inventory` (Next.js no permite slugs distintos hermanos como `[branchId]`). `(branch_id, product_id)` único (409). `POST /adjust` aplica delta atómico vía `UPDATE ... WHERE quantity + delta >= 0`; 0 filas afectadas → 404 o 409 (`Negative stock not allowed`). `?belowReorder=true` filtra `quantity < reorder_point`. `quantity` **puede ser negativo** sólo cuando lo origina una venta del POS (la migración `add-pos` eliminó el CHECK `quantity >= 0`); el admin `/adjust` sigue rechazando negativos. Aplica branch scoping.
+- **Branches**: campo `isHeadquarters` con regla descrita en sección HQ.
+
+### Migraciones relevantes
+
+- `add_rbac_tables`, `20260518000001_add_avatar_url_to_users`, `20260519000001_add_settings_catalog_tables`, `20260525000001_add_providers_table`, `20260528000001_add_products_and_inventory_tables`, `20260530000001_add_pos_tables_and_branch_scoping`, `20260531000001_add_quotes_tables_and_link_to_sale`.
+
+## POS y Cotizaciones (Backend)
+
+Módulos `src/modules/customers/`, `src/modules/pos/`, `src/modules/quotes/`. Specs: `customers-api`, `pos-api`, `quotes-api`.
+
+### Estados y ciclos de vida
+
+- **Sale**: `completed` | `cancelled` | `edited`. No hay `draft`/`open`: el carrito vive en cliente.
+  - **Crear** (`CreateSaleUseCase`, transaccional): valida customer/branch/folio/paymentMethod activos → valida `productPrice.productId === item.productId` → snapshotea por línea → calcula totales → incrementa `folios.current_number` atómico → decrementa `branch_inventory.quantity` (allow negative; crea registro con `-qty` si falta) → persiste.
+  - **Cancelar** (`CancelSaleUseCase`): idempotente; restaura stock; `status='cancelled'`, `cancelledAt`, `cancellationReason`. Folio NO se libera (numeración fiscal MX consecutiva sin reuso).
+  - **Editar** (`EditCompletedSaleUseCase`): rechaza si `cancelled`; restaura stock viejo → borra `sale_items` → re-aplica nuevas → recalcula → `status='edited'`, `editedAt`. Folio/branch inmutables. **Sólo desde HQ** (guard en `SalesController.edit`: bypass con `branches:access_all` o `x-user-branch-id === hq.id`; sin matriz → todos los non-admin reciben 403).
+- **Quote**: `draft → authorized → converted | cancelled | expired`. Sólo `draft` editable. Sólo `authorized` convertible. `converted` y `cancelled` terminales. `expired` se calcula en lectura (`status='authorized' AND expires_at < NOW()` → `isExpired: true`; sin cron).
+  - **NO toca inventario** en create/update/authorize/cancel. Único momento de movimiento de stock: la conversión, delegada al pipeline POS (`SaleRepository.createCompletedFromQuote`).
+  - **Inmutables tras creación**: `customerId`, `branchId`, `folioId`, `folioNumber`. Para cambiarlos: cancelar y crear otra.
+  - **Folio de cotización ≠ folio fiscal**: la cotización usa típicamente un folio `code='COT'`; al convertir, el body de `/convert` indica el folio fiscal de la venta resultante.
+  - **Cancelación NO idempotente**: cancelar dos veces → 409. Cancelar una `converted` → 409 con `saleId` (UI debe redirigir al flujo de cancelación de venta).
+  - **Expiración rechazada en autorización y conversión**: `expiresAt < NOW()` → 409 `QuoteExpiredError`.
+
+### Snapshot por línea (transversal Sale ↔ Quote ↔ ReturnItem)
+
+Tanto `SaleItem` como `QuoteItem` y `ReturnItem` snapshotean: `productCodeSnapshot`, `productNameSnapshot`, `priceNameSnapshot`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`. Sobreviven renames/borrados del catálogo. La conversión preserva el snapshot sin re-resolver el catálogo (gana el precio cotizado aunque el de catálogo haya cambiado).
+
+### Cálculo de totales (transversal)
+
+Servicios puros: `SaleTotalsCalculator`, `QuoteTotalsCalculator`, `ReturnTotalsCalculator` (en sus respectivos `domain/services/`). Por línea:
+
+```
+lineSubtotal = round(quantity * unitPrice * (1 - discountPct/100), 4)
+lineIva       = round(lineSubtotal * ivaRate, 4)
+lineIeps      = round(lineSubtotal * iepsRate, 4)
+lineTotal     = lineSubtotal + lineIva + lineIeps
+```
+
+Redondeo half-to-even (banker's) a 4 decimales (escala `Decimal(14,4)`). UI muestra a 2 decimales. **Test de equivalencia obligatorio** entre los tres calculadores sobre vectores compartidos (`tests/fixtures/totals-vectors.ts`).
+
+### Enlace Quote ↔ Sale
+
+- `Sale.quoteId: string | null` — FK opcional a `quotes(id)` `ON DELETE SET NULL`. `null` para ventas directas; poblado por `/quotes/:id/convert`.
+- `POST /sales` acepta `quoteId?: string | null`; si se envía, `CreateSaleUseCase` (con `QuoteRepository` inyectado) valida `status='authorized'`, `convertedSaleId === null`, `branchId/customerId` coincidan (sino 400).
+- `SaleRepository.createCompletedFromQuote(data)`: en una sola transacción aloca folio fiscal, decrementa inventario, inserta `sales`+`sale_items` con `quote_id`, marca cotización `converted` (`convertedAt=NOW()`, `convertedSaleId=<newSaleId>`). El use case de conversión también llama `quoteRepo.markConverted` para consistencia bidireccional.
+- **Conversión idempotente**: si `convertedSaleId !== null`, la segunda llamada devuelve la misma venta sin doble decremento ni doble folio.
+- El POS DI container importa `PrismaQuoteRepository` localmente (no desde `quotes/di`) para evitar import circular.
+
+### Arquitectura
+
+- `PosLookupService` (impl. `PrismaPosLookupService`) abstrae consultas a Product/ProductPrice/Customer/Branch/Folio/PaymentMethod para que los use cases no acoplen Prisma.
+- `PrismaSaleRepository.{createCompleted,cancel,replaceItemsAndRecalculate,createCompletedFromQuote}` orquestan transacciones; usan `$executeRaw` para los UPDATE atómicos de inventario. Helpers internos compartidos: `allocateFolio`, `decrementInventoryAllowNegative`, `toSaleItemCreate`.
+- `PrismaQuoteRepository.createWithItems` ejecuta `prisma.$transaction` con `UPDATE folios SET current_number = current_number + 1 ... RETURNING` + inserts. **No toca `branch_inventory`** en ningún punto.
+
+## Devoluciones (Backend)
+
+Módulo `src/modules/returns/`. Spec: `returns-api`. Migración: `20260602000001_add_returns_tables` (tablas `returns`, `return_items`).
+
+**Ciclo de vida**: `completed → cancelled`. No hay más transiciones. `completed` = devolución activa; `cancelled` = revertida.
+
+**Endpoints** (`returns:read` / `returns:create` / `returns:cancel`):
+- `GET /api/v1/admin/returns` — lista paginada con branch scoping
+- `POST /api/v1/admin/returns` — crea devolución; el `branchId` se deriva del sale (no va en body)
+- `GET /api/v1/admin/returns/:id` — detalle con items
+- `POST /api/v1/admin/returns/:id/cancel` — cancela; revierte inventario
+- `GET /api/v1/admin/sales/:id/returns` — todas las devoluciones de una venta (incluye `cancelled`)
+
+**Reglas de negocio:**
+- Solo se puede devolver una venta con `status='completed'`. `cancelled` y `edited` → 409 `SaleNotReturnableError`.
+- `ReturnableQuantityCalculator.computeRemaining(soldQty, priorItems)`: sólo las devoluciones `completed` descuentan del remanente. Una devolución `cancelled` **libera** su espacio (el espacio se puede re-devolver).
+- `createWithItems` (tx Prisma): incrementa `branch_inventory.quantity` por cada item (crea registro si no existe, igual que el helper del POS). `markCancelled` (tx): decrementa (permite negativo).
+- **No toca `sale_items`** en ningún paso. Los snapshots se copian del `sale_item` original.
+- **`customerBalance` no muta** al crear ni cancelar devoluciones. Diferido a `add-customer-credit`.
+- **No usa folio** del catálogo (diseño explícito; no acopla al sistema de folios).
+- `cancelledBy` y `creatorId` son `@db.Uuid` (igual que `sales.cashier_id`).
+
+**Caveat de inventario al cancelar ventas con devoluciones vigentes**: si una venta `completed` tiene devoluciones `completed`, cancelar la venta restaura el stock ORIGINAL vendido (no neto). El stock queda "inflado" por las unidades ya devueltas. Este comportamiento es intencional y requiere reconciliación manual.
+
+**`SaleDetailDto.returnedQuantityBySaleItem`**: `Record<saleItemId, number>` — agrega `SUM(quantity)` de devoluciones `completed` por `sale_item_id`. Poblado en `PrismaSaleRepository.findByIdWithItems` via `$queryRaw`. `{}` si no hay devoluciones.
+
+**Branch scoping**: idéntico al resto de módulos — `resolveScopedBranchId` para `list`; `enforceBranchScope` cargando el recurso primero para `getById`/`cancel`/`listBySale`/`create`. Para `create` el `branchId` se extrae del `sale` (el body no lo recibe).
+
+**Permisos RBAC**:
+| Permiso | admin | operator | viewer |
+|---|---|---|---|
+| `returns:read` | ✅ | ✅ | ✅ |
+| `returns:create` | ✅ | ✅ | ❌ |
+| `returns:cancel` | ✅ | ✅ | ❌ |
+
+**Arquitectura**:
+- Puerto: `src/modules/returns/application/ports/ReturnRepository.ts`
+- Use cases: `CreateReturnUseCase`, `ListReturnsUseCase`, `GetReturnUseCase`, `ListReturnsBySaleUseCase`, `CancelReturnUseCase`
+- Repositorio Prisma: `src/modules/returns/infrastructure/repositories/PrismaReturnRepository.ts`
+- Repositorio InMemory (tests): `src/modules/returns/infrastructure/repositories/InMemoryReturnRepository.ts`
+- Controller: `src/modules/returns/infrastructure/http/ReturnsController.ts`
+- DI: `src/modules/returns/infrastructure/di/container.ts` → exporta `returnsController`. Instancia `PrismaSaleRepository` localmente (no desde `pos/di`) para evitar import circular.
+
+## Abonos (Backend)
+
+Módulo `src/modules/payments/`. Spec: `payments-api`. Migración: `20260608000001_add_customer_payments` (tablas `customer_payments`; columnas `paid_amount`, `payment_status` en `sales`; columna `is_credit` en `payment_methods`).
+
+**Ciclo de vida del pago**: `completed → cancelled`. Solo esas dos transiciones. No hay draft ni pending en `CustomerPayment`.
+
+**Ciclo de vida de `sale.paymentStatus`**: `pending → partial → paid` (o cualquier transición al crear/cancelar abonos). `pending` = venta a crédito sin ningún abono; `partial` = abonos parciales; `paid` = liquidada. Ventas cash crean directamente con `paidAmount=total` y `paymentStatus='paid'`.
+
+**El carácter "crédito" se deriva de `paymentMethod.isCredit`**, no de una columna en `sales`. Si `paymentMethod.isCredit=true`: venta crea con `paidAmount=0`, `paymentStatus='pending'`, incrementa `customer.currentBalance` en el total. Si `false`: `paidAmount=total`, `paymentStatus='paid'`, balance no se toca.
+
+**Endpoints** (`payments:read` / `payments:create` / `payments:cancel` / `payments:report_read`):
+- `GET /api/v1/admin/payments` — lista paginada con branch scoping
+- `POST /api/v1/admin/payments` — registra abono; valida que la venta sea crédito y que el monto no exceda el due
+- `GET /api/v1/admin/payments/:id` — detalle
+- `POST /api/v1/admin/payments/:id/cancel` — cancela; revierte `sale.paidAmount`, `sale.paymentStatus`, `customer.currentBalance`
+- `GET /api/v1/admin/payments/history` — historial con filtros (`?format=json|pdf`; `productId` via EXISTS en sale_items)
+- `GET /api/v1/admin/sales/:id/payments` — abonos de una venta + agregados
+
+**Reglas de negocio:**
+- Solo se puede abonar ventas con `paymentMethod.isCredit=true` (`SaleNotPayableError` si no).
+- `amount ≤ (total - paidAmount)` — exceso → 409 `PaymentExceedsDueAmount(due)`.
+- `createCompleted` (tx Prisma): (a) aloca folio RECIBO via `allocateFolio`, (b) `UPDATE sales SET paid_amount = paid_amount + ? WHERE paid_amount + ? <= total` (0 filas → `PaymentExceedsDueAmountError`), (c) `UPDATE customers SET current_balance = current_balance - ?` (nunca puede sobrepasar el total pagado), (d) INSERT en `customer_payments`.
+- `markCancelled` (tx): cancela en DB, recalcula `paymentStatus` via `SalePaymentApplier`, revierte `sale.paidAmount`, revierte `customer.currentBalance`.
+- **Cancelar venta con abonos activos → 409 `SaleHasActivePayments`** (con array de paymentIds). El caller debe cancelar los abonos primero.
+- **Editar venta con abonos activos → 409** por la misma razón.
+- `cancelledBy` y `userId` son `@db.Uuid`.
+- **Folio RECIBO**: semilla `code='RECIBO'`, `prefix='RECIBO-'`. Cada abono consume un número secuencial. El folio de la cotización/venta fiscal es independiente.
+- **`payment_methods.isCredit`**: inmutable tras creación (PATCH lo ignora silenciosamente, igual que `code`).
+- **PDF**: `renderToBuffer(<PaymentHistoryPdf/>)` server-side con `@react-pdf/renderer`. Si `items.length > 10000` → 409 `tooLarge=true`.
+- **`allocateFolio` compartido**: `src/shared/infrastructure/folios/allocateFolio.ts` — reutilizado por `PrismaSaleRepository`, `PrismaQuoteRepository`, `PrismaPaymentRepository`.
+
+**Branch scoping**: idéntico al resto — `resolveScopedBranchId` para `list` e `history`; `enforceBranchScope` cargando el recurso para `getById`/`cancel`/`listBySale`. Para `register` el `branchId` se extrae del sale.
+
+**Permisos RBAC**:
+| Permiso | admin | operator | viewer |
+|---|---|---|---|
+| `payments:read` | ✅ | ✅ | ✅ |
+| `payments:create` | ✅ | ✅ | ❌ |
+| `payments:cancel` | ✅ | ✅ | ❌ |
+| `payments:report_read` | ✅ | ✅ | ✅ |
+| `sales:create_credit` | ✅ | ✅ | ❌ |
+
+**Arquitectura**:
+- Puerto: `src/modules/payments/application/ports/PaymentRepository.ts`
+- Use cases: `RegisterPaymentUseCase`, `CancelPaymentUseCase`, `ListPaymentsUseCase`, `GetPaymentUseCase`, `ListPaymentsBySaleUseCase`, `GetPaymentHistoryReportUseCase`
+- Servicio de dominio puro: `SalePaymentApplier` — calcula `newPaidAmount` y `newPaymentStatus` sin I/O
+- Repositorio Prisma: `src/modules/payments/infrastructure/repositories/PrismaPaymentRepository.ts`
+- Repositorio InMemory (tests): `src/modules/payments/infrastructure/repositories/InMemoryPaymentRepository.ts`
+- Controller: `src/modules/payments/infrastructure/http/PaymentsController.ts`
+- PDF: `src/modules/payments/infrastructure/pdf/PaymentHistoryPdf.tsx`
+- DI: `src/modules/payments/infrastructure/di/container.ts` → exporta `paymentsController`. Instancia `PrismaSaleRepository` localmente (no desde `pos/di`) para evitar import circular.
+
+## UI por feature
+
+### Convenciones compartidas
+
+- **Modal create/edit con diff**: un único `<Módulo>EditModal` con prop `mode: "create" | "edit"`. En `edit` el `code` está deshabilitado (inmutable backend); submit sólo si el diff no está vacío. Campo opcional vacío envía `null` en el PATCH. Error 409 → mensaje inline en el campo correspondiente.
+- **Búsqueda — client vs. server**:
+  - `payment-methods`, `folios`, `departments`, `branches`: client-side sobre la página cargada (backend no acepta `?search=`).
+  - `providers`, `products`, `sales`, `quotes`: **server-side** vía `?search=` (mín 2 chars) con debounce 300 ms. `CatalogToolbar` recibe `searchScope="server"` para renderizar badge "Búsqueda en servidor · 2+ caracteres".
+- **Gating por permisos**: cada `*Page` usa `useCurrentUser().can(permission)`; muestra optimistamente durante `"loading"` para evitar layout shift.
+
+### Catálogos (`/catalogs`)
+
+Hub con 6 tarjetas. Rutas bajo `app/(private)/catalogs/`:
+
+- `/catalogs/payment-methods` (`payment_methods:*`)
+- `/catalogs/folios` (`folios:*`)
+- `/catalogs/departments` (`departments:*`)
+- `/catalogs/branches` (`branches:*`)
+- `/catalogs/providers` (`providers:*`) — modal con 3 secciones (Datos básicos / Datos fiscales / Contacto)
+- `/catalogs/products` (`products:*`) — detalle en `/catalogs/products/[id]` con 3 tabs (General / Precios / Dosificaciones) que gestionan el agregado sin modales anidados
+
+Bloques compartidos en `app/(private)/catalogs/_blocks/`: `CatalogShell`, `CatalogToolbar`, `CatalogPagination`, `CatalogStatusBadge`, `CatalogEmpty`, `CatalogError`, `CatalogHubCard`, `CatalogsHubPage`.
+
+### Usuarios (`/users`)
+
+`useUserMutations` calcula diff PATCH (`name`/`email`/`avatarUrl`) y sincroniza roles en paralelo sólo si `stagedRoleIds` difiere del original. "Resetear a Gravatar" envía `avatarUrl: null`. `ForbiddenError` sin `required` → `SelfModificationError`; con `required` → re-throw como error de permisos.
+
+### POS / Ventas (`/pos`, `/sales`)
+
+- `/pos` (`sales:create`): layout split-pane catálogo izquierda / carrito derecha.
+- `/sales` (`sales:read`): listado paginado, filtros estado/sucursal (sucursal sólo con `branches:access_all`)/rango fechas.
+- `/sales/[id]` (`sales:read`): detalle; permite cancelar (`sales:cancel`) y editar (`sales:edit_completed` + HQ guard cliente).
+- `/sales/[id]/edit` (`sales:edit_completed`): reusa bloques POS; redirige a detalle si no se cumplen los guards.
+
+**HQ guard cliente** (defensa en profundidad, backend también rechaza con 403):
+```
+mostrarEditar = can("sales:edit_completed") && (branchId === hq.id || can("branches:access_all"))
+```
+Optimista durante `hqLoading`. `EditSalePage` repite el guard en `useEffect`.
+
+**`computeTotalsClient`** (`app/(private)/pos/_logic/lib/computeTotalsClient.ts`): port puro del `SaleTotalsCalculator` con banker's rounding. No depende de `src/modules/` (Prisma) en cliente.
+
+**Quick-add de cliente**: `CustomerPicker` acepta `footerSlot` con "+ Nuevo cliente" sólo si `can("customers:write")`. `CustomerQuickAddModal` crea via `POST /customers`; al confirmar queda pre-seleccionado. 409 con "rfc" → `CustomerRfcAlreadyInUseError`; sin "rfc" → `CustomerCodeAlreadyInUseError`.
+
+### Cotizaciones (`/quotes`)
+
+- `/quotes` (`quotes:read`): listado paginado, filtros sucursal/estado/fechas/búsqueda server-side.
+- `/quotes/new` (`quotes:create`): split-pane catálogo/carrito.
+- `/quotes/[id]` (`quotes:read`): acciones contextuales por estado (Autorizar, Editar, Cancelar, Convertir).
+- `/quotes/[id]/edit` (`quotes:write`): sólo si `status='draft'`; redirige sino.
+
+**Modo "Cotización" en el POS**:
+- `PosHeader` muestra `SegmentedButton` "Venta | Cotización" cuando el usuario tiene `quotes:create`.
+- `CartPanel` en `mode="quote"` oculta forma de pago, muestra `expiresAt`, CTA "Crear cotización" (`bg-secondary-container`).
+- Si el usuario sólo tiene `quotes:create` (sin `sales:create`): POS monta forzado en `mode="quote"`, oculta el SegmentedButton.
+
+**Conversión**: `ConvertQuoteModal` pide `paymentMethodId` + `folioId` fiscal (distintos al folio de la cotización). Éxito → redirige a `/sales/[saleId]`.
+
+### Devoluciones (UI) (`/returns`)
+
+- `/returns` (`returns:read`): listado paginado con filtros estado/sucursal/fechas/búsqueda server-side (mín 2 chars, debounce 300 ms). Columnas: Folio venta, Cliente, Sucursal (solo con bypass), Devuelto por, Reembolso, Fecha, Estado, Acción.
+- `/returns/[id]` (`returns:read`): detalle con header (link al ticket, `ReturnStatusBadge`, reembolso), `ReturnItemsTable` (snapshots), `ReturnMetaPanel` (cliente, motivo, notas, banner cancelación), `ReturnActionsBar` (botón cancelar si `completed` y `returns:cancel`).
+- `/sales/[id]/returns/new` (`returns:create`): formulario contra ticket existente. Gate: `sale.status === 'completed'`. Extiende `SaleItemsTable` con `renderQuantityCell` (inputs de cantidad por fila, `ReturnLineRow`). Redirige a `/returns/<id>` en éxito.
+- `SaleDetailPage` incluye `SaleReturnsSection`: lista devoluciones del ticket y muestra CTA "+ Registrar devolución" si `status='completed'` + `returns:create` + hay líneas disponibles.
+- `SaleItemsTable` extendida con `returnedQuantityBySaleItem?` y `renderQuantityCell?` — backwards compatible.
+
+**Bloques**: `ReturnsListPage`, `ReturnsToolbar`, `ReturnsTable`, `ReturnsEmpty`, `ReturnStatusBadge`, `ReturnDetailPage`, `ReturnItemsTable`, `ReturnMetaPanel`, `ReturnActionsBar`, `CancelReturnModal`, `SaleReturnsSection`, `CreateReturnPage`, `ReturnLineRow`, `CreateReturnFooter`.
+**Hooks**: `useReturnsList`, `useReturnDetail`, `useReturnMutations`, `useSaleReturns`, `useCreateReturnForm`.
+**Servicios**: `listReturns`, `getReturn`, `listSaleReturns`, `createReturn`, `cancelReturn`.
+**Sin guard de matriz**: las devoluciones no requieren acceso a HQ.
+
+### NavigationRail
+
+`RailItem` `{ key, href, icon, label, requires?, children? }`. Items con `children` (sólo un nivel) renderizan botón padre + `RailFlyout` en hover (anchored `left: 80px`). El padre es visible si AL MENOS UN hijo está en `true` o `"loading"`. Click en el padre navega al `href` del padre; click en hijo navega y cierra el flyout.
+
+Items primarios y su `requires`:
+
+| key | href | icon | requires |
+|---|---|---|---|
+| dashboard | `/dashboard` | `dashboard` | — |
+| pos | `/pos` | `point_of_sale` | `sales:create` |
+| sales | `/sales` | `receipt_long` | `sales:read` |
+| quotes | `/quotes` | `request_quote` | `quotes:read` |
+| returns | `/returns` | `assignment_return` | `returns:read` |
+| inventory | `/inventory` | `inventory_2` | `inventory:read` |
+| catalogs | `/catalogs` | `category` | (children) |
+| users | `/users` | `group` | `users:read` |
+| roles | `/roles` | `shield_person` | `roles:read` |
+
+Children de `catalogs`: `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`. Bajo los secundarios (`/support`, `/account`), un botón de logout invoca `useLogout` (deshabilitado mientras está en vuelo).
 
 ## OpenSpec
 
 Workflow activo: `opsx:propose` → `opsx:apply` → `opsx:verify` → `opsx:archive`.
 
-Change en curso: ninguno.
-Changes archivados: **create-auth-api** (2026-05-10), **add-login-ui** (2026-05-14), **fix-login** (2026-05-14), **emit-token-on-register** (2026-05-15), **panel-front** (2026-05-15).
+Specs canónicas (source of truth para reglas finas): ver `openspec/specs/<capability>/spec.md`.
+
+Changes archivados (en orden cronológico): create-auth-api, add-login-ui, fix-login, emit-token-on-register, panel-front, add-roles-permissions, add-roles-ui, admin-users-crud, users-ui, logout-ui, crud-settings-models, add-catalogs-ui, add-providers-crud, add-providers-ui, inventory-backend, ui-ux-inventory, add-pos, ui-ux-pos, add-quotes-crud, ui-ux-quotes, apis-devoluciones, ui-ux-devoluciones, api-abonos.
+
+Changes activos: ver `openspec/changes/` (excluyendo `archive/`).
