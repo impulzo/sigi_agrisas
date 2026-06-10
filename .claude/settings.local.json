@@ -114,7 +114,11 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:ZcEdCgSeFzC0a9tZ@db.qzzjpyepggwautckqeex.supabase.co:5432/postgres\" ~/.nvm/versions/node/v24.14.1/bin/npx ts-node *)",
       "Bash(python3 *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "mcp__vercel__list_teams",
+      "mcp__vercel__list_projects",
+      "mcp__vercel__list_deployments",
+      "mcp__vercel__get_deployment_build_logs"
     ]
   },
   "enabledMcpjsonServers": [
