@@ -98,6 +98,7 @@ export class AuthController {
       if (err instanceof InvalidCredentialsError) {
         return NextResponse.json({ error: err.message }, { status: 401 });
       }
+      console.error("[AuthController.login] unexpected error:", err);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
   }
