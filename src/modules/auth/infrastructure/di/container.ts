@@ -8,18 +8,25 @@ import { RefreshTokenUseCase } from "@/modules/auth/application/use-cases/Refres
 import { LogoutUseCase } from "@/modules/auth/application/use-cases/LogoutUseCase";
 import { AuthController } from "@/modules/auth/infrastructure/http/AuthController";
 
-const userRepo = new UserPrismaRepository(prisma);
-const tokenService = new JwtTokenService();
-const hasher = new BcryptPasswordHasher();
+export const authController = (() => {
+  try {
+    const userRepo = new UserPrismaRepository(prisma);
+    const tokenService = new JwtTokenService();
+    const hasher = new BcryptPasswordHasher();
 
-const registerUseCase = new RegisterUseCase(userRepo, hasher, tokenService);
-const loginUseCase = new LoginUseCase(userRepo, hasher, tokenService);
-const refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
-const logoutUseCase = new LogoutUseCase();
+    const registerUseCase = new RegisterUseCase(userRepo, hasher, tokenService);
+    const loginUseCase = new LoginUseCase(userRepo, hasher, tokenService);
+    const refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
+    const logoutUseCase = new LogoutUseCase();
 
-export const authController = new AuthController(
-  registerUseCase,
-  loginUseCase,
-  refreshTokenUseCase,
-  logoutUseCase
-);
+    return new AuthController(
+      registerUseCase,
+      loginUseCase,
+      refreshTokenUseCase,
+      logoutUseCase
+    );
+  } catch (err) {
+    console.error("[auth/di] failed to initialize AuthController:", err);
+    throw err;
+  }
+})();
