@@ -1,11 +1,12 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
-import { formatMxCurrency } from "../_logic/lib/formatMxCurrency";
+import { useTableKeyboard } from "../../../_hooks/useTableKeyboard";
 import type { ProductDto } from "../_logic/types/api";
 
-interface ProductCatalogGridProps {
+interface ProductCatalogTableProps {
   items: ProductDto[];
   total: number;
   page: number;
@@ -16,7 +17,7 @@ interface ProductCatalogGridProps {
   onPageChange: (page: number) => void;
 }
 
-export function ProductCatalogGrid({
+export function ProductCatalogTable({
   items,
   total,
   page,
@@ -25,8 +26,37 @@ export function ProductCatalogGrid({
   error,
   onAddProduct,
   onPageChange,
-}: ProductCatalogGridProps) {
+}: ProductCatalogTableProps) {
   const totalPages = Math.ceil(total / pageSize);
+  const [focusTarget, setFocusTarget] = useState<"first" | "last" | null>(null);
+
+  const { getRowProps, rowRefs, setFocusedIndex } = useTableKeyboard(items, onAddProduct, {
+    onPageDown: () => {
+      if (page < totalPages) {
+        setFocusTarget("first");
+        onPageChange(page + 1);
+      }
+    },
+    onPageUp: () => {
+      if (page > 1) {
+        setFocusTarget("last");
+        onPageChange(page - 1);
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (!focusTarget || items.length === 0) return;
+    if (focusTarget === "first") {
+      setFocusedIndex(0);
+      rowRefs.current[0]?.focus();
+    } else {
+      const last = items.length - 1;
+      setFocusedIndex(last);
+      rowRefs.current[last]?.focus();
+    }
+    setFocusTarget(null);
+  }, [items, focusTarget, setFocusedIndex, rowRefs]);
 
   if (isLoading) {
     return (
@@ -55,41 +85,40 @@ export function ProductCatalogGrid({
   return (
     <div className="flex flex-col">
       <div className="overflow-x-auto">
-        <table className="w-full text-body-sm">
+        <table className="w-full text-left text-body-md">
           <thead>
-            <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
-              <th className="px-3 py-2 text-left font-medium">Código</th>
-              <th className="px-3 py-2 text-left font-medium">Producto</th>
-              <th className="px-3 py-2 text-right font-medium">Precio</th>
-              <th className="px-3 py-2 text-right font-medium sr-only">Acción</th>
+            <tr className="border-b border-outline-variant text-label-lg text-on-surface-variant">
+              <th className="px-4 py-2 font-medium">Código</th>
+              <th className="px-4 py-2 font-medium">Nombre</th>
+              <th className="px-4 py-2 font-medium hidden md:table-cell">Departamento</th>
+              <th className="px-4 py-2 font-medium text-right">Acción</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((product) => (
+            {items.map((product, idx) => (
               <tr
                 key={product.id}
-                className="border-b border-outline-variant/40 hover:bg-surface-container-low transition-colors"
+                {...getRowProps(idx)}
+                onClick={() => onAddProduct(product)}
+                className="border-b border-outline-variant hover:bg-surface-container-low focus:bg-surface-container focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary transition-colors cursor-pointer"
               >
-                <td className="px-3 py-2 font-mono text-label-sm">{product.code}</td>
-                <td className="px-3 py-2 max-w-[200px] truncate">{product.name}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-on-surface-variant">
-                  —
+                <td className="px-4 py-2 font-mono text-label-lg text-on-surface-variant">{product.code}</td>
+                <td className="px-4 py-2 text-body-sm font-medium">{product.name}</td>
+                <td className="px-4 py-2 text-body-sm text-on-surface-variant hidden md:table-cell">
+                  {product.departmentName ?? "—"}
                 </td>
-                <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    onClick={() => onAddProduct(product)}
-                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-1 text-label-sm font-medium hover:bg-primary/20 transition-colors"
-                  >
-                    <Icon name="add" size={16} />
+                <td className="px-4 py-2 text-right">
+                  <span className="inline-flex items-center gap-1 text-label-sm text-primary font-medium">
+                    <Icon name="add" size={14} />
                     Añadir
-                  </button>
+                  </span>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-3 py-2 border-t border-outline-variant">
           <span className="text-label-sm text-on-surface-variant">

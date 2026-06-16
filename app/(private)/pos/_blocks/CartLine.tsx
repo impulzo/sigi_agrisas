@@ -4,23 +4,43 @@ import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { formatMxCurrency } from "../_logic/lib/formatMxCurrency";
 import type { CartLine as CartLineType } from "../_logic/types/domain";
 
+interface ListItemProps {
+  tabIndex: number;
+  ref: (el: HTMLElement | null) => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
+  onFocus: () => void;
+  "aria-selected": boolean;
+}
+
 interface CartLineProps {
   line: CartLineType;
+  itemProps?: ListItemProps;
   onUpdateQuantity: (id: string, qty: number) => void;
   onUpdateDiscount: (id: string, pct: number) => void;
   onChangeTier: (id: string) => void;
   onRemove: (id: string) => void;
 }
 
+function stopShortcutKeys(e: React.KeyboardEvent) {
+  if (e.key === "+" || e.key === "=" || e.key === "-" || e.key === "Delete" || e.key === "Backspace") {
+    e.stopPropagation();
+  }
+}
+
 export function CartLine({
   line,
+  itemProps,
   onUpdateQuantity,
   onUpdateDiscount,
   onChangeTier,
   onRemove,
 }: CartLineProps) {
   return (
-    <div className="flex flex-col gap-2 py-3 border-b border-outline-variant last:border-0">
+    <div
+      {...itemProps}
+      aria-keyshortcuts="+ - Delete Enter"
+      className="flex flex-col gap-2 py-3 border-b border-outline-variant last:border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary rounded"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <p className="text-body-sm font-medium text-on-surface truncate">{line.productName}</p>
@@ -57,6 +77,7 @@ export function CartLine({
             min="0.001"
             step="0.001"
             value={line.quantity}
+            onKeyDown={stopShortcutKeys}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (!isNaN(v) && v > 0) onUpdateQuantity(line.id, v);
@@ -72,6 +93,7 @@ export function CartLine({
             max="100"
             step="0.01"
             value={line.discountPct}
+            onKeyDown={stopShortcutKeys}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (!isNaN(v)) onUpdateDiscount(line.id, v);
