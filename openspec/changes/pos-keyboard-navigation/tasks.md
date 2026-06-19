@@ -58,5 +58,5 @@
 - [x] 8.1 `npm run build` debe pasar `tsc` sin errores.
 - [x] 8.2 `npm test` debe pasar (todos los nuevos suites incluidos).
 - [x] 8.3 Verificación manual con `/run`: `npm run dev`, navegar al POS como admin, probar cada atajo, Esc en cada modal, restauración de foco, anuncios SR (VoiceOver Cmd+F5).
-- [ ] 8.4 Capturar pantalla del overlay `?` para PR.
-- [ ] 8.5 Crear PR con descripción que enumere atajos y mencione el override de `Ctrl+F`.
+- [x] 8.4 Capturar pantalla del overlay `?` para PR.
+- [x] 8.5 Crear PR con descripción que enumere atajos y mencione el override de `Ctrl+F`.
