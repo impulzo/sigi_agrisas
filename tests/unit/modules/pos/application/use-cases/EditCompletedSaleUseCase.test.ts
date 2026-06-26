@@ -7,6 +7,7 @@ import { CancelledSaleNotEditableError } from "@/modules/pos/domain/errors/Cance
 import { EmptySaleError } from "@/modules/pos/domain/errors/EmptySaleError";
 import { ProductPriceMismatchError } from "@/modules/pos/domain/errors/ProductPriceMismatchError";
 import { SaleHasActivePaymentsError } from "@/modules/payments/domain/errors/SaleHasActivePaymentsError";
+import { ReturnedTotalSaleNotEditableError } from "@/modules/pos/domain/errors/ReturnedTotalSaleNotEditableError";
 
 function makeSummary(status: SaleStatus): SaleSummary {
   const now = new Date();
@@ -60,7 +61,7 @@ function makeLookups(overrides?: Partial<PosLookupService>): PosLookupService {
     }),
     getCustomer: jest.fn().mockResolvedValue({ id: "c1", isActive: true, creditLimit: null, currentBalance: 0 }),
     getBranch: jest.fn().mockResolvedValue({ id: "b1", isActive: true }),
-    getFolio: jest.fn().mockResolvedValue({ id: "f1", code: "VENTA", prefix: null, isActive: true }),
+    getFolio: jest.fn().mockResolvedValue({ id: "f1", code: "VENTA", prefix: null, scope: "POS", isActive: true }),
     getPaymentMethod: jest.fn().mockResolvedValue({ id: "pm1", isActive: true, isCredit: false }),
     ...overrides,
   };
@@ -79,6 +80,7 @@ function makeRepo(initialStatus: SaleStatus): SaleRepository {
         sale: { ...makeSummary("edited").sale, subtotal: data.subtotal, taxTotal: data.taxTotal, total: data.total } as Sale,
       })
     ),
+    markReturnedTotal: jest.fn(),
   };
 }
 
@@ -114,6 +116,7 @@ describe("EditCompletedSaleUseCase", () => {
       createCompletedFromQuote: jest.fn(),
       cancel: jest.fn(),
       replaceItemsAndRecalculate: jest.fn(),
+      markReturnedTotal: jest.fn(),
     };
     await expect(
       new EditCompletedSaleUseCase(repo, makeLookups()).execute("missing", baseReq)
@@ -158,9 +161,16 @@ describe("EditCompletedSaleUseCase", () => {
       createCompletedFromQuote: jest.fn(),
       cancel: jest.fn(),
       replaceItemsAndRecalculate: jest.fn().mockRejectedValue(new SaleHasActivePaymentsError(["pay-1"])),
+      markReturnedTotal: jest.fn(),
     };
     await expect(
       new EditCompletedSaleUseCase(repo, makeLookups()).execute("sale-1", baseReq)
     ).rejects.toBeInstanceOf(SaleHasActivePaymentsError);
+  });
+
+  it("lanza ReturnedTotalSaleNotEditableError cuando sale tiene status returned_total", async () => {
+    await expect(
+      new EditCompletedSaleUseCase(makeRepo("returned_total"), makeLookups()).execute("sale-1", baseReq)
+    ).rejects.toBeInstanceOf(ReturnedTotalSaleNotEditableError);
   });
 });

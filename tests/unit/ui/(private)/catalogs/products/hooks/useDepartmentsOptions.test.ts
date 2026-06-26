@@ -37,8 +37,8 @@ describe("useDepartmentsOptions", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.options[0]).toEqual({ id: "d1", name: "Agrícola" });
-    expect(result.current.options[1]).toEqual({ id: "d2", name: "Industrial" });
+    expect(result.current.options[0]).toEqual({ id: "d1", name: "Agrícola", providerId: null, providerName: null });
+    expect(result.current.options[1]).toEqual({ id: "d2", name: "Industrial", providerId: null, providerName: null });
   });
 
   it("mientras el caché es válido, los renders adicionales no llaman a authFetch", async () => {

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Icon } from "../../../../_components/atoms/Icon/Icon";
 import { Switch } from "../../../../_components/atoms/Switch/Switch";
 import { createDepartmentSchema, updateDepartmentSchema } from "../_logic/schemas/department.schema";
+import { useProvidersOptions } from "../../../../_hooks/useProvidersOptions";
 import type { Department } from "../_logic/types/domain";
 import type { CreateDepartmentBody, UpdateDepartmentBody } from "../_logic/types/api";
 
@@ -29,10 +30,12 @@ export function DepartmentEditModal({
   onClose,
 }: DepartmentEditModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const { options: providerOptions } = useProvidersOptions();
 
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [providerId, setProviderId] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
@@ -46,10 +49,7 @@ export function DepartmentEditModal({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    const handleCancel = (e: Event) => {
-      e.preventDefault();
-      onClose();
-    };
+    const handleCancel = (e: Event) => { e.preventDefault(); onClose(); };
     dialog.addEventListener("cancel", handleCancel);
     return () => dialog.removeEventListener("cancel", handleCancel);
   }, [onClose]);
@@ -57,14 +57,12 @@ export function DepartmentEditModal({
   useEffect(() => {
     if (!open) return;
     if (mode === "create") {
-      setCode("");
-      setName("");
-      setDescription("");
-      setIsActive(true);
+      setCode(""); setName(""); setDescription(""); setProviderId(""); setIsActive(true);
     } else if (entity) {
       setCode(entity.code);
       setName(entity.name);
       setDescription(entity.description ?? "");
+      setProviderId(entity.providerId ?? "");
       setIsActive(entity.isActive);
     }
     setValidationErrors({});
@@ -72,33 +70,18 @@ export function DepartmentEditModal({
 
   function validate(): boolean {
     if (mode === "create") {
-      const result = createDepartmentSchema.safeParse({
-        code,
-        name,
-        description: description || null,
-        isActive,
-      });
+      const result = createDepartmentSchema.safeParse({ code, name, description: description || null, providerId, isActive });
       if (!result.success) {
         const errs: Record<string, string> = {};
-        for (const issue of result.error.issues) {
-          const key = String(issue.path[0]);
-          errs[key] = issue.message;
-        }
+        for (const issue of result.error.issues) { const key = String(issue.path[0]); errs[key] = issue.message; }
         setValidationErrors(errs);
         return false;
       }
     } else {
-      const result = updateDepartmentSchema.safeParse({
-        name,
-        description: description || null,
-        isActive,
-      });
+      const result = updateDepartmentSchema.safeParse({ name, description: description || null, providerId: providerId || null, isActive });
       if (!result.success) {
         const errs: Record<string, string> = {};
-        for (const issue of result.error.issues) {
-          const key = String(issue.path[0]);
-          errs[key] = issue.message;
-        }
+        for (const issue of result.error.issues) { const key = String(issue.path[0]); errs[key] = issue.message; }
         setValidationErrors(errs);
         return false;
       }
@@ -113,25 +96,28 @@ export function DepartmentEditModal({
     if (name !== entity.name) diff.name = name;
     const desc = description || null;
     if (desc !== entity.description) diff.description = desc;
+    const newProviderId = providerId || null;
+    if (newProviderId !== entity.providerId) diff.providerId = newProviderId;
     if (isActive !== entity.isActive) diff.isActive = isActive;
     return diff;
   }
 
   const isCreateMode = mode === "create";
-  const isDirty =
-    isCreateMode
-      ? code !== "" || name !== "" || description !== "" || !isActive
-      : entity !== null &&
-        (name !== entity.name ||
-          (description || null) !== entity.description ||
-          isActive !== entity.isActive);
+  const isDirty = isCreateMode
+    ? code !== "" || name !== "" || description !== "" || providerId !== "" || !isActive
+    : entity !== null && (
+        name !== entity.name ||
+        (description || null) !== entity.description ||
+        (providerId || null) !== entity.providerId ||
+        isActive !== entity.isActive
+      );
 
   const isDiffEmpty = mode === "edit" && Object.keys(getDiff()).length === 0;
 
   function handleSave() {
     if (!validate()) return;
     if (isCreateMode) {
-      onSave({ code, name, description: description || null, isActive });
+      onSave({ code, name, description: description || null, providerId, isActive });
     } else {
       const diff = getDiff();
       if (Object.keys(diff).length === 0) return;
@@ -148,20 +134,14 @@ export function DepartmentEditModal({
     >
       <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
         <h2 className="text-title-md font-semibold text-on-surface">{title}</h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
-        >
+        <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high">
           <Icon name="close" size={20} />
         </button>
       </div>
 
       <div className="px-6 py-5 space-y-5 max-h-[65vh] overflow-y-auto">
         <div>
-          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="dept-code">
-            Código
-          </label>
+          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="dept-code">Código</label>
           <input
             id="dept-code"
             type="text"
@@ -172,16 +152,12 @@ export function DepartmentEditModal({
             className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-surface-container"
           />
           {(validationErrors.code || codeError) && (
-            <p className="text-label-sm text-error mt-1">
-              {validationErrors.code ?? codeError}
-            </p>
+            <p className="text-label-sm text-error mt-1">{validationErrors.code ?? codeError}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="dept-name">
-            Nombre
-          </label>
+          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="dept-name">Nombre</label>
           <input
             id="dept-name"
             type="text"
@@ -190,15 +166,35 @@ export function DepartmentEditModal({
             placeholder="Nombre del departamento"
             className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
           />
-          {validationErrors.name && (
-            <p className="text-label-sm text-error mt-1">{validationErrors.name}</p>
+          {validationErrors.name && <p className="text-label-sm text-error mt-1">{validationErrors.name}</p>}
+        </div>
+
+        <div>
+          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="dept-provider">
+            Proveedor {isCreateMode && <span className="text-error">*</span>}
+          </label>
+          <select
+            id="dept-provider"
+            value={providerId}
+            onChange={(e) => setProviderId(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">Sin proveedor</option>
+            {providerOptions.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          {validationErrors.providerId && <p className="text-label-sm text-error mt-1">{validationErrors.providerId}</p>}
+          {!isCreateMode && !entity?.providerId && (
+            <p className="flex items-center gap-1.5 text-label-sm text-on-surface-variant mt-1.5">
+              <Icon name="info" size={14} />
+              Este departamento no tiene proveedor asignado. Se recomienda asignar uno.
+            </p>
           )}
         </div>
 
         <div>
-          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="dept-description">
-            Descripción
-          </label>
+          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="dept-description">Descripción</label>
           <textarea
             id="dept-description"
             value={description}
@@ -207,27 +203,16 @@ export function DepartmentEditModal({
             rows={3}
             className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
-          {validationErrors.description && (
-            <p className="text-label-sm text-error mt-1">{validationErrors.description}</p>
-          )}
+          {validationErrors.description && <p className="text-label-sm text-error mt-1">{validationErrors.description}</p>}
         </div>
 
         <div className="flex items-center gap-3">
-          <Switch
-            checked={isActive}
-            onChange={setIsActive}
-            aria-label="Activo"
-            id="dept-isActive"
-          />
-          <label htmlFor="dept-isActive" className="text-label-lg text-on-surface-variant cursor-pointer">
-            Activo
-          </label>
+          <Switch checked={isActive} onChange={setIsActive} aria-label="Activo" id="dept-isActive" />
+          <label htmlFor="dept-isActive" className="text-label-lg text-on-surface-variant cursor-pointer">Activo</label>
         </div>
 
         {mutationError && (
-          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded-lg">
-            {mutationError}
-          </p>
+          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded-lg">{mutationError}</p>
         )}
       </div>
 
@@ -247,13 +232,8 @@ export function DepartmentEditModal({
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isSaving ? (
-            <>
-              <Icon name="progress_activity" size={16} className="animate-spin" />
-              Guardando...
-            </>
-          ) : (
-            "Guardar"
-          )}
+            <><Icon name="progress_activity" size={16} className="animate-spin" />Guardando...</>
+          ) : "Guardar"}
         </button>
       </div>
     </dialog>

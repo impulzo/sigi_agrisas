@@ -37,7 +37,7 @@ describe("usePosKeyboard", () => {
       usePosKeyboard({
         searchInputRef, catalogContainerRef, cartContainerRef,
         onSubmit: jest.fn(), onClearCart: jest.fn(), onToggleMode: jest.fn(),
-        canToggleMode: true, canSubmit: false, isSubmitting: false, cartHasItems: false,
+        canToggleMode: true, canSubmit: false, isSubmitting: false,
       })
     );
     fire("f", { ctrlKey: true });
@@ -52,7 +52,7 @@ describe("usePosKeyboard", () => {
       usePosKeyboard({
         searchInputRef, catalogContainerRef, cartContainerRef,
         onSubmit, onClearCart: jest.fn(), onToggleMode: jest.fn(),
-        canToggleMode: true, canSubmit: true, isSubmitting: false, cartHasItems: true,
+        canToggleMode: true, canSubmit: true, isSubmitting: false,
       })
     );
     fire("Enter", { ctrlKey: true });
@@ -66,7 +66,7 @@ describe("usePosKeyboard", () => {
       usePosKeyboard({
         searchInputRef, catalogContainerRef, cartContainerRef,
         onSubmit, onClearCart: jest.fn(), onToggleMode: jest.fn(),
-        canToggleMode: true, canSubmit: true, isSubmitting: true, cartHasItems: true,
+        canToggleMode: true, canSubmit: true, isSubmitting: true,
       })
     );
     fire("Enter", { ctrlKey: true });
@@ -80,7 +80,7 @@ describe("usePosKeyboard", () => {
       usePosKeyboard({
         searchInputRef, catalogContainerRef, cartContainerRef,
         onSubmit, onClearCart: jest.fn(), onToggleMode: jest.fn(),
-        canToggleMode: true, canSubmit: false, isSubmitting: false, cartHasItems: false,
+        canToggleMode: true, canSubmit: false, isSubmitting: false,
       })
     );
     fire("Enter", { ctrlKey: true });
@@ -94,7 +94,7 @@ describe("usePosKeyboard", () => {
       usePosKeyboard({
         searchInputRef, catalogContainerRef, cartContainerRef,
         onSubmit: jest.fn(), onClearCart: jest.fn(), onToggleMode,
-        canToggleMode: true, canSubmit: false, isSubmitting: false, cartHasItems: false,
+        canToggleMode: true, canSubmit: false, isSubmitting: false,
       })
     );
     fire("v", { altKey: true });
@@ -108,7 +108,7 @@ describe("usePosKeyboard", () => {
       usePosKeyboard({
         searchInputRef, catalogContainerRef, cartContainerRef,
         onSubmit: jest.fn(), onClearCart: jest.fn(), onToggleMode,
-        canToggleMode: true, canSubmit: false, isSubmitting: false, cartHasItems: false,
+        canToggleMode: true, canSubmit: false, isSubmitting: false,
       })
     );
     fire("c", { altKey: true });
@@ -122,56 +122,24 @@ describe("usePosKeyboard", () => {
       usePosKeyboard({
         searchInputRef, catalogContainerRef, cartContainerRef,
         onSubmit: jest.fn(), onClearCart: jest.fn(), onToggleMode,
-        canToggleMode: false, canSubmit: false, isSubmitting: false, cartHasItems: false,
+        canToggleMode: false, canSubmit: false, isSubmitting: false,
       })
     );
     fire("v", { altKey: true });
     expect(onToggleMode).not.toHaveBeenCalled();
   });
 
-  it("Ctrl+Shift+Backspace calls onClearCart after confirm", () => {
+  it("Ctrl+Shift+Backspace calls onClearCart", () => {
     const { searchInputRef, catalogContainerRef, cartContainerRef } = makeRefs();
     const onClearCart = jest.fn();
-    jest.spyOn(window, "confirm").mockReturnValue(true);
     renderHook(() =>
       usePosKeyboard({
         searchInputRef, catalogContainerRef, cartContainerRef,
         onSubmit: jest.fn(), onClearCart, onToggleMode: jest.fn(),
-        canToggleMode: false, canSubmit: false, isSubmitting: false, cartHasItems: true,
+        canToggleMode: false, canSubmit: false, isSubmitting: false,
       })
     );
     fire("Backspace", { ctrlKey: true, shiftKey: true });
     expect(onClearCart).toHaveBeenCalled();
-  });
-
-  it("Ctrl+Shift+Backspace does NOT call onClearCart when user cancels confirm", () => {
-    const { searchInputRef, catalogContainerRef, cartContainerRef } = makeRefs();
-    const onClearCart = jest.fn();
-    jest.spyOn(window, "confirm").mockReturnValue(false);
-    renderHook(() =>
-      usePosKeyboard({
-        searchInputRef, catalogContainerRef, cartContainerRef,
-        onSubmit: jest.fn(), onClearCart, onToggleMode: jest.fn(),
-        canToggleMode: false, canSubmit: false, isSubmitting: false, cartHasItems: true,
-      })
-    );
-    fire("Backspace", { ctrlKey: true, shiftKey: true });
-    expect(onClearCart).not.toHaveBeenCalled();
-  });
-
-  it("Ctrl+Shift+Backspace skipped when cart is empty", () => {
-    const { searchInputRef, catalogContainerRef, cartContainerRef } = makeRefs();
-    const onClearCart = jest.fn();
-    const confirmSpy = jest.spyOn(window, "confirm");
-    renderHook(() =>
-      usePosKeyboard({
-        searchInputRef, catalogContainerRef, cartContainerRef,
-        onSubmit: jest.fn(), onClearCart, onToggleMode: jest.fn(),
-        canToggleMode: false, canSubmit: false, isSubmitting: false, cartHasItems: false,
-      })
-    );
-    fire("Backspace", { ctrlKey: true, shiftKey: true });
-    expect(confirmSpy).not.toHaveBeenCalled();
-    expect(onClearCart).not.toHaveBeenCalled();
   });
 });

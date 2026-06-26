@@ -1,4 +1,5 @@
 import { PrismaDepartmentRepository } from "@/modules/departments/infrastructure/repositories/PrismaDepartmentRepository";
+import { PrismaProviderRepository } from "@/modules/providers/infrastructure/repositories/PrismaProviderRepository";
 import { CreateDepartmentUseCase } from "@/modules/departments/application/use-cases/CreateDepartmentUseCase";
 import { GetDepartmentUseCase } from "@/modules/departments/application/use-cases/GetDepartmentUseCase";
 import { ListDepartmentsUseCase } from "@/modules/departments/application/use-cases/ListDepartmentsUseCase";
@@ -15,10 +16,11 @@ afterAll(async () => {
 
 describe("Department CRUD integration", () => {
   const repo = new PrismaDepartmentRepository(prisma);
-  const createUC = new CreateDepartmentUseCase(repo);
+  const providerRepo = new PrismaProviderRepository(prisma);
+  const createUC = new CreateDepartmentUseCase(repo, providerRepo);
   const getUC = new GetDepartmentUseCase(repo);
   const listUC = new ListDepartmentsUseCase(repo);
-  const updateUC = new UpdateDepartmentUseCase(repo);
+  const updateUC = new UpdateDepartmentUseCase(repo, providerRepo);
   const softDeleteUC = new SoftDeleteDepartmentUseCase(repo);
 
   let createdId: string;

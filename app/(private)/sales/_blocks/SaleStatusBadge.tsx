@@ -1,6 +1,6 @@
 import { cn } from "../../../_lib/cn";
 
-type SaleStatus = "completed" | "cancelled" | "edited";
+type SaleStatus = "completed" | "cancelled" | "edited" | "returned_total";
 
 const statusConfig: Record<SaleStatus, { label: string; className: string }> = {
   completed: {
@@ -14,6 +14,10 @@ const statusConfig: Record<SaleStatus, { label: string; className: string }> = {
   edited: {
     label: "Editada",
     className: "bg-amber-100 text-amber-800",
+  },
+  returned_total: {
+    label: "Devuelto total",
+    className: "bg-error-container text-on-error-container",
   },
 };
 

@@ -7,13 +7,15 @@ import { AuthResponse } from "@/modules/auth/application/dto/AuthResponse";
 import { EmailAlreadyInUseError } from "@/modules/auth/domain/errors/EmailAlreadyInUseError";
 import { Email } from "@/modules/auth/domain/value-objects/Email";
 import { Password } from "@/modules/auth/domain/value-objects/Password";
+import { RoleAssigner } from "@/modules/rbac/application/ports/RoleAssigner";
 import { randomUUID } from "crypto";
 
 export class RegisterUseCase {
   constructor(
     private readonly userRepo: UserRepository,
     private readonly hasher: PasswordHasher,
-    private readonly tokenService: TokenService
+    private readonly tokenService: TokenService,
+    private readonly roleAssigner: RoleAssigner
   ) {}
 
   async execute(req: RegisterRequest): Promise<AuthResponse> {
@@ -36,6 +38,7 @@ export class RegisterUseCase {
     });
 
     await this.userRepo.save(user);
+    await this.roleAssigner.assignDefaultRole(user.id);
 
     const payload = { sub: user.id, email: user.email, roles: user.roles, branchId: user.branchId };
     const accessToken = this.tokenService.generateAccessToken(payload);

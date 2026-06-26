@@ -30,7 +30,7 @@ export function ReturnMetaPanel({ ret }: ReturnMetaPanelProps) {
           </p>
         </div>
         <div className="col-span-full">
-          <p className="text-label-sm text-on-surface-variant mb-1">Motivo</p>
+          <p className="text-label-sm text-on-surface-variant mb-1">Motivo de devolución</p>
           <p className="text-body-sm text-on-surface whitespace-pre-line">{ret.reason}</p>
         </div>
         {ret.notes && (

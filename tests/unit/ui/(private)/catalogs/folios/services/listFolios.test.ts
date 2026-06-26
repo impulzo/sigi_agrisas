@@ -6,6 +6,7 @@ const baseDto = {
   code: "FAC",
   name: "Factura",
   prefix: "FAC-",
+  scope: "OPERATIONS",
   currentNumber: 1,
   isActive: true,
   createdAt: "2024-01-01T00:00:00.000Z",

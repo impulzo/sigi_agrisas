@@ -41,7 +41,7 @@ describe("useDepartmentMutations", () => {
 
     let entity;
     await act(async () => {
-      entity = await result.current.createOne({ code: "SALES", name: "Ventas" });
+      entity = await result.current.createOne({ code: "SALES", name: "Ventas", providerId: "00000000-0000-0000-0000-000000000000" });
     });
 
     expect(entity).toEqual(baseEntity);
@@ -55,7 +55,7 @@ describe("useDepartmentMutations", () => {
 
     let entity;
     await act(async () => {
-      entity = await result.current.createOne({ code: "SALES", name: "Ventas" });
+      entity = await result.current.createOne({ code: "SALES", name: "Ventas", providerId: "00000000-0000-0000-0000-000000000000" });
     });
 
     expect(entity).toBeNull();

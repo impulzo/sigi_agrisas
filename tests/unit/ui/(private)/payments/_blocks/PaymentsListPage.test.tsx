@@ -4,6 +4,12 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 
+jest.mock("next/navigation", () => ({
+  useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn() })),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+  usePathname: jest.fn(() => "/payments"),
+}));
+
 jest.mock("next/link", () => {
   const Link = ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>

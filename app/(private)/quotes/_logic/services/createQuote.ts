@@ -5,6 +5,7 @@ import {
   CustomerInactiveError,
   BranchInactiveError,
   FolioInactiveError,
+  FolioScopeMismatchError,
   ProductInactiveError,
   ProductPriceMismatchError,
   EmptyQuoteError,
@@ -31,6 +32,7 @@ export async function createQuote(
   if (res.status === 403) throw new QuoteCreateForbiddenError();
   if (res.status === 400) {
     const err = await res.json().catch(() => ({})) as Record<string, unknown>;
+    if (err.error === "FolioScopeMismatch") throw new FolioScopeMismatchError((err.expected as string) ?? "", (err.actual as string) ?? "");
     const msg = typeof err.error === "string" ? err.error.toLowerCase() : "";
     if (msg.includes("customer") && msg.includes("inactive")) throw new CustomerInactiveError();
     if (msg.includes("branch") && msg.includes("inactive")) throw new BranchInactiveError();

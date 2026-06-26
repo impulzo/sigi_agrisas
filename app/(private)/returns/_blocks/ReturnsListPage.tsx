@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useReturnsList } from "../_logic/hooks/useReturnsList";
 import { CatalogShell } from "../../catalogs/_blocks/CatalogShell";
@@ -14,6 +15,7 @@ import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOpti
 import type { ReturnStatus } from "../_logic/types/api";
 
 export function ReturnsListPage() {
+  const router = useRouter();
   const { can } = useCurrentUser();
   const canRead = can("returns:read");
   const isBypass = can("branches:access_all");
@@ -113,6 +115,7 @@ export function ReturnsListPage() {
             items={items}
             isLoading={isLoading}
             showBranch={isBypass === true}
+            onEnter={(ret) => router.push(`/returns/${ret.id}`)}
           />
           <CatalogPagination
             page={page}

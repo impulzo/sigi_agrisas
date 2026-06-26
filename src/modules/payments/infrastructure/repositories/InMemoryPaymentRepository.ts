@@ -19,6 +19,9 @@ import { PaymentAlreadyCancelledError } from "../../domain/errors/PaymentAlready
 import { PaymentExceedsDueAmountError } from "../../domain/errors/PaymentExceedsDueAmountError";
 import { SaleNotPayableError } from "../../domain/errors/SaleNotPayableError";
 import { BranchScopeViolationError } from "../../domain/errors/BranchScopeViolationError";
+import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
+import { FolioScope } from "@/shared/domain/types/FolioScope";
+import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 
 interface SaleMock {
   id: string;
@@ -39,10 +42,17 @@ interface CustomerMock {
   creditLimit: number | null;
 }
 
+interface FolioMock {
+  id: string;
+  scope: FolioScope;
+  isActive: boolean;
+}
+
 export class InMemoryPaymentRepository implements PaymentRepository {
   private payments = new Map<string, CustomerPayment>();
   private sales = new Map<string, SaleMock>();
   private customers = new Map<string, CustomerMock>();
+  private folios = new Map<string, FolioMock>();
   private folioCounter = 0;
 
   seedSale(sale: SaleMock): void {
@@ -53,6 +63,10 @@ export class InMemoryPaymentRepository implements PaymentRepository {
     this.customers.set(customer.id, { ...customer });
   }
 
+  seedFolio(folio: FolioMock): void {
+    this.folios.set(folio.id, { ...folio });
+  }
+
   async createCompleted(input: CreatePaymentInput): Promise<PaymentWithSale> {
     const sale = this.sales.get(input.saleId);
     if (!sale) throw new Error("Sale not found");
@@ -61,6 +75,12 @@ export class InMemoryPaymentRepository implements PaymentRepository {
 
     if (input.callerBranchId !== null && sale.branchId !== input.callerBranchId) {
       throw new BranchScopeViolationError();
+    }
+
+    const folioMock = this.folios.get(input.folioId);
+    if (folioMock) {
+      if (!folioMock.isActive) throw new InactiveResourceError("Folio");
+      if (folioMock.scope !== "OPERATIONS") throw new FolioScopeMismatchError("OPERATIONS", folioMock.scope);
     }
 
     const remaining = sale.total - sale.paidAmount;

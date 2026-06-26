@@ -37,7 +37,7 @@ export function SearchInput({
         value={value ?? ""}
         onChange={handleChange}
         placeholder={placeholder}
-        aria-keyshortcuts="Control+f"
+        aria-keyshortcuts="Control+F"
         className="bg-transparent border-none focus:outline-none focus:ring-0 text-body-md placeholder:text-on-surface-variant w-64"
       />
     </div>

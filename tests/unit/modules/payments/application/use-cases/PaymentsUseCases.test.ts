@@ -9,6 +9,7 @@ import { PaymentNotFoundError } from "@/modules/payments/domain/errors/PaymentNo
 import { PaymentAlreadyCancelledError } from "@/modules/payments/domain/errors/PaymentAlreadyCancelledError";
 import { PaymentExceedsDueAmountError } from "@/modules/payments/domain/errors/PaymentExceedsDueAmountError";
 import { SaleNotPayableError } from "@/modules/payments/domain/errors/SaleNotPayableError";
+import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 const BRANCH_ID = "branch-1";
@@ -142,6 +143,27 @@ describe("RegisterPaymentUseCase", () => {
     await expect(
       useCase.execute({ saleId: "nonexistent", paymentMethodId: PM_ID, folioId: FOLIO_ID, amount: 100, notes: null, userId: USER_ID, callerBranchId: null })
     ).rejects.toThrow("Sale not found");
+  });
+
+  it("rechaza folio con scope POS (espera OPERATIONS)", async () => {
+    const repo = makeRepo();
+    repo.seedFolio({ id: FOLIO_ID, scope: "POS", isActive: true });
+    const err = await makeRegisterUseCase(repo)
+      .execute({ saleId: SALE_ID, paymentMethodId: PM_ID, folioId: FOLIO_ID, amount: 100, notes: null, userId: USER_ID, callerBranchId: null })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(FolioScopeMismatchError);
+    expect(err.expected).toBe("OPERATIONS");
+    expect(err.actual).toBe("POS");
+  });
+
+  it("rechaza folio con scope INVENTORY (espera OPERATIONS)", async () => {
+    const repo = makeRepo();
+    repo.seedFolio({ id: FOLIO_ID, scope: "INVENTORY", isActive: true });
+    const err = await makeRegisterUseCase(repo)
+      .execute({ saleId: SALE_ID, paymentMethodId: PM_ID, folioId: FOLIO_ID, amount: 100, notes: null, userId: USER_ID, callerBranchId: null })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(FolioScopeMismatchError);
+    expect(err.actual).toBe("INVENTORY");
   });
 
   it("allows sequential partial payments up to full amount", async () => {

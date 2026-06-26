@@ -11,3 +11,10 @@ export class DepartmentCodeAlreadyInUseError extends Error {
     this.name = "DepartmentCodeAlreadyInUseError";
   }
 }
+
+export class ProviderNotFoundOrInactiveError extends Error {
+  constructor() {
+    super("Provider not found or inactive");
+    this.name = "ProviderNotFoundOrInactiveError";
+  }
+}

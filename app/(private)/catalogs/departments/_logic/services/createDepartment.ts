@@ -1,7 +1,7 @@
 import { authFetch, NetworkError, UnauthenticatedError, ForbiddenError } from "../../../../../_lib/authFetch";
 import type { CreateDepartmentBody, DepartmentDto } from "../types/api";
 import type { Department } from "../types/domain";
-import { DepartmentCodeAlreadyInUseError } from "../errors";
+import { DepartmentCodeAlreadyInUseError, ProviderNotFoundOrInactiveError } from "../errors";
 import { toDepartment } from "./listDepartments";
 
 export async function createDepartment(
@@ -18,6 +18,10 @@ export async function createDepartment(
   } catch (err) {
     if (err instanceof NetworkError || err instanceof UnauthenticatedError || err instanceof ForbiddenError) throw err;
     throw new NetworkError();
+  }
+  if (res.status === 400) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    if (body.error === "Provider not found or inactive") throw new ProviderNotFoundOrInactiveError();
   }
   if (res.status === 409) throw new DepartmentCodeAlreadyInUseError();
   if (!res.ok) throw new NetworkError();

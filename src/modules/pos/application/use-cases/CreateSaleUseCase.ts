@@ -11,6 +11,7 @@ import { InactiveResourceError } from "../../domain/errors/InactiveResourceError
 import { QuoteLinkInvalidError } from "../../domain/errors/QuoteLinkInvalidError";
 import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
 import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
+import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 
 export interface CreateSaleResult {
   dto: SaleDetailDto;
@@ -34,17 +35,18 @@ export class CreateSaleUseCase {
 
     // 1. Validate header resources
     const [customer, branch, folio, payment] = await Promise.all([
-      this.lookups.getCustomer(req.customerId),
+      req.customerId ? this.lookups.getCustomer(req.customerId) : Promise.resolve(null),
       this.lookups.getBranch(req.branchId),
       this.lookups.getFolio(req.folioId),
       this.lookups.getPaymentMethod(req.paymentMethodId),
     ]);
 
-    if (!customer) throw new InactiveResourceError("Customer not found");
-    if (!customer.isActive) throw new InactiveResourceError("Customer");
+    if (req.customerId && !customer) throw new InactiveResourceError("Customer not found");
+    if (customer && !customer.isActive) throw new InactiveResourceError("Customer");
     if (!branch) throw new InactiveResourceError("Branch not found");
     if (!branch.isActive) throw new InactiveResourceError("Branch");
     if (!folio) throw new InactiveResourceError("Folio not found");
+    if (folio.scope !== "POS") throw new FolioScopeMismatchError("POS", folio.scope);
     if (!folio.isActive) throw new InactiveResourceError("Folio");
     if (!payment) throw new InactiveResourceError("Payment method not found");
     if (!payment.isActive) throw new InactiveResourceError("Payment method");
@@ -52,6 +54,7 @@ export class CreateSaleUseCase {
     // Credit pre-check: validate credit line exists before processing items
     let creditAvailable: number | null = null;
     if (payment.isCredit) {
+      if (!customer) throw new InactiveResourceError("Customer required for credit sales");
       if (customer.creditLimit === null) throw new CustomerHasNoCreditLineError();
       creditAvailable = customer.creditLimit - customer.currentBalance;
     }
@@ -109,6 +112,7 @@ export class CreateSaleUseCase {
         discountPct: price.discountPct,
         ivaRate: product.ivaRate,
         iepsRate: product.iepsRate,
+        isTaxable: product.isTaxable,
       });
 
       snapshotInputs.push({
@@ -120,8 +124,8 @@ export class CreateSaleUseCase {
         quantity: item.quantity,
         unitPrice: price.price,
         discountPct: price.discountPct,
-        ivaRate: product.ivaRate,
-        iepsRate: product.iepsRate,
+        ivaRate: product.isTaxable ? product.ivaRate : 0,
+        iepsRate: product.isTaxable ? product.iepsRate : 0,
       });
     }
 
@@ -153,7 +157,7 @@ export class CreateSaleUseCase {
       ? await this.saleRepo.createCompletedFromQuote({
           quoteId: validatedQuoteId,
           branchId: req.branchId,
-          customerId: req.customerId,
+          customerId: req.customerId ?? null,
           cashierId,
           paymentMethodId: req.paymentMethodId,
           folioId: req.folioId,
@@ -167,7 +171,7 @@ export class CreateSaleUseCase {
         })
       : await this.saleRepo.createCompleted({
           branchId: req.branchId,
-          customerId: req.customerId,
+          customerId: req.customerId ?? null,
           cashierId,
           paymentMethodId: req.paymentMethodId,
           folioId: req.folioId,

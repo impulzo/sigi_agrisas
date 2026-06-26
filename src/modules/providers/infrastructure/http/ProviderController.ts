@@ -8,6 +8,7 @@ import { SoftDeleteProviderUseCase } from "../../application/use-cases/SoftDelet
 import { ProviderNotFoundError } from "../../domain/errors/ProviderNotFoundError";
 import { ProviderCodeAlreadyInUseError } from "../../domain/errors/ProviderCodeAlreadyInUseError";
 import { ProviderRfcAlreadyInUseError } from "../../domain/errors/ProviderRfcAlreadyInUseError";
+import { ProviderHasDepartmentsError } from "../../domain/errors/ProviderHasDepartmentsError";
 
 const RFC_REGEX = /^([A-ZÑ&]{3,4})\d{6}([A-Z\d]{3})$/;
 const TAX_REGIME_REGEX = /^\d{3}$/;
@@ -197,6 +198,7 @@ export class ProviderController {
       return new NextResponse(null, { status: 204 });
     } catch (err) {
       if (err instanceof ProviderNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      if (err instanceof ProviderHasDepartmentsError) return NextResponse.json({ error: "ProviderHasDepartments", departmentCount: err.departmentCount }, { status: 409 });
       throw err;
     }
   }

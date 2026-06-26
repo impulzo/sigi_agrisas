@@ -12,6 +12,7 @@ const makeLine = (n: number): CartLine => ({
   productId: `prod-${n}`,
   productCode: `P00${n}`,
   productName: `Producto ${n}`,
+  productPriceId: `price-${n}`,
   priceName: "Normal",
   unitPrice: 100,
   quantity: 2,

@@ -3,6 +3,7 @@ import { SaleRepository, SaleSummary } from "@/modules/pos/application/ports/Sal
 import { Sale, SaleStatus } from "@/modules/pos/domain/entities/Sale";
 import { SaleNotFoundError } from "@/modules/pos/domain/errors/SaleNotFoundError";
 import { SaleHasActivePaymentsError } from "@/modules/payments/domain/errors/SaleHasActivePaymentsError";
+import { ReturnedTotalSaleNotCancellableError } from "@/modules/pos/domain/errors/ReturnedTotalSaleNotCancellableError";
 
 function makeSummary(status: SaleStatus, opts?: { reason?: string | null; cancelledAt?: Date }): SaleSummary {
   const now = new Date();
@@ -47,6 +48,7 @@ describe("CancelSaleUseCase", () => {
       createCompletedFromQuote: jest.fn(),
       cancel,
       replaceItemsAndRecalculate: jest.fn(),
+      markReturnedTotal: jest.fn(),
     };
     const result = await new CancelSaleUseCase(repo).execute("sale-1", { reason: "test" });
     expect(result.dto.status).toBe("cancelled");
@@ -61,6 +63,7 @@ describe("CancelSaleUseCase", () => {
       createCompletedFromQuote: jest.fn(),
       cancel: jest.fn().mockResolvedValue(makeSummary("cancelled")),
       replaceItemsAndRecalculate: jest.fn(),
+      markReturnedTotal: jest.fn(),
     };
     const result = await new CancelSaleUseCase(repo).execute("sale-1", {});
     expect(result.branchId).toBe("b1");
@@ -74,6 +77,7 @@ describe("CancelSaleUseCase", () => {
       createCompletedFromQuote: jest.fn(),
       cancel: jest.fn(),
       replaceItemsAndRecalculate: jest.fn(),
+      markReturnedTotal: jest.fn(),
     };
     await expect(new CancelSaleUseCase(repo).execute("missing", {})).rejects.toThrow(
       SaleNotFoundError
@@ -89,6 +93,7 @@ describe("CancelSaleUseCase", () => {
       createCompletedFromQuote: jest.fn(),
       cancel,
       replaceItemsAndRecalculate: jest.fn(),
+      markReturnedTotal: jest.fn(),
     };
     const result = await new CancelSaleUseCase(repo).execute("sale-1", { reason: "segunda vez" });
     expect(result.dto.status).toBe("cancelled");
@@ -104,6 +109,7 @@ describe("CancelSaleUseCase", () => {
       createCompletedFromQuote: jest.fn(),
       cancel,
       replaceItemsAndRecalculate: jest.fn(),
+      markReturnedTotal: jest.fn(),
     };
     await new CancelSaleUseCase(repo).execute("sale-1", {});
     expect(cancel).toHaveBeenCalledWith("sale-1", null);
@@ -117,7 +123,23 @@ describe("CancelSaleUseCase", () => {
       createCompletedFromQuote: jest.fn(),
       cancel: jest.fn().mockRejectedValue(new SaleHasActivePaymentsError(["p-1", "p-2"])),
       replaceItemsAndRecalculate: jest.fn(),
+      markReturnedTotal: jest.fn(),
     };
     await expect(new CancelSaleUseCase(repo).execute("sale-1", {})).rejects.toBeInstanceOf(SaleHasActivePaymentsError);
+  });
+
+  it("lanza ReturnedTotalSaleNotCancellableError cuando sale tiene status returned_total", async () => {
+    const repo: SaleRepository = {
+      findAll: jest.fn(),
+      findByIdWithItems: jest.fn().mockResolvedValue(makeSummary("returned_total")),
+      createCompleted: jest.fn(),
+      createCompletedFromQuote: jest.fn(),
+      cancel: jest.fn(),
+      replaceItemsAndRecalculate: jest.fn(),
+      markReturnedTotal: jest.fn(),
+    };
+    await expect(new CancelSaleUseCase(repo).execute("sale-1", {})).rejects.toBeInstanceOf(
+      ReturnedTotalSaleNotCancellableError
+    );
   });
 });

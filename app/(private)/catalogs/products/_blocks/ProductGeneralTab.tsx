@@ -2,9 +2,14 @@
 
 import { useState, useCallback } from "react";
 import { Switch } from "../../../../_components/atoms/Switch/Switch";
+import { ImageUploadField } from "../../../../_components/molecules/ImageUploadField/ImageUploadField";
 import { updateProduct } from "../_logic/services/products";
+import { uploadProductImage } from "../_logic/services/uploadProductImage";
+import { deleteProductImage } from "../_logic/services/deleteProductImage";
 import { ProductDepartmentInvalidError } from "../_logic/errors";
 import { createProductSchema } from "../_logic/schemas/product.schema";
+import { useTaxRatesOptions } from "../../../../_hooks/useTaxRatesOptions";
+import { useDepartmentsOptions } from "../_logic/hooks/useDepartmentsOptions";
 import type { Product } from "../_logic/types/domain";
 import type { UpdateProductBody } from "../_logic/types/api";
 
@@ -33,29 +38,39 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
   const [name, setName] = useState(product.name);
   const [unit, setUnit] = useState(product.unit);
   const [departmentId, setDepartmentId] = useState(product.departmentId);
+  const [taxRateId, setTaxRateId] = useState<string | null>(product.taxRateId ?? null);
   const [satProductCode, setSatProductCode] = useState(product.satProductCode ?? "");
   const [ivaRate, setIvaRate] = useState(taxRateToDisplay(product.ivaRate));
   const [iepsRate, setIepsRate] = useState(taxRateToDisplay(product.iepsRate));
+  const [isTaxable, setIsTaxable] = useState(product.isTaxable);
   const [isActive, setIsActive] = useState(product.isActive);
+  const [imageUrl, setImageUrl] = useState<string | null>(product.imageUrl ?? null);
   const [isSaving, setIsSaving] = useState(false);
   const [deptError, setDeptError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  const { options: taxRateOptions } = useTaxRatesOptions();
+  const { options: allDeptOptions } = useDepartmentsOptions();
+  const derivedProviderName = allDeptOptions.find((d) => d.id === departmentId)?.providerName ?? null;
 
   const buildDiff = useCallback((): UpdateProductBody => {
     const diff: UpdateProductBody = {};
     if (name !== product.name) diff.name = name;
     if (unit !== product.unit) diff.unit = unit;
     if (departmentId !== product.departmentId) diff.departmentId = departmentId;
+    const newTaxRateId = taxRateId || null;
+    if (newTaxRateId !== product.taxRateId) diff.taxRateId = newTaxRateId;
     const parsedSat = satProductCode.trim() === "" ? null : satProductCode.trim();
     if (parsedSat !== product.satProductCode) diff.satProductCode = parsedSat;
     const parsedIva = parseTaxInput(ivaRate);
     if (parsedIva !== product.ivaRate) diff.ivaRate = parsedIva;
     const parsedIeps = parseTaxInput(iepsRate);
     if (parsedIeps !== product.iepsRate) diff.iepsRate = parsedIeps;
+    if (isTaxable !== product.isTaxable) diff.isTaxable = isTaxable;
     if (isActive !== product.isActive) diff.isActive = isActive;
     return diff;
-  }, [product, name, unit, departmentId, satProductCode, ivaRate, iepsRate, isActive]);
+  }, [product, name, unit, departmentId, taxRateId, satProductCode, ivaRate, iepsRate, isTaxable, isActive]);
 
   const isDiffEmpty = Object.keys(buildDiff()).length === 0;
 
@@ -117,8 +132,43 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
       </div>
 
       <div>
+        <label className="block text-label-lg text-on-surface-variant mb-1">Proveedor</label>
+        <input type="text" value={derivedProviderName ?? "Sin proveedor"} disabled className={fieldClass} />
+      </div>
+
+      <div>
+        <label className="block text-label-lg text-on-surface-variant mb-1">Tasa de impuesto</label>
+        <select
+          value={taxRateId ?? ""}
+          onChange={(e) => setTaxRateId(e.target.value || null)}
+          disabled={!canWrite}
+          className={fieldClass}
+        >
+          <option value="">Sin tasa asignada</option>
+          {taxRateOptions.map((tr) => (
+            <option key={tr.id} value={tr.id}>
+              {tr.code} — {tr.name} ({(tr.rate * 100).toFixed(2)}%)
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
         <label className="block text-label-lg text-on-surface-variant mb-1">Cód. SAT (8 dígitos)</label>
         <input type="text" value={satProductCode} onChange={(e) => setSatProductCode(e.target.value.replace(/\D/g, "").slice(0, 8))} disabled={!canWrite} className={fieldClass} />
+      </div>
+
+      <div>
+        <label className="block text-label-lg text-on-surface-variant mb-1">Imagen del producto</label>
+        <ImageUploadField
+          currentUrl={imageUrl}
+          productId={product.id}
+          canWrite={canWrite}
+          onUploaded={(url) => { setImageUrl(url); onUpdated({ ...product, imageUrl: url }); }}
+          onDeleted={() => { setImageUrl(null); onUpdated({ ...product, imageUrl: null }); }}
+          uploadFn={uploadProductImage}
+          deleteFn={deleteProductImage}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -137,6 +187,11 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
           </div>
         </div>
       </div>
+
+      <label className={`flex items-center gap-3 select-none ${canWrite ? "cursor-pointer" : "cursor-default opacity-70"}`}>
+        <Switch checked={isTaxable} onChange={canWrite ? setIsTaxable : () => {}} aria-label="Sujeto a impuestos" />
+        <span className="text-label-lg text-on-surface-variant">Sujeto a impuestos</span>
+      </label>
 
       {canWrite && (
         <label className="flex items-center gap-3 cursor-pointer select-none">

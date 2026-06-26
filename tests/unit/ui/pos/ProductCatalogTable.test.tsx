@@ -108,4 +108,68 @@ describe("ProductCatalogTable", () => {
     await user.click(nextBtn);
     expect(onPageChange).toHaveBeenCalledWith(2);
   });
+
+  it("ArrowDown on last row calls onPageChange(page+1) when next page exists", async () => {
+    const onPageChange = jest.fn();
+    const user = userEvent.setup();
+    render(
+      <ProductCatalogTable
+        items={items} total={40} page={1} pageSize={20}
+        isLoading={false} error={null}
+        onAddProduct={jest.fn()} onPageChange={onPageChange}
+      />
+    );
+    const rows = screen.getAllByRole("row").slice(1); // skip thead
+    await user.click(rows[rows.length - 1]);
+    await user.keyboard("{ArrowDown}");
+    expect(onPageChange).toHaveBeenCalledWith(2);
+  });
+
+  it("ArrowDown on last row does not call onPageChange when on last page", async () => {
+    const onPageChange = jest.fn();
+    const user = userEvent.setup();
+    render(
+      <ProductCatalogTable
+        items={items} total={3} page={1} pageSize={20}
+        isLoading={false} error={null}
+        onAddProduct={jest.fn()} onPageChange={onPageChange}
+      />
+    );
+    const rows = screen.getAllByRole("row").slice(1);
+    await user.click(rows[rows.length - 1]);
+    await user.keyboard("{ArrowDown}");
+    expect(onPageChange).not.toHaveBeenCalled();
+  });
+
+  it("ArrowUp on first row calls onPageChange(page-1) when previous page exists", async () => {
+    const onPageChange = jest.fn();
+    const user = userEvent.setup();
+    render(
+      <ProductCatalogTable
+        items={items} total={40} page={2} pageSize={20}
+        isLoading={false} error={null}
+        onAddProduct={jest.fn()} onPageChange={onPageChange}
+      />
+    );
+    const rows = screen.getAllByRole("row").slice(1);
+    await user.click(rows[0]);
+    await user.keyboard("{ArrowUp}");
+    expect(onPageChange).toHaveBeenCalledWith(1);
+  });
+
+  it("Enter on a row calls onAddProduct via keyboard", async () => {
+    const onAdd = jest.fn();
+    const user = userEvent.setup();
+    render(
+      <ProductCatalogTable
+        items={items} total={3} page={1} pageSize={20}
+        isLoading={false} error={null}
+        onAddProduct={onAdd} onPageChange={jest.fn()}
+      />
+    );
+    const rows = screen.getAllByRole("row").slice(1);
+    rows[1].focus();
+    await user.keyboard("{Enter}");
+    expect(onAdd).toHaveBeenCalledWith(items[1], 1);
+  });
 });

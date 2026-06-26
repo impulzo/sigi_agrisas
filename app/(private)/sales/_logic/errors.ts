@@ -13,3 +13,7 @@ export class SaleNotInHeadquartersError extends Error {
 export class SaleScopingForbiddenError extends Error {
   constructor() { super("Sin acceso a esa sucursal"); this.name = "SaleScopingForbiddenError"; }
 }
+
+export class SaleAlreadyFullyReturnedError extends Error {
+  constructor() { super("Esta venta ya fue devuelta en su totalidad"); this.name = "SaleAlreadyFullyReturnedError"; }
+}

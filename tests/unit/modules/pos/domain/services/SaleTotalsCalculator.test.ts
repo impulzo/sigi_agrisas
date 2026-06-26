@@ -85,6 +85,17 @@ describe("SaleTotalsCalculator", () => {
     ).toThrow(/ivaRate must be between 0 and 1/);
   });
 
+  it("isTaxable=false produce lineIva=0 e lineIeps=0 aunque las tasas sean > 0", () => {
+    const r = SaleTotalsCalculator.computeTotals([
+      { quantity: 1, unitPrice: 100, ivaRate: 0.16, iepsRate: 0.08, isTaxable: false },
+    ]);
+    expect(r.lines[0].lineIva).toBe(0);
+    expect(r.lines[0].lineIeps).toBe(0);
+    expect(r.lines[0].lineTax).toBe(0);
+    expect(r.lines[0].lineSubtotal).toBe(100);
+    expect(r.lines[0].lineTotal).toBe(100);
+  });
+
   describe("fixtures compartidos (tests/fixtures/totals-vectors.ts)", () => {
     it.each(totalsVectors.map((f, i) => [`fixture #${i + 1}`, f]))(
       "%s: produce totales consistentes (total = subtotal + taxTotal)",

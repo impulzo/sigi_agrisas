@@ -1,5 +1,6 @@
 import { prisma } from "@/shared/infrastructure/prisma/client";
 import { PrismaDepartmentRepository } from "@/modules/departments/infrastructure/repositories/PrismaDepartmentRepository";
+import { PrismaTaxRateRepository } from "@/modules/tax-rates/infrastructure/repositories/PrismaTaxRateRepository";
 import { PrismaProductRepository } from "@/modules/products/infrastructure/repositories/PrismaProductRepository";
 import { PrismaProductPriceRepository } from "@/modules/products/infrastructure/repositories/PrismaProductPriceRepository";
 import { PrismaProductDosificationRepository } from "@/modules/products/infrastructure/repositories/PrismaProductDosificationRepository";
@@ -8,6 +9,9 @@ import { GetProductUseCase } from "@/modules/products/application/use-cases/GetP
 import { CreateProductUseCase } from "@/modules/products/application/use-cases/CreateProductUseCase";
 import { UpdateProductUseCase } from "@/modules/products/application/use-cases/UpdateProductUseCase";
 import { SoftDeleteProductUseCase } from "@/modules/products/application/use-cases/SoftDeleteProductUseCase";
+import { UploadProductImageUseCase } from "@/modules/products/application/use-cases/UploadProductImageUseCase";
+import { DeleteProductImageUseCase } from "@/modules/products/application/use-cases/DeleteProductImageUseCase";
+import { SupabaseProductImageStorage } from "@/modules/products/infrastructure/services/SupabaseProductImageStorage";
 import { ListProductPricesUseCase } from "@/modules/products/application/use-cases/ListProductPricesUseCase";
 import { CreateProductPriceUseCase } from "@/modules/products/application/use-cases/CreateProductPriceUseCase";
 import { UpdateProductPriceUseCase } from "@/modules/products/application/use-cases/UpdateProductPriceUseCase";
@@ -21,16 +25,20 @@ import { ProductPricesController } from "@/modules/products/infrastructure/http/
 import { ProductDosificationsController } from "@/modules/products/infrastructure/http/ProductDosificationsController";
 
 const departmentRepo = new PrismaDepartmentRepository(prisma);
+const taxRateRepo = new PrismaTaxRateRepository(prisma);
 const productRepo = new PrismaProductRepository(prisma);
 const priceRepo = new PrismaProductPriceRepository(prisma);
 const dosificationRepo = new PrismaProductDosificationRepository(prisma);
+const imageStorage = new SupabaseProductImageStorage();
 
 export const productsController = new ProductsController(
   new ListProductsUseCase(productRepo),
   new GetProductUseCase(productRepo),
-  new CreateProductUseCase(productRepo, departmentRepo),
-  new UpdateProductUseCase(productRepo, departmentRepo),
-  new SoftDeleteProductUseCase(productRepo)
+  new CreateProductUseCase(productRepo, departmentRepo, taxRateRepo),
+  new UpdateProductUseCase(productRepo, departmentRepo, taxRateRepo),
+  new SoftDeleteProductUseCase(productRepo),
+  new UploadProductImageUseCase(productRepo, imageStorage),
+  new DeleteProductImageUseCase(productRepo, imageStorage),
 );
 
 export const productPricesController = new ProductPricesController(

@@ -2,6 +2,7 @@ import { TokenService } from "@/modules/auth/application/ports/TokenService";
 
 export interface RefreshTokenResponse {
   accessToken: string;
+  newRefreshToken: string;
 }
 
 export class RefreshTokenUseCase {
@@ -10,6 +11,7 @@ export class RefreshTokenUseCase {
   execute(refreshToken: string): RefreshTokenResponse {
     const payload = this.tokenService.verifyRefreshToken(refreshToken);
     const accessToken = this.tokenService.generateAccessToken(payload);
-    return { accessToken };
+    const newRefreshToken = this.tokenService.generateRefreshToken(payload);
+    return { accessToken, newRefreshToken };
   }
 }

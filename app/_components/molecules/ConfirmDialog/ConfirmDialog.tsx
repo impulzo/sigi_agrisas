@@ -11,6 +11,7 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  error?: string;
   className?: string;
 }
 
@@ -22,6 +23,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancelar",
   onConfirm,
   onCancel,
+  error,
   className,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -58,7 +60,8 @@ export function ConfirmDialog({
       )}
     >
       <h2 id="confirm-dialog-title" className="text-title-md font-semibold text-on-surface mb-2">{title}</h2>
-      <p className="text-body-md text-on-surface-variant mb-6">{description}</p>
+      <p className="text-body-md text-on-surface-variant mb-4">{description}</p>
+      {error && <p className="text-body-sm text-error mb-4">{error}</p>}
       <div className="flex justify-end gap-3">
         <button
           type="button"

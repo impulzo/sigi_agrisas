@@ -2,6 +2,7 @@
 
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import type { InventoryItem } from "../_logic/types/domain";
+import { useTableKeyboard } from "../../../_hooks/useTableKeyboard";
 
 interface InventoryTableProps {
   items: InventoryItem[];
@@ -9,9 +10,13 @@ interface InventoryTableProps {
   onAdjust: (item: InventoryItem) => void;
   onEdit: (item: InventoryItem) => void;
   onRemove: (item: InventoryItem) => void;
+  onEnter?: (item: InventoryItem) => void;
 }
 
-export function InventoryTable({ items, canWrite, onAdjust, onEdit, onRemove }: InventoryTableProps) {
+export function InventoryTable({ items, canWrite, onAdjust, onEdit, onRemove, onEnter }: InventoryTableProps) {
+  const noop = () => {};
+  const { getRowProps } = useTableKeyboard(items, onEnter ?? noop);
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-body-md">
@@ -27,11 +32,15 @@ export function InventoryTable({ items, canWrite, onAdjust, onEdit, onRemove }: 
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => {
+          {items.map((item, idx) => {
             const available = item.quantity - item.reservedQuantity;
             const isLow = item.quantity < item.reorderPoint;
             return (
-              <tr key={item.id} className={`border-b border-outline-variant transition-colors ${isLow ? "bg-error-container/20 hover:bg-error-container/30" : "hover:bg-surface-container-low"}`}>
+              <tr
+                key={item.id}
+                {...getRowProps(idx)}
+                className={`border-b border-outline-variant focus:outline-none transition-colors cursor-default ${isLow ? "bg-error-container/20 hover:bg-error-container/30 focus:bg-error-container/30" : "hover:bg-surface-container-low focus:bg-surface-container"}`}
+              >
                 <td className="px-4 py-3 font-mono text-label-lg">
                   <div className="flex items-center gap-2">
                     {isLow && <Icon name="warning" size={14} className="text-error flex-shrink-0" />}

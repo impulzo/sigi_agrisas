@@ -5,9 +5,10 @@ import { toReturnDetailDto } from "../mappers/toReturnDto";
 import { ReturnTotalsCalculator } from "../../domain/services/ReturnTotalsCalculator";
 import { ReturnableQuantityCalculator } from "../../domain/services/ReturnableQuantityCalculator";
 import { SaleNotReturnableError } from "../../domain/errors/SaleNotReturnableError";
-import { EmptyReturnError } from "../../domain/errors/EmptyReturnError";
+import { ReturnItemsEmptyError } from "../../domain/errors/ReturnItemsEmptyError";
 import { SaleItemNotPartOfSaleError } from "../../domain/errors/SaleItemNotPartOfSaleError";
 import { ReturnQuantityExceedsRemainingError } from "../../domain/errors/ReturnQuantityExceedsRemainingError";
+import { ReturnInvalidQuantityError } from "../../domain/errors/ReturnInvalidQuantityError";
 
 export class CreateReturnUseCase {
   constructor(
@@ -17,7 +18,7 @@ export class CreateReturnUseCase {
 
   async execute(req: CreateReturnRequest): Promise<ReturnDetailDto> {
     if (!req.items || req.items.length === 0) {
-      throw new EmptyReturnError();
+      throw new ReturnItemsEmptyError();
     }
 
     // Load sale with items
@@ -65,6 +66,9 @@ export class CreateReturnUseCase {
     }> = [];
 
     for (const reqItem of req.items) {
+      if (reqItem.quantity <= 0) {
+        throw new ReturnInvalidQuantityError(reqItem.saleItemId, reqItem.quantity);
+      }
       const saleItem = saleItemMap.get(reqItem.saleItemId)!;
       const prior = priorByItem.get(reqItem.saleItemId) ?? [];
       const remaining = ReturnableQuantityCalculator.computeRemaining(
@@ -128,6 +132,7 @@ export class CreateReturnUseCase {
       refundTax: totalsResult.taxTotal,
       refundTotal: totalsResult.total,
       notes: req.notes ?? null,
+      markSaleReturnedTotalId: req.markSaleReturnedTotalId,
       items: snapshotItems,
     };
 

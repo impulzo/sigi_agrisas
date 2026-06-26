@@ -24,6 +24,7 @@ const baseEntity = {
   code: "FAC",
   name: "Factura",
   prefix: "FAC-",
+  scope: "OPERATIONS" as const,
   currentNumber: 1,
   isActive: true,
   createdAt: new Date("2024-01-01"),
@@ -42,7 +43,7 @@ describe("useFolioMutations", () => {
 
     let entity;
     await act(async () => {
-      entity = await result.current.createOne({ code: "FAC", name: "Factura" });
+      entity = await result.current.createOne({ code: "FAC", name: "Factura", scope: "OPERATIONS" });
     });
 
     expect(entity).toEqual(baseEntity);
@@ -56,7 +57,7 @@ describe("useFolioMutations", () => {
 
     let entity;
     await act(async () => {
-      entity = await result.current.createOne({ code: "FAC", name: "Factura" });
+      entity = await result.current.createOne({ code: "FAC", name: "Factura", scope: "OPERATIONS" });
     });
 
     expect(entity).toBeNull();

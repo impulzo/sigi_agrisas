@@ -20,3 +20,10 @@ export class PaymentAlreadyCancelledError extends Error {
     this.name = "PaymentAlreadyCancelledError";
   }
 }
+
+export class FolioScopeMismatchError extends Error {
+  constructor(public readonly expected: string, public readonly actual: string) {
+    super(`El folio seleccionado es de tipo ${actual}, pero este flujo requiere uno de tipo ${expected}.`);
+    this.name = "FolioScopeMismatchError";
+  }
+}

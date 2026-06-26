@@ -5,6 +5,7 @@ import { SaleStatusBadge } from "./SaleStatusBadge";
 import { SalePaymentStatusBadge } from "./SalePaymentStatusBadge";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import type { SaleSummary } from "../_logic/types/domain";
+import { useTableKeyboard } from "../../../_hooks/useTableKeyboard";
 
 const MX_NUMBER = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -24,9 +25,13 @@ function fmtDate(d: Date) {
 interface SalesTableProps {
   items: SaleSummary[];
   isLoading: boolean;
+  onEnter?: (item: SaleSummary) => void;
 }
 
-export function SalesTable({ items, isLoading }: SalesTableProps) {
+export function SalesTable({ items, isLoading, onEnter }: SalesTableProps) {
+  const noop = () => {};
+  const { getRowProps } = useTableKeyboard(items, onEnter ?? noop);
+
   if (isLoading) {
     return (
       <div className="p-4 space-y-2">
@@ -61,14 +66,15 @@ export function SalesTable({ items, isLoading }: SalesTableProps) {
           </tr>
         </thead>
         <tbody>
-          {items.map((sale) => {
+          {items.map((sale, idx) => {
             const folioLabel = sale.folioPrefix
               ? `${sale.folioPrefix}-${sale.folioNumber}`
               : String(sale.folioNumber);
             return (
               <tr
                 key={sale.id}
-                className="border-b border-outline-variant/40 hover:bg-surface-container-low transition-colors"
+                {...getRowProps(idx)}
+                className="border-b border-outline-variant/40 hover:bg-surface-container-low focus:bg-surface-container focus:outline-none transition-colors cursor-default"
               >
                 <td className="px-4 py-3">
                   <Link

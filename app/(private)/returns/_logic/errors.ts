@@ -15,8 +15,8 @@ export class SaleNotReturnableError extends Error {
   }
 }
 
-export class EmptyReturnError extends Error {
-  constructor() { super("Selecciona al menos un producto para devolver"); this.name = "EmptyReturnError"; }
+export class ReturnItemsEmptyError extends Error {
+  constructor() { super("Selecciona al menos un producto para devolver"); this.name = "ReturnItemsEmptyError"; }
 }
 
 export class SaleItemNotPartOfSaleError extends Error {

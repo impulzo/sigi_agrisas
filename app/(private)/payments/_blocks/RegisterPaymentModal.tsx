@@ -4,7 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { useFoliosOptions } from "../../../_hooks/useFoliosOptions";
 import { usePaymentMethodsOptions } from "../../../_hooks/usePaymentMethodsOptions";
 import { registerPayment } from "../_logic/services/registerPayment";
-import { PaymentExceedsDueAmountError, SaleNotPayableError } from "../_logic/errors";
+import { PaymentExceedsDueAmountError, SaleNotPayableError, FolioScopeMismatchError } from "../_logic/errors";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
@@ -19,7 +19,7 @@ interface RegisterPaymentModalProps {
 
 export function RegisterPaymentModal({ saleId, dueAmount, onSuccess, onClose }: RegisterPaymentModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const { options: folioOptions, isLoading: foliosLoading } = useFoliosOptions();
+  const { options: folioOptions, isLoading: foliosLoading } = useFoliosOptions({ scope: "OPERATIONS" });
   const { options: methodOptions, isLoading: methodsLoading } = usePaymentMethodsOptions();
 
   const [amount, setAmount] = useState("");
@@ -48,8 +48,8 @@ export function RegisterPaymentModal({ saleId, dueAmount, onSuccess, onClose }: 
 
   useEffect(() => {
     if (!foliosLoading && folioOptions.length > 0 && !folioId) {
-      const recibo = folioOptions.find((f) => f.code === "RECIBO");
-      setFolioId(recibo?.id ?? folioOptions[0].id);
+      const rb = folioOptions.find((f) => f.code === "RB");
+      setFolioId(rb?.id ?? folioOptions[0].id);
     }
   }, [foliosLoading, folioOptions, folioId]);
 
@@ -86,6 +86,8 @@ export function RegisterPaymentModal({ saleId, dueAmount, onSuccess, onClose }: 
       if (err instanceof PaymentExceedsDueAmountError) {
         setAmountError(err.message);
       } else if (err instanceof SaleNotPayableError) {
+        setFormError(err.message);
+      } else if (err instanceof FolioScopeMismatchError) {
         setFormError(err.message);
       } else if (err instanceof Error) {
         setFormError(err.message);

@@ -85,7 +85,7 @@ describe("Sales — stock negativo por ventas (integration real DB)", () => {
     const customer = await createCustomer.execute({ code: `${P}CLI1`, name: "Cliente Neg", rfc: "CNE010101001" });
     customerId = customer.id;
 
-    const folio = await folioRepo.create({ code: `${P}FOL1`, name: "Folio Neg", prefix: "NEG", currentNumber: 0 });
+    const folio = await folioRepo.create({ code: `${P}FOL1`, name: "Folio Neg", prefix: "NEG", currentNumber: 0, scope: "POS" });
     folioId = folio.id;
 
     const pm = await pmRepo.create({ code: `${P}PM1`, name: "Efectivo Neg" });

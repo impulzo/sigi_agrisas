@@ -133,30 +133,58 @@ export function NavigationRail() {
     return allowed === true;
   });
 
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!navRef.current) return;
+    const activeEl = navRef.current.querySelector<HTMLElement>('[data-active="true"]');
+    if (!activeEl) return;
+    const nav = navRef.current;
+    const navRect = nav.getBoundingClientRect();
+    const elRect = activeEl.getBoundingClientRect();
+    if (elRect.bottom > navRect.bottom || elRect.top < navRect.top) {
+      activeEl.scrollIntoView({ block: "nearest" });
+    }
+  }, [pathname]);
+
   return (
-    <aside className="fixed left-0 top-0 h-screen w-[80px] bg-surface-container-low border-r border-outline-variant flex flex-col items-center py-6 gap-y-6 z-50 shadow-sm">
-      <div className="mb-md" aria-hidden="true">
+    <aside className="fixed left-0 top-0 h-screen w-[80px] bg-surface-container-low border-r border-outline-variant flex flex-col items-center z-50 shadow-sm">
+      {/* Header: logo, fixed */}
+      <div className="flex-shrink-0 py-6" aria-hidden="true">
         <span className="text-headline-lg font-black text-primary">A</span>
       </div>
-      <nav className="flex flex-col gap-md" aria-label="Primary">
+
+      {/* Scrollable section: primary + secondary items */}
+      <nav
+        ref={navRef}
+        className="flex-1 overflow-y-auto scrollbar-thin flex flex-col items-center gap-md py-2 w-full"
+        aria-label="Primary"
+      >
         {visiblePrimaryItems.map((item) =>
           item.children ? (
-            <RailParentItem
-              key={item.key}
-              item={item}
-              active={isActive(pathname, item.href)}
-              pathname={pathname}
-              can={can}
-            />
+            <div key={item.key} data-active={isActive(pathname, item.href) ? "true" : undefined}>
+              <RailParentItem
+                item={item}
+                active={isActive(pathname, item.href)}
+                pathname={pathname}
+                can={can}
+              />
+            </div>
           ) : (
-            <RailLink key={item.key} item={item} active={isActive(pathname, item.href)} />
+            <div key={item.key} data-active={isActive(pathname, item.href) ? "true" : undefined}>
+              <RailLink item={item} active={isActive(pathname, item.href)} />
+            </div>
           )
         )}
+        <div className="mt-auto pt-4 flex flex-col gap-md items-center">
+          {secondaryItems.map((item) => (
+            <RailLink key={item.key} item={item} active={isActive(pathname, item.href)} />
+          ))}
+        </div>
       </nav>
-      <div className="mt-auto flex flex-col gap-md">
-        {secondaryItems.map((item) => (
-          <RailLink key={item.key} item={item} active={isActive(pathname, item.href)} />
-        ))}
+
+      {/* Footer: logout, always visible */}
+      <div className="flex-shrink-0 pb-4">
         <button
           onClick={logout}
           disabled={isLoggingOut}

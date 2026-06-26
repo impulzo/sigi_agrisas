@@ -3,6 +3,8 @@ export interface Department {
   code: string;
   name: string;
   description: string | null;
+  providerId: string | null;
+  providerName: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

@@ -22,6 +22,7 @@ const STATUS_OPTIONS = [
   { value: "completed", label: "Completada" },
   { value: "cancelled", label: "Cancelada" },
   { value: "edited", label: "Editada" },
+  { value: "returned_total", label: "Devuelto total" },
 ];
 
 export function SalesToolbar({

@@ -18,8 +18,13 @@ const PRODUCTS: Product[] = [
     satProductCode: null,
     departmentId: "d1",
     departmentName: "Agrícola",
+    providerId: null,
+    providerName: null,
+    taxRateId: null,
+    taxRateCode: null,
     ivaRate: 0.16,
     iepsRate: null,
+    imageUrl: null,
     isActive: true,
     createdAt: new Date("2026-05-01"),
     updatedAt: new Date("2026-05-01"),
@@ -32,8 +37,13 @@ const PRODUCTS: Product[] = [
     satProductCode: null,
     departmentId: "d1",
     departmentName: "Agrícola",
+    providerId: null,
+    providerName: null,
+    taxRateId: null,
+    taxRateCode: null,
     ivaRate: null,
     iepsRate: 0.08,
+    imageUrl: null,
     isActive: false,
     createdAt: new Date("2026-05-10"),
     updatedAt: new Date("2026-05-10"),
@@ -144,5 +154,42 @@ describe("ProductsTable", () => {
     );
     const link = screen.getByText("Gestionar").closest("a")!;
     expect(link).toHaveAttribute("href", "/catalogs/products/p1");
+  });
+
+  it("muestra <img> con imageUrl cuando el producto tiene imagen (task 7.3)", () => {
+    const withImage: Product = {
+      ...PRODUCTS[0],
+      id: "p3",
+      code: "PROD_03",
+      imageUrl: "https://storage.test/products/p3/abc.jpg",
+    };
+    render(
+      <ProductsTable
+        items={[withImage]}
+        canWrite={false}
+        onEdit={jest.fn()}
+        onManage={jest.fn()}
+        onDelete={jest.fn()}
+        onReactivate={jest.fn()}
+      />
+    );
+    const img = screen.getByRole("img", { name: /PROD_03|Maíz Blanco/i });
+    expect(img).toHaveAttribute("src", "https://storage.test/products/p3/abc.jpg");
+    expect(img).toHaveAttribute("loading", "lazy");
+  });
+
+  it("muestra placeholder cuando imageUrl es null (task 7.3)", () => {
+    render(
+      <ProductsTable
+        items={[PRODUCTS[0]]}
+        canWrite={false}
+        onEdit={jest.fn()}
+        onManage={jest.fn()}
+        onDelete={jest.fn()}
+        onReactivate={jest.fn()}
+      />
+    );
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByText("image_not_supported")).toBeInTheDocument();
   });
 });

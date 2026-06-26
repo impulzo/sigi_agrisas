@@ -44,3 +44,10 @@ export class CustomerCodeAlreadyInUseError extends Error {
 export class CustomerRfcAlreadyInUseError extends Error {
   constructor() { super("El RFC ya está en uso por otro cliente"); this.name = "CustomerRfcAlreadyInUseError"; }
 }
+
+export class FolioScopeMismatchError extends Error {
+  constructor(public readonly expected: string, public readonly actual: string) {
+    super(`El folio seleccionado es de tipo ${actual}, pero este flujo requiere uno de tipo ${expected}.`);
+    this.name = "FolioScopeMismatchError";
+  }
+}

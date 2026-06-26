@@ -165,6 +165,30 @@ describe("useCreateReturnForm — submit", () => {
     expect(servicesModule.createReturn).not.toHaveBeenCalled();
   });
 
+  it("submit() con reason vacío → reasonError seteado, sin dispatch", async () => {
+    const sale = makeSale();
+    const { result } = renderHook(() => useCreateReturnForm(sale));
+
+    act(() => { result.current.updateLine("si1", 2); });
+    // reason stays "" (< 3 chars)
+    await act(async () => { await result.current.submit(); });
+
+    expect(result.current.reasonError).toBe("El motivo es obligatorio (mín. 3 caracteres)");
+    expect(servicesModule.createReturn).not.toHaveBeenCalled();
+  });
+
+  it("setReason limpia reasonError", async () => {
+    const sale = makeSale();
+    const { result } = renderHook(() => useCreateReturnForm(sale));
+
+    act(() => { result.current.updateLine("si1", 2); });
+    await act(async () => { await result.current.submit(); }); // triggers reasonError
+    expect(result.current.reasonError).not.toBeNull();
+
+    act(() => { result.current.setReason("Motivo válido"); });
+    expect(result.current.reasonError).toBeNull();
+  });
+
   it("ReturnQuantityExceedsRemainingError → marca error en la fila y llama onQuantityError", async () => {
     const err = new ReturnQuantityExceedsRemainingError("si1", 5, 3);
     jest.spyOn(servicesModule, "createReturn").mockRejectedValue(err);

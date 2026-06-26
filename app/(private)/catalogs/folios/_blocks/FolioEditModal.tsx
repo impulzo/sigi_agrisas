@@ -4,8 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { Icon } from "../../../../_components/atoms/Icon/Icon";
 import { Switch } from "../../../../_components/atoms/Switch/Switch";
 import { createFolioSchema, updateFolioSchema } from "../_logic/schemas/folio.schema";
-import type { Folio } from "../_logic/types/domain";
+import type { Folio, FolioScope } from "../_logic/types/domain";
 import type { CreateFolioBody, UpdateFolioBody } from "../_logic/types/api";
+import { SCOPE_LABEL } from "../_logic/scopeLabels";
+
+const SCOPE_OPTIONS = (Object.entries(SCOPE_LABEL) as [FolioScope, string][]).map(
+  ([value, label]) => ({ value, label }),
+);
 
 interface FolioEditModalProps {
   open: boolean;
@@ -33,6 +38,7 @@ export function FolioEditModal({
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [prefix, setPrefix] = useState("");
+  const [scope, setScope] = useState<FolioScope>("OPERATIONS");
   const [currentNumber, setCurrentNumber] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -61,12 +67,14 @@ export function FolioEditModal({
       setCode("");
       setName("");
       setPrefix("");
+      setScope("OPERATIONS");
       setCurrentNumber(0);
       setIsActive(true);
     } else if (entity) {
       setCode(entity.code);
       setName(entity.name);
       setPrefix(entity.prefix ?? "");
+      setScope(entity.scope);
       setCurrentNumber(entity.currentNumber);
       setIsActive(entity.isActive);
     }
@@ -79,6 +87,7 @@ export function FolioEditModal({
         code,
         name,
         prefix: prefix || null,
+        scope,
         currentNumber,
         isActive,
       });
@@ -95,6 +104,7 @@ export function FolioEditModal({
       const result = updateFolioSchema.safeParse({
         name,
         prefix: prefix || null,
+        scope,
         currentNumber,
         isActive,
       });
@@ -118,6 +128,7 @@ export function FolioEditModal({
     if (name !== entity.name) diff.name = name;
     const pfx = prefix || null;
     if (pfx !== entity.prefix) diff.prefix = pfx;
+    if (scope !== entity.scope) diff.scope = scope;
     if (currentNumber !== entity.currentNumber) diff.currentNumber = currentNumber;
     if (isActive !== entity.isActive) diff.isActive = isActive;
     return diff;
@@ -126,10 +137,16 @@ export function FolioEditModal({
   const isCreateMode = mode === "create";
   const isDirty =
     isCreateMode
-      ? code !== "" || name !== "" || prefix !== "" || currentNumber !== 0 || !isActive
+      ? code !== "" ||
+        name !== "" ||
+        prefix !== "" ||
+        scope !== "OPERATIONS" ||
+        currentNumber !== 0 ||
+        !isActive
       : entity !== null &&
         (name !== entity.name ||
           (prefix || null) !== entity.prefix ||
+          scope !== entity.scope ||
           currentNumber !== entity.currentNumber ||
           isActive !== entity.isActive);
 
@@ -138,7 +155,7 @@ export function FolioEditModal({
   function handleSave() {
     if (!validate()) return;
     if (isCreateMode) {
-      onSave({ code, name, prefix: prefix || null, currentNumber, isActive });
+      onSave({ code, name, prefix: prefix || null, scope, currentNumber, isActive });
     } else {
       const diff = getDiff();
       if (Object.keys(diff).length === 0) return;
@@ -216,6 +233,27 @@ export function FolioEditModal({
           />
           {validationErrors.prefix && (
             <p className="text-label-sm text-error mt-1">{validationErrors.prefix}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="folio-scope">
+            Ámbito
+          </label>
+          <select
+            id="folio-scope"
+            value={scope}
+            onChange={(e) => setScope(e.target.value as FolioScope)}
+            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {SCOPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          {validationErrors.scope && (
+            <p className="text-label-sm text-error mt-1">{validationErrors.scope}</p>
           )}
         </div>
 

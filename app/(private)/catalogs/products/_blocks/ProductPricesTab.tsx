@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useProductPrices } from "../_logic/hooks/useProductPrices";
+import { useTableKeyboard } from "../../../../_hooks/useTableKeyboard";
 import { DuplicatePriceNameError, DuplicateDefaultPriceError } from "../_logic/errors";
 import { ConfirmDialog } from "../../../../_components/molecules/ConfirmDialog/ConfirmDialog";
 import { Badge } from "../../../../_components/atoms/Badge/Badge";
@@ -155,6 +156,12 @@ export function ProductPricesTab({ productId, canWrite }: ProductPricesTabProps)
   const [nameError, setNameError] = useState<string | null>(null);
   const [defaultError, setDefaultError] = useState<string | null>(null);
 
+  const openEditModal = (p: ProductPrice) => {
+    setNameError(null); setDefaultError(null); setModal({ mode: "edit", entity: p });
+  };
+  const noop = () => {};
+  const { getRowProps: getPriceRowProps } = useTableKeyboard(prices, canWrite ? openEditModal : noop);
+
   const handleSave = async (data: CreatePriceBody | UpdatePriceBody) => {
     setNameError(null); setDefaultError(null);
     try {
@@ -199,8 +206,12 @@ export function ProductPricesTab({ productId, canWrite }: ProductPricesTabProps)
               </tr>
             </thead>
             <tbody>
-              {prices.map((p) => (
-                <tr key={p.id} className="border-b border-outline-variant hover:bg-surface-container-low">
+              {prices.map((p, idx) => (
+                <tr
+                  key={p.id}
+                  {...getPriceRowProps(idx)}
+                  className="border-b border-outline-variant hover:bg-surface-container-low focus:bg-surface-container focus:outline-none transition-colors cursor-default"
+                >
                   <td className="px-4 py-2">{p.name}</td>
                   <td className="px-4 py-2 text-right">${p.price.toFixed(2)}</td>
                   <td className="px-4 py-2 text-right">{p.minQuantity}</td>

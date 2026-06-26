@@ -7,6 +7,7 @@ const baseDto = {
   code: "FAC",
   name: "Factura",
   prefix: "FAC-",
+  scope: "OPERATIONS",
   currentNumber: 1,
   isActive: true,
   createdAt: "2024-01-01T00:00:00.000Z",
@@ -21,7 +22,7 @@ describe("createFolio", () => {
       json: async () => baseDto,
     } as Response);
 
-    const result = await createFolio({ body: { code: "FAC", name: "Factura" } }, mockFetch);
+    const result = await createFolio({ body: { code: "FAC", name: "Factura", scope: "OPERATIONS" } }, mockFetch);
 
     expect(result.id).toBe("1");
     expect(result.code).toBe("FAC");
@@ -36,7 +37,7 @@ describe("createFolio", () => {
     } as Response);
 
     await expect(
-      createFolio({ body: { code: "FAC", name: "Factura" } }, mockFetch)
+      createFolio({ body: { code: "FAC", name: "Factura", scope: "OPERATIONS" } }, mockFetch)
     ).rejects.toBeInstanceOf(FolioCodeAlreadyInUseError);
   });
 
@@ -48,7 +49,7 @@ describe("createFolio", () => {
     } as Response);
 
     await expect(
-      createFolio({ body: { code: "FAC", name: "Factura" } }, mockFetch)
+      createFolio({ body: { code: "FAC", name: "Factura", scope: "OPERATIONS" } }, mockFetch)
     ).rejects.toBeInstanceOf(NetworkError);
   });
 });

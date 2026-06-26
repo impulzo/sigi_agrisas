@@ -118,8 +118,13 @@ export class AuthController {
     }
 
     try {
-      const result = this.refreshTokenUseCase.execute(refreshToken);
-      return NextResponse.json(result, { status: 200 });
+      const { accessToken, newRefreshToken } = this.refreshTokenUseCase.execute(refreshToken);
+      const res = NextResponse.json({ accessToken }, { status: 200 });
+      res.headers.set(
+        "Set-Cookie",
+        serialize(REFRESH_TOKEN_COOKIE, newRefreshToken, refreshCookieOptions)
+      );
+      return res;
     } catch (err) {
       const isExpired = err instanceof jwt.TokenExpiredError;
       return NextResponse.json(

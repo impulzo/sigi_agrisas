@@ -6,6 +6,8 @@ import { authFetch } from "../../../../../_lib/authFetch";
 interface DepartmentOption {
   id: string;
   name: string;
+  providerId: string | null;
+  providerName: string | null;
 }
 
 interface CacheEntry {
@@ -15,25 +17,37 @@ interface CacheEntry {
 }
 
 const CACHE_TTL_MS = 5 * 60_000;
-let cache: CacheEntry | null = null;
+const cacheMap = new Map<string, CacheEntry>();
 
-async function fetchDepartments(): Promise<DepartmentOption[]> {
-  if (cache && Date.now() < cache.expiresAt) return cache.options;
-  if (cache?.promise) return cache.promise;
+function cacheKey(providerId?: string): string {
+  return providerId ?? "__all__";
+}
 
-  const promise = authFetch("/api/v1/admin/departments?pageSize=100&includeInactive=false")
+async function fetchDepartments(providerId?: string): Promise<DepartmentOption[]> {
+  const key = cacheKey(providerId);
+  const cached = cacheMap.get(key);
+  if (cached && Date.now() < cached.expiresAt) return cached.options;
+  if (cached?.promise) return cached.promise;
+
+  const url = new URL("/api/v1/admin/departments", "http://x");
+  url.searchParams.set("pageSize", "100");
+  url.searchParams.set("includeInactive", "false");
+  if (providerId) url.searchParams.set("providerId", providerId);
+
+  const promise = authFetch(url.pathname + url.search)
     .then((res) => res.json())
-    .then((body: { items: { id: string; name: string }[] }) => {
-      const options = body.items.map((d) => ({ id: d.id, name: d.name }));
-      cache = { options, expiresAt: Date.now() + CACHE_TTL_MS };
+    .then((body: { items: { id: string; name: string; providerId?: string | null; providerName?: string | null }[] }) => {
+      const options = body.items.map((d) => ({ id: d.id, name: d.name, providerId: d.providerId ?? null, providerName: d.providerName ?? null }));
+      cacheMap.set(key, { options, expiresAt: Date.now() + CACHE_TTL_MS });
       return options;
     })
     .catch(() => {
-      if (cache) delete cache.promise;
+      const entry = cacheMap.get(key);
+      if (entry) delete entry.promise;
       return [] as DepartmentOption[];
     });
 
-  cache = { options: [], expiresAt: 0, promise };
+  cacheMap.set(key, { options: [], expiresAt: 0, promise });
   return promise;
 }
 
@@ -42,23 +56,20 @@ interface UseDepartmentsOptionsResult {
   isLoading: boolean;
 }
 
-export function useDepartmentsOptions(): UseDepartmentsOptionsResult {
-  const [options, setOptions] = useState<DepartmentOption[]>(cache?.options ?? []);
-  const [isLoading, setIsLoading] = useState(!cache || !cache.expiresAt);
+export function useDepartmentsOptions(providerId?: string): UseDepartmentsOptionsResult {
+  const key = cacheKey(providerId);
+  const cached = cacheMap.get(key);
+  const [options, setOptions] = useState<DepartmentOption[]>(cached?.options ?? []);
+  const [isLoading, setIsLoading] = useState(!cached || !cached.expiresAt);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
-    fetchDepartments().then((opts) => {
-      if (!cancelled) {
-        setOptions(opts);
-        setIsLoading(false);
-      }
+    fetchDepartments(providerId).then((opts) => {
+      if (!cancelled) { setOptions(opts); setIsLoading(false); }
     });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    return () => { cancelled = true; };
+  }, [providerId]);
 
   return { options, isLoading };
 }

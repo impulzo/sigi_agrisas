@@ -8,15 +8,19 @@ import { CancelReturnUseCase } from "../../application/use-cases/CancelReturnUse
 import { ReturnNotFoundError } from "../../domain/errors/ReturnNotFoundError";
 import { ReturnAlreadyCancelledError } from "../../domain/errors/ReturnAlreadyCancelledError";
 import { SaleNotReturnableError } from "../../domain/errors/SaleNotReturnableError";
-import { EmptyReturnError } from "../../domain/errors/EmptyReturnError";
+import { SaleAlreadyFullyReturnedError } from "../../domain/errors/SaleAlreadyFullyReturnedError";
+import { ReturnItemsEmptyError } from "../../domain/errors/ReturnItemsEmptyError";
 import { ReturnQuantityExceedsRemainingError } from "../../domain/errors/ReturnQuantityExceedsRemainingError";
+import { ReturnInvalidQuantityError } from "../../domain/errors/ReturnInvalidQuantityError";
 import { SaleItemNotPartOfSaleError } from "../../domain/errors/SaleItemNotPartOfSaleError";
+import { ReturnableQuantityCalculator } from "../../domain/services/ReturnableQuantityCalculator";
 import {
   enforceBranchScope,
   resolveScopedBranchId,
 } from "@/modules/rbac/infrastructure/http/enforceBranchScope";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 import { SaleRepository } from "@/modules/pos/application/ports/SaleRepository";
+import { ReturnRepository } from "../../application/ports/ReturnRepository";
 import { ReturnStatus } from "../../domain/value-objects/ReturnStatus";
 
 const uuidSchema = z.string().uuid("Invalid ID format");
@@ -46,7 +50,7 @@ const returnItemInputSchema = z.object({
 
 const createReturnSchema = z.object({
   saleId: z.string().uuid("saleId must be a valid UUID"),
-  reason: z.string().trim().min(3, "reason must be at least 3 characters").max(500),
+  reason: z.string({ required_error: "ReturnReasonRequired" }).trim().min(3, "ReturnReasonRequired").max(500, "ReturnReasonTooLong"),
   returnedAt: z
     .string()
     .refine((v) => !isNaN(Date.parse(v)), "returnedAt must be a valid ISO 8601 date")
@@ -59,7 +63,17 @@ const createReturnSchema = z.object({
 });
 
 const cancelReturnSchema = z.object({
-  reason: z.string().max(500).nullable().optional(),
+  reason: z.string().trim().min(3).max(500).nullable().optional(),
+});
+
+const fullReturnSchema = z.object({
+  reason: z.string({ required_error: "ReturnReasonRequired" }).trim().min(3, "ReturnReasonRequired").max(500, "ReturnReasonTooLong"),
+  returnedAt: z
+    .string()
+    .refine((v) => !isNaN(Date.parse(v)), "returnedAt must be a valid ISO 8601 date")
+    .refine((v) => new Date(v) <= new Date(), "returnedAt must not be in the future")
+    .optional(),
+  notes: z.string().max(1000).nullable().optional(),
 });
 
 export class ReturnsController {
@@ -70,7 +84,8 @@ export class ReturnsController {
     private readonly createUseCase: CreateReturnUseCase,
     private readonly cancelUseCase: CancelReturnUseCase,
     private readonly saleRepo: SaleRepository,
-    private readonly authzService: AuthorizationService
+    private readonly authzService: AuthorizationService,
+    private readonly returnRepo: ReturnRepository
   ) {}
 
   async list(req: NextRequest): Promise<NextResponse> {
@@ -179,8 +194,11 @@ export class ReturnsController {
       });
       return NextResponse.json(dto, { status: 201 });
     } catch (err) {
-      if (err instanceof EmptyReturnError) {
-        return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof ReturnItemsEmptyError) {
+        return NextResponse.json({ error: "ReturnItemsEmpty" }, { status: 400 });
+      }
+      if (err instanceof ReturnInvalidQuantityError) {
+        return NextResponse.json({ error: "ReturnInvalidQuantity", saleItemId: err.saleItemId, quantity: err.quantity }, { status: 400 });
       }
       if (err instanceof SaleNotReturnableError) {
         return NextResponse.json({ error: err.message, status: err.saleStatus }, { status: 409 });
@@ -191,16 +209,101 @@ export class ReturnsController {
       if (err instanceof ReturnQuantityExceedsRemainingError) {
         return NextResponse.json(
           {
-            error: err.message,
+            error: "ReturnQuantityExceedsRemaining",
             saleItemId: err.saleItemId,
             requested: err.requested,
             remaining: err.remaining,
           },
-          { status: 409 }
+          { status: 422 }
         );
       }
       if (err instanceof Error && err.message === "Sale not found") {
         return NextResponse.json({ error: "Sale not found" }, { status: 400 });
+      }
+      throw err;
+    }
+  }
+
+  async fullReturn(req: NextRequest, saleId: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(saleId);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+    const body = await req.json().catch(() => ({}));
+    const parsed = fullReturnSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const saleSummary = await this.saleRepo.findByIdWithItems(idParsed.data);
+    if (!saleSummary) {
+      return NextResponse.json({ error: "Sale not found" }, { status: 404 });
+    }
+
+    const scope = await enforceBranchScope(req, saleSummary.sale.branchId, this.authzService);
+    if (scope) return scope;
+
+    const { sale } = saleSummary;
+
+    if (sale.status === "cancelled") {
+      return NextResponse.json({ error: "SaleNotReturnableError", status: sale.status }, { status: 409 });
+    }
+    if (sale.status === "returned_total") {
+      return NextResponse.json({ error: "SaleAlreadyFullyReturned" }, { status: 409 });
+    }
+
+    // Load prior return items for ALL sale items
+    const allSaleItemIds = sale.items.map((si) => si.id);
+    const priorItems = await this.returnRepo.findPriorReturnItemsBySaleItemIds(allSaleItemIds);
+
+    const priorByItem = new Map<string, Array<{ quantity: number; returnStatus: "completed" | "cancelled" }>>();
+    for (const prior of priorItems) {
+      const group = priorByItem.get(prior.saleItemId) ?? [];
+      group.push({ quantity: prior.quantity, returnStatus: prior.returnStatus as "completed" | "cancelled" });
+      priorByItem.set(prior.saleItemId, group);
+    }
+
+    // Build items array with remaining > 0
+    const itemsToReturn: Array<{ saleItemId: string; quantity: number }> = [];
+    for (const si of sale.items) {
+      const prior = priorByItem.get(si.id) ?? [];
+      const remaining = ReturnableQuantityCalculator.computeRemaining(si.quantity, prior);
+      if (remaining > 0) {
+        itemsToReturn.push({ saleItemId: si.id, quantity: remaining });
+      }
+    }
+
+    if (itemsToReturn.length === 0) {
+      return NextResponse.json({ error: "SaleAlreadyFullyReturned" }, { status: 409 });
+    }
+
+    const creatorId = req.headers.get("x-user-id") ?? "";
+    const returnedAt = parsed.data.returnedAt ? new Date(parsed.data.returnedAt) : new Date();
+
+    try {
+      const dto = await this.createUseCase.execute({
+        saleId: idParsed.data,
+        creatorId,
+        reason: parsed.data.reason,
+        returnedAt,
+        notes: parsed.data.notes ?? null,
+        items: itemsToReturn,
+        markSaleReturnedTotalId: idParsed.data,
+      });
+
+      return NextResponse.json(dto, { status: 201 });
+    } catch (err) {
+      if (err instanceof ReturnItemsEmptyError) {
+        return NextResponse.json({ error: "ReturnItemsEmpty" }, { status: 400 });
+      }
+      if (err instanceof SaleNotReturnableError) {
+        return NextResponse.json({ error: err.message, status: err.saleStatus }, { status: 409 });
+      }
+      if (err instanceof ReturnQuantityExceedsRemainingError) {
+        return NextResponse.json(
+          { error: "ReturnQuantityExceedsRemaining", saleItemId: err.saleItemId, requested: err.requested, remaining: err.remaining },
+          { status: 422 }
+        );
       }
       throw err;
     }

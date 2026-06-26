@@ -1,7 +1,10 @@
+"use client";
+
 import { Icon } from "../../../../_components/atoms/Icon/Icon";
 import { Skeleton } from "../../../../_components/atoms/Skeleton/Skeleton";
 import { CatalogStatusBadge } from "../../_blocks/CatalogStatusBadge";
 import type { Provider } from "../_logic/types/domain";
+import { useTableKeyboard } from "../../../../_hooks/useTableKeyboard";
 
 interface ProvidersTableProps {
   items: Provider[];
@@ -10,6 +13,7 @@ interface ProvidersTableProps {
   onEdit: (item: Provider) => void;
   onSoftDelete: (id: string) => void;
   onReactivate: (id: string) => void;
+  onEnter?: (item: Provider) => void;
 }
 
 function summarizeContact(p: Provider): string | null {
@@ -27,7 +31,11 @@ export function ProvidersTable({
   onEdit,
   onSoftDelete,
   onReactivate,
+  onEnter,
 }: ProvidersTableProps) {
+  const noop = () => {};
+  const { getRowProps } = useTableKeyboard(items, onEnter ?? noop);
+
   if (isLoading) {
     return (
       <div className="space-y-2 p-4">
@@ -55,10 +63,14 @@ export function ProvidersTable({
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => {
+          {items.map((item, idx) => {
             const contact = summarizeContact(item);
             return (
-              <tr key={item.id} className="border-b border-outline-variant last:border-0 hover:bg-surface-container-low transition-colors">
+              <tr
+                key={item.id}
+                {...getRowProps(idx)}
+                className="border-b border-outline-variant last:border-0 hover:bg-surface-container-low focus:bg-surface-container focus:outline-none transition-colors cursor-default"
+              >
                 <td className="px-4 py-3 font-mono text-on-surface">{item.code}</td>
                 <td className="px-4 py-3 text-on-surface max-w-[260px]">
                   <div className="truncate" title={item.name}>{item.name}</div>

@@ -113,4 +113,37 @@ describe("RailFlyout", () => {
     const menu = screen.getByRole("menu");
     expect(menu).toHaveStyle({ top: "120px" });
   });
+
+  it("applies max-height and overflow-y-auto for scroll", () => {
+    render(
+      <RailFlyout
+        open={true}
+        anchorTop={0}
+        items={items}
+        activeHref="/dashboard"
+        onItemClick={jest.fn()}
+        onClose={jest.fn()}
+      />
+    );
+    const menu = screen.getByRole("menu");
+    expect(menu).toHaveStyle({ maxHeight: "calc(100vh - 32px)" });
+    expect(menu.className).toContain("overflow-y-auto");
+    expect(menu.className).toContain("scrollbar-thin");
+  });
+
+  it("clamps top to minimum 16px", () => {
+    render(
+      <RailFlyout
+        open={true}
+        anchorTop={0}
+        items={items}
+        activeHref="/dashboard"
+        onItemClick={jest.fn()}
+        onClose={jest.fn()}
+      />
+    );
+    const menu = screen.getByRole("menu");
+    const topVal = parseFloat(menu.style.top);
+    expect(topVal).toBeGreaterThanOrEqual(16);
+  });
 });

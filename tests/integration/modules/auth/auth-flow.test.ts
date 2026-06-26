@@ -7,6 +7,9 @@ import { BcryptPasswordHasher } from "@/modules/auth/infrastructure/services/Bcr
 import { JwtTokenService } from "@/modules/auth/infrastructure/services/JwtTokenService";
 import { InvalidCredentialsError } from "@/modules/auth/domain/errors/InvalidCredentialsError";
 import { EmailAlreadyInUseError } from "@/modules/auth/domain/errors/EmailAlreadyInUseError";
+import { RoleAssigner } from "@/modules/rbac/application/ports/RoleAssigner";
+
+const noopRoleAssigner: RoleAssigner = { assignDefaultRole: async () => {} };
 
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET = "integration-access-secret-32chars!";
@@ -26,7 +29,7 @@ describe("Auth flow integration (InMemoryUserRepository + real services)", () =>
     repo = new InMemoryUserRepository();
     hasher = new BcryptPasswordHasher();
     tokenService = new JwtTokenService();
-    registerUseCase = new RegisterUseCase(repo, hasher, tokenService);
+    registerUseCase = new RegisterUseCase(repo, hasher, tokenService, noopRoleAssigner);
     loginUseCase = new LoginUseCase(repo, hasher, tokenService);
     refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
     logoutUseCase = new LogoutUseCase();

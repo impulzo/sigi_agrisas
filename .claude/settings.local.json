@@ -122,7 +122,27 @@
       "mcp__vercel__get_runtime_logs",
       "mcp__vercel__get_project",
       "mcp__supabase__get_logs",
-      "mcp__supabase__get_project"
+      "mcp__supabase__get_project",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(openspec --version)",
+      "Bash(grep *)",
+      "Bash(echo \"PID=$!\")",
+      "Bash(nvm list *)",
+      "Bash(tee /tmp/auth.json)",
+      "Bash(tee /tmp/auth2.json)",
+      "Bash(tee /tmp/reg.json)",
+      "Skill(run)",
+      "Bash([ -d \"/Users/kevdany17/Documents/Proyects/sigi/agrisas/agrisas_panel/$TARGET\" ])",
+      "Bash(gh pr *)",
+      "Bash(gh --version)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(xargs ps -p)",
+      "Bash(npx ts-node *)",
+      "Bash(awk '/^export const DEPARTMENTS/,/^\\\\];/' /Users/kevdany17/Documents/Proyects/sigi/agrisas/agrisas_panel/prisma/seeds/data/inventario-agrisas-v2.ts)",
+      "Bash(awk '/^export const INVENTORY_DATA/,/^\\\\];/' /Users/kevdany17/Documents/Proyects/sigi/agrisas/agrisas_panel/prisma/seeds/data/inventario-agrisas-v2.ts)"
     ]
   },
   "enabledMcpjsonServers": [

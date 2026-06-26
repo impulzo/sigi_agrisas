@@ -1,8 +1,9 @@
 import { randomUUID } from "crypto";
-import { FolioRepository, FindAllFoliosOptions, CreateFolioData, UpdateFolioData } from "@/modules/folios/application/ports/FolioRepository";
+import { FolioRepository, FindAllFoliosOptions, CreateFolioData, UpdateFolioData, AuditCounts } from "@/modules/folios/application/ports/FolioRepository";
 import { Folio } from "@/modules/folios/domain/entities/Folio";
 import { FolioNotFoundError } from "@/modules/folios/domain/errors/FolioNotFoundError";
 import { FolioCodeAlreadyInUseError } from "@/modules/folios/domain/errors/FolioCodeAlreadyInUseError";
+import { AuditSequenceRaw } from "@/modules/folios/application/dto/FolioAuditDto";
 
 export class InMemoryFolioRepository implements FolioRepository {
   private store: Map<string, Folio> = new Map();
@@ -11,8 +12,10 @@ export class InMemoryFolioRepository implements FolioRepository {
     for (const f of folios) this.store.set(f.id, f);
   }
 
-  async findAll({ page, pageSize, includeInactive }: FindAllFoliosOptions): Promise<{ items: Folio[]; total: number }> {
-    const all = [...this.store.values()].filter((f) => includeInactive || f.isActive);
+  async findAll({ page, pageSize, includeInactive, scope }: FindAllFoliosOptions): Promise<{ items: Folio[]; total: number }> {
+    const all = [...this.store.values()].filter(
+      (f) => (includeInactive || f.isActive) && (!scope || f.scope === scope)
+    );
     const skip = (page - 1) * pageSize;
     return { items: all.slice(skip, skip + pageSize), total: all.length };
   }
@@ -29,6 +32,7 @@ export class InMemoryFolioRepository implements FolioRepository {
       code: data.code,
       name: data.name,
       prefix: data.prefix ?? null,
+      scope: data.scope,
       currentNumber: data.currentNumber ?? 0,
       isActive: data.isActive ?? true,
       createdAt: now,
@@ -45,6 +49,7 @@ export class InMemoryFolioRepository implements FolioRepository {
       code: existing.code,
       name: data.name ?? existing.name,
       prefix: data.prefix !== undefined ? data.prefix : existing.prefix,
+      scope: data.scope ?? existing.scope,
       currentNumber: data.currentNumber !== undefined ? data.currentNumber : existing.currentNumber,
       isActive: data.isActive !== undefined ? data.isActive : existing.isActive,
       createdAt: existing.createdAt,
@@ -54,6 +59,14 @@ export class InMemoryFolioRepository implements FolioRepository {
     return updated;
   }
 
+  async findAuditSequence(_folioId: string): Promise<AuditSequenceRaw[]> {
+    return [];
+  }
+
+  async getAuditCounts(_folioId: string): Promise<AuditCounts> {
+    return { withFolioNumber: 0, withoutFolioNumber: 0 };
+  }
+
   async softDelete(id: string): Promise<void> {
     const existing = this.store.get(id);
     if (!existing) throw new FolioNotFoundError();
@@ -61,6 +74,7 @@ export class InMemoryFolioRepository implements FolioRepository {
       code: existing.code,
       name: existing.name,
       prefix: existing.prefix,
+      scope: existing.scope,
       currentNumber: existing.currentNumber,
       isActive: false,
       createdAt: existing.createdAt,

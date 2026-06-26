@@ -39,3 +39,18 @@ export class DuplicateDosificationNameError extends Error {
     this.name = "DuplicateDosificationNameError";
   }
 }
+
+export class ProductImageTooLargeError extends Error {
+  readonly maxBytes = 2 * 1024 * 1024;
+  constructor() {
+    super("Image too large");
+    this.name = "ProductImageTooLargeError";
+  }
+}
+
+export class ProductImageInvalidFormatError extends Error {
+  constructor() {
+    super("Invalid image format");
+    this.name = "ProductImageInvalidFormatError";
+  }
+}

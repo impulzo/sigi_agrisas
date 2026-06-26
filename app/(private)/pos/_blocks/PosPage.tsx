@@ -18,11 +18,12 @@ import { PriceTierPicker } from "./PriceTierPicker";
 import { CustomerQuickAddModal } from "./CustomerQuickAddModal";
 import { SaleConfirmedModal } from "./SaleConfirmedModal";
 import { PosShortcutsOverlay } from "./PosShortcutsOverlay";
+import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog/ConfirmDialog";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import type { ProductDto, ProductPriceDto, CustomerDto, BranchOption } from "../_logic/types/api";
 
-type Modal = "pricePicker" | "quickAdd" | "confirmed" | "shortcuts" | null;
+type Modal = "pricePicker" | "quickAdd" | "confirmed" | "shortcuts" | "clearCart" | null;
 type PosMode = "sale" | "quote";
 
 interface PricePicker {
@@ -149,12 +150,11 @@ export function PosPage() {
     catalogContainerRef,
     cartContainerRef,
     onSubmit: handleSubmit,
-    onClearCart: clear,
+    onClearCart: () => { if (lines.length > 0) setModal("clearCart"); },
     onToggleMode: setMode,
     canToggleMode: showSegmented,
     canSubmit,
     isSubmitting,
-    cartHasItems: lines.length > 0,
     onShowShortcuts: () => { lastFocusedRef.current = document.activeElement as HTMLElement; setModal("shortcuts"); },
     liveRegionRef,
   });
@@ -356,6 +356,16 @@ export function PosPage() {
           onClose={() => setModal(null)}
         />
       )}
+
+      <ConfirmDialog
+        open={modal === "clearCart"}
+        title="¿Vaciar carrito?"
+        description="Se eliminarán todos los productos. Esta acción no se puede deshacer."
+        confirmLabel="Vaciar"
+        cancelLabel="Cancelar"
+        onConfirm={() => { clear(); setModal(null); }}
+        onCancel={() => setModal(null)}
+      />
 
       {submitError && (
         <div className="fixed bottom-4 right-4 z-50 bg-error-container text-on-error-container rounded-xl px-4 py-3 text-body-sm shadow-lg max-w-sm">

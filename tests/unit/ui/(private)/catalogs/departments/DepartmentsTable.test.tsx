@@ -10,6 +10,8 @@ const ACTIVE_ITEM: Department = {
   name: "Ventas",
   description: "Departamento de ventas",
   isActive: true,
+  providerId: null,
+  providerName: null,
   createdAt: new Date("2026-05-01"),
   updatedAt: new Date("2026-05-01"),
 };
@@ -20,6 +22,8 @@ const INACTIVE_ITEM: Department = {
   name: "Compras",
   description: null,
   isActive: false,
+  providerId: null,
+  providerName: null,
   createdAt: new Date("2026-05-01"),
   updatedAt: new Date("2026-05-01"),
 };

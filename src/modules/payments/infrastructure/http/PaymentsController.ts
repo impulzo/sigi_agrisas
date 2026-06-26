@@ -25,6 +25,8 @@ import {
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 import { PaymentHistoryItem } from "../../application/ports/PaymentRepository";
 import { BranchScopeViolationError } from "../../domain/errors/BranchScopeViolationError";
+import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
+import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 
 const uuidSchema = z.string().uuid("Invalid ID format");
 
@@ -125,6 +127,15 @@ export class PaymentsController {
       }
       if (err instanceof PaymentExceedsDueAmountError) {
         return NextResponse.json({ error: "PaymentExceedsDueAmount", due: err.due }, { status: 409 });
+      }
+      if (err instanceof FolioScopeMismatchError) {
+        return NextResponse.json(
+          { error: "FolioScopeMismatch", expected: err.expected, actual: err.actual },
+          { status: 400 }
+        );
+      }
+      if (err instanceof InactiveResourceError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
       }
       if (err instanceof Error && err.message.includes("not found")) {
         return NextResponse.json({ error: err.message }, { status: 404 });

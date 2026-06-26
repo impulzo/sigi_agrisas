@@ -31,7 +31,7 @@ export function QuoteCreatePage() {
   const canCreate = can("quotes:create");
   const isBypass = can("branches:access_all");
 
-  const { options: folios, isLoading: foliosLoading } = useFoliosOptions();
+  const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
   const { lines, totals, addLine, updateQuantity, updateDiscountPct, changeTier, removeLine } = useCart();
   const { status, quote, error: submitError, submit, reset: resetSubmit } = useQuoteSubmission();
 

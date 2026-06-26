@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { useTableKeyboard } from "../../../_hooks/useTableKeyboard";
@@ -29,20 +29,27 @@ export function ProductCatalogTable({
 }: ProductCatalogTableProps) {
   const totalPages = Math.ceil(total / pageSize);
   const [focusTarget, setFocusTarget] = useState<"first" | "last" | null>(null);
+  const pageThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (pageThrottleRef.current) clearTimeout(pageThrottleRef.current); }, []);
+
+  const onPageDown = useCallback(() => {
+    if (page >= totalPages || pageThrottleRef.current) return;
+    setFocusTarget("first");
+    onPageChange(page + 1);
+    pageThrottleRef.current = setTimeout(() => { pageThrottleRef.current = null; }, 150);
+  }, [page, totalPages, onPageChange]);
+
+  const onPageUp = useCallback(() => {
+    if (page <= 1 || pageThrottleRef.current) return;
+    setFocusTarget("last");
+    onPageChange(page - 1);
+    pageThrottleRef.current = setTimeout(() => { pageThrottleRef.current = null; }, 150);
+  }, [page, onPageChange]);
 
   const { getRowProps, rowRefs, setFocusedIndex } = useTableKeyboard(items, onAddProduct, {
-    onPageDown: () => {
-      if (page < totalPages) {
-        setFocusTarget("first");
-        onPageChange(page + 1);
-      }
-    },
-    onPageUp: () => {
-      if (page > 1) {
-        setFocusTarget("last");
-        onPageChange(page - 1);
-      }
-    },
+    onPageDown,
+    onPageUp,
   });
 
   useEffect(() => {

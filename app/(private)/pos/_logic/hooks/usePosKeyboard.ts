@@ -14,7 +14,6 @@ interface UsePosKeyboardArgs {
   canToggleMode: boolean;
   canSubmit: boolean;
   isSubmitting: boolean;
-  cartHasItems: boolean;
   onShowShortcuts?: () => void;
   liveRegionRef?: RefObject<HTMLDivElement>;
 }
@@ -45,7 +44,6 @@ export function usePosKeyboard({
   canToggleMode,
   canSubmit,
   isSubmitting,
-  cartHasItems,
   onShowShortcuts,
   liveRegionRef,
 }: UsePosKeyboardArgs) {
@@ -57,7 +55,7 @@ export function usePosKeyboard({
     function handleKeyDown(e: KeyboardEvent) {
       const inInput = isInputTarget(e);
 
-      if (isMod(e) && e.key === "f") {
+      if (isMod(e) && e.key.toLowerCase() === "f") {
         e.preventDefault();
         searchInputRef.current?.focus();
         searchInputRef.current?.select();
@@ -104,9 +102,7 @@ export function usePosKeyboard({
 
       if (isMod(e) && e.shiftKey && e.key === "Backspace") {
         e.preventDefault();
-        if (cartHasItems && window.confirm("¿Vaciar el carrito?")) {
-          onClearCart();
-        }
+        onClearCart();
         return;
       }
 
@@ -129,7 +125,6 @@ export function usePosKeyboard({
     canToggleMode,
     canSubmit,
     isSubmitting,
-    cartHasItems,
     onShowShortcuts,
     liveRegionRef,
   ]);

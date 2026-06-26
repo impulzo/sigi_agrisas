@@ -16,6 +16,7 @@ const config: Config = {
       transform: {
         "^.+\\.tsx?$": ["ts-jest", { tsconfig: "tsconfig.json" }],
       },
+      setupFiles: ["<rootDir>/tests/setup/loadEnv.ts"],
       setupFilesAfterEnv: ["<rootDir>/jest.setup.backend.ts"],
     },
     {

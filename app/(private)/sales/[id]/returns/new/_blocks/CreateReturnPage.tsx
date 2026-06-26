@@ -12,7 +12,8 @@ import { EmptyState } from "../../../../../../_components/molecules/EmptyState/E
 import { Spinner } from "../../../../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../../../../_components/atoms/Icon/Icon";
 import { SaleNotReturnableError } from "../../../../../returns/_logic/errors";
-import type { ReactNode } from "react";
+import { computeReturnTotalsClient } from "../../../../../returns/_logic/lib/computeReturnTotalsClient";
+import { useMemo, type ReactNode } from "react";
 import type { SaleItem } from "../../../../_logic/types/domain";
 
 interface CreateReturnPageProps {
@@ -34,6 +35,31 @@ export function CreateReturnPage({ saleId }: CreateReturnPageProps) {
     (_saleItemId) => {
       refresh();
     },
+  );
+
+  // Must be before early returns to satisfy Rules of Hooks
+  const refundTotals = useMemo(
+    () =>
+      computeReturnTotalsClient(
+        sale
+          ? form.lines
+              .filter((l) => l.quantity > 0)
+              .map((l) => {
+                const item = sale.items.find((i) => i.id === l.saleItemId);
+                return item
+                  ? {
+                      quantity: l.quantity,
+                      unitPrice: item.unitPrice,
+                      discountPct: item.discountPct ?? null,
+                      ivaRate: item.ivaRate ?? null,
+                      iepsRate: item.iepsRate ?? null,
+                    }
+                  : { quantity: 0, unitPrice: 0 };
+              })
+          : []
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [form.lines, sale]
   );
 
   if (isLoading) {
@@ -94,10 +120,11 @@ export function CreateReturnPage({ saleId }: CreateReturnPageProps) {
   function renderQuantityCell(item: SaleItem, returnedQty: number): ReactNode {
     const line = form.lines.find((l) => l.saleItemId === item.id);
     if (!line) return null;
+    const maxQuantity = Math.max(0, item.quantity - returnedQty);
     return (
       <ReturnLineRow
-        item={item}
-        returnedQty={returnedQty}
+        productName={item.productNameSnapshot}
+        maxQuantity={maxQuantity}
         value={line.quantity}
         error={line.error}
         onChange={(qty) => form.updateLine(item.id, qty)}
@@ -140,8 +167,12 @@ export function CreateReturnPage({ saleId }: CreateReturnPageProps) {
         notes={form.notes}
         onNotesChange={form.setNotes}
         validationError={form.validationError}
+        reasonError={form.reasonError}
         isSubmitting={form.isSubmitting}
         onSubmit={handleSubmit}
+        refundSubtotal={refundTotals.subtotal}
+        refundTax={refundTotals.taxTotal}
+        refundTotal={refundTotals.total}
       />
     </div>
   );

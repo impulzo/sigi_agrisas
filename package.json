@@ -10,7 +10,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
-    "seed:inventory": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/inventory.ts"
+    "seed:inventory": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/inventory.ts",
+    "seed:folios": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/folios.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
@@ -18,6 +19,7 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "@react-pdf/renderer": "^4.5.1",
+    "@supabase/supabase-js": "^2.108.2",
     "autoprefixer": "^10.5.0",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
@@ -34,6 +36,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@testing-library/jest-dom": "^6.4.0",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.6.1",

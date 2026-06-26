@@ -1,6 +1,6 @@
 import { authFetch, NetworkError } from "../../../../_lib/authFetch";
 import type { RegisterPaymentBody } from "../types/api";
-import { PaymentExceedsDueAmountError, SaleNotPayableError } from "../errors";
+import { PaymentExceedsDueAmountError, SaleNotPayableError, FolioScopeMismatchError } from "../errors";
 
 export async function registerPayment(
   body: RegisterPaymentBody,
@@ -30,7 +30,8 @@ export async function registerPayment(
   }
 
   if (res.status === 400) {
-    const data = await res.json() as { message?: string };
+    const data = await res.json() as { error?: string; message?: string; expected?: string; actual?: string };
+    if (data.error === "FolioScopeMismatch") throw new FolioScopeMismatchError(data.expected ?? "", data.actual ?? "");
     throw new Error(data.message ?? "Error al registrar el abono");
   }
 

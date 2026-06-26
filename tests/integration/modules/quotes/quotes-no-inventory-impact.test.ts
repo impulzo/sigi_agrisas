@@ -118,6 +118,7 @@ describe("Quotes — el ciclo de vida no toca inventario (integration real DB)",
       name: "Folio Cotización",
       prefix: "COT",
       currentNumber: 0,
+      scope: "POS",
     });
     quoteFolioId = cotFolio.id;
 
@@ -126,6 +127,7 @@ describe("Quotes — el ciclo de vida no toca inventario (integration real DB)",
       name: "Folio Fiscal",
       prefix: "FAC",
       currentNumber: 0,
+      scope: "POS",
     });
     fiscalFolioId = fiscalFolio.id;
 

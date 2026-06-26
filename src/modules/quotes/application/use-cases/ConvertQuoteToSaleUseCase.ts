@@ -10,6 +10,7 @@ import { QuoteExpiredError } from "../../domain/errors/QuoteExpiredError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
 import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
+import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 
 export interface ConvertQuoteResult {
   dto: SaleDetailDto;
@@ -61,6 +62,7 @@ export class ConvertQuoteToSaleUseCase {
     ]);
     if (!folio) throw new InactiveResourceError("Folio not found");
     if (!folio.isActive) throw new InactiveResourceError("Folio");
+    if (folio.scope !== "POS") throw new FolioScopeMismatchError("POS", folio.scope);
     if (!payment) throw new InactiveResourceError("Payment method not found");
     if (!payment.isActive) throw new InactiveResourceError("Payment method");
 

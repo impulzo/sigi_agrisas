@@ -29,7 +29,7 @@ export function CartLinesList({
     [onUpdateQuantity],
   );
   const onMinus = useCallback(
-    (line: CartLineType) => onUpdateQuantity(line.id, Math.max(0.001, line.quantity - 1)),
+    (line: CartLineType) => onUpdateQuantity(line.id, Math.max(0.01, line.quantity - 1)),
     [onUpdateQuantity],
   );
   const onDelete = useCallback(

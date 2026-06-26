@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useProductDosifications } from "../_logic/hooks/useProductDosifications";
+import { useTableKeyboard } from "../../../../_hooks/useTableKeyboard";
 import { DuplicateDosificationNameError } from "../_logic/errors";
 import { ConfirmDialog } from "../../../../_components/molecules/ConfirmDialog/ConfirmDialog";
 import { CatalogStatusBadge } from "../../_blocks/CatalogStatusBadge";
@@ -108,6 +109,12 @@ export function ProductDosificationsTab({ productId, canWrite }: ProductDosifica
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
 
+  const openEditModal = (d: ProductDosification) => {
+    setNameError(null); setModal({ mode: "edit", entity: d });
+  };
+  const noop = () => {};
+  const { getRowProps: getDosifRowProps } = useTableKeyboard(dosifications, canWrite ? openEditModal : noop);
+
   const handleSave = async (data: CreateDosificationBody | UpdateDosificationBody) => {
     setNameError(null);
     try {
@@ -150,8 +157,12 @@ export function ProductDosificationsTab({ productId, canWrite }: ProductDosifica
               </tr>
             </thead>
             <tbody>
-              {dosifications.map((d) => (
-                <tr key={d.id} className="border-b border-outline-variant hover:bg-surface-container-low">
+              {dosifications.map((d, idx) => (
+                <tr
+                  key={d.id}
+                  {...getDosifRowProps(idx)}
+                  className="border-b border-outline-variant hover:bg-surface-container-low focus:bg-surface-container focus:outline-none transition-colors cursor-default"
+                >
                   <td className="px-4 py-2">{d.name}</td>
                   <td className="px-4 py-2 text-right">{d.numParts}</td>
                   <td className="px-4 py-2 text-right">
