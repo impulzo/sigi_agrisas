@@ -26,5 +26,6 @@ export const returnsController = new ReturnsController(
   createUseCase,
   cancelUseCase,
   saleRepo,
-  rbacContainer.authorizationService
+  rbacContainer.authorizationService,
+  returnRepo
 );

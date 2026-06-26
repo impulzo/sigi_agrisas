@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { formatMxCurrency } from "../_logic/lib/formatMxCurrency";
@@ -12,64 +13,96 @@ interface SaleConfirmedModalProps {
 
 export function SaleConfirmedModal({ sale, onNewSale }: SaleConfirmedModalProps) {
   const router = useRouter();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const newSaleBtnRef = useRef<HTMLButtonElement>(null);
 
   const folioLabel = sale.folioPrefix
     ? `${sale.folioPrefix}-${sale.folioNumber}`
     : String(sale.folioNumber);
 
+  useEffect(() => {
+    dialogRef.current?.showModal();
+    newSaleBtnRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const handleCancel = (e: Event) => {
+      e.preventDefault();
+      onNewSale();
+    };
+    dialog.addEventListener("cancel", handleCancel);
+    return () => dialog.removeEventListener("cancel", handleCancel);
+  }, [onNewSale]);
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onNewSale();
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl text-center">
-        <div className="flex justify-center mb-4">
-          <span className="text-5xl text-primary">
-            <Icon name="check_circle" size={64} />
+    <dialog
+      ref={dialogRef}
+      onKeyDown={handleKeyDown}
+      className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl text-center backdrop:bg-black/40"
+    >
+      <div className="flex justify-center mb-4">
+        <span className="text-5xl text-primary">
+          <Icon name="check_circle" size={64} />
+        </span>
+      </div>
+
+      <h2 className="text-title-md font-semibold text-on-surface mb-1">
+        ¡Venta registrada!
+      </h2>
+
+      <p className="text-body-sm text-on-surface-variant mb-4">
+        Folio <strong className="font-mono">{folioLabel}</strong>
+      </p>
+
+      <div className="space-y-2 mb-6 text-left bg-surface-container-low rounded-xl p-4">
+        <div className="flex justify-between text-body-sm">
+          <span className="text-on-surface-variant">Total</span>
+          <span className="font-semibold tabular-nums text-on-surface">
+            {formatMxCurrency(sale.total)}
           </span>
         </div>
-
-        <h2 className="text-title-md font-semibold text-on-surface mb-1">
-          ¡Venta registrada!
-        </h2>
-
-        <p className="text-body-sm text-on-surface-variant mb-4">
-          Folio <strong className="font-mono">{folioLabel}</strong>
-        </p>
-
-        <div className="space-y-2 mb-6 text-left bg-surface-container-low rounded-xl p-4">
+        {sale.customerName && (
           <div className="flex justify-between text-body-sm">
-            <span className="text-on-surface-variant">Total</span>
-            <span className="font-semibold tabular-nums text-on-surface">
-              {formatMxCurrency(sale.total)}
-            </span>
+            <span className="text-on-surface-variant">Cliente</span>
+            <span className="text-on-surface">{sale.customerName}</span>
           </div>
-          {sale.customerName && (
-            <div className="flex justify-between text-body-sm">
-              <span className="text-on-surface-variant">Cliente</span>
-              <span className="text-on-surface">{sale.customerName}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-body-sm">
-            <span className="text-on-surface-variant">Artículos</span>
-            <span className="text-on-surface">{sale.items.length}</span>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onNewSale}
-            className="flex-1 rounded-full border border-outline py-2 text-body-sm font-medium text-on-surface hover:bg-surface-container-low transition-colors"
-          >
-            Nueva venta
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push(`/sales/${sale.id}`)}
-            className="flex-1 rounded-full bg-primary py-2 text-body-sm font-medium text-on-primary hover:bg-primary/90 transition-colors"
-          >
-            Ver ticket
-          </button>
+        )}
+        <div className="flex justify-between text-body-sm">
+          <span className="text-on-surface-variant">Artículos</span>
+          <span className="text-on-surface">{sale.items.length}</span>
         </div>
       </div>
-    </div>
+
+      <p className="text-label-sm text-on-surface-variant mb-4">
+        Esc o Enter para nueva venta
+      </p>
+
+      <div className="flex gap-3">
+        <button
+          ref={newSaleBtnRef}
+          type="button"
+          onClick={onNewSale}
+          className="flex-1 rounded-full border border-outline py-2 text-body-sm font-medium text-on-surface hover:bg-surface-container-low transition-colors"
+        >
+          Nueva venta
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push(`/sales/${sale.id}`)}
+          className="flex-1 rounded-full bg-primary py-2 text-body-sm font-medium text-on-primary hover:bg-primary/90 transition-colors"
+        >
+          Ver ticket
+        </button>
+      </div>
+    </dialog>
   );
 }

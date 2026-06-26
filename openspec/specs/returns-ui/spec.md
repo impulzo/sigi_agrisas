@@ -144,6 +144,8 @@ The form SHALL render:
 - **Lines table** (reutilizando `SaleItemsTable` con `renderQuantityCell` override): cada fila muestra `productCode`, `productName`, `vendido` (`sale_item.quantity`), `ya devuelto` (de `returnedQuantityBySaleItem[item.id] ?? 0`), `disponible` (`vendido - ya devuelto`), y un `<input type="number">` para `cantidad a devolver` (min 0, max `disponible`, step `0.0001`).
 - **Footer**: campo `Motivo` (textarea required, 3–500 chars, contador), `Fecha de devolución` (`<input type="date">`, default hoy, max hoy), `Notas` (textarea opcional, max 1000 chars), CTA "Registrar devolución" (`bg-primary`).
 
+Each `ReturnLineRow` SHALL display a column "Disponible" showing `remainingQuantity` (computed as `soldQty - sum(completed returns)`) alongside the quantity input. Lines where `remainingQuantity = 0` SHALL render the quantity input as disabled with label "Devuelto" instead of a numeric input. The submit button SHALL be disabled when the sum of all entered quantities equals zero. `CreateReturnFooter` SHALL display a real-time preview of `refundSubtotal`, `refundTax`, `refundTotal` computed client-side as quantities change.
+
 Client-side validation:
 - Cada `quantity > 0` debe ser `<= disponible`; sino → error inline en la fila.
 - Suma de `quantity > 0` SHALL ser ≥ 1; sino → error en el footer "Selecciona al menos un producto".
@@ -193,6 +195,30 @@ On submit:
 #### Scenario: returnedAt in the future
 - **WHEN** el usuario intenta seleccionar una fecha posterior a hoy
 - **THEN** el `<input type="date">` no permite la selección (atributo `max`) y el cliente no envía la request
+
+#### Scenario: ReturnLineRow shows available quantity
+- **WHEN** a sale item has `soldQty = 10` and a prior completed return of 3
+- **THEN** the `ReturnLineRow` shows "Disponible: 7" and the quantity input has `max = 7`
+
+#### Scenario: Fully returned line is disabled
+- **WHEN** `remainingQuantity = 0` for a sale item
+- **THEN** the quantity input is rendered disabled with label "Devuelto" and no numeric input
+
+#### Scenario: Submit disabled when all quantities zero
+- **WHEN** all `ReturnLineRow` inputs are 0 or empty
+- **THEN** the "Registrar devolución" button is disabled
+
+#### Scenario: Real-time refund total preview
+- **WHEN** the user enters a quantity in any `ReturnLineRow`
+- **THEN** `CreateReturnFooter` immediately updates `refundSubtotal`, `refundTax`, `refundTotal` without a server round-trip
+
+#### Scenario: Reason required on submit
+- **WHEN** the user submits with empty `reason`
+- **THEN** inline error "El motivo es obligatorio (mín. 3 caracteres)" appears and request is NOT dispatched
+
+#### Scenario: Successful submission redirects to return detail
+- **WHEN** `POST /returns` returns HTTP 201
+- **THEN** the page navigates to `/returns/[newReturnId]`
 
 ---
 
@@ -346,6 +372,53 @@ The system SHALL provide React hooks under `app/(private)/returns/_logic/hooks/`
 
 ---
 
+### Requirement: Full-return action in sale detail
+The system SHALL add a "Devolución Total" button to `SaleDetailPage` (route `/sales/[id]`). The button SHALL be visible when ALL of the following are true: `sale.status === 'completed'`, `can("returns:create") === true`, and at least one sale line has `remaining > 0`. Clicking the button opens `FullReturnModal`.
+
+#### Scenario: Button visible for eligible sale
+- **WHEN** an operator with `returns:create` views a `completed` sale with unreturned lines
+- **THEN** the "Devolución Total" button appears in the actions bar
+
+#### Scenario: Button hidden when all lines returned
+- **WHEN** all sale lines have `remaining = 0` (or sale status is `returned_total`)
+- **THEN** the "Devolución Total" button is NOT rendered
+
+#### Scenario: Button hidden without permission
+- **WHEN** a viewer without `returns:create` views a sale
+- **THEN** the "Devolución Total" button is NOT rendered
+
+---
+
+### Requirement: FullReturnModal
+The system SHALL provide a `FullReturnModal` dialog that captures the mandatory `reason` (textarea, 3–500 chars) and optional `notes` (textarea, max 1000 chars) before calling `POST /api/v1/admin/sales/:id/full-return`. On success, the modal closes, a toast "Devolución total registrada" appears, and the page re-fetches the sale detail (showing updated status `returned_total`).
+
+#### Scenario: Submit with valid reason
+- **WHEN** the user enters a reason of ≥ 3 chars and clicks "Confirmar devolución total"
+- **THEN** `POST /sales/:id/full-return` is called and on 201 the modal closes and the sale status badge updates
+
+#### Scenario: Submit with empty reason
+- **WHEN** the user submits with an empty `reason` field
+- **THEN** an inline error "El motivo es obligatorio (mín. 3 caracteres)" appears and the request is NOT dispatched
+
+#### Scenario: Server error 409 SaleAlreadyFullyReturned
+- **WHEN** the server returns HTTP 409 `SaleAlreadyFullyReturned`
+- **THEN** the modal shows "Esta venta ya fue devuelta en su totalidad"
+
+---
+
+### Requirement: `returned_total` status badge
+The system SHALL update `SaleStatusBadge` (and the equivalent `ReturnStatusBadge` if reused) to render `returned_total` as "Devuelto total" with `bg-error-container text-on-error-container` styling. The `/sales` list SHALL include `returned_total` as a selectable filter option in the "Estado" filter.
+
+#### Scenario: Badge renders returned_total
+- **WHEN** a sale row has `status = 'returned_total'`
+- **THEN** the badge renders "Devuelto total" with error-container color
+
+#### Scenario: Filter by returned_total in sales list
+- **WHEN** the user selects "Devuelto total" in the Estado filter on `/sales`
+- **THEN** the request adds `?status=returned_total` and only fully returned sales appear
+
+---
+
 ### Requirement: `ReturnStatusBadge` visual styling
 The system SHALL provide a `ReturnStatusBadge` component under `app/(private)/returns/_blocks/` that renders a pill with a colored dot and text following the design system pattern:
 
@@ -372,3 +445,29 @@ The component receives `{ status: "completed" | "cancelled" }` and renders the c
 #### Scenario: Cancelled return
 - **WHEN** se renderiza `<ReturnStatusBadge status="cancelled" />`
 - **THEN** el badge muestra "Cancelada" con `bg-surface-container-highest` y un punto `bg-outline-variant`
+
+---
+
+### Requirement: Return reason displayed in detail
+The system SHALL render `Return.reason` in `ReturnMetaPanel` on the `/returns/[id]` detail page using `<p className="whitespace-pre-line">`. The label SHALL be "Motivo de devolución". The field SHALL always be visible (it is never null).
+
+#### Scenario: Reason rendered with line breaks preserved
+- **WHEN** a return has `reason: "Producto dañado.\nCliente rechazó el artículo."`
+- **THEN** the detail page renders both lines separated visually (whitespace-pre-line)
+
+#### Scenario: Reason always present
+- **WHEN** any return detail is opened
+- **THEN** the "Motivo de devolución" label and its content are always visible in ReturnMetaPanel
+
+---
+
+### Requirement: Return reason required in create form
+The system SHALL enforce client-side that the `reason` field in `/sales/[id]/returns/new` and in `FullReturnModal` (HU-002) is non-empty and ≥ 3 chars before dispatching the request. The field SHALL show inline error "El motivo es obligatorio (mín. 3 caracteres)".
+
+#### Scenario: Empty reason blocks submit
+- **WHEN** the user clicks submit with an empty `reason`
+- **THEN** the form shows the inline error and does not dispatch the API call
+
+#### Scenario: Reason of 3 chars passes client validation
+- **WHEN** the user enters exactly 3 chars in `reason`
+- **THEN** no client-side error appears and the form can be submitted

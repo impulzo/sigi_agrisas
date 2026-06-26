@@ -20,7 +20,7 @@ describe("createDepartment", () => {
       json: async () => baseDto,
     } as Response);
 
-    const result = await createDepartment({ body: { code: "SALES", name: "Ventas" } }, mockFetch);
+    const result = await createDepartment({ body: { code: "SALES", name: "Ventas", providerId: "00000000-0000-0000-0000-000000000000" } }, mockFetch);
 
     expect(result.id).toBe("1");
     expect(result.code).toBe("SALES");
@@ -35,7 +35,7 @@ describe("createDepartment", () => {
     } as Response);
 
     await expect(
-      createDepartment({ body: { code: "SALES", name: "Ventas" } }, mockFetch)
+      createDepartment({ body: { code: "SALES", name: "Ventas", providerId: "00000000-0000-0000-0000-000000000000" } }, mockFetch)
     ).rejects.toBeInstanceOf(DepartmentCodeAlreadyInUseError);
   });
 
@@ -47,7 +47,7 @@ describe("createDepartment", () => {
     } as Response);
 
     await expect(
-      createDepartment({ body: { code: "SALES", name: "Ventas" } }, mockFetch)
+      createDepartment({ body: { code: "SALES", name: "Ventas", providerId: "00000000-0000-0000-0000-000000000000" } }, mockFetch)
     ).rejects.toBeInstanceOf(NetworkError);
   });
 });

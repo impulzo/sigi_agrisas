@@ -7,6 +7,7 @@ import { useDebounce } from "../../../../_hooks/useDebounce";
 import { useProducts } from "../_logic/hooks/useProducts";
 import { useProductMutations } from "../_logic/hooks/useProductMutations";
 import { useDepartmentsOptions } from "../_logic/hooks/useDepartmentsOptions";
+import { useProvidersOptions } from "../../../../_hooks/useProvidersOptions";
 import { ProductsTable } from "./ProductsTable";
 import { ProductEditModal } from "./ProductEditModal";
 import { CatalogShell } from "../../_blocks/CatalogShell";
@@ -18,6 +19,7 @@ import { ConfirmDialog } from "../../../../_components/molecules/ConfirmDialog/C
 import { Skeleton } from "../../../../_components/atoms/Skeleton/Skeleton";
 import { EmptyState } from "../../../../_components/molecules/EmptyState/EmptyState";
 import { ProductCodeAlreadyInUseError, ProductDepartmentInvalidError } from "../_logic/errors";
+import { uploadProductImage } from "../_logic/services/uploadProductImage";
 import type { Product } from "../_logic/types/domain";
 import type { CreateProductBody, UpdateProductBody } from "../_logic/types/api";
 
@@ -39,23 +41,27 @@ export function ProductsPage() {
   const trimmedSearch = debouncedSearch.trim();
   const effectiveSearch = trimmedSearch.length >= 2 ? trimmedSearch : undefined;
   const [departmentId, setDepartmentId] = useState<string | undefined>(undefined);
+  const [providerId, setProviderId] = useState<string | undefined>(undefined);
   const [includeInactive, setIncludeInactive] = useState(false);
   const [modalState, setModalState] = useState<ModalState | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [deptError, setDeptError] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [imageUploadWarning, setImageUploadWarning] = useState<string | null>(null);
 
   const { items, total, isLoading, error, refresh } = useProducts({
     page,
     pageSize,
     search: effectiveSearch,
     departmentId,
+    providerId,
     includeInactive,
   });
 
   const { isSaving, createOne, updateOne, softDeleteOne, reactivateOne, clearError } = useProductMutations();
-  const { options: deptOptions, isLoading: deptLoading } = useDepartmentsOptions();
+  const { options: deptOptions, isLoading: deptLoading } = useDepartmentsOptions(providerId);
+  const { options: providerOptions, isLoading: providerLoading } = useProvidersOptions();
 
   const canRead = can("products:read");
   const canWrite = can("products:write");
@@ -70,6 +76,12 @@ export function ProductsPage() {
     setPage(1);
   }, []);
 
+  const handleProviderChange = useCallback((val: string) => {
+    setProviderId(val || undefined);
+    setDepartmentId(undefined);
+    setPage(1);
+  }, []);
+
   const handleIncludeInactiveChange = useCallback((val: boolean) => {
     setIncludeInactive(val);
     setPage(1);
@@ -79,6 +91,7 @@ export function ProductsPage() {
     setCodeError(null);
     setDeptError(null);
     setMutationError(null);
+    setImageUploadWarning(null);
     clearError();
     setModalState({ mode: "create", entity: null });
   }, [clearError]);
@@ -87,6 +100,7 @@ export function ProductsPage() {
     setCodeError(null);
     setDeptError(null);
     setMutationError(null);
+    setImageUploadWarning(null);
     clearError();
     setModalState({ mode: "edit", entity });
   }, [clearError]);
@@ -95,13 +109,23 @@ export function ProductsPage() {
     router.push(`/catalogs/products/${entity.id}`);
   }, [router]);
 
-  const handleSave = useCallback(async (data: CreateProductBody | UpdateProductBody) => {
+  const handleSave = useCallback(async (data: CreateProductBody | UpdateProductBody, stagedImage?: File | null) => {
     setCodeError(null);
     setDeptError(null);
     setMutationError(null);
+    setImageUploadWarning(null);
     try {
       if (modalState?.mode === "create") {
-        await createOne(data as CreateProductBody);
+        const product = await createOne(data as CreateProductBody);
+        if (product && stagedImage) {
+          try {
+            await uploadProductImage(product.id, stagedImage);
+          } catch {
+            setImageUploadWarning("Producto creado pero la imagen no pudo subirse.");
+            refresh();
+            return;
+          }
+        }
       } else if (modalState?.entity) {
         await updateOne(modalState.entity.id, data as UpdateProductBody);
       }
@@ -155,7 +179,18 @@ export function ProductsPage() {
         searchScope="server"
         createButtonLabel="Nuevo producto"
       />
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
+        <select
+          value={providerId ?? ""}
+          onChange={(e) => handleProviderChange(e.target.value)}
+          disabled={providerLoading}
+          className="rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value="">Todos los proveedores</option>
+          {providerOptions.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
         <select
           value={departmentId ?? ""}
           onChange={(e) => handleDepartmentChange(e.target.value)}
@@ -197,6 +232,7 @@ export function ProductsPage() {
               onManage={handleManage}
               onDelete={(entity) => setConfirmDeleteId(entity.id)}
               onReactivate={handleReactivate}
+              onEnter={handleManage}
             />
             <CatalogPagination
               page={page}
@@ -219,9 +255,10 @@ export function ProductsPage() {
           codeError={codeError}
           deptError={deptError}
           mutationError={mutationError}
+          imageUploadWarning={imageUploadWarning}
           deptOptions={deptOptions}
           onSave={handleSave}
-          onClose={() => setModalState(null)}
+          onClose={() => { setModalState(null); setImageUploadWarning(null); }}
         />
       )}
 

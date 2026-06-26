@@ -78,6 +78,8 @@ export interface CreateReturnRequest {
   items: ReturnItemInput[];
   notes?: string | null;
   creatorId: string;
+  /** When set, marks the referenced sale as 'returned_total' atomically with the return creation. */
+  markSaleReturnedTotalId?: string;
 }
 
 export interface CancelReturnRequest {

@@ -20,6 +20,7 @@ interface UseCreateReturnFormResult {
   notes: string;
   isSubmitting: boolean;
   validationError: string | null;
+  reasonError: string | null;
   setReason: (v: string) => void;
   setReturnedAt: (v: string) => void;
   setNotes: (v: string) => void;
@@ -53,9 +54,15 @@ export function useCreateReturnForm(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sale?.id]);
 
-  const [reason, setReason] = useState("");
+  const [reason, setReasonRaw] = useState("");
+  const [reasonError, setReasonError] = useState<string | null>(null);
   const [returnedAt, setReturnedAt] = useState(todayIso());
   const [notes, setNotes] = useState("");
+
+  const setReason = useCallback((v: string) => {
+    setReasonRaw(v);
+    setReasonError(null);
+  }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateLine = useCallback((saleItemId: string, quantity: number) => {
@@ -81,6 +88,11 @@ export function useCreateReturnForm(
 
   const submit = useCallback(async (): Promise<ReturnDetail | null> => {
     if (!sale || validationError) return null;
+    if (reason.trim().length < 3) {
+      setReasonError("El motivo es obligatorio (mín. 3 caracteres)");
+      return null;
+    }
+    setReasonError(null);
     const items = lines
       .filter((l) => l.quantity > 0)
       .map((l) => ({ saleItemId: l.saleItemId, quantity: l.quantity }));
@@ -120,6 +132,7 @@ export function useCreateReturnForm(
     notes,
     isSubmitting,
     validationError,
+    reasonError,
     setReason,
     setReturnedAt,
     setNotes,

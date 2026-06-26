@@ -16,6 +16,7 @@ export interface ProductDto {
   iepsRate: number | null;
   isActive: boolean;
   departmentId: string;
+  departmentName?: string;
   createdAt: Date;
   updatedAt: Date;
 }

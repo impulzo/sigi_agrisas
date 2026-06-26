@@ -79,6 +79,8 @@ describe("DepartmentsPage", () => {
           name: "Ventas",
           description: null,
           isActive: true,
+          providerId: null,
+          providerName: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },

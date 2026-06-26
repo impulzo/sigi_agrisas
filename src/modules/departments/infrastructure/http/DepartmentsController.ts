@@ -8,6 +8,7 @@ import { UpdateDepartmentUseCase } from "@/modules/departments/application/use-c
 import { SoftDeleteDepartmentUseCase } from "@/modules/departments/application/use-cases/SoftDeleteDepartmentUseCase";
 import { DepartmentNotFoundError } from "@/modules/departments/domain/errors/DepartmentNotFoundError";
 import { DepartmentCodeAlreadyInUseError } from "@/modules/departments/domain/errors/DepartmentCodeAlreadyInUseError";
+import { ProviderNotFoundOrInactiveError } from "@/modules/departments/domain/errors/ProviderNotFoundOrInactiveError";
 
 const uuidSchema = z.string().uuid("Invalid ID format");
 
@@ -15,6 +16,7 @@ const createBodySchema = z.object({
   code: z.string().regex(/^[A-Z0-9_]{1,32}$/, "code must be uppercase letters, digits, or underscores (1–32 chars)"),
   name: z.string().min(1).max(100),
   description: z.string().max(500).nullable().optional(),
+  providerId: z.string().uuid("providerId must be a valid UUID"),
   isActive: z.boolean().optional(),
 });
 
@@ -22,10 +24,11 @@ const updateBodySchema = z
   .object({
     name: z.string().min(1).max(100).optional(),
     description: z.string().max(500).nullable().optional(),
+    providerId: z.string().uuid("providerId must be a valid UUID").nullable().optional(),
     isActive: z.boolean().optional(),
   })
-  .refine((d) => d.name !== undefined || d.description !== undefined || d.isActive !== undefined, {
-    message: "At least one field (name, description, isActive) must be provided",
+  .refine((d) => d.name !== undefined || d.description !== undefined || d.providerId !== undefined || d.isActive !== undefined, {
+    message: "At least one field (name, description, providerId, isActive) must be provided",
   });
 
 export class DepartmentsController {
@@ -41,7 +44,8 @@ export class DepartmentsController {
     const { searchParams } = new URL(req.url);
     const parsed = parseListQuery(searchParams);
     if (!parsed.success) return NextResponse.json({ error: parsed.error }, { status: 400 });
-    return NextResponse.json(await this.listUseCase.execute(parsed.data));
+    const providerId = searchParams.get("providerId") ?? undefined;
+    return NextResponse.json(await this.listUseCase.execute({ ...parsed.data, providerId }));
   }
 
   async getById(_req: NextRequest, id: string): Promise<NextResponse> {
@@ -63,6 +67,7 @@ export class DepartmentsController {
       return NextResponse.json(await this.createUseCase.execute(parsed.data), { status: 201 });
     } catch (err) {
       if (err instanceof DepartmentCodeAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
+      if (err instanceof ProviderNotFoundOrInactiveError) return NextResponse.json({ error: err.message }, { status: 400 });
       throw err;
     }
   }
@@ -77,6 +82,7 @@ export class DepartmentsController {
       return NextResponse.json(await this.updateUseCase.execute({ id: idParsed.data, ...parsed.data }));
     } catch (err) {
       if (err instanceof DepartmentNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      if (err instanceof ProviderNotFoundOrInactiveError) return NextResponse.json({ error: err.message }, { status: 400 });
       throw err;
     }
   }

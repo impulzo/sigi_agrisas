@@ -7,6 +7,13 @@ import userEvent from "@testing-library/user-event";
 import { PriceTierPicker } from "../../../../../../app/(private)/pos/_blocks/PriceTierPicker";
 import type { ProductDto, ProductPriceDto } from "../../../../../../app/(private)/pos/_logic/types/api";
 
+HTMLDialogElement.prototype.showModal = jest.fn(function (this: HTMLDialogElement) {
+  this.setAttribute("open", "");
+});
+HTMLDialogElement.prototype.close = jest.fn(function (this: HTMLDialogElement) {
+  this.removeAttribute("open");
+});
+
 const product: ProductDto = {
   id: "prod-1",
   code: "P001",

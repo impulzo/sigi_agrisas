@@ -2,6 +2,8 @@ export interface DepartmentProps {
   code: string;
   name: string;
   description: string | null;
+  providerId: string | null;
+  providerName: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -12,6 +14,8 @@ export class Department {
   readonly code: string;
   readonly name: string;
   readonly description: string | null;
+  readonly providerId: string | null;
+  readonly providerName: string | null;
   readonly isActive: boolean;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -21,6 +25,8 @@ export class Department {
     this.code = props.code;
     this.name = props.name;
     this.description = props.description;
+    this.providerId = props.providerId;
+    this.providerName = props.providerName;
     this.isActive = props.isActive;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;

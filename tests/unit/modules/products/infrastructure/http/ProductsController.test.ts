@@ -7,6 +7,13 @@ import { GetProductUseCase } from "@/modules/products/application/use-cases/GetP
 import { CreateProductUseCase } from "@/modules/products/application/use-cases/CreateProductUseCase";
 import { UpdateProductUseCase } from "@/modules/products/application/use-cases/UpdateProductUseCase";
 import { SoftDeleteProductUseCase } from "@/modules/products/application/use-cases/SoftDeleteProductUseCase";
+import { UploadProductImageUseCase } from "@/modules/products/application/use-cases/UploadProductImageUseCase";
+import { DeleteProductImageUseCase } from "@/modules/products/application/use-cases/DeleteProductImageUseCase";
+
+const noopStorage = {
+  upload: jest.fn().mockResolvedValue("https://example.supabase.co/storage/v1/object/public/product-images/test.jpg"),
+  delete: jest.fn().mockResolvedValue(undefined),
+};
 
 async function buildController() {
   const productRepo = new InMemoryProductRepository();
@@ -18,7 +25,9 @@ async function buildController() {
     new GetProductUseCase(productRepo),
     new CreateProductUseCase(productRepo, deptRepo),
     new UpdateProductUseCase(productRepo, deptRepo),
-    new SoftDeleteProductUseCase(productRepo)
+    new SoftDeleteProductUseCase(productRepo),
+    new UploadProductImageUseCase(productRepo, noopStorage),
+    new DeleteProductImageUseCase(productRepo, noopStorage),
   );
   return { ctrl, departmentId: dept.id };
 }
@@ -94,5 +103,36 @@ describe("ProductsController — Zod validation", () => {
     const { ctrl } = await buildController();
     const res = await ctrl.list(makeListReq({ pageSize: "200" }));
     expect(res.status).toBe(400);
+  });
+
+  it("rejects isTaxable when value is not a boolean (string 'yes')", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const res = await ctrl.create(
+      new NextRequest("http://localhost/api/v1/admin/products", {
+        method: "POST",
+        body: JSON.stringify({ code: "P1", name: "Arroz", unit: "kg", departmentId, isTaxable: "yes" }),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("persists isTaxable=true via PATCH", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const createRes = await ctrl.create(makeCreateReq({ code: "P2", name: "Azúcar", unit: "kg", departmentId }));
+    expect(createRes.status).toBe(201);
+    const { id } = await createRes.json();
+
+    const patchRes = await ctrl.update(
+      new NextRequest(`http://localhost/api/v1/admin/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isTaxable: true }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      id,
+    );
+    expect(patchRes.status).toBe(200);
+    const body = await patchRes.json();
+    expect(body.isTaxable).toBe(true);
   });
 });

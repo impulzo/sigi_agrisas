@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useDebounce } from "../../../_hooks/useDebounce";
 import { useSalesList } from "../_logic/hooks/useSalesList";
@@ -14,6 +15,7 @@ import type { BranchOption } from "../../pos/_logic/types/api";
 import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
 
 export function SalesListPage() {
+  const router = useRouter();
   const { can } = useCurrentUser();
   const canRead = can("sales:read");
   const isBypass = can("branches:access_all");
@@ -110,7 +112,7 @@ export function SalesListPage() {
         />
       }
     >
-      <SalesTable items={items} isLoading={isLoading} />
+      <SalesTable items={items} isLoading={isLoading} onEnter={(sale) => router.push(`/sales/${sale.id}`)} />
       <CatalogPagination
         page={page}
         pageSize={pageSize}

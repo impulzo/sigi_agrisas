@@ -9,7 +9,7 @@ import {
   ReturnNotFoundError,
   ReturnAlreadyCancelledError,
   SaleNotReturnableError,
-  EmptyReturnError,
+  ReturnItemsEmptyError,
   SaleItemNotPartOfSaleError,
   ReturnQuantityExceedsRemainingError,
   SaleNotFoundError,
@@ -144,9 +144,9 @@ describe("createReturn", () => {
     expect(result.id).toBe("r1");
   });
 
-  it("lanza EmptyReturnError en 400 'Return must include at least one item'", async () => {
+  it("lanza ReturnItemsEmptyError en 400 'Return must include at least one item'", async () => {
     const fetch = mockFetch(400, { error: "Return must include at least one item" });
-    await expect(createReturn(body, fetch as never)).rejects.toBeInstanceOf(EmptyReturnError);
+    await expect(createReturn(body, fetch as never)).rejects.toBeInstanceOf(ReturnItemsEmptyError);
   });
 
   it("lanza SaleNotFoundError en 400 'Sale not found'", async () => {

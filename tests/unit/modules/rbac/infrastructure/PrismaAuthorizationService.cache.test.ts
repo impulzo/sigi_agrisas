@@ -4,7 +4,7 @@ import { UserRoleRepository } from "@/modules/rbac/application/ports/UserRoleRep
 function makePrisma(keys: string[]) {
   return {
     $queryRaw: jest.fn().mockResolvedValue(keys.map((k) => ({ key: k }))),
-  } as unknown as Parameters<typeof PrismaAuthorizationService>[0];
+  } as unknown as ConstructorParameters<typeof PrismaAuthorizationService>[0];
 }
 
 function makeUserRoleRepo(): UserRoleRepository {

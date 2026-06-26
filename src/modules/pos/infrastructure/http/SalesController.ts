@@ -9,8 +9,11 @@ import { SaleNotFoundError } from "../../domain/errors/SaleNotFoundError";
 import { EmptySaleError } from "../../domain/errors/EmptySaleError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
+import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 import { CancelledSaleNotEditableError } from "../../domain/errors/CancelledSaleNotEditableError";
 import { SaleNotEditableHereError } from "../../domain/errors/SaleNotEditableHereError";
+import { ReturnedTotalSaleNotCancellableError } from "../../domain/errors/ReturnedTotalSaleNotCancellableError";
+import { ReturnedTotalSaleNotEditableError } from "../../domain/errors/ReturnedTotalSaleNotEditableError";
 import { QuoteLinkInvalidError } from "../../domain/errors/QuoteLinkInvalidError";
 import { SaleStatus } from "../../domain/entities/Sale";
 import { SaleHasActivePaymentsError } from "@/modules/payments/domain/errors/SaleHasActivePaymentsError";
@@ -27,7 +30,7 @@ import { PosLookupService } from "../../application/ports/PosLookups";
 
 const uuidSchema = z.string().uuid("Invalid sale ID format");
 
-const STATUS_VALUES: SaleStatus[] = ["completed", "cancelled", "edited"];
+const STATUS_VALUES: SaleStatus[] = ["completed", "cancelled", "edited", "returned_total"];
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -52,7 +55,7 @@ const saleItemSchema = z.object({
 
 const createSaleSchema = z.object({
   branchId: z.string().uuid(),
-  customerId: z.string().uuid(),
+  customerId: z.string().uuid().nullable().optional(),
   paymentMethodId: z.string().uuid(),
   folioId: z.string().uuid(),
   notes: z.string().max(1000).nullable().optional(),
@@ -163,6 +166,12 @@ export class SalesController {
       if (err instanceof EmptySaleError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof ProductPriceMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof InactiveResourceError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof FolioScopeMismatchError) {
+        return NextResponse.json(
+          { error: "FolioScopeMismatch", expected: err.expected, actual: err.actual },
+          { status: 400 }
+        );
+      }
       if (err instanceof QuoteLinkInvalidError) {
         return NextResponse.json({ error: err.message, reason: err.reason }, { status: 400 });
       }
@@ -195,6 +204,7 @@ export class SalesController {
       return NextResponse.json(dto);
     } catch (err) {
       if (err instanceof SaleNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      if (err instanceof ReturnedTotalSaleNotCancellableError) return NextResponse.json({ error: err.message }, { status: 409 });
       if (err instanceof SaleHasActivePaymentsError) {
         return NextResponse.json({ error: "SaleHasActivePayments", paymentIds: err.paymentIds }, { status: 409 });
       }
@@ -242,6 +252,7 @@ export class SalesController {
     } catch (err) {
       if (err instanceof SaleNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
       if (err instanceof CancelledSaleNotEditableError) return NextResponse.json({ error: err.message }, { status: 409 });
+      if (err instanceof ReturnedTotalSaleNotEditableError) return NextResponse.json({ error: err.message }, { status: 409 });
       if (err instanceof SaleNotEditableHereError) return NextResponse.json({ error: err.message }, { status: 403 });
       if (err instanceof EmptySaleError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof ProductPriceMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });

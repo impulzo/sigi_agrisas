@@ -24,7 +24,7 @@ describe("Folio CRUD integration", () => {
   let createdId: string;
 
   it("creates a folio with prefix and currentNumber", async () => {
-    const result = await createUC.execute({ code: CODE, name: "Test Folio", prefix: "TST-", currentNumber: 100 });
+    const result = await createUC.execute({ code: CODE, name: "Test Folio", prefix: "TST-", scope: "OPERATIONS", currentNumber: 100 });
     expect(result.id).toBeDefined();
     expect(result.prefix).toBe("TST-");
     expect(result.currentNumber).toBe(100);

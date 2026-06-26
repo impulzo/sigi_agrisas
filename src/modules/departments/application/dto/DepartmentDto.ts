@@ -5,6 +5,8 @@ export interface DepartmentDto {
   code: string;
   name: string;
   description: string | null;
+  providerId: string | null;
+  providerName: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -16,6 +18,8 @@ export function toDepartmentDto(d: Department): DepartmentDto {
     code: d.code,
     name: d.name,
     description: d.description,
+    providerId: d.providerId,
+    providerName: d.providerName,
     isActive: d.isActive,
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,

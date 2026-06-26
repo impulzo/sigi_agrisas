@@ -5,6 +5,7 @@ import { GetFolioUseCase } from "@/modules/folios/application/use-cases/GetFolio
 import { CreateFolioUseCase } from "@/modules/folios/application/use-cases/CreateFolioUseCase";
 import { UpdateFolioUseCase } from "@/modules/folios/application/use-cases/UpdateFolioUseCase";
 import { SoftDeleteFolioUseCase } from "@/modules/folios/application/use-cases/SoftDeleteFolioUseCase";
+import { AuditFolioSequenceUseCase } from "@/modules/folios/application/use-cases/AuditFolioSequenceUseCase";
 import { FoliosController } from "@/modules/folios/infrastructure/http/FoliosController";
 
 const repo = new PrismaFolioRepository(prisma);
@@ -14,5 +15,6 @@ export const foliosController = new FoliosController(
   new GetFolioUseCase(repo),
   new CreateFolioUseCase(repo),
   new UpdateFolioUseCase(repo),
-  new SoftDeleteFolioUseCase(repo)
+  new SoftDeleteFolioUseCase(repo),
+  new AuditFolioSequenceUseCase(repo)
 );

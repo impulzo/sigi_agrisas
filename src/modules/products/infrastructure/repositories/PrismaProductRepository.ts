@@ -10,7 +10,12 @@ import { Product } from "../../domain/entities/Product";
 import { ProductNotFoundError } from "../../domain/errors/ProductNotFoundError";
 import { ProductCodeAlreadyInUseError } from "../../domain/errors/ProductCodeAlreadyInUseError";
 
-type ProductRow = Prisma.ProductGetPayload<{ include: { department: { select: { name: true } } } }>;
+const INCLUDE_WITH_RELATIONS = {
+  department: { select: { name: true, providerId: true, provider: { select: { id: true, name: true } } } },
+  taxRate: { select: { code: true } },
+} as const;
+
+type ProductRow = Prisma.ProductGetPayload<{ include: typeof INCLUDE_WITH_RELATIONS }>;
 
 function decToNullableNumber(value: Prisma.Decimal | null): number | null {
   return value === null ? null : value.toNumber();
@@ -25,13 +30,19 @@ function toProductWithDepartment(row: ProductRow): ProductWithDepartment {
       unit: row.unit,
       satProductCode: row.satProductCode,
       departmentId: row.departmentId,
+      taxRateId: row.taxRateId ?? null,
       ivaRate: decToNullableNumber(row.ivaRate),
       iepsRate: decToNullableNumber(row.iepsRate),
+      imageUrl: row.imageUrl ?? null,
+      isTaxable: row.isTaxable,
       isActive: row.isActive,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }),
     departmentName: row.department?.name ?? "",
+    taxRateCode: row.taxRate?.code ?? null,
+    providerId: row.department?.provider?.id ?? null,
+    providerName: row.department?.provider?.name ?? null,
   };
 }
 
@@ -50,7 +61,6 @@ function isPrismaNotFoundError(err: unknown): boolean {
   return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2025";
 }
 
-const INCLUDE_DEPARTMENT = { department: { select: { name: true } } } as const;
 
 export class PrismaProductRepository implements ProductRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -61,12 +71,14 @@ export class PrismaProductRepository implements ProductRepository {
     includeInactive,
     search,
     departmentId,
+    providerId,
   }: FindAllProductsOptions): Promise<{ items: ProductWithDepartment[]; total: number }> {
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.ProductWhereInput = {
       ...(includeInactive ? {} : { isActive: true }),
       ...(departmentId ? { departmentId } : {}),
+      ...(providerId ? { department: { providerId } } : {}),
       ...(search
         ? {
             OR: [
@@ -83,7 +95,7 @@ export class PrismaProductRepository implements ProductRepository {
         skip,
         take: pageSize,
         orderBy: { createdAt: "desc" },
-        include: INCLUDE_DEPARTMENT,
+        include: INCLUDE_WITH_RELATIONS,
       }),
       this.prisma.product.count({ where }),
     ]);
@@ -92,7 +104,7 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async findById(id: string): Promise<ProductWithDepartment | null> {
-    const row = await this.prisma.product.findUnique({ where: { id }, include: INCLUDE_DEPARTMENT });
+    const row = await this.prisma.product.findUnique({ where: { id }, include: INCLUDE_WITH_RELATIONS });
     return row ? toProductWithDepartment(row) : null;
   }
 
@@ -104,12 +116,14 @@ export class PrismaProductRepository implements ProductRepository {
           name: data.name,
           unit: data.unit,
           departmentId: data.departmentId,
+          taxRateId: data.taxRateId ?? null,
           satProductCode: data.satProductCode ?? null,
           ivaRate: data.ivaRate ?? null,
           iepsRate: data.iepsRate ?? null,
+          ...(data.isTaxable !== undefined ? { isTaxable: data.isTaxable } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
         },
-        include: INCLUDE_DEPARTMENT,
+        include: INCLUDE_WITH_RELATIONS,
       });
       return toProductWithDepartment(row);
     } catch (err) {
@@ -127,11 +141,14 @@ export class PrismaProductRepository implements ProductRepository {
           ...(data.unit !== undefined ? { unit: data.unit } : {}),
           ...(data.departmentId !== undefined ? { departmentId: data.departmentId } : {}),
           ...("satProductCode" in data ? { satProductCode: data.satProductCode ?? null } : {}),
+          ...("taxRateId" in data ? { taxRateId: data.taxRateId ?? null } : {}),
           ...("ivaRate" in data ? { ivaRate: data.ivaRate ?? null } : {}),
           ...("iepsRate" in data ? { iepsRate: data.iepsRate ?? null } : {}),
+          ...("imageUrl" in data ? { imageUrl: data.imageUrl ?? null } : {}),
+          ...(data.isTaxable !== undefined ? { isTaxable: data.isTaxable } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
         },
-        include: INCLUDE_DEPARTMENT,
+        include: INCLUDE_WITH_RELATIONS,
       });
       return toProductWithDepartment(row);
     } catch (err) {

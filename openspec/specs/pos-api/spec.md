@@ -65,7 +65,7 @@ The system SHALL persist a sale as the aggregate `Sale` (header) + `SaleItem` (l
 ### Requirement: List sales
 The system SHALL expose `GET /api/v1/admin/sales` that returns a paginated list of sales. Requires the `sales:read` permission. Query parameters: `page` (default 1), `pageSize` (default 20, max 100), `branchId` (optional UUID), `customerId` (optional UUID), `status` (optional, comma-separated; one or more of `completed`,`cancelled`,`edited`), `from` (optional ISO date — inclusive lower bound on `created_at`), `to` (optional ISO date — inclusive upper bound on `created_at`), `search` (optional, min 2 chars; matches `folio_code`, `folio_number::text`, or joined `customer.name`/`customer.rfc`).
 
-Each `SaleDto` includes `id`, `folioId`, `folioCode`, `folioNumber`, `branchId`, `branchName` (joined), `customerId`, `customerName` (joined), `customerRfc` (joined), `cashierId`, `cashierName` (joined), `paymentMethodId`, `paymentMethodCode` (joined), `quoteId` (string or `null`), `status`, `subtotal`, `taxTotal`, `total`, `notes`, `completedAt`, `cancelledAt`, `cancellationReason`, `editedAt`, `createdAt`, `updatedAt`. `items` is NOT included in the list response.
+Each `SaleDto` includes `id`, `folioId`, `folioCode`, `folioNumber`, `branchId`, `branchName` (joined), `customerId`, `customerName` (joined), `customerRfc` (joined), `cashierId`, `cashierName` (joined), `paymentMethodId`, `paymentMethodCode` (joined), `isCredit` (derived from `paymentMethod.isCredit`), `quoteId` (string or `null`), `status`, `paidAmount` (string, 4 decimals), `paymentStatus` (one of `paid`, `partial`, `pending`), `subtotal`, `taxTotal`, `total`, `notes`, `completedAt`, `cancelledAt`, `cancellationReason`, `editedAt`, `createdAt`, `updatedAt`. `items` is NOT included in the list response.
 
 Sorted by `created_at DESC`.
 
@@ -179,16 +179,16 @@ The body MUST NOT include any explicit `isCredit` flag; the credit flow is activ
 **Credit flow auto-activation**: after loading the `paymentMethod`, if `paymentMethod.isCredit === true`, the controller SHALL:
 
 1. Verify the caller has `sales:create_credit`; otherwise HTTP 403 `{"error":"Forbidden","required":"sales:create_credit"}`.
-2. Verify `customer.creditLimit !== null`; otherwise HTTP 409 `{"error":"CustomerHasNoCreditLine"}`.
-3. Verify `customer.currentBalance + sale.total <= customer.creditLimit`; otherwise HTTP 409 `{"error":"CreditLimitExceeded","available":"<remaining>"}`.
+2. Verify `customer.creditLimit !== null`; otherwise HTTP 409 `{"error":"Customer has no credit line (creditLimit is null)"}`.
+3. Verify `customer.currentBalance + sale.total <= customer.creditLimit`; otherwise HTTP 409 `{"error":"Credit limit exceeded","available":"<remaining>"}`.
 
 These checks run AFTER total calculation but BEFORE folio allocation, all within the same transaction.
 
 **`quoteId` validation when present**: if the body includes a non-null `quoteId`, the controller SHALL:
 
-1. Load the quote; if it does not exist → HTTP 400 `{"error": "Quote not found"}`.
-2. Verify `quote.status === 'authorized'` AND `quote.convertedSaleId === null`. If not → HTTP 400 `{"error": "Quote cannot be linked to a new sale", "status": "<actual>"}`.
-3. Verify `quote.branchId === branchId` and `quote.customerId === customerId` (the sale's branch/customer must match the quote's; mismatch → HTTP 400). The quote does NOT constrain `paymentMethodId`, `folioId`, or `items` — those are governed by the sale body.
+1. Load the quote; if it does not exist → HTTP 400 `{"error": "Quote not found", "reason": "not_found"}`.
+2. Verify `quote.status === 'authorized'` AND `quote.convertedSaleId === null`. If not → HTTP 400 `{"error": "Quote cannot be linked to a new sale (status=<actual>)", "reason": "wrong_status"}`.
+3. Verify `quote.branchId === branchId` and `quote.customerId === customerId` (the sale's branch/customer must match the quote's; mismatch → HTTP 400 `{"error": "...", "reason": "branch_mismatch" | "customer_mismatch"}`). The quote does NOT constrain `paymentMethodId`, `folioId`, or `items` — those are governed by the sale body.
 4. Persist `sale.quoteId = quoteId`; ALSO update the quote in the same transaction: `quote.status='converted'`, `quote.convertedAt=NOW()`, `quote.convertedSaleId=<newSaleId>` (this keeps both sides consistent regardless of whether the caller used `POST /sales` or `POST /quotes/:id/convert`).
 
 The `quoteId` does NOT constrain whether the sale is cash or credit — the `paymentMethodId` of the body decides.
@@ -229,11 +229,11 @@ Returns HTTP 201 with the `SaleDetailDto` (including items, `quoteId`, `paidAmou
 
 #### Scenario: Credit sale exceeds creditLimit
 - **WHEN** the body selects a `paymentMethod` with `isCredit=true` for a customer with `creditLimit=10000`, `currentBalance=8000`, and `sale.total=5000`
-- **THEN** the system returns HTTP 409 `{"error":"CreditLimitExceeded","available":"2000.0000"}`; nothing is persisted
+- **THEN** the system returns HTTP 409 `{"error":"Credit limit exceeded","available":"2000.0000"}`; nothing is persisted
 
 #### Scenario: Credit sale for customer without credit line
 - **WHEN** the body selects a `paymentMethod` with `isCredit=true` for a customer with `creditLimit=null`
-- **THEN** the system returns HTTP 409 `{"error":"CustomerHasNoCreditLine"}`
+- **THEN** the system returns HTTP 409 `{"error":"Customer has no credit line (creditLimit is null)"}`
 
 #### Scenario: Successful sale with quoteId (cash)
 - **WHEN** the body includes `quoteId: Q` and a `paymentMethod` whose `isCredit=false`, where `Q` is an authorized quote with `convertedSaleId: null` and matching `branchId`/`customerId`
@@ -245,11 +245,11 @@ Returns HTTP 201 with the `SaleDetailDto` (including items, `quoteId`, `paidAmou
 
 #### Scenario: Invalid quoteId (already converted)
 - **WHEN** the body includes `quoteId: Q` where `Q` has `status='converted'`
-- **THEN** the system returns HTTP 400 `{"error": "Quote cannot be linked to a new sale", "status": "converted"}` and the transaction does not commit
+- **THEN** the system returns HTTP 400 `{"error": "Quote cannot be linked to a new sale (status=converted)", "reason": "wrong_status"}` and the transaction does not commit
 
 #### Scenario: Invalid quoteId (draft)
 - **WHEN** the body includes `quoteId: Q` where `Q` has `status='draft'`
-- **THEN** the system returns HTTP 400 `{"error": "Quote cannot be linked to a new sale", "status": "draft"}`
+- **THEN** the system returns HTTP 400 `{"error": "Quote cannot be linked to a new sale (status=draft)", "reason": "wrong_status"}`
 
 #### Scenario: Quote branch mismatch
 - **WHEN** the body has `branchId: B1` but `quoteId: Q` where `Q.branchId = B2`
@@ -305,7 +305,7 @@ Behavior (inside a Prisma transaction):
 - If `sale.status === 'cancelled'`: the operation is idempotent — returns HTTP 200 with the unchanged `SaleDetailDto` and the original `cancelledAt`/`cancellationReason`.
 - If `sale.status === 'completed'` or `'edited'`:
   1. Load `sale.paymentMethod.isCredit` (via JOIN/include) so the credit-aware logic is consistent within the transaction.
-  2. **Pre-check active payments**: if `paymentMethod.isCredit === true` AND there is at least one `CustomerPayment` with `status='completed'` linked to this sale → HTTP 409 `{"error":"SaleHasActivePayments","paymentIds":["<id1>","<id2>",...]}`. The transaction does NOT commit. The operator MUST cancel each listed payment first.
+  2. **Pre-check active payments**: if there is at least one `CustomerPayment` with `status='completed'` linked to this sale → HTTP 409 `{"error":"SaleHasActivePayments","paymentIds":["<id1>","<id2>",...]}`. The transaction does NOT commit. The operator MUST cancel each listed payment first. (In practice only credit sales can have active payments; the check applies unconditionally to all sales.)
   3. For each item, `UPDATE branch_inventory SET quantity = quantity + ${qty}, updated_at = NOW() WHERE branch_id = ? AND product_id = ?` (restores stock).
   4. If `paymentMethod.isCredit === true`: `UPDATE customers SET current_balance = current_balance - (sale.total - sale.paidAmount) WHERE id = sale.customerId`. (Since active payments are required to be already cancelled, `paidAmount` reflects only cancelled payments which don't affect balance — so this subtracts the original outstanding.)
   5. `UPDATE sales SET status='cancelled', cancelled_at=NOW(), cancellation_reason=?`.
@@ -519,6 +519,49 @@ if (!bypass) {
 #### Scenario: Listing without assigned branch
 - **WHEN** a user without `branches:access_all` and without a `branchId` calls `GET /api/v1/admin/sales` without `?branchId=`
 - **THEN** the system returns HTTP 403
+
+---
+
+### Requirement: POS product catalog does NOT expose product imageUrl
+The POS lookup endpoint(s) used to populate the POS product catalog (e.g., `searchProducts` consumed by `PosLookupService`) SHALL NOT expose the `imageUrl` field of products. The DTO returned to the POS frontend MUST NOT include `imageUrl`. The `SaleItem` snapshot (`product_code_snapshot`, `product_name_snapshot`, `price_name_snapshot`, etc.) MUST NOT store any image reference. This preserves payload size and rendering latency on the POS catalog.
+
+#### Scenario: searchProducts response excludes imageUrl
+- **WHEN** the POS frontend invokes the product search endpoint
+- **THEN** each item in the response MUST NOT contain an `imageUrl` field
+
+#### Scenario: SaleItem snapshot excludes image
+- **WHEN** a sale is created
+- **THEN** the persisted `sale_items` rows MUST NOT contain any image-related column
+
+#### Scenario: Quote and Return snapshots also exclude image
+- **WHEN** a quote item or return item is created
+- **THEN** the persisted snapshot MUST NOT contain any image-related column
+
+---
+
+### Requirement: Folio scope must be POS for sales
+
+`CreateSaleUseCase` SHALL validar, después de cargar el `Folio` desde el `folioId` recibido, que `folio.scope === 'POS'`. Si el scope no coincide, el use case SHALL lanzar `FolioScopeMismatchError(expected='POS', actual=<folio.scope>)` que el controller mapea a HTTP 400 `{"error":"FolioScopeMismatch","expected":"POS","actual":"<scope>"}`. La validación SHALL ocurrir en el mismo paso que `folio.isActive`, antes de cualquier mutación de inventario o asignación de folio. `EditCompletedSaleUseCase` no admite cambios de `folioId` (folio inmutable en edit), por lo que NO requiere chequeo adicional: el folio original ya fue validado contra `scope='POS'` en la creación.
+
+#### Scenario: Crear venta con folio POS válido
+
+- **WHEN** un usuario con `sales:create` envía `POST /api/v1/admin/sales` con `folioId` apuntando a un folio cuyo `scope='POS'` (e.g. `TK`, `TC`)
+- **THEN** el sistema procede con la emisión normal y retorna HTTP 201
+
+#### Scenario: Crear venta con folio OPERATIONS rechazada
+
+- **WHEN** la request usa `folioId` apuntando a un folio cuyo `scope='OPERATIONS'` (e.g. `RB`)
+- **THEN** el sistema retorna HTTP 400 `{"error":"FolioScopeMismatch","expected":"POS","actual":"OPERATIONS"}` SIN tocar inventario ni `current_number` del folio
+
+#### Scenario: Crear venta con folio INVENTORY rechazada
+
+- **WHEN** la request usa `folioId` apuntando a un folio cuyo `scope='INVENTORY'` (e.g. `TS`)
+- **THEN** el sistema retorna HTTP 400 `{"error":"FolioScopeMismatch","expected":"POS","actual":"INVENTORY"}`
+
+#### Scenario: Scope check ocurre antes de allocate folio
+
+- **WHEN** la request usa un folio con scope incorrecto pero `is_active=true` y `current_number=42`
+- **THEN** tras el 400, `current_number` sigue en 42 (no se incrementa por el intento fallido)
 
 ---
 

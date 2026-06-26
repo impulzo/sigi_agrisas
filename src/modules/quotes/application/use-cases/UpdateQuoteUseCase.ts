@@ -86,6 +86,7 @@ export class UpdateQuoteUseCase {
         discountPct: price.discountPct,
         ivaRate: product.ivaRate,
         iepsRate: product.iepsRate,
+        isTaxable: product.isTaxable,
       });
       snapshotInputs.push({
         productId: product.id,

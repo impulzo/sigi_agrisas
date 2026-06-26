@@ -9,6 +9,7 @@ import { ProductGeneralTab } from "./ProductGeneralTab";
 import { ProductPricesTab } from "./ProductPricesTab";
 import { ProductDosificationsTab } from "./ProductDosificationsTab";
 import { Icon } from "../../../../_components/atoms/Icon/Icon";
+import { ProductImage } from "../../../../_components/atoms/ProductImage/ProductImage";
 import { Skeleton } from "../../../../_components/atoms/Skeleton/Skeleton";
 import { ProductNotFoundError } from "../_logic/errors";
 import type { Product } from "../_logic/types/domain";
@@ -85,9 +86,18 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
         >
           <Icon name="arrow_back" size={20} />
         </Link>
+        <ProductImage src={product.imageUrl ?? null} alt={product.name} size={96} />
         <div>
           <h1 className="text-headline-lg font-semibold text-on-surface">{product.name}</h1>
           <p className="text-label-lg font-mono text-on-surface-variant">{product.code}</p>
+          <div className="flex flex-col gap-0.5 mt-0.5">
+            <p className="text-body-md text-on-surface-variant">
+              <span className="font-medium">Departamento:</span> {product.departmentName}
+            </p>
+            <p className="text-body-md text-on-surface-variant">
+              <span className="font-medium">Proveedor:</span> {product.providerName ?? "Sin proveedor"}
+            </p>
+          </div>
         </div>
       </div>
 

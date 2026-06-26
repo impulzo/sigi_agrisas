@@ -92,7 +92,7 @@ describe("POS — cancelar venta con returns vigentes (integration real DB)", ()
     productId = product.id;
     const price = await createPrice.execute(productId, { name: "Lista", price: 100, isDefault: true });
     const customer = await createCustomer.execute({ code: `${P}CLI1`, name: "Cliente CancelRet", rfc: "CCR010101001" });
-    const folio = await folioRepo.create({ code: `${P}FOL1`, name: "Folio CancelRet", prefix: "CR", currentNumber: 0 });
+    const folio = await folioRepo.create({ code: `${P}FOL1`, name: "Folio CancelRet", prefix: "CR", currentNumber: 0, scope: "POS" });
     const pm = await pmRepo.create({ code: `${P}PM1`, name: "Efectivo CancelRet" });
     const user = await prisma.user.create({ data: { email: `${P}u@test.com`, passwordHash: "x", name: "User CR" } });
     creatorId = user.id;

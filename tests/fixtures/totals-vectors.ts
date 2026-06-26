@@ -4,6 +4,7 @@ export interface TotalsVectorLine {
   discountPct?: number | null;
   ivaRate?: number | null;
   iepsRate?: number | null;
+  isTaxable?: boolean;
 }
 
 export const totalsVectors: ReadonlyArray<ReadonlyArray<TotalsVectorLine>> = [
@@ -19,6 +20,9 @@ export const totalsVectors: ReadonlyArray<ReadonlyArray<TotalsVectorLine>> = [
   [{ quantity: 3, unitPrice: 33.333, ivaRate: 0.16 }],
   [{ quantity: 1, unitPrice: 12345.6789, ivaRate: 0.16 }],
   [{ quantity: 1, unitPrice: 0.12345 }],
+  // isTaxable=false: tax must be zero regardless of rates
+  [{ quantity: 1, unitPrice: 100, ivaRate: 0.16, iepsRate: 0.08, isTaxable: false }],
+  [{ quantity: 2, unitPrice: 50, ivaRate: 0.16, isTaxable: false }],
   [
     { quantity: 4, unitPrice: 7.77, discountPct: 13.5, ivaRate: 0.16 },
     { quantity: 1.5, unitPrice: 99.99, ivaRate: 0, iepsRate: 0.08 },

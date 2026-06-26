@@ -3,6 +3,9 @@ import { Product } from "../../domain/entities/Product";
 export interface ProductWithDepartment {
   product: Product;
   departmentName: string;
+  taxRateCode: string | null;
+  providerName: string | null;
+  providerId: string | null;
 }
 
 export interface FindAllProductsOptions {
@@ -11,6 +14,7 @@ export interface FindAllProductsOptions {
   includeInactive: boolean;
   search?: string;
   departmentId?: string;
+  providerId?: string;
 }
 
 export interface CreateProductData {
@@ -18,9 +22,11 @@ export interface CreateProductData {
   name: string;
   unit: string;
   departmentId: string;
+  taxRateId?: string | null;
   satProductCode?: string | null;
   ivaRate?: number | null;
   iepsRate?: number | null;
+  isTaxable?: boolean;
   isActive?: boolean;
 }
 
@@ -29,8 +35,11 @@ export interface UpdateProductData {
   unit?: string;
   satProductCode?: string | null;
   departmentId?: string;
+  taxRateId?: string | null;
   ivaRate?: number | null;
   iepsRate?: number | null;
+  imageUrl?: string | null;
+  isTaxable?: boolean;
   isActive?: boolean;
 }
 

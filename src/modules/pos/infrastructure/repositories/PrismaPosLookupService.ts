@@ -15,7 +15,7 @@ export class PrismaPosLookupService implements PosLookupService {
   async getProduct(id: string): Promise<ProductLookup | null> {
     const row = await this.prisma.product.findUnique({
       where: { id },
-      select: { id: true, code: true, name: true, ivaRate: true, iepsRate: true, isActive: true },
+      select: { id: true, code: true, name: true, ivaRate: true, iepsRate: true, isTaxable: true, isActive: true },
     });
     if (!row) return null;
     return {
@@ -24,6 +24,7 @@ export class PrismaPosLookupService implements PosLookupService {
       name: row.name,
       ivaRate: row.ivaRate ? Number(row.ivaRate) : null,
       iepsRate: row.iepsRate ? Number(row.iepsRate) : null,
+      isTaxable: row.isTaxable,
       isActive: row.isActive,
     };
   }
@@ -68,9 +69,10 @@ export class PrismaPosLookupService implements PosLookupService {
   async getFolio(id: string): Promise<FolioLookup | null> {
     const row = await this.prisma.folio.findUnique({
       where: { id },
-      select: { id: true, code: true, prefix: true, isActive: true },
+      select: { id: true, code: true, prefix: true, scope: true, isActive: true },
     });
-    return row ?? null;
+    if (!row) return null;
+    return { ...row, scope: row.scope as FolioLookup["scope"] };
   }
 
   async getPaymentMethod(id: string): Promise<PaymentMethodLookup | null> {

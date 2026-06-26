@@ -4,6 +4,7 @@ export interface TotalsLine {
   discountPct: number;
   ivaRate: number;
   iepsRate: number;
+  isTaxable?: boolean;
 }
 
 export interface ComputedLine {
@@ -38,12 +39,16 @@ function bankersRound(value: number, decimals: number): number {
 
 export function computeTotalsClient(lines: TotalsLine[]): TotalsResult {
   const computed: ComputedLine[] = lines.map((line) => {
+    // ?? true: pre-migration items lack isTaxable; default taxable preserves prior behavior
+    const isTaxable = line.isTaxable ?? true;
+    const effectiveIvaRate = isTaxable ? line.ivaRate : 0;
+    const effectiveIepsRate = isTaxable ? line.iepsRate : 0;
     const lineSubtotal = bankersRound(
       line.quantity * line.unitPrice * (1 - line.discountPct / 100),
       4
     );
-    const lineIva = bankersRound(lineSubtotal * line.ivaRate, 4);
-    const lineIeps = bankersRound(lineSubtotal * line.iepsRate, 4);
+    const lineIva = bankersRound(lineSubtotal * effectiveIvaRate, 4);
+    const lineIeps = bankersRound(lineSubtotal * effectiveIepsRate, 4);
     const lineTotal = lineSubtotal + lineIva + lineIeps;
     return { lineSubtotal, lineIva, lineIeps, lineTotal };
   });

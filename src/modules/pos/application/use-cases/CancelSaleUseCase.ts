@@ -3,6 +3,7 @@ import { CancelSaleRequest } from "../dto/CancelSaleRequest";
 import { SaleDetailDto } from "../dto/SaleDto";
 import { toSaleDetailDto } from "../mappers/toSaleDto";
 import { SaleNotFoundError } from "../../domain/errors/SaleNotFoundError";
+import { ReturnedTotalSaleNotCancellableError } from "../../domain/errors/ReturnedTotalSaleNotCancellableError";
 
 export interface CancelSaleResult {
   dto: SaleDetailDto;
@@ -15,6 +16,7 @@ export class CancelSaleUseCase {
   async execute(id: string, req: CancelSaleRequest): Promise<CancelSaleResult> {
     const existing = await this.repo.findByIdWithItems(id);
     if (!existing) throw new SaleNotFoundError(id);
+    if (existing.sale.status === "returned_total") throw new ReturnedTotalSaleNotCancellableError();
     const summary = await this.repo.cancel(id, req.reason ?? null);
     return {
       dto: toSaleDetailDto(summary.sale, summary.joined),

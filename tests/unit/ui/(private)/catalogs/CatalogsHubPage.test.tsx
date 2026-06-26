@@ -11,7 +11,7 @@ import { useCurrentUser } from "../../../../../app/_hooks/useCurrentUser";
 import { CatalogsHubPage } from "../../../../../app/(private)/catalogs/_blocks/CatalogsHubPage";
 
 describe("CatalogsHubPage", () => {
-  it("renderiza las 6 tarjetas de catálogos incluyendo Productos", () => {
+  it("renderiza las 7 tarjetas de catálogos incluyendo Productos y Tasas de Impuesto", () => {
     (useCurrentUser as jest.Mock).mockReturnValue({
       can: jest.fn(() => true),
     });
@@ -56,7 +56,7 @@ describe("CatalogsHubPage", () => {
       can: jest.fn(() => "loading" as const),
     });
     render(<CatalogsHubPage />);
-    expect(screen.getAllByRole("link", { name: /Abrir/i }).length).toBe(6);
+    expect(screen.getAllByRole("link", { name: /Abrir/i }).length).toBe(7);
     expect(screen.queryByText("Sin acceso")).not.toBeInTheDocument();
   });
 

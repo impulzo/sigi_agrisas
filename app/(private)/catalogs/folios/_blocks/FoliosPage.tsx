@@ -6,6 +6,7 @@ import { useFolios } from "../_logic/hooks/useFolios";
 import { useFolioMutations } from "../_logic/hooks/useFolioMutations";
 import { FoliosTable } from "./FoliosTable";
 import { FolioEditModal } from "./FolioEditModal";
+import { FolioAuditModal } from "./FolioAuditModal";
 import { CatalogShell } from "../../_blocks/CatalogShell";
 import { CatalogToolbar } from "../../_blocks/CatalogToolbar";
 import { CatalogPagination } from "../../_blocks/CatalogPagination";
@@ -33,6 +34,7 @@ export function FoliosPage() {
   const [includeInactive, setIncludeInactive] = useState(false);
   const [modalState, setModalState] = useState<ModalState | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [auditFolioId, setAuditFolioId] = useState<string | null>(null);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -201,6 +203,8 @@ export function FoliosPage() {
             onEdit={handleEdit}
             onSoftDelete={(id) => setConfirmDeleteId(id)}
             onReactivate={handleReactivate}
+            onAudit={(id) => setAuditFolioId(id)}
+            onEnter={canWrite === true ? handleEdit : undefined}
           />
         )}
 
@@ -224,6 +228,14 @@ export function FoliosPage() {
         onSave={handleSave}
         onClose={handleCloseModal}
       />
+
+      {auditFolioId && (
+        <FolioAuditModal
+          folioId={auditFolioId}
+          open={auditFolioId !== null}
+          onClose={() => setAuditFolioId(null)}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmDeleteId !== null}

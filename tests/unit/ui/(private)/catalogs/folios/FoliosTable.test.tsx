@@ -9,6 +9,7 @@ const ACTIVE_ITEM: Folio = {
   code: "FACT_A",
   name: "Factura A",
   prefix: "FA",
+  scope: "OPERATIONS",
   currentNumber: 100,
   isActive: true,
   createdAt: new Date("2026-05-01"),
@@ -20,6 +21,7 @@ const INACTIVE_ITEM: Folio = {
   code: "REM_B",
   name: "Remisión B",
   prefix: null,
+  scope: "OPERATIONS",
   currentNumber: 0,
   isActive: false,
   createdAt: new Date("2026-05-01"),
@@ -35,6 +37,7 @@ describe("FoliosTable", () => {
         onEdit={jest.fn()}
         onSoftDelete={jest.fn()}
         onReactivate={jest.fn()}
+        onAudit={jest.fn()}
       />
     );
     expect(screen.getByText("FACT_A")).toBeInTheDocument();
@@ -51,13 +54,14 @@ describe("FoliosTable", () => {
         onEdit={jest.fn()}
         onSoftDelete={jest.fn()}
         onReactivate={jest.fn()}
+        onAudit={jest.fn()}
       />
     );
     expect(screen.getByText("FA")).toBeInTheDocument();
     expect(screen.getByText("100")).toBeInTheDocument();
   });
 
-  it("columna Acciones NO se renderiza si canWrite=false", () => {
+  it("columna Acciones siempre se renderiza (botón Auditar visible para todos)", () => {
     render(
       <FoliosTable
         items={[ACTIVE_ITEM]}
@@ -65,12 +69,14 @@ describe("FoliosTable", () => {
         onEdit={jest.fn()}
         onSoftDelete={jest.fn()}
         onReactivate={jest.fn()}
+        onAudit={jest.fn()}
       />
     );
-    expect(screen.queryByText("Acciones")).not.toBeInTheDocument();
+    expect(screen.getByText("Acciones")).toBeInTheDocument();
+    expect(screen.getByTitle("Auditar secuencia")).toBeInTheDocument();
   });
 
-  it("columna Acciones se renderiza si canWrite=true", () => {
+  it("botones Editar/Desactivar visibles cuando canWrite=true", () => {
     render(
       <FoliosTable
         items={[ACTIVE_ITEM]}
@@ -78,9 +84,11 @@ describe("FoliosTable", () => {
         onEdit={jest.fn()}
         onSoftDelete={jest.fn()}
         onReactivate={jest.fn()}
+        onAudit={jest.fn()}
       />
     );
-    expect(screen.getByText("Acciones")).toBeInTheDocument();
+    expect(screen.getByTitle("Editar")).toBeInTheDocument();
+    expect(screen.getByTitle("Desactivar")).toBeInTheDocument();
   });
 
   it("muestra badge Activo para item activo", () => {
@@ -91,6 +99,7 @@ describe("FoliosTable", () => {
         onEdit={jest.fn()}
         onSoftDelete={jest.fn()}
         onReactivate={jest.fn()}
+        onAudit={jest.fn()}
       />
     );
     expect(screen.getByText("Activo")).toBeInTheDocument();
@@ -104,6 +113,7 @@ describe("FoliosTable", () => {
         onEdit={jest.fn()}
         onSoftDelete={jest.fn()}
         onReactivate={jest.fn()}
+        onAudit={jest.fn()}
       />
     );
     expect(screen.getByText("Inactivo")).toBeInTheDocument();
@@ -118,6 +128,7 @@ describe("FoliosTable", () => {
         onEdit={jest.fn()}
         onSoftDelete={onSoftDelete}
         onReactivate={jest.fn()}
+        onAudit={jest.fn()}
       />
     );
     await userEvent.setup().click(screen.getByTitle("Desactivar"));
@@ -133,10 +144,27 @@ describe("FoliosTable", () => {
         onEdit={jest.fn()}
         onSoftDelete={jest.fn()}
         onReactivate={onReactivate}
+        onAudit={jest.fn()}
       />
     );
     await userEvent.setup().click(screen.getByTitle("Reactivar"));
     expect(onReactivate).toHaveBeenCalledWith("f2");
+  });
+
+  it("botón Auditar llama onAudit con el id del folio", async () => {
+    const onAudit = jest.fn();
+    render(
+      <FoliosTable
+        items={[ACTIVE_ITEM]}
+        canWrite={false}
+        onEdit={jest.fn()}
+        onSoftDelete={jest.fn()}
+        onReactivate={jest.fn()}
+        onAudit={onAudit}
+      />
+    );
+    await userEvent.setup().click(screen.getByTitle("Auditar secuencia"));
+    expect(onAudit).toHaveBeenCalledWith("f1");
   });
 
   it("skeleton visible cuando isLoading=true", () => {
@@ -148,6 +176,7 @@ describe("FoliosTable", () => {
         onEdit={jest.fn()}
         onSoftDelete={jest.fn()}
         onReactivate={jest.fn()}
+        onAudit={jest.fn()}
       />
     );
     expect(container.querySelectorAll('[aria-hidden="true"]').length).toBeGreaterThan(0);

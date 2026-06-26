@@ -43,7 +43,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
 
   const { sale, isLoading: saleLoading } = useSaleDetail(id);
   const { isSaving, edit, mutationError } = useSaleMutations();
-  const { options: folios, isLoading: foliosLoading } = useFoliosOptions();
+  const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
   const { options: paymentMethods, isLoading: pmLoading } = usePaymentMethodsOptions();
 
   const {

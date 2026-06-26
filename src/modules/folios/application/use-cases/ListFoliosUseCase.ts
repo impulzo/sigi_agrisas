@@ -1,10 +1,12 @@
 import { FolioRepository } from "@/modules/folios/application/ports/FolioRepository";
 import { FolioDto, toFolioDto } from "@/modules/folios/application/dto/FolioDto";
+import { FolioScope } from "@/shared/domain/types/FolioScope";
 
 export interface ListFoliosRequest {
   page: number;
   pageSize: number;
   includeInactive: boolean;
+  scope?: FolioScope;
 }
 
 export interface ListFoliosResponse {

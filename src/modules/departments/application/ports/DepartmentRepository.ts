@@ -4,18 +4,21 @@ export interface FindAllDepartmentsOptions {
   page: number;
   pageSize: number;
   includeInactive: boolean;
+  providerId?: string;
 }
 
 export interface CreateDepartmentData {
   code: string;
   name: string;
   description?: string | null;
+  providerId?: string | null;
   isActive?: boolean;
 }
 
 export interface UpdateDepartmentData {
   name?: string;
   description?: string | null;
+  providerId?: string | null;
   isActive?: boolean;
 }
 

@@ -5,10 +5,11 @@ import { Sale } from "@/modules/pos/domain/entities/Sale";
 import { SaleItem } from "@/modules/pos/domain/entities/SaleItem";
 import { Return } from "@/modules/returns/domain/entities/Return";
 import { ReturnItem } from "@/modules/returns/domain/entities/ReturnItem";
-import { EmptyReturnError } from "@/modules/returns/domain/errors/EmptyReturnError";
+import { ReturnItemsEmptyError } from "@/modules/returns/domain/errors/ReturnItemsEmptyError";
 import { SaleNotReturnableError } from "@/modules/returns/domain/errors/SaleNotReturnableError";
 import { SaleItemNotPartOfSaleError } from "@/modules/returns/domain/errors/SaleItemNotPartOfSaleError";
 import { ReturnQuantityExceedsRemainingError } from "@/modules/returns/domain/errors/ReturnQuantityExceedsRemainingError";
+import { ReturnInvalidQuantityError } from "@/modules/returns/domain/errors/ReturnInvalidQuantityError";
 
 const NOW = new Date("2026-06-01T10:00:00Z");
 
@@ -121,7 +122,46 @@ describe("CreateReturnUseCase", () => {
   });
 
   describe("validation errors", () => {
-    it("throws EmptyReturnError when items is empty", async () => {
+    it("throws ReturnInvalidQuantityError when quantity = 0", async () => {
+      const item = makeSaleItem({ id: "si-1", saleId: "sale-1", quantity: 10 });
+      const sale = makeCompletedSale([item]);
+      seedSale(saleRepo, sale);
+
+      const err = await useCase
+        .execute({
+          saleId: "sale-1",
+          creatorId: "00000000-0000-0000-0000-000000000001",
+          reason: "Test",
+          returnedAt: NOW,
+          notes: null,
+          items: [{ saleItemId: "si-1", quantity: 0 }],
+        })
+        .catch((e) => e);
+
+      expect(err).toBeInstanceOf(ReturnInvalidQuantityError);
+      expect((err as ReturnInvalidQuantityError).saleItemId).toBe("si-1");
+    });
+
+    it("throws ReturnInvalidQuantityError when quantity is negative", async () => {
+      const item = makeSaleItem({ id: "si-1", saleId: "sale-1", quantity: 10 });
+      const sale = makeCompletedSale([item]);
+      seedSale(saleRepo, sale);
+
+      const err = await useCase
+        .execute({
+          saleId: "sale-1",
+          creatorId: "00000000-0000-0000-0000-000000000001",
+          reason: "Test",
+          returnedAt: NOW,
+          notes: null,
+          items: [{ saleItemId: "si-1", quantity: -3 }],
+        })
+        .catch((e) => e);
+
+      expect(err).toBeInstanceOf(ReturnInvalidQuantityError);
+    });
+
+    it("throws ReturnItemsEmptyError when items is empty", async () => {
       const item = makeSaleItem({ id: "si-1", saleId: "sale-1" });
       const sale = makeCompletedSale([item]);
       seedSale(saleRepo, sale);
@@ -135,7 +175,7 @@ describe("CreateReturnUseCase", () => {
           notes: null,
           items: [],
         })
-      ).rejects.toBeInstanceOf(EmptyReturnError);
+      ).rejects.toBeInstanceOf(ReturnItemsEmptyError);
     });
 
     it("throws error when sale not found", async () => {

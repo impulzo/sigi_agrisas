@@ -88,4 +88,6 @@ export interface SaleRepository {
   cancel(id: string, reason: string | null): Promise<SaleSummary>;
   /** Atomic edit (HQ-only invocation, enforced upstream). */
   replaceItemsAndRecalculate(id: string, data: EditSaleData): Promise<SaleSummary>;
+  /** Transition sale status to 'returned_total'. */
+  markReturnedTotal(saleId: string): Promise<void>;
 }

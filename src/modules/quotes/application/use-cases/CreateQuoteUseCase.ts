@@ -10,6 +10,7 @@ import {
 import { EmptyQuoteError } from "../../domain/errors/EmptyQuoteError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
+import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 
 export interface CreateQuoteResult {
   dto: QuoteDetailDto;
@@ -51,6 +52,7 @@ export class CreateQuoteUseCase {
     if (!branch.isActive) throw new InactiveResourceError("Branch");
     if (!folio) throw new InactiveResourceError("Folio not found");
     if (!folio.isActive) throw new InactiveResourceError("Folio");
+    if (folio.scope !== "POS") throw new FolioScopeMismatchError("POS", folio.scope);
 
     // Resolve items: validate FKs + collect snapshots
     const calcLines: QuoteLineInput[] = [];
@@ -75,6 +77,7 @@ export class CreateQuoteUseCase {
         discountPct: price.discountPct,
         ivaRate: product.ivaRate,
         iepsRate: product.iepsRate,
+        isTaxable: product.isTaxable,
       });
 
       snapshotInputs.push({
@@ -86,8 +89,8 @@ export class CreateQuoteUseCase {
         quantity: item.quantity,
         unitPrice: price.price,
         discountPct: price.discountPct,
-        ivaRate: product.ivaRate,
-        iepsRate: product.iepsRate,
+        ivaRate: product.isTaxable ? product.ivaRate : 0,
+        iepsRate: product.isTaxable ? product.iepsRate : 0,
       });
     }
 

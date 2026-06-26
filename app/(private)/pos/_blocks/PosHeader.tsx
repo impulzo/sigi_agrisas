@@ -17,6 +17,7 @@ interface PosHeaderProps {
   mode?: PosMode;
   onModeChange?: (mode: PosMode) => void;
   canQuote?: boolean;
+  onShowShortcuts?: () => void;
 }
 
 export function PosHeader({
@@ -29,6 +30,7 @@ export function PosHeader({
   mode = "sale",
   onModeChange,
   canQuote = false,
+  onShowShortcuts,
 }: PosHeaderProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingMode, setPendingMode] = useState<PosMode | null>(null);
@@ -78,16 +80,24 @@ export function PosHeader({
       </div>
 
       {cartHasItems && (
-        <>
-          <button
-            type="button"
-            onClick={() => setShowConfirm(true)}
-            className="shrink-0 text-label-sm text-error hover:text-error/80 transition-colors"
-          >
-            Limpiar carrito
-          </button>
-        </>
+        <button
+          type="button"
+          onClick={() => setShowConfirm(true)}
+          className="shrink-0 text-label-sm text-error hover:text-error/80 transition-colors"
+        >
+          Limpiar carrito
+        </button>
       )}
+
+      <button
+        type="button"
+        onClick={onShowShortcuts}
+        title="Atajos de teclado (?)"
+        className="shrink-0 text-label-sm text-on-surface-variant hover:text-on-surface transition-colors px-2 py-1 rounded"
+        aria-label="Mostrar atajos de teclado"
+      >
+        ?
+      </button>
 
       <ConfirmDialog
         open={showConfirm}

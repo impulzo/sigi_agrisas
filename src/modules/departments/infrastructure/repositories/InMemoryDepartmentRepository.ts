@@ -9,8 +9,8 @@ export class InMemoryDepartmentRepository implements DepartmentRepository {
 
   seed(items: Department[]): void { for (const d of items) this.store.set(d.id, d); }
 
-  async findAll({ page, pageSize, includeInactive }: FindAllDepartmentsOptions): Promise<{ items: Department[]; total: number }> {
-    const all = [...this.store.values()].filter((d) => includeInactive || d.isActive);
+  async findAll({ page, pageSize, includeInactive, providerId }: FindAllDepartmentsOptions): Promise<{ items: Department[]; total: number }> {
+    const all = [...this.store.values()].filter((d) => (includeInactive || d.isActive) && (!providerId || d.providerId === providerId));
     const skip = (page - 1) * pageSize;
     return { items: all.slice(skip, skip + pageSize), total: all.length };
   }
@@ -20,7 +20,11 @@ export class InMemoryDepartmentRepository implements DepartmentRepository {
   async create(data: CreateDepartmentData): Promise<Department> {
     if ([...this.store.values()].find((d) => d.code === data.code)) throw new DepartmentCodeAlreadyInUseError();
     const now = new Date();
-    const d = Department.create(randomUUID(), { code: data.code, name: data.name, description: data.description ?? null, isActive: data.isActive ?? true, createdAt: now, updatedAt: now });
+    const d = Department.create(randomUUID(), {
+      code: data.code, name: data.name, description: data.description ?? null,
+      providerId: data.providerId ?? null, providerName: null,
+      isActive: data.isActive ?? true, createdAt: now, updatedAt: now,
+    });
     this.store.set(d.id, d);
     return d;
   }
@@ -32,6 +36,8 @@ export class InMemoryDepartmentRepository implements DepartmentRepository {
       code: existing.code,
       name: data.name ?? existing.name,
       description: data.description !== undefined ? data.description : existing.description,
+      providerId: "providerId" in data ? (data.providerId ?? null) : existing.providerId,
+      providerName: existing.providerName,
       isActive: data.isActive !== undefined ? data.isActive : existing.isActive,
       createdAt: existing.createdAt,
       updatedAt: new Date(),
@@ -43,6 +49,10 @@ export class InMemoryDepartmentRepository implements DepartmentRepository {
   async softDelete(id: string): Promise<void> {
     const existing = this.store.get(id);
     if (!existing) throw new DepartmentNotFoundError();
-    this.store.set(id, Department.create(id, { code: existing.code, name: existing.name, description: existing.description, isActive: false, createdAt: existing.createdAt, updatedAt: new Date() }));
+    this.store.set(id, Department.create(id, {
+      code: existing.code, name: existing.name, description: existing.description,
+      providerId: existing.providerId, providerName: existing.providerName,
+      isActive: false, createdAt: existing.createdAt, updatedAt: new Date(),
+    }));
   }
 }

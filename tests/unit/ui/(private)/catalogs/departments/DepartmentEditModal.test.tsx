@@ -1,6 +1,14 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+jest.mock("../../../../../../app/_hooks/useProvidersOptions", () => ({
+  useProvidersOptions: () => ({
+    options: [{ id: "00000000-0000-0000-0000-000000000001", name: "Proveedor Test" }],
+    isLoading: false,
+  }),
+}));
+
 import { DepartmentEditModal } from "../../../../../../app/(private)/catalogs/departments/_blocks/DepartmentEditModal";
 import type { Department } from "../../../../../../app/(private)/catalogs/departments/_logic/types/domain";
 
@@ -19,6 +27,8 @@ const BASE_ENTITY: Department = {
   name: "Ventas",
   description: "Departamento de ventas",
   isActive: true,
+  providerId: null,
+  providerName: null,
   createdAt: new Date("2026-05-01"),
   updatedAt: new Date("2026-05-01"),
 };
@@ -80,6 +90,7 @@ describe("DepartmentEditModal — modo create", () => {
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Código"), "NUEVO");
     await user.type(screen.getByLabelText("Nombre"), "Nuevo departamento");
+    await user.selectOptions(screen.getByLabelText(/proveedor/i), "00000000-0000-0000-0000-000000000001");
     await user.click(screen.getByRole("button", { name: /guardar/i }));
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ code: "NUEVO", name: "Nuevo departamento" })

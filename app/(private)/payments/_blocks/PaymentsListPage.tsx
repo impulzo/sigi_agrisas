@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { usePaymentsList } from "../_logic/hooks/usePaymentsList";
 import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
@@ -14,6 +15,7 @@ import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import type { PaymentStatus } from "../_logic/types/domain";
 
 export function PaymentsListPage() {
+  const router = useRouter();
   const { can } = useCurrentUser();
   const canRead = can("payments:read");
   const isBypass = can("branches:access_all");
@@ -106,6 +108,7 @@ export function PaymentsListPage() {
             items={items}
             isLoading={isLoading}
             showBranch={isBypass === true}
+            onEnter={(p) => router.push(`/payments/${p.id}`)}
           />
           <CatalogPagination
             page={page}

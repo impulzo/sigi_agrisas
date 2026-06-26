@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const createReturnSchema = z.object({
-  reason: z.string().trim().min(3, "El motivo debe tener al menos 3 caracteres").max(500, "El motivo no puede exceder 500 caracteres"),
+  reason: z.string().trim().min(3, "El motivo es obligatorio (mín. 3 caracteres)").max(500, "El motivo no puede exceder 500 caracteres"),
   returnedAt: z.string().refine((val) => {
     const d = new Date(val);
     return !isNaN(d.getTime()) && d <= new Date();

@@ -3,8 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Switch } from "../../../../_components/atoms/Switch/Switch";
 import { createProductSchema, updateProductSchema } from "../_logic/schemas/product.schema";
+import { useTaxRatesOptions } from "../../../../_hooks/useTaxRatesOptions";
 import type { Product } from "../_logic/types/domain";
 import type { CreateProductBody, UpdateProductBody } from "../_logic/types/api";
+
+const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
+const MAX_IMG_BYTES = 2 * 1024 * 1024;
 
 interface DeptOption {
   id: string;
@@ -20,7 +24,8 @@ interface ProductEditModalProps {
   deptError: string | null;
   mutationError: string | null;
   deptOptions: DeptOption[];
-  onSave: (data: CreateProductBody | UpdateProductBody) => void;
+  imageUploadWarning?: string | null;
+  onSave: (data: CreateProductBody | UpdateProductBody, stagedImage?: File | null) => void;
   onClose: () => void;
 }
 
@@ -45,6 +50,7 @@ export function ProductEditModal({
   codeError,
   deptError,
   mutationError,
+  imageUploadWarning,
   deptOptions,
   onSave,
   onClose,
@@ -55,10 +61,16 @@ export function ProductEditModal({
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("");
   const [departmentId, setDepartmentId] = useState("");
+  const [taxRateId, setTaxRateId] = useState<string | null>(null);
   const [satProductCode, setSatProductCode] = useState("");
   const [ivaRate, setIvaRate] = useState("");
   const [iepsRate, setIepsRate] = useState("");
+  const [isTaxable, setIsTaxable] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const { options: taxRateOptions } = useTaxRatesOptions();
+  const [stagedImage, setStagedImage] = useState<File | null>(null);
+  const [imgPreview, setImgPreview] = useState<string | null>(null);
+  const [imgError, setImgError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -79,16 +91,19 @@ export function ProductEditModal({
   useEffect(() => {
     if (!open) return;
     if (mode === "create") {
-      setCode(""); setName(""); setUnit(""); setDepartmentId("");
-      setSatProductCode(""); setIvaRate(""); setIepsRate(""); setIsActive(true);
+      setCode(""); setName(""); setUnit(""); setDepartmentId(""); setTaxRateId(null);
+      setSatProductCode(""); setIvaRate(""); setIepsRate(""); setIsTaxable(false); setIsActive(true);
+      setStagedImage(null); setImgPreview(null); setImgError(null);
     } else if (entity) {
       setCode(entity.code);
       setName(entity.name);
       setUnit(entity.unit);
       setDepartmentId(entity.departmentId);
+      setTaxRateId(entity.taxRateId ?? null);
       setSatProductCode(entity.satProductCode ?? "");
       setIvaRate(taxRateToDisplay(entity.ivaRate));
       setIepsRate(taxRateToDisplay(entity.iepsRate));
+      setIsTaxable(entity.isTaxable);
       setIsActive(entity.isActive);
     }
     setValidationErrors({});
@@ -100,15 +115,18 @@ export function ProductEditModal({
     if (name !== entity.name) diff.name = name;
     if (unit !== entity.unit) diff.unit = unit;
     if (departmentId !== entity.departmentId) diff.departmentId = departmentId;
+    const newTaxRateId = taxRateId || null;
+    if (newTaxRateId !== entity.taxRateId) diff.taxRateId = newTaxRateId;
     const parsedSat = satProductCode.trim() === "" ? null : satProductCode.trim();
     if (parsedSat !== entity.satProductCode) diff.satProductCode = parsedSat;
     const parsedIva = parseTaxInput(ivaRate);
     if (parsedIva !== entity.ivaRate) diff.ivaRate = parsedIva;
     const parsedIeps = parseTaxInput(iepsRate);
     if (parsedIeps !== entity.iepsRate) diff.iepsRate = parsedIeps;
+    if (isTaxable !== entity.isTaxable) diff.isTaxable = isTaxable;
     if (isActive !== entity.isActive) diff.isActive = isActive;
     return diff;
-  }, [entity, name, unit, departmentId, satProductCode, ivaRate, iepsRate, isActive]);
+  }, [entity, name, unit, departmentId, taxRateId, satProductCode, ivaRate, iepsRate, isTaxable, isActive]);
 
   const isDiffEmpty = mode === "edit" && Object.keys(buildDiff()).length === 0;
 
@@ -121,9 +139,11 @@ export function ProductEditModal({
       name: name.trim(),
       unit: unit.trim(),
       departmentId: departmentId,
+      taxRateId: taxRateId || null,
       satProductCode: satProductCode.trim() || null,
       ivaRate: parseTaxInput(ivaRate),
       iepsRate: parseTaxInput(iepsRate),
+      isTaxable,
       isActive,
     };
 
@@ -135,7 +155,7 @@ export function ProductEditModal({
         setValidationErrors(errs);
         return;
       }
-      onSave(result.data as CreateProductBody);
+      onSave(result.data as CreateProductBody, stagedImage);
     } else {
       const diff = buildDiff();
       if (Object.keys(diff).length === 0) return;
@@ -158,6 +178,9 @@ export function ProductEditModal({
         <div className="px-6 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
           {mutationError && (
             <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-xl">{mutationError}</p>
+          )}
+          {imageUploadWarning && (
+            <p className="text-label-sm text-on-surface bg-surface-container-high px-3 py-2 rounded-xl">{imageUploadWarning}</p>
           )}
 
           <div className="grid grid-cols-2 gap-4">
@@ -223,6 +246,22 @@ export function ProductEditModal({
           </div>
 
           <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1">Tasa de impuesto</label>
+            <select
+              value={taxRateId ?? ""}
+              onChange={(e) => setTaxRateId(e.target.value || null)}
+              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">Sin tasa asignada</option>
+              {taxRateOptions.map((tr) => (
+                <option key={tr.id} value={tr.id}>
+                  {tr.code} — {tr.name} ({(tr.rate * 100).toFixed(2)}%)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label className="block text-label-lg text-on-surface-variant mb-1">Cód. SAT (8 dígitos)</label>
             <input
               type="text"
@@ -276,11 +315,57 @@ export function ProductEditModal({
             </div>
           </div>
 
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <Switch checked={isTaxable} onChange={setIsTaxable} aria-label="Sujeto a impuestos" />
+            <span className="text-label-lg text-on-surface-variant">Sujeto a impuestos</span>
+          </label>
+
           {mode === "edit" && (
             <label className="flex items-center gap-3 cursor-pointer select-none">
               <Switch checked={isActive} onChange={setIsActive} aria-label="Activo" />
               <span className="text-label-lg text-on-surface-variant">Activo</span>
             </label>
+          )}
+
+          {mode === "create" && (
+            <div>
+              <label className="block text-label-lg text-on-surface-variant mb-1">
+                Imagen del producto (opcional)
+              </label>
+              <div className="flex items-center gap-3">
+                {imgPreview ? (
+                  <img src={imgPreview} alt="preview" className="w-16 h-16 object-cover rounded-xl border border-outline-variant" />
+                ) : (
+                  <div className="w-16 h-16 flex items-center justify-center rounded-xl border border-dashed border-outline-variant bg-surface-container text-on-surface-variant">
+                    <span className="material-symbols-outlined text-xl" aria-hidden="true">image</span>
+                  </div>
+                )}
+                <label className="cursor-pointer text-label-sm text-primary hover:underline">
+                  {stagedImage ? "Cambiar" : "Seleccionar"}
+                  <input
+                    type="file"
+                    accept={ALLOWED_MIME.join(",")}
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      if (!ALLOWED_MIME.includes(f.type)) { setImgError("Formato no permitido. Usa JPG, PNG o WebP."); return; }
+                      if (f.size > MAX_IMG_BYTES) { setImgError("La imagen excede 2 MB."); return; }
+                      setImgError(null);
+                      setStagedImage(f);
+                      setImgPreview(URL.createObjectURL(f));
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                {stagedImage && (
+                  <button type="button" onClick={() => { setStagedImage(null); setImgPreview(null); }} className="text-label-sm text-error hover:underline">
+                    Quitar
+                  </button>
+                )}
+              </div>
+              {imgError && <p className="text-label-sm text-error mt-1">{imgError}</p>}
+            </div>
           )}
         </div>
 
@@ -293,13 +378,23 @@ export function ProductEditModal({
           >
             Cancelar
           </button>
-          <button
-            type="submit"
-            disabled={isSaving || isDiffEmpty}
-            className="px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {isSaving ? "Guardando…" : mode === "create" ? "Crear" : "Guardar"}
-          </button>
+          {imageUploadWarning ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity"
+            >
+              Cerrar
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={isSaving || isDiffEmpty}
+              className="px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {isSaving ? "Guardando…" : mode === "create" ? "Crear" : "Guardar"}
+            </button>
+          )}
         </div>
       </form>
     </dialog>

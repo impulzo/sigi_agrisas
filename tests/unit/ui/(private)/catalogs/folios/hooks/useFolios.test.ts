@@ -13,6 +13,7 @@ const baseItem = {
   code: "FAC",
   name: "Factura",
   prefix: "FAC-",
+  scope: "OPERATIONS" as const,
   currentNumber: 1,
   isActive: true,
   createdAt: new Date("2024-01-01"),

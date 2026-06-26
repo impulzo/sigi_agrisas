@@ -1,14 +1,17 @@
 import { PrismaClient } from "@prisma/client";
-import { FolioRepository, FindAllFoliosOptions, CreateFolioData, UpdateFolioData } from "@/modules/folios/application/ports/FolioRepository";
+import { FolioRepository, FindAllFoliosOptions, CreateFolioData, UpdateFolioData, AuditCounts } from "@/modules/folios/application/ports/FolioRepository";
 import { Folio } from "@/modules/folios/domain/entities/Folio";
+import { FolioScope } from "@/shared/domain/types/FolioScope";
 import { FolioNotFoundError } from "@/modules/folios/domain/errors/FolioNotFoundError";
 import { FolioCodeAlreadyInUseError } from "@/modules/folios/domain/errors/FolioCodeAlreadyInUseError";
+import { AuditSequenceRaw } from "@/modules/folios/application/dto/FolioAuditDto";
 
 type PrismaFolio = {
   id: string;
   code: string;
   name: string;
   prefix: string | null;
+  scope: string;
   currentNumber: number;
   isActive: boolean;
   createdAt: Date;
@@ -20,6 +23,7 @@ function toDomain(row: PrismaFolio): Folio {
     code: row.code,
     name: row.name,
     prefix: row.prefix,
+    scope: row.scope as FolioScope,
     currentNumber: row.currentNumber,
     isActive: row.isActive,
     createdAt: row.createdAt,
@@ -38,8 +42,10 @@ function isPrismaNotFoundError(err: unknown): boolean {
 export class PrismaFolioRepository implements FolioRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async findAll({ page, pageSize, includeInactive }: FindAllFoliosOptions): Promise<{ items: Folio[]; total: number }> {
-    const where = includeInactive ? {} : { isActive: true };
+  async findAll({ page, pageSize, includeInactive, scope }: FindAllFoliosOptions): Promise<{ items: Folio[]; total: number }> {
+    const where: { isActive?: boolean; scope?: string } = {};
+    if (!includeInactive) where.isActive = true;
+    if (scope) where.scope = scope;
     const skip = (page - 1) * pageSize;
     const [rows, total] = await Promise.all([
       this.prisma.folio.findMany({ where, skip, take: pageSize, orderBy: { createdAt: "desc" } }),
@@ -60,6 +66,7 @@ export class PrismaFolioRepository implements FolioRepository {
           code: data.code,
           name: data.name,
           prefix: data.prefix ?? null,
+          scope: data.scope,
           currentNumber: data.currentNumber ?? 0,
           isActive: data.isActive ?? true,
         },
@@ -88,5 +95,51 @@ export class PrismaFolioRepository implements FolioRepository {
       if (isPrismaNotFoundError(err)) throw new FolioNotFoundError();
       throw err;
     }
+  }
+
+  async findAuditSequence(folioId: string): Promise<AuditSequenceRaw[]> {
+    type RawRow = { num: unknown; doc_type: string; doc_id: string; status: string; issued_at: Date };
+    const rows = await this.prisma.$queryRaw<RawRow[]>`
+      SELECT folio_number AS num, 'sale' AS doc_type, id AS doc_id, status, created_at AS issued_at
+      FROM sales
+      WHERE folio_id = ${folioId} AND folio_number IS NOT NULL
+      UNION ALL
+      SELECT folio_number, 'quote', id, status, created_at
+      FROM quotes
+      WHERE folio_id = ${folioId} AND folio_number IS NOT NULL
+      UNION ALL
+      SELECT folio_number, 'payment', id, status, created_at
+      FROM customer_payments
+      WHERE folio_id = ${folioId} AND folio_number IS NOT NULL
+      ORDER BY num ASC
+      LIMIT 10001
+    `;
+    return rows.map((r) => ({
+      num: Number(r.num),
+      doc_type: r.doc_type as AuditSequenceRaw["doc_type"],
+      doc_id: r.doc_id,
+      status: r.status,
+      issued_at: r.issued_at,
+    }));
+  }
+
+  async getAuditCounts(folioId: string): Promise<AuditCounts> {
+    type CountRow = { with_number: unknown; without_number: unknown };
+    const [row] = await this.prisma.$queryRaw<CountRow[]>`
+      SELECT
+        COUNT(*) FILTER (WHERE folio_number IS NOT NULL)::int AS with_number,
+        COUNT(*) FILTER (WHERE folio_number IS NULL)::int AS without_number
+      FROM (
+        SELECT folio_number FROM sales WHERE folio_id = ${folioId}
+        UNION ALL
+        SELECT folio_number FROM quotes WHERE folio_id = ${folioId}
+        UNION ALL
+        SELECT folio_number FROM customer_payments WHERE folio_id = ${folioId}
+      ) t
+    `;
+    return {
+      withFolioNumber: Number(row.with_number),
+      withoutFolioNumber: Number(row.without_number),
+    };
   }
 }

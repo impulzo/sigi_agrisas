@@ -1,7 +1,10 @@
+"use client";
+
 import { Icon } from "../../../../_components/atoms/Icon/Icon";
 import { Skeleton } from "../../../../_components/atoms/Skeleton/Skeleton";
 import { CatalogStatusBadge } from "../../_blocks/CatalogStatusBadge";
 import type { Department } from "../_logic/types/domain";
+import { useTableKeyboard } from "../../../../_hooks/useTableKeyboard";
 
 interface DepartmentsTableProps {
   items: Department[];
@@ -10,6 +13,7 @@ interface DepartmentsTableProps {
   onEdit: (item: Department) => void;
   onSoftDelete: (id: string) => void;
   onReactivate: (id: string) => void;
+  onEnter?: (item: Department) => void;
 }
 
 export function DepartmentsTable({
@@ -19,7 +23,11 @@ export function DepartmentsTable({
   onEdit,
   onSoftDelete,
   onReactivate,
+  onEnter,
 }: DepartmentsTableProps) {
+  const noop = () => {};
+  const { getRowProps } = useTableKeyboard(items, onEnter ?? noop);
+
   if (isLoading) {
     return (
       <div className="space-y-2 p-4">
@@ -37,6 +45,7 @@ export function DepartmentsTable({
           <tr className="border-b border-outline-variant bg-surface-container">
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Código</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Nombre</th>
+            <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Proveedor</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Descripción</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Estado</th>
             {canWrite && (
@@ -45,10 +54,15 @@ export function DepartmentsTable({
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => (
-            <tr key={item.id} className="border-b border-outline-variant last:border-0 hover:bg-surface-container-low transition-colors">
+          {items.map((item, idx) => (
+            <tr
+              key={item.id}
+              {...getRowProps(idx)}
+              className="border-b border-outline-variant last:border-0 hover:bg-surface-container-low focus:bg-surface-container focus:outline-none transition-colors cursor-default"
+            >
               <td className="px-4 py-3 font-mono text-on-surface">{item.code}</td>
               <td className="px-4 py-3 text-on-surface">{item.name}</td>
+              <td className="px-4 py-3 text-on-surface-variant">{item.providerName ?? "—"}</td>
               <td className="px-4 py-3 text-on-surface-variant">
                 {item.description ? (
                   <span title={item.description}>

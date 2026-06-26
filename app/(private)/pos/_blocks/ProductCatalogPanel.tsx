@@ -1,18 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { RefObject, useState } from "react";
 import { SearchInput } from "../../../_components/molecules/SearchInput/SearchInput";
 import { useDebounce } from "../../../_hooks/useDebounce";
 import { useProductSearch } from "../_logic/hooks/useProductSearch";
-import { ProductCatalogGrid } from "./ProductCatalogGrid";
+import { ProductCatalogTable } from "./ProductCatalogTable";
 import type { ProductDto } from "../_logic/types/api";
 
 interface ProductCatalogPanelProps {
   branchId?: string;
   onAddProduct: (product: ProductDto) => void;
+  searchInputRef?: RefObject<HTMLInputElement>;
 }
 
-export function ProductCatalogPanel({ branchId, onAddProduct }: ProductCatalogPanelProps) {
+export function ProductCatalogPanel({ branchId, onAddProduct, searchInputRef }: ProductCatalogPanelProps) {
   const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -36,10 +37,11 @@ export function ProductCatalogPanel({ branchId, onAddProduct }: ProductCatalogPa
           value={searchInput}
           onChange={handleSearch}
           placeholder="Buscar producto por código o nombre..."
+          inputRef={searchInputRef}
         />
       </div>
       <div className="flex-1 overflow-y-auto">
-        <ProductCatalogGrid
+        <ProductCatalogTable
           items={items}
           total={total}
           page={page}

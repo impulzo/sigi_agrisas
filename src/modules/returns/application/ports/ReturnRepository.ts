@@ -50,6 +50,8 @@ export interface CreateReturnData {
   refundTax: number;
   refundTotal: number;
   notes: string | null;
+  /** When set, marks the referenced sale as 'returned_total' within the same transaction. */
+  markSaleReturnedTotalId?: string;
   items: Array<{
     saleItemId: string;
     productId: string;

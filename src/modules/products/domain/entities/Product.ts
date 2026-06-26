@@ -5,8 +5,11 @@ export interface ProductProps {
   unit: string;
   satProductCode: string | null;
   departmentId: string;
+  taxRateId: string | null;
   ivaRate: number | null;
   iepsRate: number | null;
+  imageUrl: string | null;
+  isTaxable: boolean;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -19,8 +22,11 @@ export class Product {
   readonly unit: string;
   readonly satProductCode: string | null;
   readonly departmentId: string;
+  readonly taxRateId: string | null;
   readonly ivaRate: number | null;
   readonly iepsRate: number | null;
+  readonly imageUrl: string | null;
+  readonly isTaxable: boolean;
   readonly isActive: boolean;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -32,8 +38,11 @@ export class Product {
     this.unit = props.unit;
     this.satProductCode = props.satProductCode;
     this.departmentId = props.departmentId;
+    this.taxRateId = props.taxRateId;
     this.ivaRate = props.ivaRate;
     this.iepsRate = props.iepsRate;
+    this.imageUrl = props.imageUrl;
+    this.isTaxable = props.isTaxable;
     this.isActive = props.isActive;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;

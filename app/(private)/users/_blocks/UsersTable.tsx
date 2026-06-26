@@ -1,8 +1,11 @@
+"use client";
+
 import { Avatar } from "../../../_components/atoms/Avatar/Avatar";
 import { Badge } from "../../../_components/atoms/Badge/Badge";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import type { User } from "../_logic/types/domain";
+import { useTableKeyboard } from "../../../_hooks/useTableKeyboard";
 
 function formatRelativeDate(date: Date): string {
   const now = Date.now();
@@ -25,6 +28,7 @@ interface UsersTableProps {
   isLoading?: boolean;
   onEdit: (user: User) => void;
   onDelete: (user: User) => void;
+  onEnter?: (user: User) => void;
 }
 
 export function UsersTable({
@@ -34,7 +38,10 @@ export function UsersTable({
   isLoading,
   onEdit,
   onDelete,
+  onEnter,
 }: UsersTableProps) {
+  const noop = () => {};
+  const { getRowProps } = useTableKeyboard(users, onEnter ?? noop);
   if (isLoading) {
     return (
       <div className="space-y-2 p-4">
@@ -60,10 +67,14 @@ export function UsersTable({
           </tr>
         </thead>
         <tbody>
-          {users.map((user) => {
+          {users.map((user, idx) => {
             const isSelf = user.id === currentUserId;
             return (
-              <tr key={user.id} className="border-b border-outline-variant last:border-0 hover:bg-surface-container-low transition-colors">
+              <tr
+                key={user.id}
+                {...getRowProps(idx)}
+                className="border-b border-outline-variant last:border-0 hover:bg-surface-container-low focus:bg-surface-container focus:outline-none transition-colors cursor-default"
+              >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <Avatar src={user.avatarUrl} alt={user.name ?? user.email} size="sm" fallbackInitials={(user.name ?? user.email)[0].toUpperCase()} />

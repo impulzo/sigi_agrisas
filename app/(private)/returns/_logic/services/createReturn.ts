@@ -4,7 +4,7 @@ import type { ReturnDetail } from "../types/domain";
 import {
   SaleNotFoundError,
   SaleItemNotPartOfSaleError,
-  EmptyReturnError,
+  ReturnItemsEmptyError,
   SaleNotReturnableError,
   ReturnQuantityExceedsRemainingError,
   ReturnCreateForbiddenError,
@@ -32,7 +32,7 @@ export async function createReturn(body: CreateReturnRequest, fetchImpl = authFe
   if (res.status === 400) {
     const errorBody = await res.json() as { error: string; field?: string; saleItemId?: string; requested?: number; remaining?: number };
     if (errorBody.error === "Sale not found") throw new SaleNotFoundError();
-    if (errorBody.error === "Return must include at least one item") throw new EmptyReturnError();
+    if (errorBody.error === "Return must include at least one item") throw new ReturnItemsEmptyError();
     if (errorBody.saleItemId && !errorBody.requested) throw new SaleItemNotPartOfSaleError(errorBody.saleItemId);
     throw new NetworkError();
   }

@@ -51,7 +51,7 @@ describe("useRegisterForm", () => {
       await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent);
     });
     expect(registerMock).toHaveBeenCalledWith({ name: "Ana", email: "ana@b.com", password: "secret123" });
-    expect(mockReplace).toHaveBeenCalledWith("/dashboard");
+    expect(mockReplace).toHaveBeenCalledWith("/pos");
   });
 
   it("sets formError on EmailAlreadyExistsError", async () => {

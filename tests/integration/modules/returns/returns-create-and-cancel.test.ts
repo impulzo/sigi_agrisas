@@ -91,7 +91,7 @@ describe("Returns — create y cancel (integration real DB)", () => {
 
     const dept = await deptRepo.create({ code: `${P}DEPT1`, name: "Dept Returns Test" });
     const product = await createProduct.execute({
-      code: `${P}PROD1`, name: "Producto Returns", unit: "kg", departmentId: dept.id, ivaRate: 0.16,
+      code: `${P}PROD1`, name: "Producto Returns", unit: "kg", departmentId: dept.id, ivaRate: 0.16, isTaxable: true,
     });
     productId = product.id;
 
@@ -101,7 +101,7 @@ describe("Returns — create y cancel (integration real DB)", () => {
     const customer = await createCustomer.execute({ code: `${P}CLI1`, name: "Cliente Returns", rfc: "CRT010101001" });
     customerId = customer.id;
 
-    const folio = await folioRepo.create({ code: `${P}FOL1`, name: "Folio Returns", prefix: "RET", currentNumber: 0 });
+    const folio = await folioRepo.create({ code: `${P}FOL1`, name: "Folio Returns", prefix: "RET", currentNumber: 0, scope: "POS" });
     folioId = folio.id;
 
     const pm = await pmRepo.create({ code: `${P}PM1`, name: "Efectivo Returns" });

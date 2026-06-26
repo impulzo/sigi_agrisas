@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { DashboardHeader } from "./_blocks/DashboardHeader";
 import { SalesCard } from "./_blocks/SalesCard";
 import { InventoryCard } from "./_blocks/InventoryCard";
@@ -11,11 +12,14 @@ import { getLowStockAlerts } from "./_logic/services/getLowStockAlerts";
 import { getRecentActivity } from "./_logic/services/getRecentActivity";
 
 export const metadata: Metadata = {
-  title: "Inicio | Agrisas",
+  title: "Dashboard | Agrisas",
 };
 
 export default async function DashboardPage() {
-  const userEmail = headers().get("x-user-email") ?? "";
+  const hdrs = headers();
+  const userEmail = hdrs.get("x-user-email") ?? "";
+  const roles = hdrs.get("x-user-roles") ?? "";
+  if (!roles.split(",").includes("admin")) redirect("/pos");
   const userName = userEmail ? userEmail.split("@")[0] : "Admin";
 
   const [kpis, alerts, activity] = await Promise.all([

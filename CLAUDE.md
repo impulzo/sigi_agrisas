@@ -8,6 +8,13 @@ Panel de administración agrícola. Next.js 14 App Router + TypeScript + Arquite
 
 Responde siempre en español.
 
+## Skills activas
+
+Usa estas skills en cada sesión:
+
+- **`caveman`** — modo de comunicación ultra-comprimido. Actívalo siempre con `/caveman` al inicio. Elimina artículos, relleno y cortesías; conserva toda la sustancia técnica. Nivel por defecto: `full`. Cambiar con `/caveman lite|full|ultra`.
+- **`searching-sourcegraph`** — búsqueda en código indexado. Úsala para localizar patrones, ejemplos de uso de una función o entender cómo fluye una feature antes de proponer cambios. Actívala cuando la pregunta sea "¿cómo funciona X?", "¿dónde se usa Y?", o antes de cualquier refactor que cruce módulos.
+
 ## Stack
 
 | Capa | Tecnología |
@@ -36,7 +43,7 @@ app/api/v1/<...>/route.ts                # delegan a <módulo>Controller vía DI
 middleware.ts                            # delega a AuthMiddlewareAdapter
 ```
 
-Módulos hexagonales activos: `auth`, `rbac`, `users`, `payment-methods`, `folios`, `departments`, `branches`, `providers`, `products`, `inventory`, `customers`, `pos`, `quotes`, `returns`, `payments`.
+Módulos hexagonales activos: `auth`, `rbac`, `users`, `payment-methods`, `folios`, `departments`, `branches`, `providers`, `products`, `inventory`, `customers`, `pos`, `quotes`, `returns`, `payments`, `billing`, `reports`.
 
 **Reglas de capas (backend):**
 - El dominio no importa nada de infraestructura ni de Next.js.
@@ -96,6 +103,7 @@ npm run build        # Build de producción (verifica tipos)
 npm test             # Todos los tests
 npm run test:watch   # Watch
 npm run seed         # Seed RBAC idempotente
+npm run seed:folios  # Seed catálogo canónico de 8 folios (TK, TC, RB, COT, DEV, TS, AB, CP)
 npx prisma studio    # GUI de BD
 npx prisma generate  # Regenerar Prisma Client
 ```
@@ -116,9 +124,12 @@ npx prisma generate  # Regenerar Prisma Client
 ## JWT
 
 - **Access token**: HS256, TTL 15 min, `Authorization: Bearer`. Claims: `sub`, `email`, `roles[]`, `branchId` (string | null).
-- **Refresh token**: HS256, TTL 7 días, cookie `refreshToken` HttpOnly + SameSite=Strict. Claims: `sub`, `email`, `branchId`.
+- **Refresh token**: HS256, TTL 7 días (sliding), cookie `refreshToken` HttpOnly + SameSite=Strict. Claims: `sub`, `email`, `branchId`. Cada llamada a `/api/v1/auth/refresh` exitosa rota la cookie con TTL renovado de 7 días.
 - Secrets: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` — fallar en startup si no están.
 - **`branchId`**: sucursal asignada (`null` para admins). Cambiar `branchId` en BD NO invalida tokens activos; el refresh propaga el viejo. Para efecto inmediato, re-loguearse.
+- **Auto-refresh client-side**: `app/_lib/session/refreshScheduler.ts` programa el refresh ~60 s antes del `exp` del access token. `authFetch` reintenta con refresh ante 401 (dedupe de 1 sola promesa concurrente).
+- **Cierre por inactividad**: `useInactivityTimer` (30 min default) cierra la sesión con `logoutClient("inactivity")` → redirige a `/auth/login?reason=inactivity`. Login muestra banner contextual según `?reason=inactivity|session_lost`.
+- **Coordinación multi-pestaña**: `BroadcastChannel("agrisas-auth")` en `SessionLifecycleProvider`. Solo la pestaña líder llama a `/auth/refresh`; las demás actualizan su token vía broadcast. Logout en cualquier pestaña cierra las demás.
 
 ## Middleware de autenticación
 
@@ -139,7 +150,7 @@ Módulo `src/modules/rbac/` — modelo `users → roles → permissions`.
 - **Guard**: `requirePermission(req, "resource:action")` en `src/modules/rbac/infrastructure/http/requirePermission.ts` — 401 si falta `x-user-id`, 403 si `userCan` es false.
 - `AuthorizationService.userCan(userId, key)` — caché en memoria 60 s; `invalidate(userId)` e `invalidateByRole(roleId)` para invalidación explícita.
 - **JWT** lleva `roles: string[]` (nombres), no permisos. Los permisos se resuelven en backend.
-- **Seed**: `npm run seed` idempotente; 39 permisos, 3 roles base (`admin`, `operator`, `viewer`). `RBAC_DEFAULT_ROLE=viewer` al registrar.
+- **Seed**: `npm run seed` idempotente; 47 permisos, 3 roles base (`admin`, `operator`, `viewer`). `RBAC_DEFAULT_ROLE=viewer` al registrar.
 - Detalle de qué permisos otorga cada rol → `openspec/specs/rbac/spec.md`.
 
 ## Branch scoping (transversal)
@@ -216,10 +227,11 @@ Cada módulo CRUD admin sigue el mismo patrón hexagonal y la misma forma de end
   - **Dosifications**: `name` único por producto; `num_parts >= 2`. Soft delete. `computedUnitPrice = basePrice / numParts * 1.07` (recargo fijo 7%, `DOSIFICATION_SURCHARGE_PCT = 7.0`). Sin precio default → `computedUnitPrice: null`, `requiresDefaultPrice: true`.
 - **Inventory**: rutas bajo `/api/v1/admin/branches/[id]/inventory` (Next.js no permite slugs distintos hermanos como `[branchId]`). `(branch_id, product_id)` único (409). `POST /adjust` aplica delta atómico vía `UPDATE ... WHERE quantity + delta >= 0`; 0 filas afectadas → 404 o 409 (`Negative stock not allowed`). `?belowReorder=true` filtra `quantity < reorder_point`. `quantity` **puede ser negativo** sólo cuando lo origina una venta del POS (la migración `add-pos` eliminó el CHECK `quantity >= 0`); el admin `/adjust` sigue rechazando negativos. Aplica branch scoping.
 - **Branches**: campo `isHeadquarters` con regla descrita en sección HQ.
+- **Folios**: campo `scope: 'POS' | 'INVENTORY' | 'OPERATIONS'` (NOT NULL, default `'OPERATIONS'`, editable on PATCH). Catálogo canónico de 8 folios sembrado vía `npm run seed:folios`: TK/TC/COT (POS), TS (INVENTORY), RB/AB/DEV/CP (OPERATIONS). `GET /folios?scope=POS` filtra. Backend enforza scope en `CreateSale`/`CreateQuote`/`ConvertQuote` (esperan `POS`) y `RegisterPayment` (espera `OPERATIONS`); mismatch → 400 `{"error":"FolioScopeMismatch","expected":"...","actual":"..."}`. El seed `prisma/seeds/folios.ts` borra folios legacy sin referencias y aborta con mensaje claro si alguno tiene FKs activas.
 
 ### Migraciones relevantes
 
-- `add_rbac_tables`, `20260518000001_add_avatar_url_to_users`, `20260519000001_add_settings_catalog_tables`, `20260525000001_add_providers_table`, `20260528000001_add_products_and_inventory_tables`, `20260530000001_add_pos_tables_and_branch_scoping`, `20260531000001_add_quotes_tables_and_link_to_sale`.
+- `add_rbac_tables`, `20260518000001_add_avatar_url_to_users`, `20260519000001_add_settings_catalog_tables`, `20260525000001_add_providers_table`, `20260528000001_add_products_and_inventory_tables`, `20260530000001_add_pos_tables_and_branch_scoping`, `20260531000001_add_quotes_tables_and_link_to_sale`, `20260611000001_add_folios_scope_column`.
 
 ## POS y Cotizaciones (Backend)
 
@@ -333,12 +345,12 @@ Módulo `src/modules/payments/`. Spec: `payments-api`. Migración: `202606080000
 **Reglas de negocio:**
 - Solo se puede abonar ventas con `paymentMethod.isCredit=true` (`SaleNotPayableError` si no).
 - `amount ≤ (total - paidAmount)` — exceso → 409 `PaymentExceedsDueAmount(due)`.
-- `createCompleted` (tx Prisma): (a) aloca folio RECIBO via `allocateFolio`, (b) `UPDATE sales SET paid_amount = paid_amount + ? WHERE paid_amount + ? <= total` (0 filas → `PaymentExceedsDueAmountError`), (c) `UPDATE customers SET current_balance = current_balance - ?` (nunca puede sobrepasar el total pagado), (d) INSERT en `customer_payments`.
+- `createCompleted` (tx Prisma): (a) aloca folio RB (scope=OPERATIONS) via `allocateFolio`, (b) `UPDATE sales SET paid_amount = paid_amount + ? WHERE paid_amount + ? <= total` (0 filas → `PaymentExceedsDueAmountError`), (c) `UPDATE customers SET current_balance = current_balance - ?` (nunca puede sobrepasar el total pagado), (d) INSERT en `customer_payments`.
 - `markCancelled` (tx): cancela en DB, recalcula `paymentStatus` via `SalePaymentApplier`, revierte `sale.paidAmount`, revierte `customer.currentBalance`.
 - **Cancelar venta con abonos activos → 409 `SaleHasActivePayments`** (con array de paymentIds). El caller debe cancelar los abonos primero.
 - **Editar venta con abonos activos → 409** por la misma razón.
 - `cancelledBy` y `userId` son `@db.Uuid`.
-- **Folio RECIBO**: semilla `code='RECIBO'`, `prefix='RECIBO-'`. Cada abono consume un número secuencial. El folio de la cotización/venta fiscal es independiente.
+- **Folio RB**: semilla `code='RB'`, `prefix='RB-'`, `scope='OPERATIONS'`. Cada abono consume un número secuencial. El folio de la cotización/venta fiscal es independiente. El backend valida `folio.scope === 'OPERATIONS'` antes de allocate; folios POS/INVENTORY → 400 `FolioScopeMismatch`.
 - **`payment_methods.isCredit`**: inmutable tras creación (PATCH lo ignora silenciosamente, igual que `code`).
 - **PDF**: `renderToBuffer(<PaymentHistoryPdf/>)` server-side con `@react-pdf/renderer`. Si `items.length > 10000` → 409 `tooLarge=true`.
 - **`allocateFolio` compartido**: `src/shared/infrastructure/folios/allocateFolio.ts` — reutilizado por `PrismaSaleRepository`, `PrismaQuoteRepository`, `PrismaPaymentRepository`.
@@ -376,7 +388,7 @@ Módulo `src/modules/payments/`. Spec: `payments-api`. Migración: `202606080000
 
 ### Catálogos (`/catalogs`)
 
-Hub con 6 tarjetas. Rutas bajo `app/(private)/catalogs/`:
+Hub con 7 tarjetas. Rutas bajo `app/(private)/catalogs/`:
 
 - `/catalogs/payment-methods` (`payment_methods:*`)
 - `/catalogs/folios` (`folios:*`)

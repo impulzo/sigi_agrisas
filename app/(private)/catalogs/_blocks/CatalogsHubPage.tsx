@@ -52,6 +52,14 @@ const CATALOG_CARDS = [
     href: "/catalogs/products",
     permission: "products:read",
   },
+  {
+    key: "tax-rates",
+    icon: "percent" as const,
+    title: "Tasas de Impuesto",
+    description: "Gestiona las tasas de IVA e IEPS aplicables a productos.",
+    href: "/catalogs/tax-rates",
+    permission: "tax_rates:read",
+  },
 ];
 
 export function CatalogsHubPage() {

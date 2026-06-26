@@ -8,6 +8,7 @@ import { SaleNotFoundError } from "../../domain/errors/SaleNotFoundError";
 import { EmptySaleError } from "../../domain/errors/EmptySaleError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
 import { CancelledSaleNotEditableError } from "../../domain/errors/CancelledSaleNotEditableError";
+import { ReturnedTotalSaleNotEditableError } from "../../domain/errors/ReturnedTotalSaleNotEditableError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 
 export interface EditCompletedSaleResult {
@@ -25,6 +26,7 @@ export class EditCompletedSaleUseCase {
     const existing = await this.saleRepo.findByIdWithItems(id);
     if (!existing) throw new SaleNotFoundError(id);
     if (existing.sale.status === "cancelled") throw new CancelledSaleNotEditableError();
+    if (existing.sale.status === "returned_total") throw new ReturnedTotalSaleNotEditableError();
     if (!req.items || req.items.length === 0) throw new EmptySaleError();
 
     // Validate optional reassignments
@@ -60,6 +62,7 @@ export class EditCompletedSaleUseCase {
         discountPct: price.discountPct,
         ivaRate: product.ivaRate,
         iepsRate: product.iepsRate,
+        isTaxable: product.isTaxable,
       });
 
       snapshotInputs.push({

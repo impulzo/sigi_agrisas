@@ -1,6 +1,6 @@
 import { SaleItem } from "./SaleItem";
 
-export type SaleStatus = "completed" | "cancelled" | "edited";
+export type SaleStatus = "completed" | "cancelled" | "edited" | "returned_total";
 
 export interface SaleProps {
   id: string;

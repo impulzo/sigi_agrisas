@@ -8,11 +8,22 @@ interface CreateReturnFooterProps {
   notes: string;
   onNotesChange: (v: string) => void;
   validationError: string | null;
+  reasonError?: string | null;
   isSubmitting: boolean;
   onSubmit: () => void;
+  refundSubtotal: number;
+  refundTax: number;
+  refundTotal: number;
 }
 
 const today = new Date().toISOString().slice(0, 10);
+
+const MX = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  minimumFractionDigits: 2,
+});
+function fmt(n: number) { return MX.format(n); }
 
 export function CreateReturnFooter({
   reason,
@@ -22,8 +33,12 @@ export function CreateReturnFooter({
   notes,
   onNotesChange,
   validationError,
+  reasonError,
   isSubmitting,
   onSubmit,
+  refundSubtotal,
+  refundTax,
+  refundTotal,
 }: CreateReturnFooterProps) {
   return (
     <div className="space-y-4 bg-surface-container-low rounded-2xl p-4">
@@ -42,6 +57,9 @@ export function CreateReturnFooter({
           placeholder="Describe el motivo de la devolución (mín. 3 caracteres)..."
         />
         <p className="text-right text-label-sm text-on-surface-variant mt-1">{reason.length}/500</p>
+        {reasonError && (
+          <p className="text-label-sm text-error mt-1">{reasonError}</p>
+        )}
       </div>
 
       <div>
@@ -72,6 +90,22 @@ export function CreateReturnFooter({
           placeholder="Observaciones adicionales..."
         />
         <p className="text-right text-label-sm text-on-surface-variant mt-1">{notes.length}/1000</p>
+      </div>
+
+      {/* Real-time refund preview */}
+      <div className="border-t border-outline-variant pt-3 space-y-1.5">
+        <div className="flex justify-between text-body-sm">
+          <span className="text-on-surface-variant">Subtotal reembolso</span>
+          <span className="tabular-nums">{fmt(refundSubtotal)}</span>
+        </div>
+        <div className="flex justify-between text-body-sm">
+          <span className="text-on-surface-variant">Impuestos</span>
+          <span className="tabular-nums">{fmt(refundTax)}</span>
+        </div>
+        <div className="flex justify-between text-title-sm font-semibold border-t border-outline-variant pt-1.5">
+          <span>Total reembolso</span>
+          <span className="tabular-nums">{fmt(refundTotal)}</span>
+        </div>
       </div>
 
       <div className="flex flex-col items-end gap-2">

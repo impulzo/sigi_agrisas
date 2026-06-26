@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { useFoliosOptions } from "../../../_hooks/useFoliosOptions";
 import { usePaymentMethodsOptions } from "../../../_hooks/usePaymentMethodsOptions";
-import { QuoteExpiredError, QuoteNotEditableError, FolioInactiveError, PaymentMethodInactiveError } from "../_logic/errors";
+import { QuoteExpiredError, QuoteNotEditableError, FolioInactiveError, FolioScopeMismatchError, PaymentMethodInactiveError } from "../_logic/errors";
 import type { ConvertQuoteBody } from "../_logic/types/api";
 import type { QuoteDetail } from "../_logic/types/domain";
 import type { SaleDetail } from "../../sales/_logic/types/domain";
@@ -26,7 +26,7 @@ export function ConvertQuoteModal({
   convert,
 }: ConvertQuoteModalProps) {
   const router = useRouter();
-  const { options: folios, isLoading: foliosLoading } = useFoliosOptions();
+  const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
   const { options: paymentMethods, isLoading: pmLoading } = usePaymentMethodsOptions();
 
   const [folioId, setFolioId] = useState("");
@@ -52,6 +52,8 @@ export function ConvertQuoteModal({
         onClose();
       } else if (err instanceof FolioInactiveError) {
         setInlineError("El folio fiscal seleccionado está inactivo.");
+      } else if (err instanceof FolioScopeMismatchError) {
+        setInlineError(err.message);
       } else if (err instanceof PaymentMethodInactiveError) {
         setInlineError("La forma de pago seleccionada está inactiva.");
       } else {

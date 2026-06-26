@@ -5,6 +5,7 @@ import { QuoteStatusBadge } from "./QuoteStatusBadge";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import { cn } from "../../../_lib/cn";
 import type { Quote } from "../_logic/types/domain";
+import { useTableKeyboard } from "../../../_hooks/useTableKeyboard";
 
 const MX = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -21,9 +22,12 @@ interface QuotesTableProps {
   items: Quote[];
   isLoading: boolean;
   showBranch: boolean;
+  onEnter?: (item: Quote) => void;
 }
 
-export function QuotesTable({ items, isLoading, showBranch }: QuotesTableProps) {
+export function QuotesTable({ items, isLoading, showBranch, onEnter }: QuotesTableProps) {
+  const noop = () => {};
+  const { getRowProps } = useTableKeyboard(items, onEnter ?? noop);
   if (isLoading) {
     return (
       <div className="p-4 space-y-2">
@@ -58,15 +62,16 @@ export function QuotesTable({ items, isLoading, showBranch }: QuotesTableProps) 
           </tr>
         </thead>
         <tbody>
-          {items.map((q) => {
+          {items.map((q, idx) => {
             const folioLabel = q.folioPrefix
               ? `${q.folioPrefix}-${q.folioNumber}`
               : String(q.folioNumber);
             return (
               <tr
                 key={q.id}
+                {...getRowProps(idx)}
                 className={cn(
-                  "border-b border-outline-variant/40 hover:bg-surface-container-low transition-colors",
+                  "border-b border-outline-variant/40 hover:bg-surface-container-low focus:bg-surface-container focus:outline-none transition-colors cursor-default",
                   q.isExpired && "bg-error-container/10",
                 )}
               >

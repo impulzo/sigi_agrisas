@@ -189,6 +189,7 @@ export function UsersPage() {
             isLoading={isLoading}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onEnter={canWrite === true ? handleEdit : undefined}
           />
         )}
 
