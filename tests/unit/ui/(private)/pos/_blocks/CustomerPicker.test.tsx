@@ -54,6 +54,9 @@ describe("CustomerPicker — badge de adeudo", () => {
     jest.spyOn(useCustomerSearchModule, "useCustomerSearch").mockReturnValue({
       items: [customerWithDebt],
       isLoading: false,
+      total: 1,
+      error: null,
+      refresh: jest.fn(),
     });
 
     render(<CustomerPicker value="" onChange={jest.fn()} onOpenQuickAdd={jest.fn()} />);
@@ -67,6 +70,9 @@ describe("CustomerPicker — badge de adeudo", () => {
     jest.spyOn(useCustomerSearchModule, "useCustomerSearch").mockReturnValue({
       items: [customerNoDebt],
       isLoading: false,
+      total: 1,
+      error: null,
+      refresh: jest.fn(),
     });
 
     render(<CustomerPicker value="" onChange={jest.fn()} onOpenQuickAdd={jest.fn()} />);
@@ -79,6 +85,9 @@ describe("CustomerPicker — badge de adeudo", () => {
     jest.spyOn(useCustomerSearchModule, "useCustomerSearch").mockReturnValue({
       items: [],
       isLoading: false,
+      total: 0,
+      error: null,
+      refresh: jest.fn(),
     });
 
     render(<CustomerPicker value="" onChange={jest.fn()} onOpenQuickAdd={jest.fn()} />);
@@ -100,6 +109,9 @@ describe("CustomerPicker — badge de adeudo", () => {
     jest.spyOn(useCustomerSearchModule, "useCustomerSearch").mockReturnValue({
       items: [],
       isLoading: false,
+      total: 0,
+      error: null,
+      refresh: jest.fn(),
     });
 
     render(<CustomerPicker value="" onChange={jest.fn()} onOpenQuickAdd={jest.fn()} />);

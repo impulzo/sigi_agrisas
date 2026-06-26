@@ -17,6 +17,7 @@ import { QuoteExpiredError } from "../../domain/errors/QuoteExpiredError";
 import { EmptyQuoteError } from "../../domain/errors/EmptyQuoteError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
+import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 import { QUOTE_STATUSES, QuoteStatus, isQuoteStatus } from "../../domain/value-objects/QuoteStatus";
 import {
   enforceBranchScope,
@@ -300,6 +301,12 @@ export class QuotesController {
     }
     if (err instanceof InactiveResourceError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    if (err instanceof FolioScopeMismatchError) {
+      return NextResponse.json(
+        { error: "FolioScopeMismatch", expected: err.expected, actual: err.actual },
+        { status: 400 }
+      );
     }
     if (err instanceof Error && err.message === "expiresAt must be in the future") {
       return NextResponse.json({ error: err.message }, { status: 400 });

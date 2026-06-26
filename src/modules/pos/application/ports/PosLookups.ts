@@ -4,6 +4,7 @@ export interface ProductLookup {
   name: string;
   ivaRate: number | null;
   iepsRate: number | null;
+  isTaxable: boolean;
   isActive: boolean;
 }
 
@@ -27,10 +28,13 @@ export interface BranchLookup {
   isActive: boolean;
 }
 
+import { FolioScope } from "@/shared/domain/types/FolioScope";
+
 export interface FolioLookup {
   id: string;
   code: string;
   prefix: string | null;
+  scope: FolioScope;
   isActive: boolean;
 }
 

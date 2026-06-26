@@ -147,3 +147,17 @@ describe("NavigationRail — item Devoluciones", () => {
     expect(link.className).toContain("bg-primary-container");
   });
 });
+
+describe("NavigationRail — scroll structure", () => {
+  it("nav scrolleable tiene overflow-y-auto y scrollbar-thin", () => {
+    renderRail("/dashboard", []);
+    const nav = screen.getByRole("navigation", { name: /Primary/ });
+    expect(nav.className).toContain("overflow-y-auto");
+    expect(nav.className).toContain("scrollbar-thin");
+  });
+
+  it("botón de logout está en el DOM (footer fijo)", () => {
+    renderRail("/dashboard", []);
+    expect(screen.getByRole("button", { name: /Cerrar sesión/ })).toBeInTheDocument();
+  });
+});

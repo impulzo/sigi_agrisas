@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
+import { seedTaxRates } from "./seeds/taxRates";
 
 const prisma = new PrismaClient();
 
@@ -43,6 +45,13 @@ const PERMISSIONS = [
   { key: "payments:cancel", description: "Cancelar abonos" },
   { key: "payments:report_read", description: "Consultar historial de abonos y exportar PDF" },
   { key: "reports:inventory_read", description: "Leer reportes de inventario" },
+  { key: "reports:read", description: "Ver dashboard de KPIs y reportes" },
+  { key: "tax_rates:read", description: "Leer tasas de impuesto" },
+  { key: "tax_rates:write", description: "Crear/editar tasas de impuesto" },
+  { key: "billing:read", description: "Ver facturas CFDI" },
+  { key: "billing:write", description: "Emitir facturas CFDI" },
+  { key: "billing:cancel", description: "Cancelar facturas CFDI" },
+  { key: "billing:manage_csd", description: "Gestionar Certificado de Sello Digital (CSD)" },
 ];
 
 const ROLES: Array<{
@@ -69,6 +78,9 @@ const ROLES: Array<{
       "returns:read", "returns:create", "returns:cancel",
       "payments:read", "payments:create", "payments:cancel", "payments:report_read",
       "reports:inventory_read",
+      "reports:read",
+      "tax_rates:read", "tax_rates:write",
+      "billing:read", "billing:write", "billing:cancel", "billing:manage_csd",
     ],
   },
   {
@@ -86,6 +98,8 @@ const ROLES: Array<{
       "returns:read", "returns:create", "returns:cancel",
       "payments:read", "payments:create", "payments:cancel", "payments:report_read",
       "reports:inventory_read",
+      "tax_rates:read", "tax_rates:write",
+      "billing:read", "billing:write", "billing:cancel",
     ],
   },
   {
@@ -102,6 +116,8 @@ const ROLES: Array<{
       "returns:read",
       "payments:read", "payments:report_read",
       "reports:inventory_read",
+      "tax_rates:read",
+      "billing:read",
     ],
   },
 ];
@@ -140,14 +156,23 @@ async function main() {
     { timeout: 30000 }
   );
 
-  // Upsert folio RECIBO (idempotente — no reset de current_number)
-  await prisma.folio.upsert({
-    where: { code: "RECIBO" },
-    create: { code: "RECIBO", name: "Recibo de abono", prefix: "RECIBO-", isActive: true },
-    update: { name: "Recibo de abono", prefix: "RECIBO-", isActive: true },
+  // Métodos de pago base (is_credit inmutable tras creación — no se toca en update)
+  await prisma.paymentMethod.upsert({
+    where: { code: "EFECTIVO" },
+    create: {
+      code: "EFECTIVO",
+      name: "Efectivo",
+      description: "Pago en efectivo",
+      isCredit: false,
+      isActive: true,
+    },
+    update: {
+      name: "Efectivo",
+      description: "Pago en efectivo",
+      isActive: true,
+    },
   });
 
-  // Upsert payment method CREDITO (is_credit inmutable tras creación — no se toca en update)
   await prisma.paymentMethod.upsert({
     where: { code: "CREDITO" },
     create: {
@@ -164,7 +189,48 @@ async function main() {
     },
   });
 
-  console.log("Seed completado: roles y permisos base creados/actualizados.");
+  // Sucursal matriz mínima (idempotente; seed:inventory puede sobrescribir con datos del Excel)
+  const existingHq = await prisma.branch.findFirst({ where: { isHeadquarters: true } });
+  if (!existingHq) {
+    await prisma.branch.upsert({
+      where: { code: "MATRIZ" },
+      create: {
+        code: "MATRIZ",
+        name: "Matriz",
+        isHeadquarters: true,
+        isActive: true,
+      },
+      update: { isHeadquarters: true, isActive: true },
+    });
+  }
+
+  await seedTaxRates(prisma);
+
+  // Usuario admin por defecto — solo si SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD están definidos
+  const seedAdminEmail = process.env.SEED_ADMIN_EMAIL;
+  const seedAdminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (seedAdminEmail && seedAdminPassword) {
+    const existingAdmin = await prisma.user.findUnique({ where: { email: seedAdminEmail } });
+    if (!existingAdmin) {
+      const passwordHash = await bcrypt.hash(seedAdminPassword, 10);
+      const newAdmin = await prisma.user.create({
+        data: { email: seedAdminEmail, name: "Admin", passwordHash },
+      });
+      const adminRole = await prisma.role.findUnique({ where: { name: "admin" } });
+      if (adminRole) {
+        await prisma.userRole.create({
+          data: { userId: newAdmin.id, roleId: adminRole.id },
+        });
+      }
+      console.log(`Usuario admin creado: ${seedAdminEmail}`);
+    } else {
+      console.log("Usuario admin ya existe:", seedAdminEmail);
+    }
+  } else {
+    console.log("SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD no definidos — se omite creación de admin.");
+  }
+
+  console.log("Seed completado: roles, permisos, métodos de pago, tasas y sucursal base creados/actualizados.");
 }
 
 main()

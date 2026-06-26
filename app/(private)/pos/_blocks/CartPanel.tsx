@@ -1,9 +1,11 @@
 "use client";
 
+import { RefObject } from "react";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { CartLinesList } from "./CartLinesList";
 import { CartTotals } from "./CartTotals";
 import { CustomerPicker } from "./CustomerPicker";
+import { canSubmitCart } from "../_logic/lib/canSubmitCart";
 import type { CartLine, CartTotals as CartTotalsType } from "../_logic/types/domain";
 import type { FolioOption, PaymentMethodOption, CustomerDto, ProductPriceDto } from "../_logic/types/api";
 
@@ -45,6 +47,7 @@ interface CartPanelProps {
   onChangeTier: (id: string) => void;
   onRemoveLine: (id: string) => void;
   onSubmit: () => void;
+  containerRef?: RefObject<HTMLDivElement>;
 }
 
 export function CartPanel({
@@ -72,18 +75,21 @@ export function CartPanel({
   onChangeTier,
   onRemoveLine,
   onSubmit,
+  containerRef,
 }: CartPanelProps) {
   const isQuoteMode = mode === "quote";
 
-  const canSubmit =
-    canCreate === true &&
-    lines.length > 0 &&
-    !!selectedFolioId &&
-    (isQuoteMode || !!selectedPaymentMethodId) &&
-    !isSubmitting;
+  const canSubmit = canSubmitCart({
+    canCreate,
+    linesCount: lines.length,
+    selectedFolioId,
+    selectedPaymentMethodId,
+    isQuoteMode,
+    isSubmitting,
+  });
 
   return (
-    <div className="flex flex-col h-full">
+    <div ref={containerRef} className="flex flex-col h-full" tabIndex={-1}>
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         <CustomerPicker
           value={selectedCustomerId}
@@ -104,7 +110,7 @@ export function CartPanel({
               <option value="">— Selecciona folio —</option>
               {folios.map((f) => (
                 <option key={f.id} value={f.id}>
-                  {f.prefix ? `${f.prefix}-` : ""}{f.currentNumber + 1} ({f.name})
+                  {f.prefix ?? ""}{String(f.currentNumber + 1).padStart(6, "0")} ({f.name})
                 </option>
               ))}
             </select>
@@ -179,6 +185,7 @@ export function CartPanel({
           type="button"
           onClick={onSubmit}
           disabled={!canSubmit}
+          aria-keyshortcuts="Control+Enter"
           className={[
             "w-full rounded-full py-3 text-body-md font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2",
             isQuoteMode

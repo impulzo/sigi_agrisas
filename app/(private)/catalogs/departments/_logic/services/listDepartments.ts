@@ -8,6 +8,8 @@ function toDepartment(dto: DepartmentDto): Department {
     code: dto.code,
     name: dto.name,
     description: dto.description,
+    providerId: dto.providerId ?? null,
+    providerName: dto.providerName ?? null,
     isActive: dto.isActive,
     createdAt: new Date(dto.createdAt),
     updatedAt: new Date(dto.updatedAt),
@@ -17,11 +19,12 @@ function toDepartment(dto: DepartmentDto): Department {
 export { toDepartment };
 
 export async function listDepartments(
-  { page, pageSize, includeInactive }: { page: number; pageSize: number; includeInactive?: boolean },
+  { page, pageSize, includeInactive, providerId }: { page: number; pageSize: number; includeInactive?: boolean; providerId?: string },
   fetchImpl = authFetch
 ): Promise<{ items: Department[]; total: number; page: number; pageSize: number }> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (includeInactive) params.set("includeInactive", "true");
+  if (providerId) params.set("providerId", providerId);
 
   let res: Response;
   try {

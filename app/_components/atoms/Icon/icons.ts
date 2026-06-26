@@ -53,6 +53,9 @@ export const ICON_NAMES = [
   "assignment_return",
   "keyboard_return",
   "cancel",
+  "policy",
+  "info",
+  "percent",
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

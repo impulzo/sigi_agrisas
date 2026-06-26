@@ -50,6 +50,7 @@ export async function searchProducts(
     iepsRate: item.iepsRate as number | null,
     isActive: item.isActive as boolean,
     departmentId: item.departmentId as string,
+    departmentName: item.departmentName as string | undefined,
     createdAt: new Date(item.createdAt as string),
     updatedAt: new Date(item.updatedAt as string),
   }));

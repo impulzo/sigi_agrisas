@@ -365,6 +365,13 @@ export class PrismaReturnRepository implements ReturnRepository {
         },
       });
 
+      if (data.markSaleReturnedTotalId) {
+        await tx.sale.update({
+          where: { id: data.markSaleReturnedTotalId },
+          data: { status: "returned_total" },
+        });
+      }
+
       const row = await tx.return.findUnique({
         where: { id: returnId },
         include: includeJoins,

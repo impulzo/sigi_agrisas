@@ -10,8 +10,10 @@ import { SaleStatusBadge } from "./SaleStatusBadge";
 import { SalePaymentStatusBadge } from "./SalePaymentStatusBadge";
 import { SaleItemsTable } from "./SaleItemsTable";
 import { CancelSaleModal } from "./CancelSaleModal";
+import { FullReturnModal } from "./FullReturnModal";
 import { SaleReturnsSection } from "./SaleReturnsSection";
 import { SalePaymentsSection } from "./SalePaymentsSection";
+import { SaleInvoicesSection } from "../../billing/_blocks/SaleInvoicesSection";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
@@ -40,14 +42,21 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
   });
 
   const [showCancel, setShowCancel] = useState(false);
+  const [showFullReturn, setShowFullReturn] = useState(false);
 
   const canCancel = can("sales:cancel");
   const canEditCompleted = can("sales:edit_completed");
+  const canReturn = can("returns:create");
   const isBypass = can("branches:access_all");
 
   // Edit guard: must have permission AND (be in HQ branch OR have bypass)
   const isInHq = isBypass === true || (hq !== null && userBranchId === hq.id);
   const canEdit = canEditCompleted === true && isInHq;
+
+  // Derived after sale is loaded — compute inside render after null check
+  function hasRemainingItems(s: NonNullable<typeof sale>) {
+    return s.items.some((item) => item.quantity > (s.returnedQuantityBySaleItem[item.id] ?? 0));
+  }
 
   if (isLoading) {
     return (
@@ -97,7 +106,16 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
         </div>
 
         <div className="flex gap-2">
-          {canCancel === true && sale.status !== "cancelled" && (
+          {canReturn === true && sale.status === "completed" && hasRemainingItems(sale) && (
+            <button
+              type="button"
+              onClick={() => setShowFullReturn(true)}
+              className="rounded-full border border-error text-error px-4 py-2 text-body-sm font-medium hover:bg-error/5 transition-colors"
+            >
+              Devolución Total
+            </button>
+          )}
+          {canCancel === true && sale.status !== "cancelled" && sale.status !== "returned_total" && (
             <button
               type="button"
               onClick={() => setShowCancel(true)}
@@ -106,7 +124,7 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
               Cancelar venta
             </button>
           )}
-          {canEdit && sale.status !== "cancelled" && (
+          {canEdit && sale.status !== "cancelled" && sale.status !== "returned_total" && (
             <Link
               href={`/sales/${sale.id}/edit`}
               className="rounded-full bg-tertiary text-on-tertiary px-4 py-2 text-body-sm font-medium hover:bg-tertiary/90 transition-colors"
@@ -156,6 +174,13 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
         returnedQuantityBySaleItem={sale.returnedQuantityBySaleItem}
       />
 
+      {/* Invoices section */}
+      <SaleInvoicesSection
+        saleId={sale.id}
+        saleStatus={sale.status}
+        saleFolioLabel={folioLabel}
+      />
+
       {/* Payments section — only for credit sales */}
       {sale.isCredit && (
         <SalePaymentsSection
@@ -202,6 +227,17 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
             setShowCancel(false);
           }}
           onClose={() => setShowCancel(false)}
+        />
+      )}
+
+      {showFullReturn && (
+        <FullReturnModal
+          saleId={sale.id}
+          onSuccess={() => {
+            setShowFullReturn(false);
+            refresh();
+          }}
+          onClose={() => setShowFullReturn(false)}
         />
       )}
     </div>

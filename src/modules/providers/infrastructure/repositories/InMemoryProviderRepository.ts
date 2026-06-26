@@ -12,6 +12,7 @@ function makeId(): string {
 
 export class InMemoryProviderRepository implements ProviderRepository {
   private store: Provider[] = [];
+  private activeDepartmentCounts: Map<string, number> = new Map();
 
   async findAll({ page, pageSize, includeInactive, search }: FindAllOptions): Promise<{ items: Provider[]; total: number }> {
     let items = includeInactive ? this.store : this.store.filter((p) => p.isActive);
@@ -105,8 +106,17 @@ export class InMemoryProviderRepository implements ProviderRepository {
     await this.update(id, { isActive: false });
   }
 
+  async countActiveDepartmentsByProvider(providerId: string): Promise<number> {
+    return this.activeDepartmentCounts.get(providerId) ?? 0;
+  }
+
+  setActiveDepartmentCount(providerId: string, count: number): void {
+    this.activeDepartmentCounts.set(providerId, count);
+  }
+
   reset(): void {
     this.store = [];
+    this.activeDepartmentCounts.clear();
     idCounter = 0;
   }
 }

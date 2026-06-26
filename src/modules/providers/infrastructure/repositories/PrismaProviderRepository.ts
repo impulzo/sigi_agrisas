@@ -103,4 +103,8 @@ export class PrismaProviderRepository implements ProviderRepository {
       throw err;
     }
   }
+
+  async countActiveDepartmentsByProvider(providerId: string): Promise<number> {
+    return this.prisma.department.count({ where: { providerId, isActive: true } });
+  }
 }

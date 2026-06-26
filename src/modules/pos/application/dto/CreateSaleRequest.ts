@@ -6,7 +6,7 @@ export interface SaleItemInput {
 
 export interface CreateSaleRequest {
   branchId: string;
-  customerId: string;
+  customerId?: string | null;
   paymentMethodId: string;
   folioId: string;
   notes?: string | null;

@@ -7,14 +7,16 @@ import { LoginUseCase } from "@/modules/auth/application/use-cases/LoginUseCase"
 import { RefreshTokenUseCase } from "@/modules/auth/application/use-cases/RefreshTokenUseCase";
 import { LogoutUseCase } from "@/modules/auth/application/use-cases/LogoutUseCase";
 import { AuthController } from "@/modules/auth/infrastructure/http/AuthController";
+import { PrismaRoleAssigner } from "@/modules/rbac/infrastructure/services/PrismaRoleAssigner";
 
 export const authController = (() => {
   try {
     const userRepo = new UserPrismaRepository(prisma);
     const tokenService = new JwtTokenService();
     const hasher = new BcryptPasswordHasher();
+    const roleAssigner = new PrismaRoleAssigner(prisma);
 
-    const registerUseCase = new RegisterUseCase(userRepo, hasher, tokenService);
+    const registerUseCase = new RegisterUseCase(userRepo, hasher, tokenService, roleAssigner);
     const loginUseCase = new LoginUseCase(userRepo, hasher, tokenService);
     const refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
     const logoutUseCase = new LogoutUseCase();

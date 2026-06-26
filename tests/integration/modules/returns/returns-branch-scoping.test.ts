@@ -142,8 +142,8 @@ describe("Returns — branch scoping (integration real DB)", () => {
     const price = await createPrice.execute(product.id, { name: "Lista", price: 100, isDefault: true });
 
     const customer = await createCustomer.execute({ code: `${P}CLI1`, name: "Cliente Scope", rfc: "CSC010101001" });
-    const folioA = await folioRepo.create({ code: `${P}FOL_A`, name: "Folio A", prefix: "FA", currentNumber: 0 });
-    const folioB = await folioRepo.create({ code: `${P}FOL_B`, name: "Folio B", prefix: "FB", currentNumber: 0 });
+    const folioA = await folioRepo.create({ code: `${P}FOL_A`, name: "Folio A", prefix: "FA", currentNumber: 0, scope: "POS" });
+    const folioB = await folioRepo.create({ code: `${P}FOL_B`, name: "Folio B", prefix: "FB", currentNumber: 0, scope: "POS" });
     const pm = await pmRepo.create({ code: `${P}PM1`, name: "Efectivo Scope" });
 
     const opA = await prisma.user.create({

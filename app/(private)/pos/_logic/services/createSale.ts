@@ -4,6 +4,7 @@ import {
   CustomerInactiveError,
   BranchInactiveError,
   FolioInactiveError,
+  FolioScopeMismatchError,
   PaymentMethodInactiveError,
   ProductInactiveError,
   ProductPriceMismatchError,
@@ -40,7 +41,8 @@ export async function createSale(
   }
 
   if (res.status === 400) {
-    const errBody = await res.json().catch(() => ({ error: "" })) as { error?: string };
+    const errBody = await res.json().catch(() => ({ error: "" })) as { error?: string; expected?: string; actual?: string };
+    if (errBody.error === "FolioScopeMismatch") throw new FolioScopeMismatchError(errBody.expected ?? "", errBody.actual ?? "");
     throw mapErrorMessage(errBody.error ?? "");
   }
 

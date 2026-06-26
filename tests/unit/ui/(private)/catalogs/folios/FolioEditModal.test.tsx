@@ -18,6 +18,7 @@ const BASE_ENTITY: Folio = {
   code: "FACT_A",
   name: "Factura A",
   prefix: "FA",
+  scope: "OPERATIONS",
   currentNumber: 100,
   isActive: true,
   createdAt: new Date("2026-05-01"),

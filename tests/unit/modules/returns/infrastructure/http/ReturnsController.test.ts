@@ -105,6 +105,7 @@ function makeSaleRepo(summary: SaleSummary | null = makeSaleSummary()): SaleRepo
     createCompletedFromQuote: jest.fn(),
     cancel: jest.fn(),
     replaceItemsAndRecalculate: jest.fn(),
+    markReturnedTotal: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -131,7 +132,8 @@ function buildController(opts: {
     new CreateReturnUseCase(returnRepo, saleRepo),
     new CancelReturnUseCase(returnRepo),
     saleRepo,
-    makeAuthz(opts.bypass ?? false)
+    makeAuthz(opts.bypass ?? false),
+    returnRepo
   );
   return { controller, returnRepo, saleRepo };
 }
@@ -185,6 +187,36 @@ describe("ReturnsController.create", () => {
   it("400 con reason menor a 3 chars", async () => {
     const { controller } = buildController();
     const res = await controller.create(req("POST", "/returns", { ...baseCreateBody, reason: "ab" }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("ReturnReasonRequired");
+  });
+
+  it("400 cuando reason está ausente", async () => {
+    const { controller } = buildController();
+    const { reason: _r, ...bodyNoReason } = baseCreateBody;
+    const res = await controller.create(req("POST", "/returns", bodyNoReason));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("ReturnReasonRequired");
+  });
+
+  it("400 cuando reason es solo whitespace", async () => {
+    const { controller } = buildController();
+    const res = await controller.create(req("POST", "/returns", { ...baseCreateBody, reason: "   " }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("ReturnReasonRequired");
+  });
+
+  it("201 cuando reason tiene exactamente 500 chars", async () => {
+    const { controller } = buildController({ bypass: true });
+    const longReason = "a".repeat(500);
+    const res = await controller.create(req("POST", "/returns", { ...baseCreateBody, reason: longReason }));
+    expect(res.status).toBe(201);
+  });
+
+  it("400 cuando reason excede 500 chars", async () => {
+    const { controller } = buildController();
+    const tooLong = "a".repeat(501);
+    const res = await controller.create(req("POST", "/returns", { ...baseCreateBody, reason: tooLong }));
     expect(res.status).toBe(400);
   });
 
@@ -247,12 +279,12 @@ describe("ReturnsController.create", () => {
     expect(body.saleItemId).toBe(FOREIGN_ITEM);
   });
 
-  it("409 cuando quantity excede remaining — body trae saleItemId/requested/remaining", async () => {
+  it("422 cuando quantity excede remaining — body trae saleItemId/requested/remaining", async () => {
     const { controller } = buildController();
     const res = await controller.create(
       req("POST", "/returns", { ...baseCreateBody, items: [{ saleItemId: SALE_ITEM_ID, quantity: 15 }] })
     );
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(422);
     const body = await res.json();
     expect(body.saleItemId).toBe(SALE_ITEM_ID);
     expect(body.requested).toBe(15);
@@ -488,5 +520,38 @@ describe("ReturnsController.listBySale", () => {
     const { controller } = buildController();
     const res = await controller.listBySale(req("GET", "/sales/not-uuid/returns"), "not-uuid");
     expect(res.status).toBe(400);
+  });
+});
+
+describe("ReturnsController.fullReturn", () => {
+  const FULL_RETURN_BODY = {
+    reason: "Devolución completa del ticket",
+    returnedAt: "2026-06-01T10:00:00Z",
+  };
+
+  it("201 y pasa markSaleReturnedTotalId al repo para atomizar la transición de estado", async () => {
+    const returnRepo = new InMemoryReturnRepository();
+    const createWithItemsSpy = jest.spyOn(returnRepo, "createWithItems");
+    const { controller } = buildController({ returnRepo, bypass: true });
+    const res = await controller.fullReturn(
+      req("POST", `/sales/${SALE_ID}/full-return`, FULL_RETURN_BODY),
+      SALE_ID
+    );
+    expect(res.status).toBe(201);
+    expect(createWithItemsSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ markSaleReturnedTotalId: SALE_ID })
+    );
+  });
+
+  it("409 SaleAlreadyFullyReturned cuando sale ya está en returned_total", async () => {
+    const saleRepo = makeSaleRepo(makeSaleSummary({ status: "returned_total" }));
+    const { controller } = buildController({ saleRepo, bypass: true });
+    const res = await controller.fullReturn(
+      req("POST", `/sales/${SALE_ID}/full-return`, FULL_RETURN_BODY),
+      SALE_ID
+    );
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("SaleAlreadyFullyReturned");
   });
 });

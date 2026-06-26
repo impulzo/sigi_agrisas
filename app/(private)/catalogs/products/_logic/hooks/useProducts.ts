@@ -9,6 +9,7 @@ interface UseProductsParams {
   pageSize: number;
   search?: string;
   departmentId?: string;
+  providerId?: string;
   includeInactive?: boolean;
 }
 
@@ -25,6 +26,7 @@ export function useProducts({
   pageSize,
   search,
   departmentId,
+  providerId,
   includeInactive,
 }: UseProductsParams): UseProductsResult {
   const [items, setItems] = useState<Product[]>([]);
@@ -39,7 +41,7 @@ export function useProducts({
     setIsLoading(true);
     setError(null);
 
-    listProducts({ page, pageSize, search, departmentId, includeInactive }, undefined, controller.signal)
+    listProducts({ page, pageSize, search, departmentId, providerId, includeInactive }, undefined, controller.signal)
       .then((data) => {
         if (cancelled) return;
         setItems(data.items);
@@ -58,7 +60,7 @@ export function useProducts({
       cancelled = true;
       controller.abort();
     };
-  }, [page, pageSize, search, departmentId, includeInactive, tick]);
+  }, [page, pageSize, search, departmentId, providerId, includeInactive, tick]);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 

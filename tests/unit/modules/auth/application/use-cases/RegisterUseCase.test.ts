@@ -2,6 +2,7 @@ import { RegisterUseCase } from "@/modules/auth/application/use-cases/RegisterUs
 import { InMemoryUserRepository } from "@/modules/auth/infrastructure/repositories/InMemoryUserRepository";
 import { PasswordHasher } from "@/modules/auth/application/ports/PasswordHasher";
 import { TokenService } from "@/modules/auth/application/ports/TokenService";
+import { RoleAssigner } from "@/modules/rbac/application/ports/RoleAssigner";
 import { EmailAlreadyInUseError } from "@/modules/auth/domain/errors/EmailAlreadyInUseError";
 
 const fakeHasher: PasswordHasher = {
@@ -16,13 +17,17 @@ const fakeTokenService: TokenService = {
   verifyRefreshToken: () => ({ sub: "id", email: "e@e.com" }),
 };
 
+const fakeRoleAssigner: RoleAssigner = {
+  assignDefaultRole: async () => {},
+};
+
 describe("RegisterUseCase", () => {
   let repo: InMemoryUserRepository;
   let useCase: RegisterUseCase;
 
   beforeEach(() => {
     repo = new InMemoryUserRepository();
-    useCase = new RegisterUseCase(repo, fakeHasher, fakeTokenService);
+    useCase = new RegisterUseCase(repo, fakeHasher, fakeTokenService, fakeRoleAssigner);
   });
 
   it("registers a new user and returns tokens", async () => {

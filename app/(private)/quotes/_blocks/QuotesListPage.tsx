@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useQuotesList } from "../_logic/hooks/useQuotesList";
 import { CatalogShell } from "../../catalogs/_blocks/CatalogShell";
@@ -14,6 +15,7 @@ import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOpti
 import type { QuoteListFilters } from "../_logic/types/domain";
 
 export function QuotesListPage() {
+  const router = useRouter();
   const { can } = useCurrentUser();
   const canRead = can("quotes:read");
   const isBypass = can("branches:access_all");
@@ -104,7 +106,7 @@ export function QuotesListPage() {
         <QuotesEmpty onRefresh={refresh} />
       ) : (
         <>
-          <QuotesTable items={items} isLoading={isLoading} showBranch={isBypass === true} />
+          <QuotesTable items={items} isLoading={isLoading} showBranch={isBypass === true} onEnter={(q) => router.push(`/quotes/${q.id}`)} />
           <CatalogPagination
             page={page}
             pageSize={pageSize}

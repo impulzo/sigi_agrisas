@@ -64,7 +64,7 @@ describe("useLoginForm", () => {
       await result.current.handleSubmit({ preventDefault: jest.fn() } as unknown as React.FormEvent);
     });
     expect(loginMock).toHaveBeenCalledWith({ email: "a@b.com", password: "secret123" });
-    expect(mockReplace).toHaveBeenCalledWith("/dashboard");
+    expect(mockReplace).toHaveBeenCalledWith("/pos");
   });
 
   it("sets formError on InvalidCredentialsError", async () => {

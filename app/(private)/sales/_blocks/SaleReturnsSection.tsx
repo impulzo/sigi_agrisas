@@ -16,7 +16,7 @@ function fmtDate(d: Date) {
 
 interface SaleReturnsSectionProps {
   saleId: string;
-  saleStatus: "completed" | "cancelled" | "edited";
+  saleStatus: "completed" | "cancelled" | "edited" | "returned_total";
   saleItems: SaleItem[];
   returnedQuantityBySaleItem: Record<string, number>;
 }

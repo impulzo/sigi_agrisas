@@ -27,6 +27,15 @@ describe("RefreshTokenUseCase", () => {
     expect(payload.sub).toBe("user-1");
   });
 
+  it("returns a new refresh token (sliding session) with correct claims", () => {
+    const refreshToken = svc.generateRefreshToken({ sub: "user-1", email: "a@b.com" });
+    const result = useCase.execute(refreshToken);
+    expect(result.newRefreshToken).toBeTruthy();
+    const newPayload = svc.verifyRefreshToken(result.newRefreshToken);
+    expect(newPayload.sub).toBe("user-1");
+    expect(newPayload.email).toBe("a@b.com");
+  });
+
   it("throws TokenExpiredError for an expired refresh token", () => {
     jest.useFakeTimers();
     const token = svc.generateRefreshToken({ sub: "user-1", email: "a@b.com" });

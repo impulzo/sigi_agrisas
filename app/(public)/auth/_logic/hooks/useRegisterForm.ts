@@ -72,7 +72,7 @@ export function useRegisterForm(): UseRegisterFormReturn {
     try {
       const { accessToken } = await register(values);
       sessionStorage.setItem("accessToken", accessToken);
-      router.replace("/dashboard");
+      router.replace("/pos");
     } catch (err) {
       if (err instanceof EmailAlreadyExistsError) {
         setFormError("Este correo ya está registrado");

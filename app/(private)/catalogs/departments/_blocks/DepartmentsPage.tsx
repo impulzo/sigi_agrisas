@@ -14,7 +14,7 @@ import { CatalogError } from "../../_blocks/CatalogError";
 import { ConfirmDialog } from "../../../../_components/molecules/ConfirmDialog/ConfirmDialog";
 import { Skeleton } from "../../../../_components/atoms/Skeleton/Skeleton";
 import { EmptyState } from "../../../../_components/molecules/EmptyState/EmptyState";
-import { DepartmentCodeAlreadyInUseError } from "../_logic/errors";
+import { DepartmentCodeAlreadyInUseError, ProviderNotFoundOrInactiveError } from "../_logic/errors";
 import type { Department } from "../_logic/types/domain";
 import type { CreateDepartmentBody, UpdateDepartmentBody } from "../_logic/types/api";
 
@@ -104,6 +104,8 @@ export function DepartmentsPage() {
       } catch (err) {
         if (err instanceof DepartmentCodeAlreadyInUseError) {
           setCodeError("Este código ya está en uso.");
+        } else if (err instanceof ProviderNotFoundOrInactiveError) {
+          setMutationError("El proveedor seleccionado no existe o fue desactivado. Selecciona otro.");
         } else {
           setMutationError((err as Error).message ?? "Error al guardar.");
         }
@@ -201,6 +203,7 @@ export function DepartmentsPage() {
             onEdit={handleEdit}
             onSoftDelete={(id) => setConfirmDeleteId(id)}
             onReactivate={handleReactivate}
+            onEnter={canWrite === true ? handleEdit : undefined}
           />
         )}
 

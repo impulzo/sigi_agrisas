@@ -1,7 +1,10 @@
+"use client";
+
 import { Icon } from "../../../../_components/atoms/Icon/Icon";
 import { Skeleton } from "../../../../_components/atoms/Skeleton/Skeleton";
 import { CatalogStatusBadge } from "../../_blocks/CatalogStatusBadge";
 import type { PaymentMethod } from "../_logic/types/domain";
+import { useTableKeyboard } from "../../../../_hooks/useTableKeyboard";
 
 interface PaymentMethodsTableProps {
   items: PaymentMethod[];
@@ -10,6 +13,7 @@ interface PaymentMethodsTableProps {
   onEdit: (item: PaymentMethod) => void;
   onSoftDelete: (id: string) => void;
   onReactivate: (id: string) => void;
+  onEnter?: (item: PaymentMethod) => void;
 }
 
 export function PaymentMethodsTable({
@@ -19,7 +23,11 @@ export function PaymentMethodsTable({
   onEdit,
   onSoftDelete,
   onReactivate,
+  onEnter,
 }: PaymentMethodsTableProps) {
+  const noop = () => {};
+  const { getRowProps } = useTableKeyboard(items, onEnter ?? noop);
+
   if (isLoading) {
     return (
       <div className="space-y-2 p-4">
@@ -45,8 +53,12 @@ export function PaymentMethodsTable({
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => (
-            <tr key={item.id} className="border-b border-outline-variant last:border-0 hover:bg-surface-container-low transition-colors">
+          {items.map((item, idx) => (
+            <tr
+              key={item.id}
+              {...getRowProps(idx)}
+              className="border-b border-outline-variant last:border-0 hover:bg-surface-container-low focus:bg-surface-container focus:outline-none transition-colors cursor-default"
+            >
               <td className="px-4 py-3 font-mono text-on-surface">{item.code}</td>
               <td className="px-4 py-3 text-on-surface">{item.name}</td>
               <td className="px-4 py-3 text-on-surface-variant">

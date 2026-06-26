@@ -29,7 +29,7 @@ export interface SaleSummaryDto {
   folioPrefix?: string | null;
   paymentMethodId: string;
   paymentMethodName?: string | null;
-  status: "completed" | "cancelled" | "edited";
+  status: "completed" | "cancelled" | "edited" | "returned_total";
   subtotal: number;
   taxTotal: number;
   total: number;

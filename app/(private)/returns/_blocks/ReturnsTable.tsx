@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ReturnStatusBadge } from "./ReturnStatusBadge";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import type { Return } from "../_logic/types/domain";
+import { useTableKeyboard } from "../../../_hooks/useTableKeyboard";
 
 const MX_NUMBER = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -26,10 +27,13 @@ interface ReturnsTableProps {
   items: Return[];
   isLoading: boolean;
   showBranch: boolean;
+  onEnter?: (item: Return) => void;
 }
 
-export function ReturnsTable({ items, isLoading, showBranch }: ReturnsTableProps) {
+export function ReturnsTable({ items, isLoading, showBranch, onEnter }: ReturnsTableProps) {
   const router = useRouter();
+  const noop = () => {};
+  const { getRowProps } = useTableKeyboard(items, onEnter ?? noop);
 
   if (isLoading) {
     return (
@@ -65,7 +69,7 @@ export function ReturnsTable({ items, isLoading, showBranch }: ReturnsTableProps
           </tr>
         </thead>
         <tbody>
-          {items.map((ret) => {
+          {items.map((ret, idx) => {
             const folioLabel = ret.salefolioCode
               ? `${ret.salefolioCode}-${ret.salefolioNumber}`
               : ret.salefolioNumber
@@ -75,7 +79,8 @@ export function ReturnsTable({ items, isLoading, showBranch }: ReturnsTableProps
             return (
               <tr
                 key={ret.id}
-                className="border-b border-outline-variant/40 hover:bg-surface-container-low transition-colors"
+                {...getRowProps(idx)}
+                className="border-b border-outline-variant/40 hover:bg-surface-container-low focus:bg-surface-container focus:outline-none transition-colors cursor-default"
               >
                 <td className="px-4 py-3">
                   <Link

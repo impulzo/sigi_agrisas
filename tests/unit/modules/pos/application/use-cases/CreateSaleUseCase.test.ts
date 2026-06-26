@@ -8,6 +8,7 @@ import { ProductPriceMismatchError } from "@/modules/pos/domain/errors/ProductPr
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
 import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
+import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 
 function makeSummary(data: CreateSaleData): SaleSummary {
   const now = new Date();
@@ -98,7 +99,7 @@ function makeLookups(overrides?: Partial<PosLookupService>): PosLookupService {
     }),
     getCustomer: jest.fn().mockResolvedValue({ id: "c1", isActive: true, creditLimit: null, currentBalance: 0 }),
     getBranch: jest.fn().mockResolvedValue({ id: "b1", isActive: true }),
-    getFolio: jest.fn().mockResolvedValue({ id: "f1", code: "VENTA", prefix: null, isActive: true }),
+    getFolio: jest.fn().mockResolvedValue({ id: "f1", code: "VENTA", prefix: null, scope: "POS", isActive: true }),
     getPaymentMethod: jest.fn().mockResolvedValue({ id: "pm1", isActive: true, isCredit: false }),
     ...overrides,
   };
@@ -167,6 +168,28 @@ describe("CreateSaleUseCase", () => {
     await expect(
       new CreateSaleUseCase(makeRepo(), lookups).execute(baseReq, "user-1")
     ).rejects.toThrow(InactiveResourceError);
+  });
+
+  it("rechaza folio con scope OPERATIONS (espera POS)", async () => {
+    const lookups = makeLookups({
+      getFolio: jest.fn().mockResolvedValue({ id: "f1", code: "RB", prefix: "RB-", scope: "OPERATIONS", isActive: true }),
+    });
+    const repo = makeRepo();
+    const err = await new CreateSaleUseCase(repo, lookups).execute(baseReq, "user-1").catch((e) => e);
+    expect(err).toBeInstanceOf(FolioScopeMismatchError);
+    expect(err.expected).toBe("POS");
+    expect(err.actual).toBe("OPERATIONS");
+    expect(repo.createCompleted).not.toHaveBeenCalled();
+  });
+
+  it("rechaza folio con scope INVENTORY (espera POS)", async () => {
+    const lookups = makeLookups({
+      getFolio: jest.fn().mockResolvedValue({ id: "f1", code: "TS", prefix: "TS-", scope: "INVENTORY", isActive: true }),
+    });
+    const err = await new CreateSaleUseCase(makeRepo(), lookups).execute(baseReq, "user-1").catch((e) => e);
+    expect(err).toBeInstanceOf(FolioScopeMismatchError);
+    expect(err.expected).toBe("POS");
+    expect(err.actual).toBe("INVENTORY");
   });
 
   describe("ventas a crédito", () => {

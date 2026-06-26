@@ -37,7 +37,7 @@ export function QuoteEditPage({ id }: QuoteEditPageProps) {
 
   const { quote, isLoading, error } = useQuoteDetail(id);
   const { isSaving, update } = useQuoteMutations();
-  const { options: folios, isLoading: foliosLoading } = useFoliosOptions();
+  const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
   const { lines, totals, addLine, updateQuantity, updateDiscountPct, changeTier, removeLine, clear } = useCart();
 
   const [initialized, setInitialized] = useState(false);

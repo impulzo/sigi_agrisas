@@ -7,10 +7,14 @@ import {
   listProducts,
   toProduct,
 } from "../../../../../../app/(private)/catalogs/products/_logic/services/products";
+import { uploadProductImage } from "../../../../../../app/(private)/catalogs/products/_logic/services/uploadProductImage";
+import { deleteProductImage } from "../../../../../../app/(private)/catalogs/products/_logic/services/deleteProductImage";
 import {
   ProductNotFoundError,
   ProductCodeAlreadyInUseError,
   ProductDepartmentInvalidError,
+  ProductImageTooLargeError,
+  ProductImageInvalidFormatError,
 } from "../../../../../../app/(private)/catalogs/products/_logic/errors";
 
 const BASE_DTO = {
@@ -21,8 +25,13 @@ const BASE_DTO = {
   satProductCode: null,
   departmentId: "d1",
   departmentName: "Agrícola",
+  providerId: null,
+  providerName: null,
+  taxRateId: null,
+  taxRateCode: null,
   ivaRate: 0.16,
   iepsRate: null,
+  imageUrl: null,
   isActive: true,
   createdAt: "2026-05-01T00:00:00.000Z",
   updatedAt: "2026-05-20T00:00:00.000Z",
@@ -162,5 +171,78 @@ describe("listProducts", () => {
     );
     expect(result.total).toBe(1);
     expect(result.items[0].code).toBe("PROD_01");
+  });
+});
+
+describe("uploadProductImage (task 6.3)", () => {
+  function mockFetchForUpload(status: number, body: unknown) {
+    return jest.fn().mockResolvedValue({
+      ok: status >= 200 && status < 300,
+      status,
+      json: () => Promise.resolve(body),
+    }) as unknown as typeof import("../../../../../../app/_lib/authFetch").authFetch;
+  }
+
+  it("devuelve imageUrl en éxito (200)", async () => {
+    const fetchImpl = mockFetchForUpload(200, { imageUrl: "https://storage.test/products/p1/uuid.jpg" });
+    const file = new File(["img"], "photo.jpg", { type: "image/jpeg" });
+    const url = await uploadProductImage("p1", file, fetchImpl);
+    expect(url).toBe("https://storage.test/products/p1/uuid.jpg");
+  });
+
+  it("llama al endpoint correcto con método POST", async () => {
+    const fetchImpl = mockFetchForUpload(200, { imageUrl: "https://x.test/img.jpg" });
+    const file = new File(["img"], "photo.jpg", { type: "image/jpeg" });
+    await uploadProductImage("abc-123", file, fetchImpl);
+    const [url, init] = (fetchImpl as jest.Mock).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/v1/admin/products/abc-123/image");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeInstanceOf(FormData);
+  });
+
+  it("lanza ProductImageTooLargeError en 413", async () => {
+    const fetchImpl = mockFetchForUpload(413, { error: "Image too large", maxBytes: 2097152 });
+    const file = new File(["big"], "big.jpg", { type: "image/jpeg" });
+    await expect(uploadProductImage("p1", file, fetchImpl)).rejects.toThrow(ProductImageTooLargeError);
+  });
+
+  it("lanza ProductImageInvalidFormatError en 400 con 'Invalid image format'", async () => {
+    const fetchImpl = mockFetchForUpload(400, { error: "Invalid image format" });
+    const file = new File(["pdf"], "doc.pdf", { type: "application/pdf" });
+    await expect(uploadProductImage("p1", file, fetchImpl)).rejects.toThrow(ProductImageInvalidFormatError);
+  });
+
+  it("lanza Error genérico en 400 con otro mensaje", async () => {
+    const fetchImpl = mockFetchForUpload(400, { error: "Missing file field" });
+    const file = new File(["x"], "x.jpg", { type: "image/jpeg" });
+    await expect(uploadProductImage("p1", file, fetchImpl)).rejects.toThrow("Missing file field");
+  });
+});
+
+describe("deleteProductImage (task 6.3)", () => {
+  function mockFetchForDelete(status: number, body: unknown = {}) {
+    return jest.fn().mockResolvedValue({
+      ok: status === 204 || (status >= 200 && status < 300),
+      status,
+      json: () => Promise.resolve(body),
+    }) as unknown as typeof import("../../../../../../app/_lib/authFetch").authFetch;
+  }
+
+  it("resuelve sin error en 204", async () => {
+    const fetchImpl = mockFetchForDelete(204);
+    await expect(deleteProductImage("p1", fetchImpl)).resolves.toBeUndefined();
+  });
+
+  it("llama al endpoint correcto con método DELETE", async () => {
+    const fetchImpl = mockFetchForDelete(204);
+    await deleteProductImage("p1", fetchImpl);
+    const [url, init] = (fetchImpl as jest.Mock).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/v1/admin/products/p1/image");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("lanza Error en respuesta no exitosa", async () => {
+    const fetchImpl = mockFetchForDelete(404, { error: "Product not found" });
+    await expect(deleteProductImage("p1", fetchImpl)).rejects.toThrow("Product not found");
   });
 });

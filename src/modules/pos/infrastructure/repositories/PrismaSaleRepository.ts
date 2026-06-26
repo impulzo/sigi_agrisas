@@ -527,4 +527,11 @@ export class PrismaSaleRepository implements SaleRepository {
 
     return summary;
   }
+
+  async markReturnedTotal(saleId: string): Promise<void> {
+    await this.prisma.sale.update({
+      where: { id: saleId },
+      data: { status: "returned_total" },
+    });
+  }
 }

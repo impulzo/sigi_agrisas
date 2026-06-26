@@ -3,5 +3,5 @@ import { redirect } from "next/navigation";
 
 export default function Home() {
   const refreshToken = cookies().get("refreshToken")?.value;
-  redirect(refreshToken ? "/dashboard" : "/auth/login");
+  redirect(refreshToken ? "/pos" : "/auth/login");
 }

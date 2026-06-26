@@ -106,6 +106,7 @@ model Folio {
   code          String   @unique @db.VarChar(32)
   name          String   @db.VarChar(100)
   prefix        String?  @db.VarChar(8)
+  scope         String   @default("OPERATIONS") @db.VarChar(32)
   currentNumber Int      @default(0) @map("current_number")
   isActive      Boolean  @default(true) @map("is_active")
   createdAt     DateTime @default(now()) @map("created_at")
@@ -116,6 +117,7 @@ model Folio {
   payments CustomerPayment[]
 
   @@index([code])
+  @@index([scope])
   @@map("folios")
 }
 
@@ -124,13 +126,16 @@ model Department {
   code        String   @unique @db.VarChar(32)
   name        String   @db.VarChar(100)
   description String?  @db.Text
+  providerId  String?  @map("provider_id")
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  provider Provider? @relation(fields: [providerId], references: [id], onDelete: Restrict)
   products Product[]
 
   @@index([code])
+  @@index([providerId])
   @@map("departments")
 }
 
@@ -152,6 +157,7 @@ model Branch {
   quotes    Quote[]
   returns   Return[]
   payments  CustomerPayment[]
+  invoices  Invoice[]
 
   @@index([code])
   @@map("branches")
@@ -175,10 +181,28 @@ model Provider {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  departments Department[]
+
   @@index([code])
   @@index([rfc])
   @@index([name])
   @@map("providers")
+}
+
+model TaxRate {
+  id          String   @id @default(uuid())
+  code        String   @unique @db.VarChar(32)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  rate        Decimal  @db.Decimal(5, 4)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@index([code])
+  @@map("tax_rates")
 }
 
 model Product {
@@ -188,13 +212,17 @@ model Product {
   unit           String   @db.VarChar(32)
   satProductCode String?  @map("sat_product_code") @db.VarChar(16)
   departmentId   String   @map("department_id")
+  taxRateId      String?  @map("tax_rate_id")
   ivaRate        Decimal? @map("iva_rate") @db.Decimal(5, 4)
   iepsRate       Decimal? @map("ieps_rate") @db.Decimal(5, 4)
+  imageUrl       String?  @map("image_url") @db.Text
+  isTaxable      Boolean  @default(false) @map("is_taxable")
   isActive       Boolean  @default(true) @map("is_active")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   department    Department            @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  taxRate       TaxRate?              @relation(fields: [taxRateId], references: [id], onDelete: SetNull)
   prices        ProductPrice[]
   dosifications ProductDosification[]
   inventory     BranchInventory[]
@@ -205,6 +233,7 @@ model Product {
   @@index([code])
   @@index([name])
   @@index([departmentId])
+  @@index([taxRateId])
   @@map("products")
 }
 
@@ -287,6 +316,7 @@ model Customer {
   quotes   Quote[]
   returns  Return[]
   payments CustomerPayment[]
+  invoices Invoice[]
 
   @@index([code])
   @@index([rfc])
@@ -328,6 +358,7 @@ model Sale {
   convertedFromQuotes Quote[]         @relation("QuoteConvertedSale")
   returns             Return[]
   payments            CustomerPayment[]
+  invoices            Invoice[]
 
   @@unique([folioId, folioNumber])
   @@index([branchId])
@@ -527,4 +558,75 @@ model ReturnItem {
   @@index([saleItemId])
   @@index([productId])
   @@map("return_items")
+}
+
+model Invoice {
+  id                    String    @id @default(uuid())
+  uuid                  String?   @db.VarChar(40)
+  facturamaCfdiId       String?   @map("facturama_cfdi_id") @db.VarChar(40)
+  status                String    @db.VarChar(20)
+  cfdiType              String    @default("I") @map("cfdi_type") @db.VarChar(2)
+  cfdiUse               String    @map("cfdi_use") @db.VarChar(8)
+  paymentForm           String    @default("01") @map("payment_form") @db.VarChar(4)
+  paymentMethod         String    @default("PUE") @map("payment_method") @db.VarChar(4)
+  receiverRfc           String    @map("receiver_rfc") @db.VarChar(14)
+  receiverName          String    @map("receiver_name") @db.VarChar(200)
+  receiverCfdiUse       String    @map("receiver_cfdi_use") @db.VarChar(8)
+  receiverFiscalRegime  String    @map("receiver_fiscal_regime") @db.VarChar(4)
+  receiverTaxZipCode    String    @map("receiver_tax_zip_code") @db.VarChar(5)
+  currency              String    @default("MXN") @db.VarChar(3)
+  subtotal              Decimal   @db.Decimal(14, 4)
+  taxTotal              Decimal   @map("tax_total") @db.Decimal(14, 4)
+  total                 Decimal   @db.Decimal(14, 4)
+  xmlUrl                String?   @map("xml_url") @db.Text
+  pdfUrl                String?   @map("pdf_url") @db.Text
+  saleId                String?   @map("sale_id")
+  branchId              String    @map("branch_id")
+  customerId            String?   @map("customer_id")
+  creatorId             String    @map("creator_id") @db.Uuid
+  cancellationMotive    String?   @map("cancellation_motive") @db.VarChar(2)
+  uuidReplacement       String?   @map("uuid_replacement") @db.VarChar(40)
+  cancelledAt           DateTime? @map("cancelled_at")
+  cancelledBy           String?   @map("cancelled_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  sale     Sale?     @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items    InvoiceItem[]
+
+  @@index([saleId])
+  @@index([branchId])
+  @@index([status])
+  @@index([uuid])
+  @@index([receiverRfc])
+  @@index([createdAt])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id                  String   @id @default(uuid())
+  invoiceId           String   @map("invoice_id")
+  productId           String?  @map("product_id")
+  productCodeSnapshot String   @map("product_code_snapshot") @db.VarChar(32)
+  productNameSnapshot String   @map("product_name_snapshot") @db.VarChar(200)
+  satProductCode      String?  @map("sat_product_code") @db.VarChar(8)
+  satUnitCode         String?  @map("sat_unit_code") @db.VarChar(10)
+  unit                String   @db.VarChar(60)
+  quantity            Decimal  @db.Decimal(14, 4)
+  unitPrice           Decimal  @map("unit_price") @db.Decimal(14, 4)
+  discountPct         Decimal? @map("discount_pct") @db.Decimal(5, 2)
+  ivaRate             Decimal  @map("iva_rate") @db.Decimal(6, 4)
+  iepsRate            Decimal  @map("ieps_rate") @db.Decimal(6, 4)
+  taxObject           String   @map("tax_object") @db.VarChar(2)
+  lineSubtotal        Decimal  @map("line_subtotal") @db.Decimal(14, 4)
+  lineIva             Decimal  @map("line_iva") @db.Decimal(14, 4)
+  lineIeps            Decimal  @map("line_ieps") @db.Decimal(14, 4)
+  lineTotal           Decimal  @map("line_total") @db.Decimal(14, 4)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_items")
 }

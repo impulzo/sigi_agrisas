@@ -46,7 +46,7 @@ function makeLookups(overrides: Partial<PosLookupService> = {}): PosLookupServic
     async getFolio(id) {
       return overrides.getFolio
         ? overrides.getFolio(id)
-        : { id, code: "COT", prefix: "COT", isActive: true };
+        : { id, code: "COT", prefix: "COT", scope: "POS", isActive: true };
     },
     async getPaymentMethod(id) {
       return overrides.getPaymentMethod ? overrides.getPaymentMethod(id) : { id, isActive: true, isCredit: false };
@@ -209,7 +209,7 @@ describe("QuotesController.create", () => {
 
   it("400 cuando folio está inactivo", async () => {
     const lookups = makeLookups({
-      getFolio: async (id) => ({ id, code: "COT", prefix: "COT", isActive: false }),
+      getFolio: async (id) => ({ id, code: "COT", prefix: "COT", scope: "POS", isActive: false }),
     });
     const { controller, quoteRepo } = buildController({ lookups });
     quoteRepo.reset();

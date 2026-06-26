@@ -201,6 +201,7 @@ export function BranchesPage() {
             onEdit={handleEdit}
             onSoftDelete={(id) => setConfirmDeleteId(id)}
             onReactivate={handleReactivate}
+            onEnter={canWrite === true ? handleEdit : undefined}
           />
         )}
 

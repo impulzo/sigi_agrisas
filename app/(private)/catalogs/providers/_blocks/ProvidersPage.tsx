@@ -216,6 +216,7 @@ export function ProvidersPage() {
             onEdit={handleEdit}
             onSoftDelete={(id) => setConfirmDeleteId(id)}
             onReactivate={handleReactivate}
+            onEnter={canWrite === true ? handleEdit : undefined}
           />
         )}
 

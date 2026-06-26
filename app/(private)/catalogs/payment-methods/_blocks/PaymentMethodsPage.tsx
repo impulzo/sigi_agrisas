@@ -201,6 +201,7 @@ export function PaymentMethodsPage() {
             onEdit={handleEdit}
             onSoftDelete={(id) => setConfirmDeleteId(id)}
             onReactivate={handleReactivate}
+            onEnter={canWrite === true ? handleEdit : undefined}
           />
         )}
 

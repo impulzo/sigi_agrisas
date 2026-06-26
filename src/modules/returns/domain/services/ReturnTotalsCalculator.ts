@@ -4,6 +4,7 @@ export interface ReturnLineInput {
   discountPct?: number | null;
   ivaRate?: number | null;
   iepsRate?: number | null;
+  isTaxable?: boolean;
 }
 
 export interface ReturnLineTotals {
@@ -58,14 +59,18 @@ export class ReturnTotalsCalculator {
       if (!Number.isFinite(discountPct) || discountPct < 0 || discountPct > 100) {
         throw new Error("discountPct must be between 0 and 100");
       }
-      const ivaRate = line.ivaRate ?? 0;
-      if (!Number.isFinite(ivaRate) || ivaRate < 0 || ivaRate > 1) {
+      const rawIvaRate = line.ivaRate ?? 0;
+      if (!Number.isFinite(rawIvaRate) || rawIvaRate < 0 || rawIvaRate > 1) {
         throw new Error("ivaRate must be between 0 and 1");
       }
-      const iepsRate = line.iepsRate ?? 0;
-      if (!Number.isFinite(iepsRate) || iepsRate < 0 || iepsRate > 1) {
+      const rawIepsRate = line.iepsRate ?? 0;
+      if (!Number.isFinite(rawIepsRate) || rawIepsRate < 0 || rawIepsRate > 1) {
         throw new Error("iepsRate must be between 0 and 1");
       }
+      // ?? true: pre-migration return items lack isTaxable; default taxable preserves prior behavior
+      const isTaxable = line.isTaxable ?? true;
+      const ivaRate = isTaxable ? rawIvaRate : 0;
+      const iepsRate = isTaxable ? rawIepsRate : 0;
 
       const lineSubtotal = roundHalfToEven(
         line.quantity * line.unitPrice * (1 - discountPct / 100),

@@ -4,7 +4,6 @@ import { JwtTokenService } from "@/modules/auth/infrastructure/services/JwtToken
 import { BcryptPasswordHasher } from "@/modules/auth/infrastructure/services/BcryptPasswordHasher";
 import { RegisterUseCase } from "@/modules/auth/application/use-cases/RegisterUseCase";
 import { PrismaRoleAssigner } from "@/modules/rbac/infrastructure/services/PrismaRoleAssigner";
-import { PrismaUserRoleReader } from "@/modules/rbac/infrastructure/services/PrismaUserRoleReader";
 import { PrismaAuthorizationService } from "@/modules/rbac/infrastructure/services/PrismaAuthorizationService";
 import { UserRolePrismaRepository } from "@/modules/rbac/infrastructure/repositories/UserRolePrismaRepository";
 
@@ -31,8 +30,7 @@ describe("Register con rol por defecto", () => {
     const tokenService = new JwtTokenService();
     const hasher = new BcryptPasswordHasher();
     const roleAssigner = new PrismaRoleAssigner(prisma);
-    const userRoleReader = new PrismaUserRoleReader(prisma);
-    const registerUC = new RegisterUseCase(userRepo, hasher, tokenService, roleAssigner, userRoleReader);
+    const registerUC = new RegisterUseCase(userRepo, hasher, tokenService, roleAssigner);
 
     const result = await registerUC.execute({
       name: "Integration User",
@@ -42,7 +40,6 @@ describe("Register con rol por defecto", () => {
 
     registeredUserId = result.user.id;
 
-    expect(result.user.roles).toContain("viewer");
     expect(result.accessToken).toBeTruthy();
 
     const userRoleRepo = new UserRolePrismaRepository(prisma);

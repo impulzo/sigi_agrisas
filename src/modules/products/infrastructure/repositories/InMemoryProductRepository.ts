@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import {
   ProductRepository,
   ProductWithDepartment,
@@ -9,10 +10,8 @@ import { Product } from "../../domain/entities/Product";
 import { ProductNotFoundError } from "../../domain/errors/ProductNotFoundError";
 import { ProductCodeAlreadyInUseError } from "../../domain/errors/ProductCodeAlreadyInUseError";
 
-let idCounter = 0;
-
 function makeId(): string {
-  return `test-product-${++idCounter}`;
+  return randomUUID();
 }
 
 export class InMemoryProductRepository implements ProductRepository {
@@ -24,7 +23,7 @@ export class InMemoryProductRepository implements ProductRepository {
   }
 
   private wrap(product: Product): ProductWithDepartment {
-    return { product, departmentName: this.departmentNames.get(product.departmentId) ?? "" };
+    return { product, departmentName: this.departmentNames.get(product.departmentId) ?? "", taxRateCode: null, providerName: null, providerId: null };
   }
 
   async findAll({
@@ -69,8 +68,11 @@ export class InMemoryProductRepository implements ProductRepository {
       unit: data.unit,
       satProductCode: data.satProductCode ?? null,
       departmentId: data.departmentId,
+      taxRateId: data.taxRateId ?? null,
       ivaRate: data.ivaRate ?? null,
       iepsRate: data.iepsRate ?? null,
+      isTaxable: data.isTaxable ?? false,
+      imageUrl: null,
       isActive: data.isActive ?? true,
       createdAt: now,
       updatedAt: now,
@@ -91,8 +93,11 @@ export class InMemoryProductRepository implements ProductRepository {
       unit: data.unit ?? existing.unit,
       satProductCode: "satProductCode" in data ? data.satProductCode ?? null : existing.satProductCode,
       departmentId: data.departmentId ?? existing.departmentId,
+      taxRateId: "taxRateId" in data ? data.taxRateId ?? null : existing.taxRateId,
       ivaRate: "ivaRate" in data ? data.ivaRate ?? null : existing.ivaRate,
       iepsRate: "iepsRate" in data ? data.iepsRate ?? null : existing.iepsRate,
+      isTaxable: "isTaxable" in data && data.isTaxable !== undefined ? data.isTaxable : existing.isTaxable,
+      imageUrl: "imageUrl" in data ? data.imageUrl ?? null : existing.imageUrl,
       isActive: data.isActive ?? existing.isActive,
       createdAt: existing.createdAt,
       updatedAt: new Date(),
@@ -110,6 +115,5 @@ export class InMemoryProductRepository implements ProductRepository {
   reset(): void {
     this.store = [];
     this.departmentNames.clear();
-    idCounter = 0;
   }
 }

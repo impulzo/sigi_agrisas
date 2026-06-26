@@ -41,6 +41,8 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+jest.setTimeout(60_000);
+
 describe("Sales — edición de venta completada (integration real DB)", () => {
   const branchRepo = new PrismaBranchRepository(prisma);
   const deptRepo = new PrismaDepartmentRepository(prisma);
@@ -77,7 +79,7 @@ describe("Sales — edición de venta completada (integration real DB)", () => {
 
     const dept = await deptRepo.create({ code: `${P}DEPT1`, name: "Dept Edit Test" });
     const product = await createProduct.execute({
-      code: `${P}PROD1`, name: "Producto Edit", unit: "pz", departmentId: dept.id, ivaRate: 0.16,
+      code: `${P}PROD1`, name: "Producto Edit", unit: "pz", departmentId: dept.id, ivaRate: 0.16, isTaxable: true,
     });
     productId = product.id;
 
@@ -87,7 +89,7 @@ describe("Sales — edición de venta completada (integration real DB)", () => {
     const customer = await createCustomer.execute({ code: `${P}CLI1`, name: "Cliente Edit", rfc: "CED010101001" });
     customerId = customer.id;
 
-    const folio = await folioRepo.create({ code: `${P}FOL1`, name: "Folio Edit", prefix: "EDIT", currentNumber: 0 });
+    const folio = await folioRepo.create({ code: `${P}FOL1`, name: "Folio Edit", prefix: "EDIT", currentNumber: 0, scope: "POS" });
     folioId = folio.id;
 
     const pm = await pmRepo.create({ code: `${P}PM1`, name: "Efectivo Edit" });

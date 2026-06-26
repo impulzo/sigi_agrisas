@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PaymentStatusBadge } from "./PaymentStatusBadge";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import type { Payment } from "../_logic/types/domain";
+import { useTableKeyboard } from "../../../_hooks/useTableKeyboard";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
 function fmt(n: number) { return MX.format(n); }
@@ -15,9 +16,13 @@ interface PaymentsTableProps {
   items: Payment[];
   isLoading: boolean;
   showBranch: boolean;
+  onEnter?: (item: Payment) => void;
 }
 
-export function PaymentsTable({ items, isLoading, showBranch }: PaymentsTableProps) {
+export function PaymentsTable({ items, isLoading, showBranch, onEnter }: PaymentsTableProps) {
+  const noop = () => {};
+  const { getRowProps } = useTableKeyboard(items, onEnter ?? noop);
+
   if (isLoading) {
     return (
       <div className="p-4 space-y-2">
@@ -48,12 +53,16 @@ export function PaymentsTable({ items, isLoading, showBranch }: PaymentsTablePro
           </tr>
         </thead>
         <tbody>
-          {items.map((p) => {
+          {items.map((p, idx) => {
             const folioLabel = p.folioPrefix
               ? `${p.folioPrefix}${p.folioNumber}`
               : String(p.folioNumber);
             return (
-              <tr key={p.id} className="border-b border-outline-variant/40 hover:bg-surface-container-low transition-colors">
+              <tr
+                key={p.id}
+                {...getRowProps(idx)}
+                className="border-b border-outline-variant/40 hover:bg-surface-container-low focus:bg-surface-container focus:outline-none transition-colors cursor-default"
+              >
                 <td className="px-4 py-3 font-mono text-on-surface-variant">{folioLabel}</td>
                 <td className="px-4 py-3">
                   {p.saleFolioCode ? (

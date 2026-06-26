@@ -181,6 +181,7 @@ export function InventoryPage() {
                 onAdjust={(item) => { setAdjustError(null); setModal({ type: "adjust", item }); }}
                 onEdit={(item) => setModal({ type: "edit", item })}
                 onRemove={(item) => setConfirmRemoveId(item.productId)}
+                onEnter={canWrite === true ? (item) => { setAdjustError(null); setModal({ type: "adjust", item }); } : undefined}
               />
               <CatalogPagination
                 page={page}

@@ -43,4 +43,5 @@ export interface ProviderRepository {
   create(data: CreateProviderData): Promise<Provider>;
   update(id: string, data: UpdateProviderData): Promise<Provider>;
   softDelete(id: string): Promise<void>;
+  countActiveDepartmentsByProvider(providerId: string): Promise<number>;
 }

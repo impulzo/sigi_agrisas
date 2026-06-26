@@ -18,12 +18,12 @@ const mockUseFoliosOptions = useFoliosOptions as jest.MockedFunction<typeof useF
 const mockUsePaymentMethodsOptions = usePaymentMethodsOptions as jest.MockedFunction<typeof usePaymentMethodsOptions>;
 const mockRegisterPayment = registerPayment as jest.MockedFunction<typeof registerPayment>;
 
-const FOLIO_RECIBO = { id: "f-recibo", code: "RECIBO", name: "Recibo", prefix: "RECIBO-", currentNumber: 1, isActive: true };
-const FOLIO_FACT = { id: "f-fact", code: "FACT", name: "Factura", prefix: "F-", currentNumber: 1, isActive: true };
+const FOLIO_RB = { id: "f-rb", code: "RB", name: "Recibo de Pago - Cobranza", prefix: "RB-", scope: "OPERATIONS" as const, currentNumber: 1, isActive: true };
+const FOLIO_AB = { id: "f-ab", code: "AB", name: "Cobranza/Abono", prefix: "AB-", scope: "OPERATIONS" as const, currentNumber: 1, isActive: true };
 const METHOD = { id: "pm1", code: "EFE", name: "Efectivo", isActive: true };
 
 function setup() {
-  mockUseFoliosOptions.mockReturnValue({ options: [FOLIO_RECIBO, FOLIO_FACT], isLoading: false, refresh: jest.fn() });
+  mockUseFoliosOptions.mockReturnValue({ options: [FOLIO_RB, FOLIO_AB], isLoading: false, refresh: jest.fn() });
   mockUsePaymentMethodsOptions.mockReturnValue({ options: [METHOD], isLoading: false, refresh: jest.fn() });
 }
 
@@ -37,10 +37,10 @@ describe("RegisterPaymentModal", () => {
     jest.clearAllMocks();
   });
 
-  it("preselecciona folio RECIBO cuando está disponible", () => {
+  it("preselecciona folio RB cuando está disponible", () => {
     render(<RegisterPaymentModal saleId="s1" dueAmount={500} onSuccess={jest.fn()} onClose={jest.fn()} />);
     const folioSelect = screen.getByLabelText(/Folio de recibo/i) as HTMLSelectElement;
-    expect(folioSelect.value).toBe("f-recibo");
+    expect(folioSelect.value).toBe("f-rb");
   });
 
   it("muestra el saldo pendiente como hint", () => {
@@ -64,7 +64,7 @@ describe("RegisterPaymentModal", () => {
     // Wait for effects to flush (folioId + paymentMethodId selects)
     await waitFor(() => {
       const sel = screen.getByLabelText(/Folio de recibo/i) as HTMLSelectElement;
-      expect(sel.value).toBe("f-recibo");
+      expect(sel.value).toBe("f-rb");
     });
     fireEvent.change(screen.getByLabelText(/Monto/i), { target: { value: "500" } });
     await act(async () => {

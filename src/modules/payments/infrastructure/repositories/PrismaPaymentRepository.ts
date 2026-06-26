@@ -22,6 +22,8 @@ import { SaleNotPayableError } from "../../domain/errors/SaleNotPayableError";
 import { BranchScopeViolationError } from "../../domain/errors/BranchScopeViolationError";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
+import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
+import { FolioScope } from "@/shared/domain/types/FolioScope";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -95,9 +97,11 @@ export class PrismaPaymentRepository implements PaymentRepository {
         throw new BranchScopeViolationError();
       }
 
-      // Validate folio is active
+      // Validate folio is active + scope is OPERATIONS
       const folioRow = await tx.folio.findUnique({ where: { id: input.folioId } });
       if (!folioRow || !folioRow.isActive) throw new InactiveResourceError("Folio");
+      if (folioRow.scope !== "OPERATIONS")
+        throw new FolioScopeMismatchError("OPERATIONS", folioRow.scope as FolioScope);
 
       // Validate paymentMethod is active
       const pmRow = await tx.paymentMethod.findUnique({ where: { id: input.paymentMethodId } });

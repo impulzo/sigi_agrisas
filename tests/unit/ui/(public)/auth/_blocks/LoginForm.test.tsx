@@ -14,6 +14,11 @@ jest.mock("next/link", () => {
   };
 });
 
+jest.mock("next/navigation", () => ({
+  useSearchParams: () => ({ get: () => null }),
+  useRouter: () => ({ replace: jest.fn() }),
+}));
+
 const defaultHookState = {
   values: { email: "", password: "" },
   errors: {},

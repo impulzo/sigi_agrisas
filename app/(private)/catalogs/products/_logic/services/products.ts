@@ -22,8 +22,14 @@ export function toProduct(dto: ProductDto): Product {
     satProductCode: dto.satProductCode,
     departmentId: dto.departmentId,
     departmentName: dto.departmentName,
+    isTaxable: dto.isTaxable,
+    taxRateId: dto.taxRateId ?? null,
+    taxRateCode: dto.taxRateCode ?? null,
+    providerId: dto.providerId ?? null,
+    providerName: dto.providerName ?? null,
     ivaRate: dto.ivaRate,
     iepsRate: dto.iepsRate,
+    imageUrl: dto.imageUrl ?? null,
     isActive: dto.isActive,
     createdAt: new Date(dto.createdAt),
     updatedAt: new Date(dto.updatedAt),
@@ -42,7 +48,7 @@ async function safeRethrow(err: unknown): Promise<never> {
 }
 
 export async function listProducts(
-  { page, pageSize, includeInactive, search, departmentId }: ListProductsParams,
+  { page, pageSize, includeInactive, search, departmentId, providerId }: ListProductsParams,
   fetchImpl = authFetch,
   signal?: AbortSignal,
 ): Promise<{ items: Product[]; total: number; page: number; pageSize: number }> {
@@ -51,6 +57,7 @@ export async function listProducts(
   const trimmed = search?.trim();
   if (trimmed && trimmed.length >= 2) params.set("search", trimmed);
   if (departmentId) params.set("departmentId", departmentId);
+  if (providerId) params.set("providerId", providerId);
 
   let res: Response;
   try {

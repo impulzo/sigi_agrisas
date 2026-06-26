@@ -26,6 +26,7 @@ import { QuoteNotAuthorizedError } from "@/modules/quotes/domain/errors/QuoteNot
 import { QuoteAlreadyConvertedError } from "@/modules/quotes/domain/errors/QuoteAlreadyConvertedError";
 import { QuoteAlreadyCancelledError } from "@/modules/quotes/domain/errors/QuoteAlreadyCancelledError";
 import { QuoteExpiredError } from "@/modules/quotes/domain/errors/QuoteExpiredError";
+import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 
 const BRANCH_ID = "11111111-1111-1111-1111-111111111111";
 const CUSTOMER_ID = "22222222-2222-2222-2222-222222222222";
@@ -48,7 +49,7 @@ function makeLookups(overrides: Partial<PosLookupService> = {}): PosLookupServic
     },
     async getFolio(id) {
       if (overrides.getFolio) return overrides.getFolio(id);
-      return { id, code: "COT", prefix: "COT", isActive: true };
+      return { id, code: "COT", prefix: "COT", scope: "POS", isActive: true };
     },
     async getPaymentMethod(id) {
       if (overrides.getPaymentMethod) return overrides.getPaymentMethod(id);
@@ -126,7 +127,7 @@ describe("CreateQuoteUseCase", () => {
       repo,
       makeLookups({
         async getFolio(id) {
-          return { id, code: "COT", prefix: null, isActive: false };
+          return { id, code: "COT", prefix: null, scope: "POS", isActive: false };
         },
       })
     );
@@ -150,6 +151,31 @@ describe("CreateQuoteUseCase", () => {
     await expect(
       uc.execute({ ...baseCreateReq, expiresAt: "2020-01-01T00:00:00Z" }, USER_ID)
     ).rejects.toThrow(/expiresAt/);
+  });
+
+  it("rechaza folio con scope OPERATIONS (espera POS)", async () => {
+    const uc = new CreateQuoteUseCase(
+      repo,
+      makeLookups({
+        async getFolio(id) { return { id, code: "RB", prefix: "RB-", scope: "OPERATIONS", isActive: true }; },
+      })
+    );
+    const err = await uc.execute(baseCreateReq, USER_ID).catch((e) => e);
+    expect(err).toBeInstanceOf(FolioScopeMismatchError);
+    expect(err.expected).toBe("POS");
+    expect(err.actual).toBe("OPERATIONS");
+  });
+
+  it("rechaza folio con scope INVENTORY (espera POS)", async () => {
+    const uc = new CreateQuoteUseCase(
+      repo,
+      makeLookups({
+        async getFolio(id) { return { id, code: "TS", prefix: "TS-", scope: "INVENTORY", isActive: true }; },
+      })
+    );
+    const err = await uc.execute(baseCreateReq, USER_ID).catch((e) => e);
+    expect(err).toBeInstanceOf(FolioScopeMismatchError);
+    expect(err.actual).toBe("INVENTORY");
   });
 });
 
@@ -421,5 +447,32 @@ describe("ConvertQuoteToSaleUseCase", () => {
       USER_ID
     );
     expect(dto.items[0].unitPrice).toBe(100);
+  });
+
+  it("rechaza folio fiscal con scope OPERATIONS al convertir (espera POS)", async () => {
+    const uc = new ConvertQuoteToSaleUseCase(
+      qRepo,
+      sRepo,
+      makeLookups({
+        async getFolio(id) { return { id, code: "RB", prefix: "RB-", scope: "OPERATIONS", isActive: true }; },
+      })
+    );
+    const err = await uc.execute(id, { paymentMethodId: PAYMENT_ID, folioId: FISCAL_FOLIO_ID }, USER_ID).catch((e) => e);
+    expect(err).toBeInstanceOf(FolioScopeMismatchError);
+    expect(err.expected).toBe("POS");
+    expect(err.actual).toBe("OPERATIONS");
+  });
+
+  it("rechaza folio fiscal con scope INVENTORY al convertir (espera POS)", async () => {
+    const uc = new ConvertQuoteToSaleUseCase(
+      qRepo,
+      sRepo,
+      makeLookups({
+        async getFolio(id) { return { id, code: "TS", prefix: "TS-", scope: "INVENTORY", isActive: true }; },
+      })
+    );
+    const err = await uc.execute(id, { paymentMethodId: PAYMENT_ID, folioId: FISCAL_FOLIO_ID }, USER_ID).catch((e) => e);
+    expect(err).toBeInstanceOf(FolioScopeMismatchError);
+    expect(err.actual).toBe("INVENTORY");
   });
 });

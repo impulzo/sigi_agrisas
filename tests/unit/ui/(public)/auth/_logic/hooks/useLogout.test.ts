@@ -1,38 +1,40 @@
+/**
+ * @jest-environment jsdom
+ */
 import { renderHook, act } from "@testing-library/react";
 import { useLogout } from "../../../../../../../app/(public)/auth/_logic/hooks/useLogout";
-import { NetworkError } from "../../../../../../../app/_lib/authFetch";
 
-const mockPush = jest.fn();
-
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
+jest.mock("../../../../../../../app/_lib/logout", () => ({
+  logoutClient: jest.fn(),
 }));
 
-jest.mock("../../../../../../../app/(public)/auth/_logic/services/logout", () => ({
-  logout: jest.fn(),
+jest.mock("../../../../../../../app/_lib/session/refreshScheduler", () => ({
+  cancel: jest.fn(),
+  schedule: jest.fn(),
+  _getDelay: jest.fn(),
 }));
 
-const logoutMock: jest.Mock =
-  require("../../../../../../../app/(public)/auth/_logic/services/logout").logout;
+import { logoutClient } from "../../../../../../../app/_lib/logout";
+const logoutMock = logoutClient as jest.Mock;
 
 describe("useLogout", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    logoutMock.mockResolvedValue(undefined);
   });
 
-  it("llama al servicio y redirige a /auth/login en éxito", async () => {
-    logoutMock.mockResolvedValue(undefined);
+  it("calls logoutClient('manual') on logout", async () => {
     const { result } = renderHook(() => useLogout());
 
     await act(async () => {
       await result.current.logout();
     });
 
+    expect(logoutMock).toHaveBeenCalledWith("manual");
     expect(logoutMock).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith("/auth/login");
   });
 
-  it("isLoading es true durante la operación", async () => {
+  it("isLoading is true during operation", async () => {
     let resolve!: () => void;
     logoutMock.mockReturnValue(new Promise<void>((r) => { resolve = r; }));
 
@@ -42,28 +44,16 @@ describe("useLogout", () => {
     expect(result.current.isLoading).toBe(true);
 
     await act(async () => { resolve(); });
-    expect(mockPush).toHaveBeenCalledWith("/auth/login");
   });
 
-  it("redirige a /auth/login aunque el servicio lance NetworkError", async () => {
-    logoutMock.mockRejectedValue(new NetworkError());
-    const { result } = renderHook(() => useLogout());
-
-    await act(async () => {
-      await result.current.logout();
-    });
-
-    expect(mockPush).toHaveBeenCalledWith("/auth/login");
-  });
-
-  it("no llama al servicio si isLoading ya es true (doble click)", async () => {
+  it("does not call logoutClient a second time while loading (double click)", async () => {
     let resolve!: () => void;
     logoutMock.mockReturnValue(new Promise<void>((r) => { resolve = r; }));
 
     const { result } = renderHook(() => useLogout());
 
     act(() => { result.current.logout(); });
-    act(() => { result.current.logout(); }); // segundo click ignorado
+    act(() => { result.current.logout(); }); // ignored
 
     await act(async () => { resolve(); });
 

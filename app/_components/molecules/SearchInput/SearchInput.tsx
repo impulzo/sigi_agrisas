@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent } from "react";
+import { ChangeEvent, RefObject } from "react";
 import { cn } from "../../../_lib/cn";
 import { Icon } from "../../atoms/Icon/Icon";
 
@@ -9,6 +9,7 @@ interface SearchInputProps {
   value?: string;
   onChange?: (value: string) => void;
   className?: string;
+  inputRef?: RefObject<HTMLInputElement>;
 }
 
 export function SearchInput({
@@ -16,6 +17,7 @@ export function SearchInput({
   value,
   onChange,
   className,
+  inputRef,
 }: SearchInputProps) {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     onChange?.(e.target.value);
@@ -30,10 +32,12 @@ export function SearchInput({
     >
       <Icon name="search" className="text-on-surface-variant" />
       <input
+        ref={inputRef}
         type="search"
         value={value ?? ""}
         onChange={handleChange}
         placeholder={placeholder}
+        aria-keyshortcuts="Control+F"
         className="bg-transparent border-none focus:outline-none focus:ring-0 text-body-md placeholder:text-on-surface-variant w-64"
       />
     </div>

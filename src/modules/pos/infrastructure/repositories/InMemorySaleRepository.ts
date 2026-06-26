@@ -180,6 +180,14 @@ export class InMemorySaleRepository implements SaleRepository {
     return updated;
   }
 
+  async markReturnedTotal(saleId: string): Promise<void> {
+    const idx = this.store.findIndex((s) => s.sale.id === saleId);
+    if (idx === -1) throw new SaleNotFoundError(saleId);
+    const existing = this.store[idx];
+    const sale = Sale.create({ ...existing.sale, status: "returned_total", updatedAt: new Date() });
+    this.store[idx] = { sale, joined: existing.joined };
+  }
+
   reset(): void {
     this.store = [];
     idCounter = 0;
