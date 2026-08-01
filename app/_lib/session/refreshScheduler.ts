@@ -1,4 +1,5 @@
 import { decodeJwtPayload } from "../jwt";
+import { setAccessToken } from "./accessToken";
 
 interface JwtExp {
   exp: number;
@@ -18,6 +19,11 @@ function getDelay(token: string): number {
 }
 
 async function doRefresh(): Promise<void> {
+  await refreshNow();
+}
+
+/** Refresca inmediatamente (sin esperar el timer). Usado por el scheduler y por el bootstrap en frío. */
+export async function refreshNow(onRefreshed?: OnRefreshed): Promise<string | null> {
   try {
     const res = await fetch("/api/v1/auth/refresh", {
       method: "POST",
@@ -25,16 +31,17 @@ async function doRefresh(): Promise<void> {
     });
     if (!res.ok) {
       // refresh failed — let authFetch handle the 401 path
-      return;
+      return null;
     }
     const { accessToken } = (await res.json()) as { accessToken: string };
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("accessToken", accessToken);
-    }
+    setAccessToken(accessToken);
     onRefreshedCallback?.(accessToken);
+    onRefreshed?.(accessToken);
     schedule(accessToken);
+    return accessToken;
   } catch {
     // network error — silent; authFetch will handle 401s defensively
+    return null;
   }
 }
 

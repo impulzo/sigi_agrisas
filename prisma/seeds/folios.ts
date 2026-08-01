@@ -33,6 +33,7 @@ const CANONICAL_FOLIOS: readonly CanonicalFolio[] = [
   { code: "AB", name: "Cobranza/Abono", prefix: "AB-", scope: "OPERATIONS" },
   { code: "DEV", name: "Devolución", prefix: "DEV-", scope: "OPERATIONS" },
   { code: "CP", name: "Compras", prefix: "CP-", scope: "OPERATIONS" },
+  { code: "TRI", name: "Traspaso interno (sin Carta Porte)", prefix: "TRI-", scope: "INVENTORY" },
 ] as const;
 
 const CANONICAL_CODES = CANONICAL_FOLIOS.map((f) => f.code);

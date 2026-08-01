@@ -6,7 +6,9 @@ import {
   cancel,
   scheduleBase,
   setScheduleOverride,
+  refreshNow,
 } from "../../_lib/session/refreshScheduler";
+import { setAccessToken } from "../../_lib/session/accessToken";
 import { claimRefreshLeadership } from "../../_lib/session/claimRefreshLeadership";
 import { logoutClient, setLogoutChannel } from "../../_lib/logout";
 import { useInactivityTimer } from "../../_hooks/useInactivityTimer";
@@ -33,53 +35,71 @@ export function SessionLifecycleProvider({ children }: { children: React.ReactNo
   useEffect(() => {
     const token =
       typeof window !== "undefined" ? sessionStorage.getItem("accessToken") : null;
-    if (token) schedule(token);
 
-    // BroadcastChannel for cross-tab coordination
-    if (typeof BroadcastChannel === "undefined") return;
+    // Sin BroadcastChannel no hay coordinación entre pestañas: cada pestaña se vale sola.
+    if (typeof BroadcastChannel === "undefined") {
+      if (token) {
+        schedule(token);
+      } else {
+        refreshNow();
+      }
+      return;
+    }
 
     const channel = new BroadcastChannel("agrisas-auth");
     channelRef.current = channel;
     setLogoutChannel(channel);
 
-    // Override schedule with leader-election wrapper — avoids mutating the ES module namespace
-    setScheduleOverride(async (newToken: string, cb?: (t: string) => void) => {
-      const isLeader = await claimRefreshLeadership(channel, TAB_ID);
-      if (isLeader) {
-        scheduleBase(newToken, (refreshedToken: string) => {
+    // Elección de líder: sólo una pestaña ejecuta `run`; las demás esperan su broadcast
+    // "refreshed" y sólo corren `run` ellas mismas si el líder no responde en 5 s (crash).
+    function runElected(run: (onDone: (token: string) => void) => void): void {
+      claimRefreshLeadership(channel, TAB_ID).then((isLeader) => {
+        const onDone = (refreshedToken: string) => {
           channel.postMessage({ type: "refreshed", accessToken: refreshedToken });
-          cb?.(refreshedToken);
-        });
-        return;
-      }
-      // Non-leader: give winner 5 s to broadcast "refreshed".
-      // If it never arrives (leader crashed), refresh independently.
-      let settled = false;
-      const fallbackTimer = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        scheduleBase(newToken, (refreshedToken: string) => {
-          channel.postMessage({ type: "refreshed", accessToken: refreshedToken });
-          cb?.(refreshedToken);
-        });
-      }, 5_000);
+        };
+        if (isLeader) {
+          run(onDone);
+          return;
+        }
+        let settled = false;
+        const fallbackTimer = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          run(onDone);
+        }, 5_000);
+        function onceRefreshed(evt: MessageEvent<AuthMessage>) {
+          if (evt.data.type !== "refreshed") return;
+          settled = true;
+          clearTimeout(fallbackTimer);
+          channel.removeEventListener("message", onceRefreshed);
+        }
+        channel.addEventListener("message", onceRefreshed);
+      });
+    }
 
-      function onceRefreshed(evt: MessageEvent<AuthMessage>) {
-        if (evt.data.type !== "refreshed") return;
-        settled = true;
-        clearTimeout(fallbackTimer);
-        channel.removeEventListener("message", onceRefreshed);
-      }
-      channel.addEventListener("message", onceRefreshed);
+    // Override schedule with leader-election wrapper — avoids mutating the ES module namespace
+    setScheduleOverride((newToken: string, cb?: (t: string) => void) => {
+      runElected((onDone) => {
+        scheduleBase(newToken, (refreshedToken: string) => {
+          onDone(refreshedToken);
+          cb?.(refreshedToken);
+        });
+      });
     });
+
+    if (token) {
+      schedule(token);
+    } else {
+      // Bootstrap en frío: pestaña nueva/reload sin accessToken en memoria pero con
+      // cookie refreshToken válida (por eso el Server Component ya renderizó autenticado).
+      runElected((onDone) => { refreshNow(onDone); });
+    }
 
     channel.onmessage = (evt: MessageEvent<AuthMessage>) => {
       const msg = evt.data;
 
       if (msg.type === "refreshed" && msg.accessToken) {
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem("accessToken", msg.accessToken);
-        }
+        setAccessToken(msg.accessToken);
         // Non-leaders reschedule directly via base to avoid re-entering election
         scheduleBase(msg.accessToken);
       }
