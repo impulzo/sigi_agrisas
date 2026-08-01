@@ -17,13 +17,26 @@ function makeId(): string {
 export class InMemoryProductRepository implements ProductRepository {
   private store: Product[] = [];
   private departmentNames = new Map<string, string>();
+  private taxRates = new Map<string, { code: string; name: string; rate: number }>();
 
   setDepartmentName(departmentId: string, name: string): void {
     this.departmentNames.set(departmentId, name);
   }
 
+  setTaxRate(taxRateId: string, data: { code: string; name: string; rate: number }): void {
+    this.taxRates.set(taxRateId, data);
+  }
+
   private wrap(product: Product): ProductWithDepartment {
-    return { product, departmentName: this.departmentNames.get(product.departmentId) ?? "", taxRateCode: null, providerName: null, providerId: null };
+    const taxRate = product.taxRateId ? this.taxRates.get(product.taxRateId) ?? null : null;
+    return {
+      product,
+      departmentName: this.departmentNames.get(product.departmentId) ?? "",
+      taxRateCode: taxRate?.code ?? null,
+      taxRate: taxRate && product.taxRateId ? { id: product.taxRateId, code: taxRate.code, name: taxRate.name, rate: taxRate.rate } : null,
+      providerName: null,
+      providerId: null,
+    };
   }
 
   async findAll({

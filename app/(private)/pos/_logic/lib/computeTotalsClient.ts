@@ -17,6 +17,8 @@ export interface ComputedLine {
 export interface TotalsResult {
   lines: ComputedLine[];
   subtotal: number;
+  ivaTotal: number;
+  iepsTotal: number;
   taxTotal: number;
   total: number;
 }
@@ -53,12 +55,11 @@ export function computeTotalsClient(lines: TotalsLine[]): TotalsResult {
     return { lineSubtotal, lineIva, lineIeps, lineTotal };
   });
 
-  const subtotal = bankersRound(computed.reduce((sum, l) => sum + l.lineSubtotal, 0), 4);
-  const taxTotal = bankersRound(
-    computed.reduce((sum, l) => sum + l.lineIva + l.lineIeps, 0),
-    4
-  );
-  const total = bankersRound(subtotal + taxTotal, 4);
+  const subtotal  = bankersRound(computed.reduce((sum, l) => sum + l.lineSubtotal, 0), 4);
+  const ivaTotal  = bankersRound(computed.reduce((sum, l) => sum + l.lineIva,  0), 4);
+  const iepsTotal = bankersRound(computed.reduce((sum, l) => sum + l.lineIeps, 0), 4);
+  const taxTotal  = bankersRound(ivaTotal + iepsTotal, 4);
+  const total     = bankersRound(subtotal + taxTotal, 4);
 
-  return { lines: computed, subtotal, taxTotal, total };
+  return { lines: computed, subtotal, ivaTotal, iepsTotal, taxTotal, total };
 }

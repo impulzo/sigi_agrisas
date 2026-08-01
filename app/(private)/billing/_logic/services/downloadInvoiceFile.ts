@@ -16,7 +16,7 @@ export async function downloadInvoiceFile(
 
   const disposition = res.headers.get("Content-Disposition") ?? "";
   const filenameMatch = /filename="?([^";]+)"?/.exec(disposition);
-  const filename = filenameMatch?.[1] ?? `factura-${id.slice(-8)}.${format}`;
+  const filename = filenameMatch?.[1] ?? `factura-${id}.${format}`;
 
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);

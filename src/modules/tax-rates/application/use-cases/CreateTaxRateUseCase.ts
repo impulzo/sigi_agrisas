@@ -12,7 +12,14 @@ export class CreateTaxRateUseCase {
       code: req.code.toUpperCase().trim(),
       name: req.name,
       description: req.description ?? null,
+      satTaxCode: req.satTaxCode,
+      factorType: req.factorType,
+      displayValue: req.displayValue,
       rate: req.rate,
+      transferredAccount: req.transferredAccount ?? null,
+      pendingTransferredAccount: req.pendingTransferredAccount ?? null,
+      creditedAccount: req.creditedAccount ?? null,
+      pendingCreditedAccount: req.pendingCreditedAccount ?? null,
       isActive: req.isActive ?? true,
     });
     return toTaxRateDto(taxRate);

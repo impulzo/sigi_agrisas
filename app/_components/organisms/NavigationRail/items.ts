@@ -16,8 +16,10 @@ export const primaryItems: RailItem[] = [
   { key: "quotes", href: "/quotes", icon: "request_quote", label: "Cotizaciones", requires: "quotes:read" },
   { key: "returns", href: "/returns", icon: "assignment_return", label: "Devoluciones", requires: "returns:read" },
   { key: "payments", href: "/payments", icon: "payments", label: "Abonos", requires: "payments:read" },
-  { key: "billing", href: "/billing", icon: "receipt_long", label: "Facturación", requires: "billing:read" },
+  { key: "billing", href: "/billing", icon: "description", label: "Facturación", requires: "billing:read" },
   { key: "inventory", href: "/inventory", icon: "inventory_2", label: "Inventario", requires: "inventory:read" },
+  { key: "waybills", href: "/waybills", icon: "swap_horiz", label: "Traspasos", requires: "waybills:read" },
+  { key: "reports", href: "/reports", icon: "summarize", label: "Reportes", requires: "reports:account_statements_read" },
   {
     key: "catalogs",
     href: "/catalogs",

@@ -36,6 +36,14 @@ export class InMemoryBranchRepository implements BranchRepository {
       email: data.email ?? null,
       isHeadquarters: data.isHeadquarters ?? false,
       isActive: data.isActive ?? true,
+      addressStreet: data.addressStreet ?? null,
+      addressExteriorNumber: data.addressExteriorNumber ?? null,
+      addressInteriorNumber: data.addressInteriorNumber ?? null,
+      addressNeighborhood: data.addressNeighborhood ?? null,
+      addressMunicipality: data.addressMunicipality ?? null,
+      addressState: data.addressState ?? null,
+      addressCountry: data.addressCountry ?? (data.addressStreet ? "MEX" : null),
+      addressZipCode: data.addressZipCode ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -58,6 +66,18 @@ export class InMemoryBranchRepository implements BranchRepository {
       email: data.email !== undefined ? data.email : existing.email,
       isHeadquarters: data.isHeadquarters !== undefined ? data.isHeadquarters : existing.isHeadquarters,
       isActive: data.isActive !== undefined ? data.isActive : existing.isActive,
+      addressStreet: data.addressStreet !== undefined ? data.addressStreet : existing.addressStreet,
+      addressExteriorNumber:
+        data.addressExteriorNumber !== undefined ? data.addressExteriorNumber : existing.addressExteriorNumber,
+      addressInteriorNumber:
+        data.addressInteriorNumber !== undefined ? data.addressInteriorNumber : existing.addressInteriorNumber,
+      addressNeighborhood:
+        data.addressNeighborhood !== undefined ? data.addressNeighborhood : existing.addressNeighborhood,
+      addressMunicipality:
+        data.addressMunicipality !== undefined ? data.addressMunicipality : existing.addressMunicipality,
+      addressState: data.addressState !== undefined ? data.addressState : existing.addressState,
+      addressCountry: data.addressCountry !== undefined ? data.addressCountry : existing.addressCountry,
+      addressZipCode: data.addressZipCode !== undefined ? data.addressZipCode : existing.addressZipCode,
       createdAt: existing.createdAt,
       updatedAt: new Date(),
     });
@@ -76,6 +96,14 @@ export class InMemoryBranchRepository implements BranchRepository {
       email: existing.email,
       isHeadquarters: existing.isHeadquarters,
       isActive: false,
+      addressStreet: existing.addressStreet,
+      addressExteriorNumber: existing.addressExteriorNumber,
+      addressInteriorNumber: existing.addressInteriorNumber,
+      addressNeighborhood: existing.addressNeighborhood,
+      addressMunicipality: existing.addressMunicipality,
+      addressState: existing.addressState,
+      addressCountry: existing.addressCountry,
+      addressZipCode: existing.addressZipCode,
       createdAt: existing.createdAt,
       updatedAt: new Date(),
     }));

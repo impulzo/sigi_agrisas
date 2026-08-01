@@ -14,6 +14,12 @@ import { SaleJoinedFields } from "../../application/mappers/toSaleDto";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { SaleHasActivePaymentsError } from "@/modules/payments/domain/errors/SaleHasActivePaymentsError";
 import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
+import { recordInventoryMovement } from "@/shared/infrastructure/inventory/recordInventoryMovement";
+
+/** Suma `days` días naturales a una fecha, devolviendo una nueva instancia. */
+function addDays(base: Date, days: number): Date {
+  return new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+}
 
 type PrismaSaleWithJoins = {
   id: string;
@@ -85,35 +91,6 @@ interface SnapshotLike {
   lineSubtotal: number;
   lineTax: number;
   lineTotal: number;
-}
-
-/**
- * Per item, decrement inventory in place; create the inventory row with a
- * negative initial quantity when no row exists. Sale path: negative is allowed.
- */
-async function decrementInventoryAllowNegative(
-  tx: TxClient,
-  branchId: string,
-  items: ReadonlyArray<{ productId: string; quantity: number }>
-): Promise<void> {
-  for (const item of items) {
-    const updated = await tx.$executeRaw`
-      UPDATE branch_inventory
-      SET quantity = quantity - ${item.quantity}::numeric, updated_at = NOW()
-      WHERE branch_id = ${branchId} AND product_id = ${item.productId}
-    `;
-    if (updated === 0) {
-      await tx.branchInventory.create({
-        data: {
-          branchId,
-          productId: item.productId,
-          quantity: new Prisma.Decimal(-item.quantity),
-          reservedQuantity: new Prisma.Decimal(0),
-          reorderPoint: new Prisma.Decimal(0),
-        },
-      });
-    }
-  }
 }
 
 function toSaleItemCreate(it: SnapshotLike) {
@@ -272,10 +249,35 @@ export class PrismaSaleRepository implements SaleRepository {
 
     const summary = await this.prisma.$transaction(async (tx) => {
       const { folioNumber, folioCode } = await allocateFolio(tx, data.folioId);
-      await decrementInventoryAllowNegative(tx, data.branchId, data.items);
+      const completedAt = new Date();
 
-      // Credit sale: debit customer balance (increase debt)
+      for (const item of data.items) {
+        await recordInventoryMovement(tx, {
+          branchId: data.branchId,
+          productId: item.productId,
+          movementAt: completedAt,
+          movementType: "sale",
+          direction: "OUT",
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          customerId: data.customerId,
+          folioId: data.folioId,
+          folioCode,
+          folioNumber,
+          sourceType: "sale",
+          sourceId: saleId,
+        });
+      }
+
+      let dueDate: Date | null = null;
+
+      // Credit sale: debit customer balance (increase debt) + set due date
       if (data.paymentStatus !== "paid" && data.customerId) {
+        const cust = await tx.customer.findUnique({
+          where: { id: data.customerId },
+          select: { creditDays: true },
+        });
+        dueDate = addDays(completedAt, cust?.creditDays ?? 30);
         await tx.$executeRaw`
           UPDATE customers SET current_balance = current_balance + ${data.total}::numeric
           WHERE id = ${data.customerId}
@@ -300,7 +302,8 @@ export class PrismaSaleRepository implements SaleRepository {
           taxTotal: new Prisma.Decimal(data.taxTotal),
           total: new Prisma.Decimal(data.total),
           notes: data.notes,
-          completedAt: new Date(),
+          dueDate,
+          completedAt,
           items: { create: data.items.map(toSaleItemCreate) },
         },
       });
@@ -317,10 +320,35 @@ export class PrismaSaleRepository implements SaleRepository {
 
     const summary = await this.prisma.$transaction(async (tx) => {
       const { folioNumber, folioCode } = await allocateFolio(tx, data.folioId);
-      await decrementInventoryAllowNegative(tx, data.branchId, data.items);
+      const completedAt = new Date();
 
-      // Credit sale: debit customer balance (increase debt)
+      for (const item of data.items) {
+        await recordInventoryMovement(tx, {
+          branchId: data.branchId,
+          productId: item.productId,
+          movementAt: completedAt,
+          movementType: "sale",
+          direction: "OUT",
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          customerId: data.customerId,
+          folioId: data.folioId,
+          folioCode,
+          folioNumber,
+          sourceType: "sale",
+          sourceId: saleId,
+        });
+      }
+
+      let dueDate: Date | null = null;
+
+      // Credit sale: debit customer balance (increase debt) + set due date
       if (data.paymentStatus !== "paid" && data.customerId) {
+        const cust = await tx.customer.findUnique({
+          where: { id: data.customerId },
+          select: { creditDays: true },
+        });
+        dueDate = addDays(completedAt, cust?.creditDays ?? 30);
         await tx.$executeRaw`
           UPDATE customers SET current_balance = current_balance + ${data.total}::numeric
           WHERE id = ${data.customerId}
@@ -345,7 +373,8 @@ export class PrismaSaleRepository implements SaleRepository {
           taxTotal: new Prisma.Decimal(data.taxTotal),
           total: new Prisma.Decimal(data.total),
           notes: data.notes,
-          completedAt: new Date(),
+          dueDate,
+          completedAt,
           items: { create: data.items.map(toSaleItemCreate) },
         },
       });
@@ -390,14 +419,24 @@ export class PrismaSaleRepository implements SaleRepository {
         throw new SaleHasActivePaymentsError(activePayments.map((p) => p.id));
       }
 
-      // Restore stock
+      // Restore stock + record sale_cancel movement per line
+      const cancelledAt = new Date();
       for (const item of current.items) {
-        const qty = Number(item.quantity);
-        await tx.$executeRaw`
-          UPDATE branch_inventory
-          SET quantity = quantity + ${qty}::numeric, updated_at = NOW()
-          WHERE branch_id = ${current.branchId} AND product_id = ${item.productId}
-        `;
+        await recordInventoryMovement(tx, {
+          branchId: current.branchId,
+          productId: item.productId,
+          movementAt: cancelledAt,
+          movementType: "sale_cancel",
+          direction: "IN",
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          customerId: current.customerId,
+          folioId: current.folioId,
+          folioCode: current.folioCode,
+          folioNumber: current.folioNumber,
+          sourceType: "sale",
+          sourceId: id,
+        });
       }
 
       // Restore customer credit balance for credit sales (paymentStatus !== 'paid' means outstanding debt)
@@ -413,7 +452,7 @@ export class PrismaSaleRepository implements SaleRepository {
         where: { id },
         data: {
           status: "cancelled",
-          cancelledAt: new Date(),
+          cancelledAt,
           cancellationReason: reason,
         },
       });
@@ -442,14 +481,25 @@ export class PrismaSaleRepository implements SaleRepository {
         throw new SaleHasActivePaymentsError(activePayments.map((p) => p.id));
       }
 
+      const editedAt = new Date();
+
       // 1. Restore old items' stock
       for (const item of current.items) {
-        const qty = Number(item.quantity);
-        await tx.$executeRaw`
-          UPDATE branch_inventory
-          SET quantity = quantity + ${qty}::numeric, updated_at = NOW()
-          WHERE branch_id = ${current.branchId} AND product_id = ${item.productId}
-        `;
+        await recordInventoryMovement(tx, {
+          branchId: current.branchId,
+          productId: item.productId,
+          movementAt: editedAt,
+          movementType: "sale_edit_restore",
+          direction: "IN",
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          customerId: current.customerId,
+          folioId: current.folioId,
+          folioCode: current.folioCode,
+          folioNumber: current.folioNumber,
+          sourceType: "sale",
+          sourceId: id,
+        });
       }
 
       // 2. Delete old items
@@ -457,22 +507,21 @@ export class PrismaSaleRepository implements SaleRepository {
 
       // 3. Decrement new items' stock + insert new items
       for (const item of data.items) {
-        const updated = await tx.$executeRaw`
-          UPDATE branch_inventory
-          SET quantity = quantity - ${item.quantity}::numeric, updated_at = NOW()
-          WHERE branch_id = ${current.branchId} AND product_id = ${item.productId}
-        `;
-        if (updated === 0) {
-          await tx.branchInventory.create({
-            data: {
-              branchId: current.branchId,
-              productId: item.productId,
-              quantity: new Prisma.Decimal(-item.quantity),
-              reservedQuantity: new Prisma.Decimal(0),
-              reorderPoint: new Prisma.Decimal(0),
-            },
-          });
-        }
+        await recordInventoryMovement(tx, {
+          branchId: current.branchId,
+          productId: item.productId,
+          movementAt: editedAt,
+          movementType: "sale_edit_apply",
+          direction: "OUT",
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          customerId: data.customerId ?? current.customerId,
+          folioId: current.folioId,
+          folioCode: current.folioCode,
+          folioNumber: current.folioNumber,
+          sourceType: "sale",
+          sourceId: id,
+        });
         await tx.saleItem.create({
           data: {
             saleId: id,
@@ -517,7 +566,7 @@ export class PrismaSaleRepository implements SaleRepository {
           taxTotal: new Prisma.Decimal(data.taxTotal),
           total: new Prisma.Decimal(data.total),
           status: "edited",
-          editedAt: new Date(),
+          editedAt,
         },
       });
 

@@ -15,6 +15,7 @@ import { SaleReturnsSection } from "./SaleReturnsSection";
 import { SalePaymentsSection } from "./SalePaymentsSection";
 import { SaleInvoicesSection } from "../../billing/_blocks/SaleInvoicesSection";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
+import { TaxBreakdownRows } from "../../../_components/molecules/TaxBreakdownRows/TaxBreakdownRows";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 
@@ -197,10 +198,12 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
             <span className="text-on-surface-variant">Subtotal</span>
             <span className="tabular-nums">{fmt(sale.subtotal)}</span>
           </div>
-          <div className="flex justify-between text-body-sm">
-            <span className="text-on-surface-variant">Impuestos</span>
-            <span className="tabular-nums">{fmt(sale.taxTotal)}</span>
-          </div>
+          <TaxBreakdownRows
+            ivaTotal={sale.items.reduce((s, i) => s + i.lineIva, 0)}
+            iepsTotal={sale.items.reduce((s, i) => s + i.lineIeps, 0)}
+            format={fmt}
+            variant="sale"
+          />
           <div className="flex justify-between text-title-sm font-semibold border-t border-outline-variant pt-2">
             <span>Total</span>
             <span className="tabular-nums">{fmt(sale.total)}</span>

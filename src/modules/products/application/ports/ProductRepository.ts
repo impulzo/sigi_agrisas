@@ -4,6 +4,7 @@ export interface ProductWithDepartment {
   product: Product;
   departmentName: string;
   taxRateCode: string | null;
+  taxRate: { id: string; code: string; name: string; rate: number } | null;
   providerName: string | null;
   providerId: string | null;
 }

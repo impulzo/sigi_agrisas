@@ -1,0 +1,131 @@
+import { SalesCutRepository } from "../../application/ports/SalesCutRepository";
+import {
+  SalesCutFilters,
+  SalesCutAggregates,
+  BreakdownRow,
+} from "../../domain/value-objects/SalesCutFilters";
+
+export interface InMemCutSale {
+  id: string;
+  status: string; // completed | edited | cancelled
+  total: number;
+  subtotal: number;
+  taxTotal: number;
+  iva: number;
+  ieps: number;
+  branchId: string;
+  branchName: string;
+  cashierId: string;
+  cashierName: string;
+  paymentMethodId: string;
+  paymentMethodName: string;
+  createdAt: Date;
+}
+
+export interface InMemCutPayment {
+  amount: number;
+  status: string; // completed | cancelled
+  branchId: string;
+  createdAt: Date;
+}
+
+export interface InMemCutReturn {
+  refundTotal: number;
+  status: string; // completed | cancelled
+  branchId: string;
+  returnedAt: Date;
+}
+
+const ACTIVE = ["completed", "edited"];
+
+function endOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setUTCHours(23, 59, 59, 999);
+  return d;
+}
+
+export class InMemorySalesCutRepository implements SalesCutRepository {
+  constructor(
+    private readonly sales: InMemCutSale[],
+    private readonly payments: InMemCutPayment[] = [],
+    private readonly returns: InMemCutReturn[] = []
+  ) {}
+
+  async getAggregates(f: SalesCutFilters): Promise<SalesCutAggregates> {
+    const to = endOfDay(f.to);
+    const inPeriod = (d: Date) => d >= f.from && d <= to;
+    const matchesSale = (s: InMemCutSale) =>
+      inPeriod(s.createdAt) &&
+      (!f.branchId || s.branchId === f.branchId) &&
+      (!f.cashierId || s.cashierId === f.cashierId) &&
+      (!f.paymentMethodId || s.paymentMethodId === f.paymentMethodId);
+
+    const active = this.sales.filter((s) => matchesSale(s) && ACTIVE.includes(s.status));
+    const cancelled = this.sales.filter((s) => matchesSale(s) && s.status === "cancelled");
+
+    const sum = (arr: InMemCutSale[], pick: (s: InMemCutSale) => number) =>
+      arr.reduce((acc, s) => acc + pick(s), 0);
+
+    const group = (
+      keyOf: (s: InMemCutSale) => string,
+      labelOf: (s: InMemCutSale) => string
+    ): BreakdownRow[] => {
+      const map = new Map<string, BreakdownRow>();
+      for (const s of active) {
+        const key = keyOf(s);
+        const row = map.get(key) ?? {
+          key,
+          label: labelOf(s),
+          ticketCount: 0,
+          subtotal: 0,
+          taxTotal: 0,
+          total: 0,
+        };
+        row.ticketCount += 1;
+        row.subtotal += s.subtotal;
+        row.taxTotal += s.taxTotal;
+        row.total += s.total;
+        map.set(key, row);
+      }
+      return [...map.values()];
+    };
+
+    const dayKey = (s: InMemCutSale) => s.createdAt.toISOString().split("T")[0];
+
+    const payments = this.payments.filter(
+      (p) => inPeriod(p.createdAt) && p.status === "completed" && (!f.branchId || p.branchId === f.branchId)
+    );
+    const returns = this.returns.filter(
+      (r) => inPeriod(r.returnedAt) && r.status === "completed" && (!f.branchId || r.branchId === f.branchId)
+    );
+
+    return {
+      active: {
+        grossSales: sum(active, (s) => s.total),
+        ticketCount: active.length,
+        subtotal: sum(active, (s) => s.subtotal),
+        taxTotal: sum(active, (s) => s.taxTotal),
+      },
+      cancelled: {
+        count: cancelled.length,
+        total: sum(cancelled, (s) => s.total),
+      },
+      taxSplit: {
+        ivaTotal: sum(active, (s) => s.iva),
+        iepsTotal: sum(active, (s) => s.ieps),
+      },
+      byPaymentMethod: group((s) => s.paymentMethodId, (s) => s.paymentMethodName),
+      byDay: group(dayKey, dayKey),
+      byCashier: group((s) => s.cashierId, (s) => s.cashierName),
+      byBranch: group((s) => s.branchId, (s) => s.branchName),
+      paymentsReceived: {
+        count: payments.length,
+        total: payments.reduce((a, p) => a + p.amount, 0),
+      },
+      returnsRefunded: {
+        count: returns.length,
+        total: returns.reduce((a, r) => a + r.refundTotal, 0),
+      },
+    };
+  }
+}

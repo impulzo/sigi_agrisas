@@ -1,0 +1,27 @@
+import { StyleSheet } from "@react-pdf/renderer";
+
+export const styles = StyleSheet.create({
+  page: { padding: 30, fontFamily: "Helvetica", fontSize: 10 },
+  title: { fontSize: 18, fontWeight: "bold", marginBottom: 4 },
+  subtitle: { fontSize: 10, color: "#666", marginBottom: 16 },
+  headerSection: { marginBottom: 12, flexDirection: "row", gap: 16 },
+  headerCard: { borderWidth: 0.5, borderColor: "#ccc", borderRadius: 3, padding: 6, flex: 1 },
+  headerCardLabel: { fontSize: 8, color: "#666" },
+  headerCardValue: { fontSize: 12, fontWeight: "bold" },
+  table: { marginTop: 8 },
+  tableHeader: { flexDirection: "row", backgroundColor: "#1565C0", color: "white", paddingVertical: 5, paddingHorizontal: 4 },
+  tableRow: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "#ccc", paddingVertical: 4, paddingHorizontal: 4 },
+  tableRowEven: { backgroundColor: "#f9f9f9" },
+  colFecha: { width: "12%", fontSize: 7 },
+  colMovimiento: { width: "16%", fontSize: 7 },
+  colFolio: { width: "12%", fontSize: 7 },
+  colEntrada: { width: "10%", fontSize: 7, textAlign: "right" },
+  colSalida: { width: "10%", fontSize: 7, textAlign: "right" },
+  colSaldo: { width: "10%", fontSize: 7, textAlign: "right" },
+  colCosto: { width: "10%", fontSize: 7, textAlign: "right" },
+  colVenta: { width: "10%", fontSize: 7, textAlign: "right" },
+  colStatus: { width: "10%", fontSize: 7 },
+  headerCol: { color: "white", fontWeight: "bold", fontSize: 7 },
+  footer: { position: "absolute", bottom: 20, left: 30, right: 30, fontSize: 8, color: "#888", textAlign: "center" },
+  emptyMsg: { marginTop: 40, textAlign: "center", color: "#888", fontSize: 12 },
+});

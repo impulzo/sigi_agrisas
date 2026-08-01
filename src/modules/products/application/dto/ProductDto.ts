@@ -8,6 +8,7 @@ export interface ProductDto {
   departmentName: string;
   taxRateId: string | null;
   taxRateCode: string | null;
+  taxRate: { id: string; code: string; name: string; rate: number } | null;
   providerId: string | null;
   providerName: string | null;
   ivaRate: number | null;

@@ -12,6 +12,7 @@ import {
 import { Return } from "../../domain/entities/Return";
 import { ReturnItem } from "../../domain/entities/ReturnItem";
 import { ReturnStatus } from "../../domain/value-objects/ReturnStatus";
+import { recordInventoryMovement } from "@/shared/infrastructure/inventory/recordInventoryMovement";
 
 type PrismaReturnWithJoins = {
   id: string;
@@ -138,56 +139,6 @@ function toWithItems(row: PrismaReturnWithJoins): ReturnWithItems {
 }
 
 type TxClient = Prisma.TransactionClient;
-
-async function incrementInventory(
-  tx: TxClient,
-  branchId: string,
-  items: Array<{ productId: string; quantity: number }>
-): Promise<void> {
-  for (const item of items) {
-    const updated = await tx.$executeRaw`
-      UPDATE branch_inventory
-      SET quantity = quantity + ${item.quantity}::numeric, updated_at = NOW()
-      WHERE branch_id = ${branchId} AND product_id = ${item.productId}
-    `;
-    if (updated === 0) {
-      await tx.branchInventory.create({
-        data: {
-          branchId,
-          productId: item.productId,
-          quantity: new Prisma.Decimal(item.quantity),
-          reservedQuantity: new Prisma.Decimal(0),
-          reorderPoint: new Prisma.Decimal(0),
-        },
-      });
-    }
-  }
-}
-
-async function decrementInventory(
-  tx: TxClient,
-  branchId: string,
-  items: Array<{ productId: string; quantity: number }>
-): Promise<void> {
-  for (const item of items) {
-    const updated = await tx.$executeRaw`
-      UPDATE branch_inventory
-      SET quantity = quantity - ${item.quantity}::numeric, updated_at = NOW()
-      WHERE branch_id = ${branchId} AND product_id = ${item.productId}
-    `;
-    if (updated === 0) {
-      await tx.branchInventory.create({
-        data: {
-          branchId,
-          productId: item.productId,
-          quantity: new Prisma.Decimal(-item.quantity),
-          reservedQuantity: new Prisma.Decimal(0),
-          reorderPoint: new Prisma.Decimal(0),
-        },
-      });
-    }
-  }
-}
 
 export class PrismaReturnRepository implements ReturnRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -318,12 +269,32 @@ export class PrismaReturnRepository implements ReturnRepository {
     const returnId = randomUUID();
 
     const result = await this.prisma.$transaction(async (tx) => {
-      // Increment inventory per item
-      await incrementInventory(
-        tx,
-        data.branchId,
-        data.items.map((i) => ({ productId: i.productId, quantity: i.quantity }))
-      );
+      // Referenced sale's folio identifies the document being corrected (Return has no folio of its own).
+      const sale = await tx.sale.findUnique({
+        where: { id: data.saleId },
+        select: { folioId: true, folioCode: true, folioNumber: true },
+      });
+
+      // Record return movement + increment inventory per item
+      for (const item of data.items) {
+        await recordInventoryMovement(tx, {
+          branchId: data.branchId,
+          productId: item.productId,
+          movementAt: data.returnedAt,
+          movementType: "return",
+          direction: "IN",
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          customerId: data.customerId,
+          folioId: sale?.folioId ?? null,
+          folioCode: sale?.folioCode ?? null,
+          folioNumber: sale?.folioNumber ?? null,
+          originFolioCode: sale?.folioCode ?? null,
+          originFolioNumber: sale?.folioNumber ?? null,
+          sourceType: "return",
+          sourceId: returnId,
+        });
+      }
 
       // Insert return
       await tx.return.create({
@@ -391,14 +362,38 @@ export class PrismaReturnRepository implements ReturnRepository {
     const ret = await this.prisma.return.findUniqueOrThrow({ where: { id } });
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      // Decrement inventory to undo the return (allow negative)
-      await decrementInventory(tx, ret.branchId, itemsToUndo);
+      const sale = await tx.sale.findUnique({
+        where: { id: ret.saleId },
+        select: { folioId: true, folioCode: true, folioNumber: true },
+      });
+
+      const cancelledAt = new Date();
+
+      // Decrement inventory to undo the return (allow negative) + record return_cancel movement
+      for (const item of itemsToUndo) {
+        await recordInventoryMovement(tx, {
+          branchId: ret.branchId,
+          productId: item.productId,
+          movementAt: cancelledAt,
+          movementType: "return_cancel",
+          direction: "OUT",
+          quantity: item.quantity,
+          customerId: ret.customerId,
+          folioId: sale?.folioId ?? null,
+          folioCode: sale?.folioCode ?? null,
+          folioNumber: sale?.folioNumber ?? null,
+          originFolioCode: sale?.folioCode ?? null,
+          originFolioNumber: sale?.folioNumber ?? null,
+          sourceType: "return",
+          sourceId: id,
+        });
+      }
 
       return tx.return.update({
         where: { id },
         data: {
           status: "cancelled",
-          cancelledAt: new Date(),
+          cancelledAt,
           cancelledBy,
           cancellationReason,
         },

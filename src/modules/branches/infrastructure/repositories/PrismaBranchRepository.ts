@@ -14,6 +14,14 @@ type PrismaBranch = {
   email: string | null;
   isHeadquarters: boolean;
   isActive: boolean;
+  addressStreet: string | null;
+  addressExteriorNumber: string | null;
+  addressInteriorNumber: string | null;
+  addressNeighborhood: string | null;
+  addressMunicipality: string | null;
+  addressState: string | null;
+  addressCountry: string | null;
+  addressZipCode: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -27,6 +35,14 @@ function toDomain(row: PrismaBranch): Branch {
     email: row.email,
     isHeadquarters: row.isHeadquarters,
     isActive: row.isActive,
+    addressStreet: row.addressStreet,
+    addressExteriorNumber: row.addressExteriorNumber,
+    addressInteriorNumber: row.addressInteriorNumber,
+    addressNeighborhood: row.addressNeighborhood,
+    addressMunicipality: row.addressMunicipality,
+    addressState: row.addressState,
+    addressCountry: row.addressCountry,
+    addressZipCode: row.addressZipCode,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });
@@ -80,6 +96,14 @@ export class PrismaBranchRepository implements BranchRepository {
           email: data.email ?? null,
           isHeadquarters: data.isHeadquarters ?? false,
           isActive: data.isActive ?? true,
+          addressStreet: data.addressStreet ?? null,
+          addressExteriorNumber: data.addressExteriorNumber ?? null,
+          addressInteriorNumber: data.addressInteriorNumber ?? null,
+          addressNeighborhood: data.addressNeighborhood ?? null,
+          addressMunicipality: data.addressMunicipality ?? null,
+          addressState: data.addressState ?? null,
+          addressCountry: data.addressCountry ?? (data.addressStreet ? "MEX" : null),
+          addressZipCode: data.addressZipCode ?? null,
         },
       });
       return toDomain(row);

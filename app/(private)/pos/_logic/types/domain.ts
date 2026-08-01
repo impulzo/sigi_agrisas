@@ -18,6 +18,8 @@ export interface CartLine {
 
 export interface CartTotals {
   subtotal: number;
+  ivaTotal: number;
+  iepsTotal: number;
   taxTotal: number;
   total: number;
 }

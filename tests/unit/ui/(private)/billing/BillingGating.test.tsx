@@ -45,6 +45,8 @@ import { useCsdManager } from "../../../../../app/(private)/billing/_logic/hooks
 import { BillingListPage } from "../../../../../app/(private)/billing/_blocks/BillingListPage";
 import { NewInvoicePage } from "../../../../../app/(private)/billing/_blocks/NewInvoicePage";
 import { CsdManagerPage } from "../../../../../app/(private)/billing/_blocks/CsdManagerPage";
+import { InvoiceActionsBar } from "../../../../../app/(private)/billing/_blocks/InvoiceActionsBar";
+import type { Invoice } from "../../../../../app/(private)/billing/_logic/types/domain";
 
 const mockUseCurrentUser = useCurrentUser as jest.MockedFunction<typeof useCurrentUser>;
 const mockUseInvoicesList = useInvoicesList as jest.MockedFunction<typeof useInvoicesList>;
@@ -71,6 +73,10 @@ function setupList() {
     error: null,
     refresh: jest.fn(),
   });
+}
+
+function makeInvoice(overrides: Partial<Pick<Invoice, "id" | "status">>): Invoice {
+  return { id: "inv-1", status: "stamped", ...overrides } as unknown as Invoice;
 }
 
 function setupCsd() {
@@ -177,8 +183,7 @@ describe("InvoiceActionsBar — cancel button gating", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("renders cancel button when stamped + canCancel=true", () => {
-    const { InvoiceActionsBar } = require("../../../../../app/(private)/billing/_blocks/InvoiceActionsBar");
-    const invoice = { id: "inv-1", status: "stamped" } as Parameters<typeof InvoiceActionsBar>[0]["invoice"];
+    const invoice = makeInvoice({ status: "stamped" });
     render(
       <InvoiceActionsBar
         invoice={invoice}
@@ -193,8 +198,7 @@ describe("InvoiceActionsBar — cancel button gating", () => {
   });
 
   it("hides cancel button when canCancel=false", () => {
-    const { InvoiceActionsBar } = require("../../../../../app/(private)/billing/_blocks/InvoiceActionsBar");
-    const invoice = { id: "inv-1", status: "stamped" } as Parameters<typeof InvoiceActionsBar>[0]["invoice"];
+    const invoice = makeInvoice({ status: "stamped" });
     render(
       <InvoiceActionsBar
         invoice={invoice}
@@ -209,8 +213,7 @@ describe("InvoiceActionsBar — cancel button gating", () => {
   });
 
   it("hides cancel button when invoice is cancelled (even with canCancel=true)", () => {
-    const { InvoiceActionsBar } = require("../../../../../app/(private)/billing/_blocks/InvoiceActionsBar");
-    const invoice = { id: "inv-1", status: "cancelled" } as Parameters<typeof InvoiceActionsBar>[0]["invoice"];
+    const invoice = makeInvoice({ status: "cancelled" });
     render(
       <InvoiceActionsBar
         invoice={invoice}
@@ -225,8 +228,7 @@ describe("InvoiceActionsBar — cancel button gating", () => {
   });
 
   it("always renders PDF and XML download buttons", () => {
-    const { InvoiceActionsBar } = require("../../../../../app/(private)/billing/_blocks/InvoiceActionsBar");
-    const invoice = { id: "inv-1", status: "stamped" } as Parameters<typeof InvoiceActionsBar>[0]["invoice"];
+    const invoice = makeInvoice({ status: "stamped" });
     render(
       <InvoiceActionsBar
         invoice={invoice}

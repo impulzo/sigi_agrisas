@@ -11,6 +11,8 @@ export interface QuoteItemDto {
   ivaRate: number | null;
   iepsRate: number | null;
   lineSubtotal: number;
+  lineIva: number;
+  lineIeps: number;
   lineTax: number;
   lineTotal: number;
 }

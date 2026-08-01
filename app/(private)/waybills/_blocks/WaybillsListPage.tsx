@@ -1,0 +1,136 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCurrentUser } from "../../../_hooks/useCurrentUser";
+import { useWaybillsList } from "../_logic/hooks/useWaybillsList";
+import { CatalogShell } from "../../catalogs/_blocks/CatalogShell";
+import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
+import { WaybillsToolbar } from "./WaybillsToolbar";
+import { WaybillsTable } from "./WaybillsTable";
+import { WaybillsEmpty } from "./WaybillsEmpty";
+import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
+import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
+import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
+import type { WaybillStatus } from "../_logic/types/api";
+
+export function WaybillsListPage() {
+  const router = useRouter();
+  const { can } = useCurrentUser();
+  const canRead = can("waybills:read");
+  const canWrite = can("waybills:write");
+  const isBypass = can("branches:access_all");
+
+  const { options: branchOptions } = useBranchesOptions();
+  const branches = branchOptions.map((b) => ({ id: b.id, name: b.name }));
+  const branchNameById = useMemo(
+    () => Object.fromEntries(branchOptions.map((b) => [b.id, b.name])),
+    [branchOptions]
+  );
+
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [branchId, setBranchId] = useState("");
+  const [statusFilter, setStatusFilter] = useState<WaybillStatus[]>([]);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  const { items, total, isLoading, error } = useWaybillsList({
+    page,
+    pageSize,
+    status: statusFilter,
+    branchId: branchId || undefined,
+    from: from || undefined,
+    to: to || undefined,
+  });
+
+  function handleReset() {
+    setBranchId("");
+    setStatusFilter([]);
+    setFrom("");
+    setTo("");
+    setPage(1);
+  }
+
+  if (canRead === "loading") {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (canRead === false) {
+    return <EmptyState icon="block" title="Sin acceso" description="No tienes permiso para ver traspasos." />;
+  }
+
+  if (error) {
+    return <EmptyState icon="warning" title="Error al cargar traspasos" description={error.message} />;
+  }
+
+  return (
+    <CatalogShell
+      title="Traspasos"
+      description="Traspasos de mercancía entre sucursales con Carta Porte"
+      toolbar={
+        <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+          <WaybillsToolbar
+            branchId={branchId}
+            onBranchChange={(v) => {
+              setBranchId(v);
+              setPage(1);
+            }}
+            branches={branches}
+            showBranchFilter={isBypass === true}
+            statusFilter={statusFilter}
+            onStatusChange={(v) => {
+              setStatusFilter(v);
+              setPage(1);
+            }}
+            from={from}
+            to={to}
+            onFromChange={(v) => {
+              setFrom(v);
+              setPage(1);
+            }}
+            onToChange={(v) => {
+              setTo(v);
+              setPage(1);
+            }}
+            onReset={handleReset}
+          />
+          {canWrite === true && (
+            <Link
+              href="/waybills/new"
+              className="rounded-full bg-primary text-on-primary px-4 py-2 text-label-lg font-medium hover:bg-primary/90 transition-colors flex-shrink-0"
+            >
+              + Nuevo traspaso
+            </Link>
+          )}
+        </div>
+      }
+    >
+      {!isLoading && items.length === 0 ? (
+        <WaybillsEmpty />
+      ) : (
+        <>
+          <WaybillsTable
+            items={items}
+            isLoading={isLoading}
+            branchNameById={branchNameById}
+            onEnter={(w) => router.push(`/waybills/${w.id}`)}
+          />
+          <CatalogPagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            count={items.length}
+            onPageChange={setPage}
+            onPageSizeChange={() => {}}
+          />
+        </>
+      )}
+    </CatalogShell>
+  );
+}

@@ -70,4 +70,15 @@ export class PrismaBillingLookupService implements BillingLookupService {
       address: b.address,
     };
   }
+
+  async findHeadquarters(): Promise<BranchForBilling | null> {
+    const b = await this.prisma.branch.findFirst({ where: { isHeadquarters: true } });
+    if (!b) return null;
+    return {
+      id: b.id,
+      code: b.code,
+      name: b.name,
+      address: b.address,
+    };
+  }
 }

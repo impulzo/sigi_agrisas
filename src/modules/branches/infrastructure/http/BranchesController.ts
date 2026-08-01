@@ -12,6 +12,25 @@ import { AnotherBranchIsHeadquartersError } from "@/modules/branches/domain/erro
 
 const uuidSchema = z.string().uuid("Invalid ID format");
 
+const addressFieldsSchema = {
+  addressStreet: z.string().max(150).nullable().optional(),
+  addressExteriorNumber: z.string().max(20).nullable().optional(),
+  addressInteriorNumber: z.string().max(20).nullable().optional(),
+  addressNeighborhood: z.string().max(100).nullable().optional(),
+  addressMunicipality: z.string().max(100).nullable().optional(),
+  addressState: z
+    .string()
+    .regex(/^[A-Z]{2,3}$/, "addressState must be a 2-3 uppercase letter SAT state key")
+    .nullable()
+    .optional(),
+  addressCountry: z.string().max(3).nullable().optional(),
+  addressZipCode: z
+    .string()
+    .regex(/^\d{5}$/, "addressZipCode must be a 5-digit code")
+    .nullable()
+    .optional(),
+};
+
 const createBodySchema = z.object({
   code: z.string().regex(/^[A-Z0-9_]{1,32}$/, "code must be uppercase letters, digits, or underscores (1–32 chars)"),
   name: z.string().min(1).max(100),
@@ -20,6 +39,7 @@ const createBodySchema = z.object({
   email: z.string().email("Invalid email format").max(120).nullable().optional(),
   isHeadquarters: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  ...addressFieldsSchema,
 });
 
 const updateBodySchema = z
@@ -30,6 +50,7 @@ const updateBodySchema = z
     email: z.string().email("Invalid email format").max(120).nullable().optional(),
     isHeadquarters: z.boolean().optional(),
     isActive: z.boolean().optional(),
+    ...addressFieldsSchema,
   })
   .refine(
     (d) =>
@@ -38,9 +59,17 @@ const updateBodySchema = z
       d.phone !== undefined ||
       d.email !== undefined ||
       d.isHeadquarters !== undefined ||
-      d.isActive !== undefined,
+      d.isActive !== undefined ||
+      d.addressStreet !== undefined ||
+      d.addressExteriorNumber !== undefined ||
+      d.addressInteriorNumber !== undefined ||
+      d.addressNeighborhood !== undefined ||
+      d.addressMunicipality !== undefined ||
+      d.addressState !== undefined ||
+      d.addressCountry !== undefined ||
+      d.addressZipCode !== undefined,
     {
-      message: "At least one field (name, address, phone, email, isHeadquarters, isActive) must be provided",
+      message: "At least one field must be provided",
     }
   );
 

@@ -15,6 +15,21 @@ Usa estas skills en cada sesión:
 - **`caveman`** — modo de comunicación ultra-comprimido. Actívalo siempre con `/caveman` al inicio. Elimina artículos, relleno y cortesías; conserva toda la sustancia técnica. Nivel por defecto: `full`. Cambiar con `/caveman lite|full|ultra`.
 - **`searching-sourcegraph`** — búsqueda en código indexado. Úsala para localizar patrones, ejemplos de uso de una función o entender cómo fluye una feature antes de proponer cambios. Actívala cuando la pregunta sea "¿cómo funciona X?", "¿dónde se usa Y?", o antes de cualquier refactor que cruce módulos.
 
+## CodeGraph
+
+Este repo tiene `.codegraph/` indexado. Úsalo ANTES de grep/find o leer archivos cuando necesites localizar o entender código.
+
+**MCP tool** (preferido): `codegraph_explore` — responde preguntas de código en una sola llamada: fuente verbatim + call paths + blast radius. Nombra un símbolo o archivo en el query para obtener su fuente line-numbered lista para editar con `Edit`.
+
+**Shell** (siempre disponible): `codegraph explore "<símbolos o pregunta>"` — mismo output.
+
+**Cuándo usarlo:**
+- "¿dónde está definido X?", "¿qué llama a Y?", "¿qué depende de Z?" → codegraph primero
+- Antes de editar: obtén fuente + blast radius en una llamada, no en un loop grep+read
+- Cambios cross-módulo: traza call paths incluyendo dynamic dispatch (callbacks, JSX children) que grep no sigue
+
+**Cuándo NO usarlo:** si no hay `.codegraph/` en el root, omitir completamente.
+
 ## Stack
 
 | Capa | Tecnología |

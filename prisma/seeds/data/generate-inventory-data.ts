@@ -137,8 +137,8 @@ function main(): void {
     }
 
     const sat = row["Codigo SAT"];
-    const satProductCode =
-      !isBlank(sat) && /^\d{8}$/.test(String(sat)) ? String(sat) : undefined;
+    const satProductCode: string | null =
+      !isBlank(sat) && /^\d{8}$/.test(String(sat)) ? String(sat) : null;
 
     const unit = String(row["Unidad"] ?? "PZA").trim() || "PZA";
 
@@ -148,12 +148,12 @@ function main(): void {
       unit,
       departmentCode,
       departmentName: departmentNameStr,
+      satProductCode,
       ivaRate: toRate(row["Iva"]),
       iepsRate: toRate(row["Ieps"]),
       quantity: toNumberOrZero(row["Existencia"]),
       prices,
     };
-    if (satProductCode) obj.satProductCode = satProductCode;
 
     data.push("  " + JSON.stringify(obj) + ",");
     products++;
@@ -178,7 +178,7 @@ export interface InventoryRow {
   unit: string;
   departmentCode: string;
   departmentName: string;
-  satProductCode?: string;
+  satProductCode?: string | null;
   ivaRate?: number;
   iepsRate?: number;
   /** El generador no lee columna del Excel; el engine defaultea a \`true\`. Actualizar si el Excel expone la columna. */

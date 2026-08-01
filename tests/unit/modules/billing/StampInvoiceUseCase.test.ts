@@ -58,6 +58,7 @@ function makeLookup(sale: SaleForBilling | null = makeSale()): BillingLookupServ
     findSaleWithItems: jest.fn().mockResolvedValue(sale),
     findCustomer: jest.fn().mockResolvedValue(CUSTOMER),
     findBranch: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
+    findHeadquarters: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
   };
 }
 
@@ -141,6 +142,7 @@ describe("StampInvoiceUseCase", () => {
         findSaleWithItems: jest.fn().mockResolvedValue(makeSale()),
         findCustomer: jest.fn().mockResolvedValue(incompleteCustomer),
         findBranch: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: null }),
+        findHeadquarters: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: null }),
       };
       const uc = new StampInvoiceUseCase(repo, gateway, lookup);
 

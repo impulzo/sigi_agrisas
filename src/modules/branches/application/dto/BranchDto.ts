@@ -9,6 +9,14 @@ export interface BranchDto {
   email: string | null;
   isHeadquarters: boolean;
   isActive: boolean;
+  addressStreet: string | null;
+  addressExteriorNumber: string | null;
+  addressInteriorNumber: string | null;
+  addressNeighborhood: string | null;
+  addressMunicipality: string | null;
+  addressState: string | null;
+  addressCountry: string | null;
+  addressZipCode: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +31,14 @@ export function toBranchDto(b: Branch): BranchDto {
     email: b.email,
     isHeadquarters: b.isHeadquarters,
     isActive: b.isActive,
+    addressStreet: b.addressStreet,
+    addressExteriorNumber: b.addressExteriorNumber,
+    addressInteriorNumber: b.addressInteriorNumber,
+    addressNeighborhood: b.addressNeighborhood,
+    addressMunicipality: b.addressMunicipality,
+    addressState: b.addressState,
+    addressCountry: b.addressCountry,
+    addressZipCode: b.addressZipCode,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   };

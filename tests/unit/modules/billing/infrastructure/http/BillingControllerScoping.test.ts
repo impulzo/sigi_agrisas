@@ -22,7 +22,7 @@ import { ListInvoicesBySaleUseCase } from "@/modules/billing/application/use-cas
 import { UploadCsdUseCase } from "@/modules/billing/application/use-cases/UploadCsdUseCase";
 import { GetCsdStatusUseCase } from "@/modules/billing/application/use-cases/GetCsdStatusUseCase";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
-import type { BillingLookupService } from "@/modules/billing/application/ports/BillingLookupService";
+import type { BillingLookupService, SaleForBilling } from "@/modules/billing/application/ports/BillingLookupService";
 import type { CreateInvoiceData } from "@/modules/billing/application/ports/InvoiceRepository";
 
 const VALID_BRANCH = "11111111-1111-1111-1111-111111111111";
@@ -42,11 +42,28 @@ function makeAuthz(opts: { grantBilling?: boolean; grantAccessAll?: boolean } = 
   };
 }
 
-function makeLookup(): BillingLookupService {
+function makeLookup(overrides: Partial<BillingLookupService> = {}): BillingLookupService {
   return {
     findSaleWithItems: jest.fn().mockResolvedValue(null),
     findCustomer: jest.fn().mockResolvedValue(null),
     findBranch: jest.fn().mockResolvedValue(null),
+    findHeadquarters: jest.fn().mockResolvedValue(null),
+    ...overrides,
+  };
+}
+
+function makeSale(branchId: string, overrides: Partial<SaleForBilling> = {}): SaleForBilling {
+  return {
+    id: "dddddddd-dddd-dddd-dddd-dddddddddddd",
+    status: "completed",
+    branchId,
+    customerId: null,
+    paymentMethodId: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+    subtotal: 100,
+    taxTotal: 16,
+    total: 116,
+    items: [],
+    ...overrides,
   };
 }
 
@@ -54,11 +71,12 @@ function buildController(opts: {
   authz?: AuthorizationService;
   repo?: InMemoryInvoiceRepository;
   gateway?: FakeFacturamaGateway;
+  lookup?: BillingLookupService;
 } = {}) {
   const repo = opts.repo ?? new InMemoryInvoiceRepository();
   const gateway = opts.gateway ?? new FakeFacturamaGateway();
   const authz = opts.authz ?? makeAuthz();
-  const lookup = makeLookup();
+  const lookup = opts.lookup ?? makeLookup();
   const controller = new BillingController(
     new StampInvoiceUseCase(repo, gateway, lookup),
     new CancelInvoiceUseCase(repo, gateway),
@@ -68,7 +86,8 @@ function buildController(opts: {
     new ListInvoicesBySaleUseCase(repo),
     new UploadCsdUseCase(gateway),
     new GetCsdStatusUseCase(gateway),
-    authz
+    authz,
+    lookup
   );
   return { controller, repo };
 }
@@ -255,5 +274,98 @@ describe("BillingController — branch scoping: download", () => {
       inv.id
     );
     expect(res.status).toBe(200);
+  });
+});
+
+describe("BillingController — branch scoping: listBySale", () => {
+  const SALE_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd";
+
+  it("403 when sale belongs to OTHER_BRANCH and caller is scoped to VALID_BRANCH", async () => {
+    const lookup = makeLookup({
+      findSaleWithItems: jest.fn().mockResolvedValue(makeSale(OTHER_BRANCH, { id: SALE_ID })),
+    });
+    const { controller } = buildController({ lookup, authz: makeAuthz({ grantBilling: true, grantAccessAll: false }) });
+    const res = await controller.listBySale(req("GET", `/admin/sales/${SALE_ID}/invoices`), SALE_ID);
+    expect(res.status).toBe(403);
+  });
+
+  it("200 when sale belongs to caller's branch", async () => {
+    const lookup = makeLookup({
+      findSaleWithItems: jest.fn().mockResolvedValue(makeSale(VALID_BRANCH, { id: SALE_ID })),
+    });
+    const { controller } = buildController({ lookup, authz: makeAuthz({ grantBilling: true, grantAccessAll: false }) });
+    const res = await controller.listBySale(req("GET", `/admin/sales/${SALE_ID}/invoices`), SALE_ID);
+    expect(res.status).toBe(200);
+  });
+
+  it("404 when sale does not exist", async () => {
+    const lookup = makeLookup({ findSaleWithItems: jest.fn().mockResolvedValue(null) });
+    const { controller } = buildController({ lookup, authz: makeAuthz({ grantBilling: true, grantAccessAll: false }) });
+    const res = await controller.listBySale(req("GET", `/admin/sales/${SALE_ID}/invoices`), SALE_ID);
+    expect(res.status).toBe(404);
+  });
+
+  it("admin with bypass can list invoices for a sale in another branch", async () => {
+    const lookup = makeLookup({
+      findSaleWithItems: jest.fn().mockResolvedValue(makeSale(OTHER_BRANCH, { id: SALE_ID })),
+    });
+    const { controller } = buildController({ lookup, authz: makeAuthz({ grantBilling: true, grantAccessAll: true }) });
+    const res = await controller.listBySale(
+      req("GET", `/admin/sales/${SALE_ID}/invoices`, undefined, { "x-user-branch-id": "" }),
+      SALE_ID
+    );
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("BillingController — branch scoping: stamp standalone", () => {
+  const standaloneBody = {
+    customer: {
+      rfc: "CAN850101AAA",
+      name: "Cliente SA de CV",
+      cfdiUse: "G03",
+      fiscalRegime: "601",
+      taxZipCode: "45010",
+    },
+    items: [
+      { productCode: "SKU1", description: "Servicio", quantity: 1, unitPrice: 100 },
+    ],
+  };
+
+  it("bypass caller with no branchId falls back to headquarters", async () => {
+    const lookup = makeLookup({
+      findHeadquarters: jest.fn().mockResolvedValue({ id: OTHER_BRANCH, code: "MATRIZ", name: "Matriz", address: null }),
+    });
+    const { controller } = buildController({ lookup, authz: makeAuthz({ grantBilling: true, grantAccessAll: true }) });
+    const res = await controller.stamp(
+      req("POST", "/admin/invoices", standaloneBody, { "x-user-branch-id": "" })
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.branchId).toBe(OTHER_BRANCH);
+  });
+
+  it("bypass caller with no branchId and no headquarters configured → 400", async () => {
+    const lookup = makeLookup({ findHeadquarters: jest.fn().mockResolvedValue(null) });
+    const { controller } = buildController({ lookup, authz: makeAuthz({ grantBilling: true, grantAccessAll: true }) });
+    const res = await controller.stamp(
+      req("POST", "/admin/invoices", standaloneBody, { "x-user-branch-id": "" })
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("BranchRequired");
+  });
+
+  it("non-bypass caller uses own branch, headquarters not consulted", async () => {
+    const findHeadquarters = jest.fn();
+    const lookup = makeLookup({ findHeadquarters });
+    const { controller } = buildController({ lookup, authz: makeAuthz({ grantBilling: true, grantAccessAll: false }) });
+    const res = await controller.stamp(
+      req("POST", "/admin/invoices", standaloneBody, { "x-user-branch-id": VALID_BRANCH })
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.branchId).toBe(VALID_BRANCH);
+    expect(findHeadquarters).not.toHaveBeenCalled();
   });
 });

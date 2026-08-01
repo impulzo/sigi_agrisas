@@ -11,7 +11,14 @@ export class UpdateTaxRateUseCase {
     const updated = await this.repo.update(id, {
       name: req.name,
       description: req.description,
+      satTaxCode: req.satTaxCode,
+      factorType: req.factorType,
+      displayValue: req.displayValue,
       rate: req.rate,
+      transferredAccount: req.transferredAccount,
+      pendingTransferredAccount: req.pendingTransferredAccount,
+      creditedAccount: req.creditedAccount,
+      pendingCreditedAccount: req.pendingCreditedAccount,
       isActive: req.isActive,
     });
     return toTaxRateDto(updated);

@@ -14,6 +14,14 @@ export interface CreateBranchData {
   email?: string | null;
   isHeadquarters?: boolean;
   isActive?: boolean;
+  addressStreet?: string | null;
+  addressExteriorNumber?: string | null;
+  addressInteriorNumber?: string | null;
+  addressNeighborhood?: string | null;
+  addressMunicipality?: string | null;
+  addressState?: string | null;
+  addressCountry?: string | null;
+  addressZipCode?: string | null;
 }
 
 export interface UpdateBranchData {
@@ -23,6 +31,14 @@ export interface UpdateBranchData {
   email?: string | null;
   isHeadquarters?: boolean;
   isActive?: boolean;
+  addressStreet?: string | null;
+  addressExteriorNumber?: string | null;
+  addressInteriorNumber?: string | null;
+  addressNeighborhood?: string | null;
+  addressMunicipality?: string | null;
+  addressState?: string | null;
+  addressCountry?: string | null;
+  addressZipCode?: string | null;
 }
 
 export interface BranchRepository {

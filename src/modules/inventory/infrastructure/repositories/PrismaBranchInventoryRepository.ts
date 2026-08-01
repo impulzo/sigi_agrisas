@@ -10,6 +10,8 @@ import { BranchInventory } from "../../domain/entities/BranchInventory";
 import { BranchInventoryRecordNotFoundError } from "../../domain/errors/BranchInventoryRecordNotFoundError";
 import { BranchInventoryAlreadyExistsError } from "../../domain/errors/BranchInventoryAlreadyExistsError";
 import { NegativeStockNotAllowedError } from "../../domain/errors/NegativeStockNotAllowedError";
+import { recordInventoryMovement } from "@/shared/infrastructure/inventory/recordInventoryMovement";
+import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
 
 type InventoryRow = Prisma.BranchInventoryGetPayload<{
   include: { product: { select: { code: true; name: true } } };
@@ -128,17 +130,38 @@ export class PrismaBranchInventoryRepository implements BranchInventoryRepositor
 
   async create(data: CreateBranchInventoryData): Promise<BranchInventoryView> {
     try {
-      const row = await this.prisma.branchInventory.create({
-        data: {
-          branchId: data.branchId,
-          productId: data.productId,
-          ...(data.quantity !== undefined ? { quantity: data.quantity } : {}),
-          ...(data.reservedQuantity !== undefined ? { reservedQuantity: data.reservedQuantity } : {}),
-          ...(data.reorderPoint !== undefined ? { reorderPoint: data.reorderPoint } : {}),
-        },
-        include: INCLUDE_PRODUCT,
+      return await this.prisma.$transaction(async (tx) => {
+        const row = await tx.branchInventory.create({
+          data: {
+            branchId: data.branchId,
+            productId: data.productId,
+            quantity: 0,
+            ...(data.reservedQuantity !== undefined ? { reservedQuantity: data.reservedQuantity } : {}),
+            ...(data.reorderPoint !== undefined ? { reorderPoint: data.reorderPoint } : {}),
+          },
+          include: INCLUDE_PRODUCT,
+        });
+
+        if (data.quantity !== undefined && data.quantity > 0) {
+          await recordInventoryMovement(tx, {
+            branchId: data.branchId,
+            productId: data.productId,
+            movementAt: new Date(),
+            movementType: "adjustment_in",
+            direction: "IN",
+            quantity: data.quantity,
+            sourceType: "adjustment",
+            sourceId: row.id,
+            notes: "Saldo inicial",
+          });
+        }
+
+        const finalRow = await tx.branchInventory.findUniqueOrThrow({
+          where: { id: row.id },
+          include: INCLUDE_PRODUCT,
+        });
+        return toView(finalRow);
       });
-      return toView(row);
     } catch (err) {
       if (isUniqueError(err)) throw new BranchInventoryAlreadyExistsError();
       throw err;
@@ -163,22 +186,46 @@ export class PrismaBranchInventoryRepository implements BranchInventoryRepositor
     }
   }
 
-  async adjust(id: string, delta: number): Promise<BranchInventoryView> {
-    const affected = await this.prisma.$executeRaw`
-      UPDATE branch_inventory
-      SET quantity = quantity + ${delta}::numeric, updated_at = NOW()
-      WHERE id = ${id} AND quantity + ${delta}::numeric >= 0
-    `;
+  async adjust(id: string, delta: number, reason?: string | null): Promise<BranchInventoryView> {
+    return this.prisma.$transaction(async (tx) => {
+      // Lock the row first (read-only) — the actual mutation happens once, either via
+      // recordInventoryMovement (delta != 0) or a plain touch below (delta === 0), never both.
+      const rows = await tx.$queryRaw<{ branchId: string; productId: string; quantity: Prisma.Decimal }[]>`
+        SELECT branch_id AS "branchId", product_id AS "productId", quantity
+        FROM branch_inventory WHERE id = ${id} FOR UPDATE
+      `;
+      const current = rows[0];
+      if (!current) throw new BranchInventoryRecordNotFoundError();
+      if (current.quantity.toNumber() + delta < 0) throw new NegativeStockNotAllowedError();
 
-    if (affected === 0) {
-      const exists = await this.prisma.branchInventory.findUnique({ where: { id } });
-      if (!exists) throw new BranchInventoryRecordNotFoundError();
-      throw new NegativeStockNotAllowedError();
-    }
+      if (delta !== 0) {
+        // Resolve the active INVENTORY-scope "TS" folio automatically; a missing/inactive
+        // folio must not block a critical stock adjustment (see design.md).
+        const folio = await tx.folio.findFirst({ where: { code: "TS", scope: "INVENTORY", isActive: true } });
+        const allocated = folio ? await allocateFolio(tx, folio.id) : null;
 
-    const row = await this.prisma.branchInventory.findUnique({ where: { id }, include: INCLUDE_PRODUCT });
-    if (!row) throw new BranchInventoryRecordNotFoundError();
-    return toView(row);
+        await recordInventoryMovement(tx, {
+          branchId: current.branchId,
+          productId: current.productId,
+          movementAt: new Date(),
+          movementType: delta > 0 ? "adjustment_in" : "adjustment_out",
+          direction: delta > 0 ? "IN" : "OUT",
+          quantity: Math.abs(delta),
+          folioId: folio?.id ?? null,
+          folioCode: allocated?.folioCode ?? null,
+          folioNumber: allocated?.folioNumber ?? null,
+          sourceType: "adjustment",
+          sourceId: id,
+          notes: reason ?? null,
+        });
+      } else {
+        await tx.$executeRaw`UPDATE branch_inventory SET updated_at = NOW() WHERE id = ${id}`;
+      }
+
+      const row = await tx.branchInventory.findUnique({ where: { id }, include: INCLUDE_PRODUCT });
+      if (!row) throw new BranchInventoryRecordNotFoundError();
+      return toView(row);
+    });
   }
 
   async delete(id: string): Promise<void> {

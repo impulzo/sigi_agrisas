@@ -10,14 +10,28 @@ export interface CreateTaxRateData {
   code: string;
   name: string;
   description?: string | null;
+  satTaxCode: string;
+  factorType: string;
+  displayValue: number;
   rate: number;
+  transferredAccount?: string | null;
+  pendingTransferredAccount?: string | null;
+  creditedAccount?: string | null;
+  pendingCreditedAccount?: string | null;
   isActive?: boolean;
 }
 
 export interface UpdateTaxRateData {
   name?: string;
   description?: string | null;
+  satTaxCode?: string;
+  factorType?: string;
+  displayValue?: number;
   rate?: number;
+  transferredAccount?: string | null;
+  pendingTransferredAccount?: string | null;
+  creditedAccount?: string | null;
+  pendingCreditedAccount?: string | null;
   isActive?: boolean;
 }
 
