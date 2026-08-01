@@ -10,7 +10,25 @@ import { BranchCodeAlreadyInUseError } from "@/modules/branches/domain/errors/Br
 
 function makeBranch(id: string, code: string, isActive = true): Branch {
   const now = new Date();
-  return Branch.create(id, { code, name: `Branch ${code}`, address: null, phone: null, email: null, isHeadquarters: false, isActive, createdAt: now, updatedAt: now });
+  return Branch.create(id, {
+    code,
+    name: `Branch ${code}`,
+    address: null,
+    phone: null,
+    email: null,
+    isHeadquarters: false,
+    isActive,
+    addressStreet: null,
+    addressExteriorNumber: null,
+    addressInteriorNumber: null,
+    addressNeighborhood: null,
+    addressMunicipality: null,
+    addressState: null,
+    addressCountry: null,
+    addressZipCode: null,
+    createdAt: now,
+    updatedAt: now,
+  });
 }
 
 describe("ListBranchesUseCase", () => {

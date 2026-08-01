@@ -26,6 +26,8 @@ export function toSaleItemDto(it: SaleItem): SaleItemDto {
     ivaRate: it.ivaRate,
     iepsRate: it.iepsRate,
     lineSubtotal: it.lineSubtotal,
+    lineIva:  Math.round(it.lineSubtotal * (it.ivaRate  ?? 0) * 10_000) / 10_000,
+    lineIeps: Math.round(it.lineSubtotal * (it.iepsRate ?? 0) * 10_000) / 10_000,
     lineTax: it.lineTax,
     lineTotal: it.lineTotal,
   };

@@ -14,6 +14,7 @@ const PCODE = "INVTEST_IPROD_1";
 const BCODE = "INVTEST_IBRANCH_1";
 
 async function cleanup() {
+  await prisma.inventoryMovement.deleteMany({ where: { product: { code: { startsWith: "INVTEST_I" } } } });
   await prisma.product.deleteMany({ where: { code: { startsWith: "INVTEST_I" } } });
   await prisma.branch.deleteMany({ where: { code: { startsWith: "INVTEST_I" } } });
   await prisma.department.deleteMany({ where: { code: { startsWith: "INVTEST_I" } } });

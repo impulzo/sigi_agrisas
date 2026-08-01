@@ -3,18 +3,28 @@ schema: spec-driven
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Idioma: TODAS las respuestas y artefactos generados por OpenSpec (proposal, design, specs, tasks,
+  explore, verify) se redactan en español. Excepción: identificadores de código, rutas/nombres de
+  archivo, símbolos y términos técnicos sin traducción estándar (ej. "endpoint", "hook", "branch
+  scoping") quedan en inglés.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - "Redacta todo el contenido de este artefacto en español (títulos, prosa, tabla de Historia de Usuario). Sólo identificadores de código, rutas y términos técnicos sin traducción estándar quedan en inglés."
+    - "Antes de redactar este artefacto, invoca la skill `user-stories` (Skill tool, skill: 'user-stories') pasando como args la descripción cruda del cambio que dio el usuario. No redactes el 'Why' a mano sin hacer esto primero."
+    - "Si la skill `user-stories` se detiene a preguntar (rol/motivo/alcance ambiguo), traslada esa misma pregunta al usuario vía AskUserQuestion antes de continuar — no inventes la respuesta."
+    - "Incluye la tabla resultante de `user-stories` (columnas Rol, Tarea, Motivo, Criterios de Aceptación, Criterios de Seguridad) como una sección nueva '## Historia de Usuario' en proposal.md, colocada antes de '## Why'."
+    - "'## Why' debe derivarse del/los Motivo(s) de la tabla, no repetirlos textualmente — expándelos con el contexto técnico del repo."
+    - "Si el cambio produjo más de una historia (features divididas), cada fila de la tabla debe quedar trazable a algo en '## What Changes' — no dejar historias sin cambio propuesto asociado."
+  design:
+    - "Redacta todo el contenido de este artefacto en español. Sólo identificadores de código, rutas y términos técnicos sin traducción estándar quedan en inglés."
+    - "Lee la sección '## Historia de Usuario' de proposal.md (dependencia ya cargada) antes de diseñar. Cada decisión de diseño debe poder señalar a qué fila de esa tabla responde."
+    - "Los Criterios de Seguridad de la tabla (permisos RBAC, branch scoping, validación) son requisitos de diseño obligatorios, no opcionales — refleja cada uno explícitamente en el diseño (guards, endpoints, checks)."
+  specs:
+    - "Redacta todo el contenido de este artefacto en español (Purpose, Requirements, descripción de escenarios). Los bloques Given/When/Then usan estas palabras clave en inglés por convención Gherkin; el resto del texto va en español."
+    - "Cada escenario (Given/When/Then) de las specs debe trazar a un Criterio de Aceptación de la tabla en '## Historia de Usuario' de proposal.md — no agregues escenarios sin origen en la tabla, y no omitas ningún criterio de aceptación de la tabla."
+  tasks:
+    - "Redacta todo el contenido de este artefacto en español (descripciones de tareas, notas). Sólo identificadores de código, rutas y términos técnicos sin traducción estándar quedan en inglés."

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useInvoicesList } from "../_logic/hooks/useInvoicesList";
 import { CatalogShell } from "../../catalogs/_blocks/CatalogShell";
@@ -16,7 +15,6 @@ import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOpti
 import type { InvoiceStatus } from "../_logic/types/domain";
 
 export function BillingListPage() {
-  const router = useRouter();
   const { can } = useCurrentUser();
   const canRead = can("billing:read");
   const canWrite = can("billing:write");
@@ -34,7 +32,7 @@ export function BillingListPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
-  const { items, total, isLoading, error, refresh } = useInvoicesList({
+  const { items, total, isLoading, error } = useInvoicesList({
     page,
     pageSize,
     status: statusFilter,
@@ -43,9 +41,6 @@ export function BillingListPage() {
     to: to || undefined,
     search: searchInput,
   });
-
-  void refresh;
-  void router;
 
   function handleSearch(val: string) { setSearchInput(val); setPage(1); }
   function handleReset() {

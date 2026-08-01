@@ -12,6 +12,7 @@ import { AuthorizeQuoteModal } from "./AuthorizeQuoteModal";
 import { CancelQuoteModal } from "./CancelQuoteModal";
 import { ConvertQuoteModal } from "./ConvertQuoteModal";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
+import { TaxBreakdownRows } from "../../../_components/molecules/TaxBreakdownRows/TaxBreakdownRows";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 
@@ -189,10 +190,12 @@ export function QuoteDetailPage({ id }: QuoteDetailPageProps) {
             <span className="text-body-sm text-on-surface-variant">Subtotal</span>
             <span className="tabular-nums">{fmt(quote.subtotal)}</span>
           </div>
-          <div className="flex justify-between gap-8">
-            <span className="text-body-sm text-on-surface-variant">Impuestos</span>
-            <span className="tabular-nums">{fmt(quote.taxTotal)}</span>
-          </div>
+          <TaxBreakdownRows
+            ivaTotal={quote.items.reduce((s, i) => s + i.lineIva, 0)}
+            iepsTotal={quote.items.reduce((s, i) => s + i.lineIeps, 0)}
+            format={fmt}
+            variant="quote"
+          />
           <div className="flex justify-between gap-8 border-t border-outline-variant pt-1 mt-1">
             <span className="text-body-md font-semibold text-on-surface">Total</span>
             <span className="tabular-nums font-bold text-title-md">{fmt(quote.total)}</span>

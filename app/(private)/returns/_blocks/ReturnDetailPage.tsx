@@ -10,6 +10,7 @@ import { ReturnMetaPanel } from "./ReturnMetaPanel";
 import { ReturnActionsBar } from "./ReturnActionsBar";
 import { CancelReturnModal } from "./CancelReturnModal";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
+import { TaxBreakdownRows } from "../../../_components/molecules/TaxBreakdownRows/TaxBreakdownRows";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { ReturnNotFoundError, ReturnReadForbiddenError, ReturnScopingForbiddenError } from "../_logic/errors";
@@ -112,7 +113,13 @@ export function ReturnDetailPage({ id }: ReturnDetailPageProps) {
           </p>
         </div>
 
-        <div className="text-right">
+        <div className="text-right space-y-1">
+          <TaxBreakdownRows
+            ivaTotal={ret.items.reduce((s, i) => s + i.lineIva, 0)}
+            iepsTotal={ret.items.reduce((s, i) => s + i.lineIeps, 0)}
+            format={fmt}
+            variant="compact"
+          />
           <p className="text-label-sm text-on-surface-variant">Reembolso total</p>
           <p className="text-display-sm font-bold tabular-nums text-on-surface">
             {fmt(ret.refundTotal)}

@@ -168,3 +168,64 @@ describe("SaleDetailPage — guard de edición HQ", () => {
     );
   });
 });
+
+describe("SaleDetailPage — desglose IVA/IEPS", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("muestra filas IVA e IEPS separadas cuando el ítem tiene ambos impuestos", () => {
+    const sale = makeSale();
+    sale.items = [
+      {
+        id: "item-1",
+        productId: "product-1",
+        productCodeSnapshot: "SKU-1",
+        productNameSnapshot: "Producto 1",
+        productPriceId: "price-1",
+        priceNameSnapshot: "Default",
+        quantity: 2,
+        unitPrice: 100,
+        discountPct: 0,
+        ivaRate: 0.16,
+        iepsRate: 0.08,
+        lineSubtotal: 200,
+        lineIva: 32,
+        lineIeps: 16,
+        lineTotal: 248,
+      },
+    ];
+    setup({ sale });
+    render(<SaleDetailPage id="sale-1" />);
+    expect(screen.getAllByText("IVA").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("IEPS").length).toBeGreaterThan(0);
+    expect(screen.getByText("$32.00")).toBeInTheDocument();
+    expect(screen.getByText("$16.00")).toBeInTheDocument();
+  });
+
+  it("oculta la fila IEPS cuando ningún ítem tiene IEPS", () => {
+    const sale = makeSale();
+    sale.items = [
+      {
+        id: "item-1",
+        productId: "product-1",
+        productCodeSnapshot: "SKU-1",
+        productNameSnapshot: "Producto 1",
+        productPriceId: "price-1",
+        priceNameSnapshot: "Default",
+        quantity: 2,
+        unitPrice: 100,
+        discountPct: 0,
+        ivaRate: 0.16,
+        iepsRate: 0,
+        lineSubtotal: 200,
+        lineIva: 32,
+        lineIeps: 0,
+        lineTotal: 232,
+      },
+    ];
+    setup({ sale });
+    render(<SaleDetailPage id="sale-1" />);
+    expect(screen.getByText("$32.00")).toBeInTheDocument();
+    // "IEPS" solo aparece en el encabezado de la tabla de ítems, no en el panel de totales
+    expect(screen.getAllByText("IEPS")).toHaveLength(1);
+  });
+});

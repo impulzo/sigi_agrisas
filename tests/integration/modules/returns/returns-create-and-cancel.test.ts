@@ -36,6 +36,7 @@ async function cleanup() {
   await prisma.return.deleteMany({ where: { sale: { folio: { code: { startsWith: P } } } } });
   await prisma.sale.deleteMany({ where: { folio: { code: { startsWith: P } } } });
   await prisma.branchInventory.deleteMany({ where: { branch: { code: { startsWith: P } } } });
+  await prisma.inventoryMovement.deleteMany({ where: { product: { code: { startsWith: P } } } });
   await prisma.productPrice.deleteMany({ where: { product: { code: { startsWith: P } } } });
   await prisma.product.deleteMany({ where: { code: { startsWith: P } } });
   await prisma.customer.deleteMany({ where: { code: { startsWith: P } } });

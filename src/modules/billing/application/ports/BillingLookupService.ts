@@ -44,4 +44,5 @@ export interface BillingLookupService {
   findSaleWithItems(saleId: string): Promise<SaleForBilling | null>;
   findCustomer(customerId: string): Promise<CustomerForBilling | null>;
   findBranch(branchId: string): Promise<BranchForBilling | null>;
+  findHeadquarters(): Promise<BranchForBilling | null>;
 }

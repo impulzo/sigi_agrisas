@@ -160,3 +160,16 @@ The system SHALL expose service functions in `app/(private)/inventory/_logic/ser
 #### Scenario: fetchImpl injection for tests
 - **WHEN** a service is invoked with a `fetchImpl` mock
 - **THEN** the service uses that mock instead of the global `authFetch`
+
+---
+
+### Requirement: Kardex row action in inventory table
+`InventoryTable` SHALL exponer una acción de fila "Ver Kardex" que navega a `/inventory/kardex?productId=<id>&branchId=<branchId>` precargando el producto y la sucursal de la fila. La acción SHALL estar visible para cualquier usuario con `inventory:kardex_read` (independiente de `inventory:write`).
+
+#### Scenario: Navegar al kardex desde inventario
+- **WHEN** un usuario con `inventory:kardex_read` hace clic en "Ver Kardex" sobre una fila de `InventoryTable`
+- **THEN** navega a `/inventory/kardex` con `productId` y `branchId` de esa fila precargados
+
+#### Scenario: Acción oculta sin permiso
+- **WHEN** el usuario no tiene `inventory:kardex_read`
+- **THEN** la acción "Ver Kardex" no se muestra

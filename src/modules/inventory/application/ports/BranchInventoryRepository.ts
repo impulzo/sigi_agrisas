@@ -34,6 +34,6 @@ export interface BranchInventoryRepository {
   create(data: CreateBranchInventoryData): Promise<BranchInventoryView>;
   update(id: string, data: UpdateBranchInventoryData): Promise<BranchInventoryView>;
   /** Atomically adds `delta` to quantity, rejecting if the result would be negative. */
-  adjust(id: string, delta: number): Promise<BranchInventoryView>;
+  adjust(id: string, delta: number, reason?: string | null): Promise<BranchInventoryView>;
   delete(id: string): Promise<void>;
 }

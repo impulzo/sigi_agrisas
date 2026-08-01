@@ -43,7 +43,7 @@ function buildState(lines: Omit<CartLine, "lineSubtotal" | "lineIva" | "lineIeps
       iepsRate: l.iepsRate,
     }))
   );
-  return { lines: recomputed, totals: { subtotal: totals.subtotal, taxTotal: totals.taxTotal, total: totals.total } };
+  return { lines: recomputed, totals: { subtotal: totals.subtotal, ivaTotal: totals.ivaTotal, iepsTotal: totals.iepsTotal, taxTotal: totals.taxTotal, total: totals.total } };
 }
 
 function cartReducer(state: CartState, action: CartAction): CartState {

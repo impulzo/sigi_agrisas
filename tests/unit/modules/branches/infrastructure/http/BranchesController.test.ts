@@ -79,3 +79,51 @@ describe("BranchesController — isHeadquarters", () => {
     expect(body.isHeadquarters).toBe(false);
   });
 });
+
+describe("BranchesController — domicilio fiscal estructurado", () => {
+  it("crea con los 8 campos de domicilio estructurado, independientes de address", async () => {
+    const { controller } = buildController();
+    const res = await controller.create(
+      postReq({
+        code: "SUC_1",
+        name: "Sucursal",
+        address: "Texto libre existente",
+        addressStreet: "Calle 1",
+        addressExteriorNumber: "100",
+        addressNeighborhood: "Centro",
+        addressMunicipality: "Hermosillo",
+        addressState: "SON",
+        addressZipCode: "83000",
+      })
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.address).toBe("Texto libre existente");
+    expect(body.addressStreet).toBe("Calle 1");
+    expect(body.addressZipCode).toBe("83000");
+    expect(body.addressCountry).toBe("MEX");
+  });
+
+  it("PATCH solo addressZipCode → actualiza ese campo sin exigir los demás", async () => {
+    const { controller } = buildController();
+    const created = await controller.create(postReq({ code: "SUC_1", name: "Sucursal" }));
+    const { id } = await created.json();
+    const res = await controller.update(patchReq({ addressZipCode: "01000" }), id);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.addressZipCode).toBe("01000");
+    expect(body.addressStreet).toBeNull();
+  });
+
+  it("rechaza addressZipCode con formato inválido (400)", async () => {
+    const { controller } = buildController();
+    const res = await controller.create(postReq({ code: "SUC_1", name: "Sucursal", addressZipCode: "12" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("rechaza addressState con formato inválido (400)", async () => {
+    const { controller } = buildController();
+    const res = await controller.create(postReq({ code: "SUC_1", name: "Sucursal", addressState: "sonora" }));
+    expect(res.status).toBe(400);
+  });
+});

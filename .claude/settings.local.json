@@ -142,7 +142,19 @@
       "Bash(xargs ps -p)",
       "Bash(npx ts-node *)",
       "Bash(awk '/^export const DEPARTMENTS/,/^\\\\];/' /Users/kevdany17/Documents/Proyects/sigi/agrisas/agrisas_panel/prisma/seeds/data/inventario-agrisas-v2.ts)",
-      "Bash(awk '/^export const INVENTORY_DATA/,/^\\\\];/' /Users/kevdany17/Documents/Proyects/sigi/agrisas/agrisas_panel/prisma/seeds/data/inventario-agrisas-v2.ts)"
+      "Bash(awk '/^export const INVENTORY_DATA/,/^\\\\];/' /Users/kevdany17/Documents/Proyects/sigi/agrisas/agrisas_panel/prisma/seeds/data/inventario-agrisas-v2.ts)",
+      "Skill(dataviz)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(xargs -I{} echo {})",
+      "Bash(awk '{printf \"%d: %s\\\\n\", NR+119, substr\\($0, index\\($0,$2\\)\\)}')",
+      "Bash(awk 'NR>=125 && NR<=170 {printf \"%d\\\\t%s\\\\n\", NR, $0}' openspec/specs/inventory-api/spec.md)",
+      "Bash(awk -F: '{print $3}')",
+      "Bash(git -C /Users/kevdany17/Documents/Proyects/sigi/agrisas/agrisas_panel status --porcelain openspec)",
+      "Bash(git -C /Users/kevdany17/Documents/Proyects/sigi/agrisas/agrisas_panel log --oneline -5 -- openspec/changes/add-carta-porte openspec/changes/carta-porte-ui)",
+      "Bash(awk 'NR<=35 {printf \"%d\\\\t%s\\\\n\", NR, $0}' openspec/changes/add-carta-porte/specs/waybills-api/spec.md)",
+      "Bash(node -p \"require\\('./package.json'\\).dependencies.zod || require\\('./package.json'\\).devDependencies.zod\")"
     ]
   },
   "enabledMcpjsonServers": [

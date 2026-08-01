@@ -28,6 +28,7 @@ const CANONICAL_FOLIOS: readonly CanonicalFolio[] = [
   { code: "TC", name: "Folio de Venta Crédito", prefix: "TC-", scope: "POS" },
   { code: "COT", name: "Cotización", prefix: "COT-", scope: "POS" },
   { code: "TS", name: "Traspaso entre inventarios", prefix: "TS-", scope: "INVENTORY" },
+  { code: "TRI", name: "Traspaso interno (sin Carta Porte)", prefix: "TRI-", scope: "INVENTORY" },
   { code: "RB", name: "Recibo de Pago - Cobranza", prefix: "RB-", scope: "OPERATIONS" },
   { code: "AB", name: "Cobranza/Abono", prefix: "AB-", scope: "OPERATIONS" },
   { code: "DEV", name: "Devolución", prefix: "DEV-", scope: "OPERATIONS" },
@@ -41,6 +42,7 @@ interface AbortedReference {
   sales: number;
   quotes: number;
   payments: number;
+  waybills: number;
 }
 
 interface Summary {
@@ -58,7 +60,7 @@ async function main(): Promise<Summary> {
     select: {
       id: true,
       code: true,
-      _count: { select: { sales: true, quotes: true, payments: true } },
+      _count: { select: { sales: true, quotes: true, payments: true, waybills: true } },
     },
   });
 
@@ -66,7 +68,7 @@ async function main(): Promise<Summary> {
   const aborted: AbortedReference[] = [];
 
   for (const f of legacy) {
-    const refs = f._count.sales + f._count.quotes + f._count.payments;
+    const refs = f._count.sales + f._count.quotes + f._count.payments + f._count.waybills;
     if (refs === 0) {
       toDelete.push({ id: f.id, code: f.code });
     } else {
@@ -75,6 +77,7 @@ async function main(): Promise<Summary> {
         sales: f._count.sales,
         quotes: f._count.quotes,
         payments: f._count.payments,
+        waybills: f._count.waybills,
       });
     }
   }
@@ -82,8 +85,8 @@ async function main(): Promise<Summary> {
   if (aborted.length > 0) {
     for (const a of aborted) {
       console.error(
-        `Folio ${a.code} tiene ${a.sales + a.quotes + a.payments} referencias activas ` +
-          `(sales: ${a.sales}, quotes: ${a.quotes}, payments: ${a.payments}); ` +
+        `Folio ${a.code} tiene ${a.sales + a.quotes + a.payments + a.waybills} referencias activas ` +
+          `(sales: ${a.sales}, quotes: ${a.quotes}, payments: ${a.payments}, waybills: ${a.waybills}); ` +
           `migra manualmente o limpia antes de re-correr`
       );
     }

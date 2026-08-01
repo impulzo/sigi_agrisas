@@ -19,6 +19,8 @@ export function toReturnItemDto(item: ReturnItem): ReturnItemDto {
     ivaRate: item.ivaRate,
     iepsRate: item.iepsRate,
     lineSubtotal: item.lineSubtotal,
+    lineIva:  Math.round(item.lineSubtotal * (item.ivaRate  ?? 0) * 10_000) / 10_000,
+    lineIeps: Math.round(item.lineSubtotal * (item.iepsRate ?? 0) * 10_000) / 10_000,
     lineTax: item.lineTax,
     lineTotal: item.lineTotal,
   };

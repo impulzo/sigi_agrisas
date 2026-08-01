@@ -94,7 +94,7 @@ export class InMemoryBranchInventoryRepository implements BranchInventoryReposit
     return this.wrap(updated);
   }
 
-  async adjust(id: string, delta: number): Promise<BranchInventoryView> {
+  async adjust(id: string, delta: number, _reason?: string | null): Promise<BranchInventoryView> {
     const idx = this.store.findIndex((i) => i.id === id);
     if (idx === -1) throw new BranchInventoryRecordNotFoundError();
     const existing = this.store[idx];

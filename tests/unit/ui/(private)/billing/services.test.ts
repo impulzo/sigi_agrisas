@@ -168,20 +168,20 @@ describe("downloadInvoiceFile — filename derivation", () => {
     const fetch = makeFetchWithDisposition('attachment; filename="factura-ABC.pdf"');
     const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     await downloadInvoiceFile("inv-1", "pdf", fetch);
-    const lastCall = clickSpy.mock.instances[0] as HTMLAnchorElement;
+    const lastCall = clickSpy.mock.instances[0] as unknown as HTMLAnchorElement;
     expect(lastCall.download).toBe("factura-ABC.pdf");
   });
 
   it("fallback filename when no Content-Disposition", async () => {
-    const fetch = jest.fn().mockResolvedValue({
+    const fetchImpl: typeof globalThis.fetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
       blob: () => Promise.resolve(new Blob(["xml-data"])),
       headers: new Headers(),
-    }) as unknown as typeof fetch;
+    }) as unknown as typeof globalThis.fetch;
     const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-    await downloadInvoiceFile("inv-abcdefgh", "xml", fetch);
-    const lastCall = clickSpy.mock.instances[0] as HTMLAnchorElement;
+    await downloadInvoiceFile("inv-abcdefgh", "xml", fetchImpl);
+    const lastCall = clickSpy.mock.instances[0] as unknown as HTMLAnchorElement;
     expect(lastCall.download).toMatch(/factura-.*\.xml$/);
   });
 });

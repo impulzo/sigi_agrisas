@@ -12,7 +12,7 @@ export class AdjustStockUseCase {
     if (!existing) throw new BranchInventoryRecordNotFoundError();
 
     // `adjust` is atomic and throws NegativeStockNotAllowedError when the result would be negative.
-    const view = await this.repo.adjust(existing.inventory.id, req.delta);
+    const view = await this.repo.adjust(existing.inventory.id, req.delta, req.reason ?? null);
     return toBranchInventoryDto(view);
   }
 }

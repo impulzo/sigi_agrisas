@@ -45,6 +45,9 @@ export function TaxRatesTable({
           <tr className="border-b border-outline-variant bg-surface-container">
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Código</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Nombre</th>
+            <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Clave SAT</th>
+            <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Tipo Factor</th>
+            <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Valor</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Tasa</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Descripción</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Estado</th>
@@ -62,7 +65,10 @@ export function TaxRatesTable({
             >
               <td className="px-4 py-3 font-mono text-on-surface">{item.code}</td>
               <td className="px-4 py-3 text-on-surface">{item.name}</td>
-              <td className="px-4 py-3 text-on-surface font-mono">{(item.rate * 100).toFixed(2)}%</td>
+              <td className="px-4 py-3 text-on-surface font-mono">{item.satTaxCode}</td>
+              <td className="px-4 py-3 text-on-surface">{item.factorType}</td>
+              <td className="px-4 py-3 text-on-surface font-mono">{item.displayValue}</td>
+              <td className="px-4 py-3 text-on-surface font-mono">{(item.rate * 100).toFixed(4)}%</td>
               <td className="px-4 py-3 text-on-surface-variant">
                 {item.description ? (
                   <span title={item.description}>

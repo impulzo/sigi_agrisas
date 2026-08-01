@@ -10,25 +10,71 @@ import { TaxRateNotFoundError, TaxRateCodeAlreadyInUseError, TaxRateInUseByProdu
 
 const uuidSchema = z.string().uuid("Invalid ID format");
 
-const createBodySchema = z.object({
-  code: z.string().regex(/^[A-Z0-9_]{1,32}$/, "code must be uppercase letters, digits, or underscores (1–32 chars)"),
-  name: z.string().min(1).max(100),
-  description: z.string().max(1000).nullable().optional(),
-  rate: z.number().min(0).max(1, "rate must be between 0 and 1"),
-  isActive: z.boolean().optional(),
-});
+const factorTypeSchema = z.enum(["Tasa", "Cuota", "Exento"]);
+const satTaxCodeSchema = z.string().regex(/^\d{3}$/, "satTaxCode must be 3 digits (SAT c_Impuesto catalog)");
+// "Tasa"/"Exento" are a 0-1 factor; "Cuota" is a fixed monetary amount and has no upper bound.
+const rateSchema = z.number().min(0, "rate must be >= 0");
+
+function rateExceedsFactorBound(factorType: "Tasa" | "Cuota" | "Exento", rate: number): boolean {
+  return factorType !== "Cuota" && rate > 1;
+}
+const accountSchema = z.string().max(20).nullable().optional();
+
+const createBodySchema = z
+  .object({
+    code: z.string().regex(/^[A-Z0-9_]{1,32}$/, "code must be uppercase letters, digits, or underscores (1–32 chars)"),
+    name: z.string().min(1).max(100),
+    description: z.string().max(1000).nullable().optional(),
+    satTaxCode: satTaxCodeSchema,
+    factorType: factorTypeSchema,
+    displayValue: z.number(),
+    rate: rateSchema,
+    transferredAccount: accountSchema,
+    pendingTransferredAccount: accountSchema,
+    creditedAccount: accountSchema,
+    pendingCreditedAccount: accountSchema,
+    isActive: z.boolean().optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (rateExceedsFactorBound(d.factorType, d.rate)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["rate"], message: "rate must be <= 1 for factorType Tasa/Exento" });
+    }
+  });
 
 const updateBodySchema = z
   .object({
     name: z.string().min(1).max(100).optional(),
     description: z.string().max(1000).nullable().optional(),
-    rate: z.number().min(0).max(1, "rate must be between 0 and 1").optional(),
+    satTaxCode: satTaxCodeSchema.optional(),
+    factorType: factorTypeSchema.optional(),
+    displayValue: z.number().optional(),
+    rate: rateSchema.optional(),
+    transferredAccount: accountSchema,
+    pendingTransferredAccount: accountSchema,
+    creditedAccount: accountSchema,
+    pendingCreditedAccount: accountSchema,
     isActive: z.boolean().optional(),
   })
   .refine(
-    (d) => d.name !== undefined || d.description !== undefined || d.rate !== undefined || d.isActive !== undefined,
+    (d) =>
+      d.name !== undefined ||
+      d.description !== undefined ||
+      d.satTaxCode !== undefined ||
+      d.factorType !== undefined ||
+      d.displayValue !== undefined ||
+      d.rate !== undefined ||
+      d.transferredAccount !== undefined ||
+      d.pendingTransferredAccount !== undefined ||
+      d.creditedAccount !== undefined ||
+      d.pendingCreditedAccount !== undefined ||
+      d.isActive !== undefined,
     { message: "At least one field must be provided" }
-  );
+  )
+  .superRefine((d, ctx) => {
+    if (d.factorType !== undefined && d.rate !== undefined && rateExceedsFactorBound(d.factorType, d.rate)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["rate"], message: "rate must be <= 1 for factorType Tasa/Exento" });
+    }
+  });
 
 export class TaxRatesController {
   constructor(

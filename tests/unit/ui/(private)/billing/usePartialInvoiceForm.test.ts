@@ -15,6 +15,7 @@ import { usePartialInvoiceForm } from "../../../../../app/(private)/billing/_log
 import { stampInvoice } from "../../../../../app/(private)/billing/_logic/services";
 import { computeInvoiceTotalsClient } from "../../../../../app/(private)/billing/_logic/lib/computeInvoiceTotalsClient";
 import { SaleAlreadyInvoicedError } from "../../../../../app/(private)/billing/_logic/errors";
+import type { Invoice } from "../../../../../app/(private)/billing/_logic/types/domain";
 import { totalsVectors } from "../../../../fixtures/totals-vectors";
 
 const mockStamp = stampInvoice as jest.MockedFunction<typeof stampInvoice>;
@@ -33,7 +34,7 @@ function makeLine(overrides = {}) {
     productCode: "LIBRE",
     description: "Línea libre",
     satProductCode: "01010101",
-    satUnitCode: null,
+    satUnitCode: "",
     unit: "PZA",
     quantity: 1,
     unitPrice: 100,
@@ -44,8 +45,8 @@ function makeLine(overrides = {}) {
   };
 }
 
-function makeInvoiceResult() {
-  return { id: "inv-new", status: "stamped" } as Parameters<typeof mockStamp>[0] extends any ? any : never;
+function makeInvoiceResult(): Invoice {
+  return { id: "inv-new", status: "stamped" } as unknown as Invoice;
 }
 
 describe("usePartialInvoiceForm", () => {
@@ -122,7 +123,7 @@ describe("usePartialInvoiceForm", () => {
     });
     await act(async () => { await result.current.submit(); });
     expect(mockStamp).toHaveBeenCalledTimes(1);
-    const payload = mockStamp.mock.calls[0][0] as Record<string, unknown>;
+    const payload = mockStamp.mock.calls[0][0] as unknown as Record<string, unknown>;
     expect(payload).not.toHaveProperty("saleId");
     expect(payload).toHaveProperty("customer");
     expect(payload).toHaveProperty("items");
@@ -160,6 +161,9 @@ describe("usePartialInvoiceForm", () => {
             productId: null,
             productCode: "P",
             description: "d",
+            satProductCode: "01010101",
+            satUnitCode: "",
+            unit: "PZA",
             quantity: l.quantity,
             unitPrice: l.unitPrice,
             discountPct: l.discountPct,

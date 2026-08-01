@@ -19,7 +19,7 @@ export function NewInvoicePage({ initialSaleId, initialSaleLabel }: NewInvoicePa
   const { can } = useCurrentUser();
   const canWrite = can("billing:write");
 
-  const [mode, setMode] = useState<Mode>(initialSaleId ? "sale" : "sale");
+  const [mode, setMode] = useState<Mode>("sale");
 
   if (canWrite === "loading") {
     return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;

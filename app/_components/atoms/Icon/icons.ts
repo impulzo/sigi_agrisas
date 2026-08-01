@@ -3,6 +3,7 @@ export const ICON_NAMES = [
   "point_of_sale",
   "inventory_2",
   "receipt_long",
+  "print",
   "contact_support",
   "account_circle",
   "search",
@@ -56,6 +57,8 @@ export const ICON_NAMES = [
   "policy",
   "info",
   "percent",
+  "summarize",
+  "description",
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

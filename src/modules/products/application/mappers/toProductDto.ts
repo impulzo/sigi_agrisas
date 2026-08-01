@@ -1,7 +1,7 @@
 import { ProductWithDepartment } from "../ports/ProductRepository";
 import { ProductDto } from "../dto/ProductDto";
 
-export function toProductDto({ product, departmentName, taxRateCode, providerName, providerId }: ProductWithDepartment): ProductDto {
+export function toProductDto({ product, departmentName, taxRateCode, taxRate, providerName, providerId }: ProductWithDepartment): ProductDto {
   return {
     id: product.id,
     code: product.code,
@@ -12,6 +12,7 @@ export function toProductDto({ product, departmentName, taxRateCode, providerNam
     departmentName,
     taxRateId: product.taxRateId,
     taxRateCode: taxRateCode ?? null,
+    taxRate: taxRate ?? null,
     providerId: providerId ?? null,
     providerName: providerName ?? null,
     ivaRate: product.ivaRate,

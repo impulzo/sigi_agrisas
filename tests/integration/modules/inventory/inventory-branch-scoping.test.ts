@@ -27,6 +27,7 @@ async function cleanup() {
   await prisma.userRole.deleteMany({ where: { userId: OPERATOR_USER_ID } });
   await prisma.user.deleteMany({ where: { email: { startsWith: P } } });
   await prisma.branchInventory.deleteMany({ where: { branch: { code: { startsWith: P } } } });
+  await prisma.inventoryMovement.deleteMany({ where: { product: { code: { startsWith: P } } } });
   await prisma.product.deleteMany({ where: { code: { startsWith: P } } });
   await prisma.branch.deleteMany({ where: { code: { startsWith: P } } });
   await prisma.department.deleteMany({ where: { code: { startsWith: P } } });

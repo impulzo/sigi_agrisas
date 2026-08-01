@@ -14,10 +14,18 @@ export function CartTotals({ totals }: CartTotalsProps) {
         <span>Subtotal</span>
         <span className="tabular-nums">{formatMxCurrency(totals.subtotal)}</span>
       </div>
-      <div className="flex justify-between text-body-sm text-on-surface-variant">
-        <span>Impuestos (IVA + IEPS)</span>
-        <span className="tabular-nums">{formatMxCurrency(totals.taxTotal)}</span>
-      </div>
+      {totals.ivaTotal > 0 && (
+        <div className="flex justify-between text-body-sm text-on-surface-variant">
+          <span>IVA</span>
+          <span className="tabular-nums">{formatMxCurrency(totals.ivaTotal)}</span>
+        </div>
+      )}
+      {totals.iepsTotal > 0 && (
+        <div className="flex justify-between text-body-sm text-on-surface-variant">
+          <span>IEPS</span>
+          <span className="tabular-nums">{formatMxCurrency(totals.iepsTotal)}</span>
+        </div>
+      )}
       <div className="flex justify-between text-body-md font-semibold text-on-surface border-t border-outline-variant pt-2 mt-2">
         <span>Total</span>
         <span className="tabular-nums">{formatMxCurrency(totals.total)}</span>

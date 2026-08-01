@@ -13,7 +13,7 @@ export interface InventoryRow {
   unit: string;
   departmentCode: string;
   departmentName: string;
-  satProductCode?: string;
+  satProductCode?: string | null;
   ivaRate?: number;
   iepsRate?: number;
   isTaxable?: boolean;

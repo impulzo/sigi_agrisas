@@ -12,7 +12,7 @@ import { ProductCodeAlreadyInUseError } from "../../domain/errors/ProductCodeAlr
 
 const INCLUDE_WITH_RELATIONS = {
   department: { select: { name: true, providerId: true, provider: { select: { id: true, name: true } } } },
-  taxRate: { select: { code: true } },
+  taxRate: { select: { id: true, code: true, name: true, rate: true } },
 } as const;
 
 type ProductRow = Prisma.ProductGetPayload<{ include: typeof INCLUDE_WITH_RELATIONS }>;
@@ -41,6 +41,9 @@ function toProductWithDepartment(row: ProductRow): ProductWithDepartment {
     }),
     departmentName: row.department?.name ?? "",
     taxRateCode: row.taxRate?.code ?? null,
+    taxRate: row.taxRate
+      ? { id: row.taxRate.id, code: row.taxRate.code, name: row.taxRate.name, rate: row.taxRate.rate.toNumber() }
+      : null,
     providerId: row.department?.provider?.id ?? null,
     providerName: row.department?.provider?.name ?? null,
   };

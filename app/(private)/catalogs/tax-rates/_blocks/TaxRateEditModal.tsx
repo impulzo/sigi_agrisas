@@ -18,6 +18,12 @@ interface TaxRateEditModalProps {
   onClose: () => void;
 }
 
+const FACTOR_TYPES = ["Tasa", "Cuota", "Exento"] as const;
+
+function toAccountValue(v: string): string | null {
+  return v.trim() === "" ? null : v.trim();
+}
+
 export function TaxRateEditModal({
   open,
   mode,
@@ -33,7 +39,14 @@ export function TaxRateEditModal({
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [satTaxCode, setSatTaxCode] = useState("");
+  const [factorType, setFactorType] = useState<string>("Tasa");
+  const [displayValueStr, setDisplayValueStr] = useState("");
   const [rateStr, setRateStr] = useState("");
+  const [transferredAccount, setTransferredAccount] = useState("");
+  const [pendingTransferredAccount, setPendingTransferredAccount] = useState("");
+  const [creditedAccount, setCreditedAccount] = useState("");
+  const [pendingCreditedAccount, setPendingCreditedAccount] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
@@ -55,24 +68,45 @@ export function TaxRateEditModal({
   useEffect(() => {
     if (!open) return;
     if (mode === "create") {
-      setCode(""); setName(""); setDescription(""); setRateStr(""); setIsActive(true);
+      setCode(""); setName(""); setDescription("");
+      setSatTaxCode(""); setFactorType("Tasa"); setDisplayValueStr(""); setRateStr("");
+      setTransferredAccount(""); setPendingTransferredAccount(""); setCreditedAccount(""); setPendingCreditedAccount("");
+      setIsActive(true);
     } else if (entity) {
       setCode(entity.code);
       setName(entity.name);
       setDescription(entity.description ?? "");
+      setSatTaxCode(entity.satTaxCode);
+      setFactorType(entity.factorType);
+      setDisplayValueStr(String(entity.displayValue));
       setRateStr(String((entity.rate * 100).toFixed(4).replace(/\.?0+$/, "")));
+      setTransferredAccount(entity.transferredAccount ?? "");
+      setPendingTransferredAccount(entity.pendingTransferredAccount ?? "");
+      setCreditedAccount(entity.creditedAccount ?? "");
+      setPendingCreditedAccount(entity.pendingCreditedAccount ?? "");
       setIsActive(entity.isActive);
     }
     setValidationErrors({});
   }, [open, mode, entity]);
 
   const rateNum = parseFloat(rateStr);
+  const displayValueNum = parseFloat(displayValueStr);
 
   function validate(): boolean {
     const schema = mode === "create" ? createTaxRateSchema : updateTaxRateSchema;
-    const data = mode === "create"
-      ? { code, name, description: description || null, rate: isNaN(rateNum) ? undefined : rateNum, isActive }
-      : { name, description: description || null, rate: isNaN(rateNum) ? undefined : rateNum, isActive };
+    const shared = {
+      description: description || null,
+      satTaxCode: satTaxCode || (mode === "create" ? "" : undefined),
+      factorType: mode === "create" ? factorType : factorType,
+      displayValue: isNaN(displayValueNum) ? undefined : displayValueNum,
+      rate: isNaN(rateNum) ? undefined : rateNum,
+      transferredAccount: toAccountValue(transferredAccount),
+      pendingTransferredAccount: toAccountValue(pendingTransferredAccount),
+      creditedAccount: toAccountValue(creditedAccount),
+      pendingCreditedAccount: toAccountValue(pendingCreditedAccount),
+      isActive,
+    };
+    const data = mode === "create" ? { code, name, ...shared } : { name, ...shared };
     const result = schema.safeParse(data);
     if (!result.success) {
       const errs: Record<string, string> = {};
@@ -90,28 +124,49 @@ export function TaxRateEditModal({
     if (name !== entity.name) diff.name = name;
     const desc = description || null;
     if (desc !== entity.description) diff.description = desc;
+    if (satTaxCode !== entity.satTaxCode) diff.satTaxCode = satTaxCode;
+    if (factorType !== entity.factorType) diff.factorType = factorType;
+    if (!isNaN(displayValueNum) && displayValueNum !== entity.displayValue) diff.displayValue = displayValueNum;
     const newRate = isNaN(rateNum) ? null : rateNum / 100;
-    if (newRate !== null && newRate !== entity.rate) diff.rate = rateNum;
+    if (newRate !== null && newRate !== entity.rate) diff.rate = newRate;
+    const newTransferredAccount = toAccountValue(transferredAccount);
+    if (newTransferredAccount !== entity.transferredAccount) diff.transferredAccount = newTransferredAccount;
+    const newPendingTransferredAccount = toAccountValue(pendingTransferredAccount);
+    if (newPendingTransferredAccount !== entity.pendingTransferredAccount) diff.pendingTransferredAccount = newPendingTransferredAccount;
+    const newCreditedAccount = toAccountValue(creditedAccount);
+    if (newCreditedAccount !== entity.creditedAccount) diff.creditedAccount = newCreditedAccount;
+    const newPendingCreditedAccount = toAccountValue(pendingCreditedAccount);
+    if (newPendingCreditedAccount !== entity.pendingCreditedAccount) diff.pendingCreditedAccount = newPendingCreditedAccount;
     if (isActive !== entity.isActive) diff.isActive = isActive;
     return diff;
   }
 
   const isDirty =
     mode === "create"
-      ? code !== "" || name !== "" || description !== "" || rateStr !== "" || !isActive
-      : entity !== null && (
-          name !== entity.name ||
-          (description || null) !== entity.description ||
-          (!isNaN(rateNum) && rateNum / 100 !== entity.rate) ||
-          isActive !== entity.isActive
-        );
+      ? code !== "" || name !== "" || description !== "" || satTaxCode !== "" || displayValueStr !== "" || rateStr !== "" ||
+        transferredAccount !== "" || pendingTransferredAccount !== "" || creditedAccount !== "" || pendingCreditedAccount !== "" ||
+        factorType !== "Tasa" || !isActive
+      : entity !== null && Object.keys(getDiff()).length > 0;
 
   const isDiffEmpty = mode === "edit" && Object.keys(getDiff()).length === 0;
 
   function handleSave() {
     if (!validate()) return;
     if (mode === "create") {
-      onSave({ code, name, description: description || null, rate: rateNum / 100, isActive });
+      onSave({
+        code,
+        name,
+        description: description || null,
+        satTaxCode,
+        factorType,
+        displayValue: displayValueNum,
+        rate: rateNum / 100,
+        transferredAccount: toAccountValue(transferredAccount),
+        pendingTransferredAccount: toAccountValue(pendingTransferredAccount),
+        creditedAccount: toAccountValue(creditedAccount),
+        pendingCreditedAccount: toAccountValue(pendingCreditedAccount),
+        isActive,
+      });
     } else {
       const diff = getDiff();
       if (Object.keys(diff).length === 0) return;
@@ -163,23 +218,69 @@ export function TaxRateEditModal({
           {validationErrors.name && <p className="text-label-sm text-error mt-1">{validationErrors.name}</p>}
         </div>
 
-        <div>
-          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="tr-rate">Tasa (%)</label>
-          <div className="relative">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="tr-sat-tax-code">Clave SAT</label>
             <input
-              id="tr-rate"
+              id="tr-sat-tax-code"
+              type="text"
+              value={satTaxCode}
+              onChange={(e) => setSatTaxCode(e.target.value.replace(/\D/g, "").slice(0, 3))}
+              placeholder="002"
+              maxLength={3}
+              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {validationErrors.satTaxCode && <p className="text-label-sm text-error mt-1">{validationErrors.satTaxCode}</p>}
+          </div>
+
+          <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="tr-factor-type">Tipo Factor</label>
+            <select
+              id="tr-factor-type"
+              value={factorType}
+              onChange={(e) => setFactorType(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {FACTOR_TYPES.map((ft) => (
+                <option key={ft} value={ft}>{ft}</option>
+              ))}
+            </select>
+            {validationErrors.factorType && <p className="text-label-sm text-error mt-1">{validationErrors.factorType}</p>}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="tr-display-value">Valor</label>
+            <input
+              id="tr-display-value"
               type="number"
-              value={rateStr}
-              onChange={(e) => setRateStr(e.target.value)}
+              value={displayValueStr}
+              onChange={(e) => setDisplayValueStr(e.target.value)}
               placeholder="16"
               step="0.01"
-              min="0"
-              max="100"
-              className="w-full px-3 py-2 pr-8 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-body-md">%</span>
+            {validationErrors.displayValue && <p className="text-label-sm text-error mt-1">{validationErrors.displayValue}</p>}
           </div>
-          {validationErrors.rate && <p className="text-label-sm text-error mt-1">{validationErrors.rate}</p>}
+
+          <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="tr-rate">Tasa/Cuota (%)</label>
+            <div className="relative">
+              <input
+                id="tr-rate"
+                type="number"
+                value={rateStr}
+                onChange={(e) => setRateStr(e.target.value)}
+                placeholder="16"
+                step="0.000001"
+                min="0"
+                className="w-full px-3 py-2 pr-8 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-body-md">%</span>
+            </div>
+            {validationErrors.rate && <p className="text-label-sm text-error mt-1">{validationErrors.rate}</p>}
+          </div>
         </div>
 
         <div>
@@ -194,6 +295,56 @@ export function TaxRateEditModal({
           />
           {validationErrors.description && <p className="text-label-sm text-error mt-1">{validationErrors.description}</p>}
         </div>
+
+        <fieldset className="space-y-3">
+          <legend className="text-label-lg text-on-surface-variant mb-1">Cuentas contables (opcional)</legend>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-label-md text-on-surface-variant mb-1" htmlFor="tr-transferred-account">Cuenta Trasladado</label>
+              <input
+                id="tr-transferred-account"
+                type="text"
+                value={transferredAccount}
+                onChange={(e) => setTransferredAccount(e.target.value)}
+                maxLength={20}
+                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-label-md text-on-surface-variant mb-1" htmlFor="tr-pending-transferred-account">Cuenta x Trasladar</label>
+              <input
+                id="tr-pending-transferred-account"
+                type="text"
+                value={pendingTransferredAccount}
+                onChange={(e) => setPendingTransferredAccount(e.target.value)}
+                maxLength={20}
+                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-label-md text-on-surface-variant mb-1" htmlFor="tr-credited-account">Cuenta Acreditado</label>
+              <input
+                id="tr-credited-account"
+                type="text"
+                value={creditedAccount}
+                onChange={(e) => setCreditedAccount(e.target.value)}
+                maxLength={20}
+                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-label-md text-on-surface-variant mb-1" htmlFor="tr-pending-credited-account">Cuenta x Acreditar</label>
+              <input
+                id="tr-pending-credited-account"
+                type="text"
+                value={pendingCreditedAccount}
+                onChange={(e) => setPendingCreditedAccount(e.target.value)}
+                maxLength={20}
+                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+        </fieldset>
 
         <div className="flex items-center gap-3">
           <Switch checked={isActive} onChange={setIsActive} aria-label="Activo" id="tr-isActive" />

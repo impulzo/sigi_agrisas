@@ -16,6 +16,23 @@ jest.mock("@/modules/reports/infrastructure/pdf/PaymentHistoryReportPdf", () => 
   PaymentHistoryReportPdf: () => null,
 }));
 
+jest.mock("@/modules/reports/infrastructure/pdf/AccountStatementPdf", () => ({
+  AccountStatementSummaryPdf: () => null,
+  AccountStatementLedgerPdf: () => null,
+}));
+
+jest.mock("@/modules/reports/infrastructure/pdf/AnticipoReceiptPdf", () => ({
+  AnticipoReceiptPdf: () => null,
+}));
+
+jest.mock("@/modules/reports/infrastructure/pdf/SalesCutReportPdf", () => ({
+  SalesCutReportPdf: () => null,
+}));
+
+jest.mock("@/modules/reports/infrastructure/pdf/CashCutReportPdf", () => ({
+  CashCutReportPdf: () => null,
+}));
+
 jest.mock("@/modules/rbac/infrastructure/di/container", () => ({
   rbacContainer: {
     authorizationService: {
@@ -36,6 +53,25 @@ import { InMemoryInventoryReportRepository } from "@/modules/reports/infrastruct
 import { InMemoryPaymentReportRepository } from "@/modules/reports/infrastructure/repositories/InMemoryPaymentReportRepository";
 import { RawStockRow } from "@/modules/reports/application/ports/InventoryReportRepository";
 import { RawPaymentRow } from "@/modules/reports/application/ports/PaymentReportRepository";
+import { GetAccountStatementsSummaryUseCase } from "@/modules/reports/application/use-cases/GetAccountStatementsSummaryUseCase";
+import { GetAccountStatementLedgerUseCase } from "@/modules/reports/application/use-cases/GetAccountStatementLedgerUseCase";
+import { GetAnticipoReceiptUseCase } from "@/modules/reports/application/use-cases/GetAnticipoReceiptUseCase";
+import {
+  InMemoryAccountStatementRepository,
+  InMemoryStatementCustomer,
+  InMemoryStatementMovement,
+  InMemoryAnticipoReceipt,
+} from "@/modules/reports/infrastructure/repositories/InMemoryAccountStatementRepository";
+import { GetSalesCutReportUseCase } from "@/modules/reports/application/use-cases/GetSalesCutReportUseCase";
+import {
+  InMemorySalesCutRepository,
+  InMemCutSale,
+} from "@/modules/reports/infrastructure/repositories/InMemorySalesCutRepository";
+import { GetCashCutReportUseCase } from "@/modules/reports/application/use-cases/GetCashCutReportUseCase";
+import {
+  InMemoryCashCutRepository,
+  InMemCutPayment,
+} from "@/modules/reports/infrastructure/repositories/InMemoryCashCutRepository";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 
 const BASE_URL = "http://localhost:3000/api/v1/admin/reports";
@@ -71,12 +107,30 @@ function makePaymentRow(): RawPaymentRow {
   };
 }
 
+function emptyAccountUseCases() {
+  const repo = new InMemoryAccountStatementRepository([], []);
+  return {
+    summary: new GetAccountStatementsSummaryUseCase(repo),
+    ledger: new GetAccountStatementLedgerUseCase(repo),
+    anticipo: new GetAnticipoReceiptUseCase(repo),
+  };
+}
+
+function emptySalesCutUseCase(sales: InMemCutSale[] = []) {
+  return new GetSalesCutReportUseCase(new InMemorySalesCutRepository(sales));
+}
+
+function emptyCashCutUseCase(payments: InMemCutPayment[] = []) {
+  return new GetCashCutReportUseCase(new InMemoryCashCutRepository(payments));
+}
+
 function makeStockController(rows: RawStockRow[] = [], authz?: AuthorizationService) {
   const repo = new InMemoryInventoryReportRepository(rows);
   const stockUC = new GetInventoryStockReportUseCase(repo);
   const payRepo = new InMemoryPaymentReportRepository([]);
   const payUC = new GetPaymentHistoryReportUseCase(payRepo);
-  return new ReportsController(stockUC, payUC, authz ?? makeAuthz());
+  const acc = emptyAccountUseCases();
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), authz ?? makeAuthz());
 }
 
 function makePaymentController(rows: RawPaymentRow[] = [], authz?: AuthorizationService) {
@@ -84,7 +138,46 @@ function makePaymentController(rows: RawPaymentRow[] = [], authz?: Authorization
   const stockUC = new GetInventoryStockReportUseCase(stockRepo);
   const payRepo = new InMemoryPaymentReportRepository(rows);
   const payUC = new GetPaymentHistoryReportUseCase(payRepo);
-  return new ReportsController(stockUC, payUC, authz ?? makeAuthz());
+  const acc = emptyAccountUseCases();
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), authz ?? makeAuthz());
+}
+
+function makeAccountController(
+  customers: InMemoryStatementCustomer[] = [],
+  movements: InMemoryStatementMovement[] = [],
+  authz?: AuthorizationService,
+  receipts: InMemoryAnticipoReceipt[] = []
+) {
+  const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
+  const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
+  const repo = new InMemoryAccountStatementRepository(customers, movements, receipts);
+  const summaryUC = new GetAccountStatementsSummaryUseCase(repo);
+  const ledgerUC = new GetAccountStatementLedgerUseCase(repo);
+  const anticipoUC = new GetAnticipoReceiptUseCase(repo);
+  return new ReportsController(
+    stockUC,
+    payUC,
+    summaryUC,
+    ledgerUC,
+    anticipoUC,
+    emptySalesCutUseCase(),
+    emptyCashCutUseCase(),
+    authz ?? makeAuthz()
+  );
+}
+
+function makeSalesCutController(sales: InMemCutSale[] = [], authz?: AuthorizationService) {
+  const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
+  const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
+  const acc = emptyAccountUseCases();
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(sales), emptyCashCutUseCase(), authz ?? makeAuthz());
+}
+
+function makeCashCutController(payments: InMemCutPayment[] = [], authz?: AuthorizationService) {
+  const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
+  const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
+  const acc = emptyAccountUseCases();
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(payments), authz ?? makeAuthz());
 }
 
 function req(url: string, headers: Record<string, string> = {}): NextRequest {
@@ -269,5 +362,555 @@ describe("ReportsController - getPaymentHistoryReport", () => {
       req(`${BASE_URL}/payments/history?branchId=${OTHER_BRANCH}`, authHeaders(BRANCH_ID))
     );
     expect(res.status).toBe(403);
+  });
+});
+
+// ─── Account Statements ────────────────────────────────────────────────────
+
+const CUSTOMER_ID = "33333333-3333-3333-3333-333333333333";
+
+function accCustomer(overrides: Partial<InMemoryStatementCustomer> = {}): InMemoryStatementCustomer {
+  return {
+    id: CUSTOMER_ID,
+    code: "C001",
+    name: "Cliente Uno",
+    currentBalance: 500,
+    creditLimit: 1000,
+    ...overrides,
+  };
+}
+
+function accSaleMovement(overrides: Partial<InMemoryStatementMovement> = {}): InMemoryStatementMovement {
+  return {
+    id: "sale-1",
+    customerId: CUSTOMER_ID,
+    kind: "sale",
+    isCredit: true,
+    status: "completed",
+    amount: 500,
+    date: new Date("2026-06-10T10:00:00Z"),
+    folioCode: "TK",
+    folioNumber: 1,
+    branchId: BRANCH_ID,
+    dueDate: null,
+    reference: null,
+    paymentMethodCode: "CR",
+    paymentStatus: "pending",
+    saleId: null,
+    ...overrides,
+  };
+}
+
+describe("ReportsController - getAccountStatementsSummary", () => {
+  it("401 sin x-user-id", async () => {
+    const ctrl = makeAccountController([], [], makeAuthz({ userCan: async () => false }));
+    const res = await ctrl.getAccountStatementsSummary(req(`${BASE_URL}/account-statements`));
+    expect(res.status).toBe(401);
+  });
+
+  it("403 sin reports:account_statements_read", async () => {
+    const authz = makeAuthz({ userCan: jest.fn().mockResolvedValue(false) });
+    const ctrl = makeAccountController([], [], authz);
+    const res = await ctrl.getAccountStatementsSummary(
+      req(`${BASE_URL}/account-statements`, authHeaders())
+    );
+    expect(res.status).toBe(403);
+    expect((await res.json()).required).toBe("reports:account_statements_read");
+  });
+
+  it("400 con ?format=csv", async () => {
+    const ctrl = makeAccountController();
+    const res = await ctrl.getAccountStatementsSummary(
+      req(`${BASE_URL}/account-statements?format=csv`, authHeaders())
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("200 resumen con fila por cliente y availableCredit", async () => {
+    const ctrl = makeAccountController([accCustomer()], [accSaleMovement()]);
+    const res = await ctrl.getAccountStatementsSummary(
+      req(`${BASE_URL}/account-statements`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].currentBalance).toBe("500.0000");
+    expect(body.items[0].totalCharged).toBe("500.0000");
+    expect(body.items[0].availableCredit).toBe("500.0000");
+  });
+
+  it("availableCredit null cuando creditLimit null", async () => {
+    const ctrl = makeAccountController([accCustomer({ creditLimit: null })], []);
+    const res = await ctrl.getAccountStatementsSummary(
+      req(`${BASE_URL}/account-statements`, authHeaders())
+    );
+    const body = await res.json();
+    expect(body.items[0].creditLimit).toBeNull();
+    expect(body.items[0].availableCredit).toBeNull();
+  });
+
+  it("onlyWithBalance filtra clientes con saldo cero", async () => {
+    const ctrl = makeAccountController(
+      [accCustomer(), accCustomer({ id: "44444444-4444-4444-4444-444444444444", code: "C002", name: "Cero", currentBalance: 0 })],
+      []
+    );
+    const res = await ctrl.getAccountStatementsSummary(
+      req(`${BASE_URL}/account-statements?onlyWithBalance=true`, authHeaders())
+    );
+    const body = await res.json();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].customerCode).toBe("C001");
+  });
+
+  it("403 branch scope cross-branch sin bypass", async () => {
+    const authz = makeAuthz({
+      userCan: jest.fn().mockImplementation(async (_id, key) => {
+        if (key === "reports:account_statements_read") return true;
+        return false;
+      }),
+    });
+    const ctrl = makeAccountController([accCustomer()], [accSaleMovement()], authz);
+    const res = await ctrl.getAccountStatementsSummary(
+      req(`${BASE_URL}/account-statements?branchId=${OTHER_BRANCH}`, authHeaders(BRANCH_ID))
+    );
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("ReportsController - getAccountStatementLedger", () => {
+  it("400 con customerId inválido", async () => {
+    const ctrl = makeAccountController();
+    const res = await ctrl.getAccountStatementLedger(
+      req(`${BASE_URL}/account-statements/not-a-uuid`, authHeaders()),
+      "not-a-uuid"
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("403 sin permiso", async () => {
+    const authz = makeAuthz({ userCan: jest.fn().mockResolvedValue(false) });
+    const ctrl = makeAccountController([], [], authz);
+    const res = await ctrl.getAccountStatementLedger(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}`, authHeaders()),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("404 cliente inexistente", async () => {
+    const ctrl = makeAccountController([], []);
+    const res = await ctrl.getAccountStatementLedger(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}`, authHeaders()),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("200 desglose con saldo corrido", async () => {
+    const movements: InMemoryStatementMovement[] = [
+      accSaleMovement(),
+      {
+        id: "pay-1",
+        customerId: CUSTOMER_ID,
+        kind: "payment",
+        isCredit: false,
+        status: "completed",
+        amount: 200,
+        date: new Date("2026-06-15T10:00:00Z"),
+        folioCode: "RB",
+        folioNumber: 1,
+        branchId: BRANCH_ID,
+        dueDate: null,
+        reference: "TRANSF 200",
+        paymentMethodCode: "TR",
+        paymentStatus: null,
+        saleId: "sale-1",
+      },
+    ];
+    const ctrl = makeAccountController([accCustomer()], movements);
+    const res = await ctrl.getAccountStatementLedger(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}`, authHeaders()),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.movements).toHaveLength(2);
+    expect(body.movements[0].runningBalance).toBe("500.0000");
+    expect(body.movements[1].runningBalance).toBe("300.0000");
+    expect(body.closingBalance).toBe("300.0000");
+  });
+
+  it("400 con ?sort inválido", async () => {
+    const ctrl = makeAccountController([accCustomer()], [accSaleMovement()]);
+    const res = await ctrl.getAccountStatementLedger(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}?sort=clave`, authHeaders()),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("400 con ?history inválido", async () => {
+    const ctrl = makeAccountController([accCustomer()], [accSaleMovement()]);
+    const res = await ctrl.getAccountStatementLedger(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}?history=maybe`, authHeaders()),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("403 branch scope cross-branch sin bypass", async () => {
+    const authz = makeAuthz({
+      userCan: jest.fn().mockImplementation(async (_id, key) => {
+        if (key === "reports:account_statements_read") return true;
+        return false;
+      }),
+    });
+    const ctrl = makeAccountController([accCustomer()], [accSaleMovement()], authz);
+    const res = await ctrl.getAccountStatementLedger(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}?branchId=${OTHER_BRANCH}`, authHeaders(BRANCH_ID)),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("409 ReportTooLarge cuando el desglose excede 10000 movimientos en PDF", async () => {
+    const movements: InMemoryStatementMovement[] = Array.from({ length: 10001 }, (_, i) =>
+      accSaleMovement({
+        id: `sale-${i}`,
+        amount: 1,
+        date: new Date(Date.UTC(2026, 0, 1, 0, i)),
+      })
+    );
+    const ctrl = makeAccountController([accCustomer()], movements);
+    const res = await ctrl.getAccountStatementLedger(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}?format=pdf`, authHeaders()),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "ReportTooLarge", limit: 10000 });
+  });
+});
+
+// ─── Anticipo Receipt ──────────────────────────────────────────────────────
+
+const PAYMENT_ID = "55555555-5555-5555-5555-555555555555";
+
+function accReceipt(over: Partial<InMemoryAnticipoReceipt> = {}): InMemoryAnticipoReceipt {
+  return {
+    paymentId: PAYMENT_ID,
+    customerId: CUSTOMER_ID,
+    branchId: BRANCH_ID,
+    payment: {
+      id: PAYMENT_ID,
+      folioCode: "RB",
+      folioNumber: 7,
+      amount: 200,
+      status: "completed",
+      createdAt: new Date("2026-06-15T10:00:00Z"),
+      reference: "TRANSF 200",
+      paymentMethodCode: "TR",
+      paymentMethodName: "Transferencia",
+    },
+    customer: { code: "C001", name: "Cliente Uno", address: "Calle 1" },
+    sale: { folioCode: "TC", folioNumber: 11067 },
+    ...over,
+  };
+}
+
+describe("ReportsController - getAnticipoReceipt", () => {
+  it("400 con customerId inválido", async () => {
+    const ctrl = makeAccountController();
+    const res = await ctrl.getAnticipoReceipt(
+      req(`${BASE_URL}/account-statements/x/payments/${PAYMENT_ID}/receipt`, authHeaders()),
+      "not-a-uuid",
+      PAYMENT_ID
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("400 con paymentId inválido", async () => {
+    const ctrl = makeAccountController();
+    const res = await ctrl.getAnticipoReceipt(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}/payments/x/receipt`, authHeaders()),
+      CUSTOMER_ID,
+      "not-a-uuid"
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("403 sin permiso", async () => {
+    const authz = makeAuthz({ userCan: jest.fn().mockResolvedValue(false) });
+    const ctrl = makeAccountController([], [], authz, [accReceipt()]);
+    const res = await ctrl.getAnticipoReceipt(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}/payments/${PAYMENT_ID}/receipt`, authHeaders()),
+      CUSTOMER_ID,
+      PAYMENT_ID
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("404 abono ajeno al cliente", async () => {
+    const ctrl = makeAccountController([], [], undefined, [
+      accReceipt({ customerId: "44444444-4444-4444-4444-444444444444" }),
+    ]);
+    const res = await ctrl.getAnticipoReceipt(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}/payments/${PAYMENT_ID}/receipt`, authHeaders()),
+      CUSTOMER_ID,
+      PAYMENT_ID
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("200 application/pdf con recibo", async () => {
+    const ctrl = makeAccountController([], [], undefined, [accReceipt()]);
+    const res = await ctrl.getAnticipoReceipt(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}/payments/${PAYMENT_ID}/receipt`, authHeaders()),
+      CUSTOMER_ID,
+      PAYMENT_ID
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("application/pdf");
+  });
+
+  it("404 branch scope oculta recibo de otra sucursal sin bypass", async () => {
+    const authz = makeAuthz({
+      userCan: jest.fn().mockImplementation(async (_id, key) => {
+        if (key === "reports:account_statements_read") return true;
+        return false;
+      }),
+    });
+    const ctrl = makeAccountController([], [], authz, [accReceipt({ branchId: OTHER_BRANCH })]);
+    const res = await ctrl.getAnticipoReceipt(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}/payments/${PAYMENT_ID}/receipt`, authHeaders(BRANCH_ID)),
+      CUSTOMER_ID,
+      PAYMENT_ID
+    );
+    expect(res.status).toBe(404);
+  });
+});
+
+// ─── Sales Cut ─────────────────────────────────────────────────────────────
+
+function cutSale(over: Partial<InMemCutSale> = {}): InMemCutSale {
+  return {
+    id: "sc-1",
+    status: "completed",
+    total: 116,
+    subtotal: 100,
+    taxTotal: 16,
+    iva: 16,
+    ieps: 0,
+    branchId: BRANCH_ID,
+    branchName: "Matriz",
+    cashierId: USER_ID,
+    cashierName: "Cajero",
+    paymentMethodId: "77777777-7777-7777-7777-777777777777",
+    paymentMethodName: "Efectivo",
+    createdAt: new Date(`${new Date().toISOString().split("T")[0]}T10:00:00.000Z`),
+    ...over,
+  };
+}
+
+describe("ReportsController - getSalesCutReport", () => {
+  it("401 sin x-user-id", async () => {
+    const ctrl = makeSalesCutController([], makeAuthz({ userCan: async () => false }));
+    const res = await ctrl.getSalesCutReport(req(`${BASE_URL}/sales-cut`));
+    expect(res.status).toBe(401);
+  });
+
+  it("403 sin reports:sales_cut_read", async () => {
+    const authz = makeAuthz({ userCan: jest.fn().mockResolvedValue(false) });
+    const ctrl = makeSalesCutController([], authz);
+    const res = await ctrl.getSalesCutReport(req(`${BASE_URL}/sales-cut`, authHeaders()));
+    expect(res.status).toBe(403);
+    expect((await res.json()).required).toBe("reports:sales_cut_read");
+  });
+
+  it("400 con ?format=csv", async () => {
+    const ctrl = makeSalesCutController();
+    const res = await ctrl.getSalesCutReport(req(`${BASE_URL}/sales-cut?format=csv`, authHeaders()));
+    expect(res.status).toBe(400);
+  });
+
+  it("400 con from > to", async () => {
+    const ctrl = makeSalesCutController();
+    const res = await ctrl.getSalesCutReport(
+      req(`${BASE_URL}/sales-cut?from=2026-07-10&to=2026-07-01`, authHeaders())
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("400 con cashierId inválido", async () => {
+    const ctrl = makeSalesCutController();
+    const res = await ctrl.getSalesCutReport(
+      req(`${BASE_URL}/sales-cut?cashierId=bad`, authHeaders())
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("200 preset hoy con totales y desgloses", async () => {
+    const ctrl = makeSalesCutController([cutSale(), cutSale({ id: "sc-2", status: "cancelled", total: 50 })]);
+    const res = await ctrl.getSalesCutReport(req(`${BASE_URL}/sales-cut?preset=today`, authHeaders()));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.totals.grossSales).toBe("116.0000");
+    expect(body.totals.ticketCount).toBe(1);
+    expect(body.cancelled.count).toBe(1);
+    expect(body.cancelled.total).toBe("50.0000");
+    expect(body.cash.netCash).toBe("116.0000");
+    expect(body.byPaymentMethod).toHaveLength(1);
+    expect(body.byPaymentMethod[0].label).toBe("Efectivo");
+  });
+});
+
+// ─── Cash Cut ──────────────────────────────────────────────────────────────
+
+function cutPayment(over: Partial<InMemCutPayment> = {}): InMemCutPayment {
+  return {
+    paymentId: "cp-1",
+    status: "completed",
+    branchId: BRANCH_ID,
+    customerId: "66666666-6666-6666-6666-666666666666",
+    customerCode: "C001",
+    customerName: "Cliente Uno",
+    docto: "AB-000001",
+    factura: "TC-000001",
+    facturaDate: new Date("2026-06-01T00:00:00.000Z"),
+    amount: 116,
+    paymentMethodId: "77777777-7777-7777-7777-777777777777",
+    paymentMethodCode: "EFECTIVO",
+    paymentMethodName: "Efectivo",
+    reference: "efectivo",
+    collectedAt: new Date("2026-06-04T10:00:00.000Z"),
+    saleTaxTotal: 16,
+    saleSubtotal: 100,
+    saleTotal: 116,
+    ...over,
+  };
+}
+
+describe("ReportsController - getCashCutReport", () => {
+  it("401 sin x-user-id", async () => {
+    const ctrl = makeCashCutController([], makeAuthz({ userCan: async () => false }));
+    const res = await ctrl.getCashCutReport(req(`${BASE_URL}/cash-cut?from=2026-06-01&to=2026-06-30`));
+    expect(res.status).toBe(401);
+  });
+
+  it("403 sin reports:cash_cut_read", async () => {
+    const authz = makeAuthz({ userCan: jest.fn().mockResolvedValue(false) });
+    const ctrl = makeCashCutController([], authz);
+    const res = await ctrl.getCashCutReport(
+      req(`${BASE_URL}/cash-cut?from=2026-06-01&to=2026-06-30`, authHeaders())
+    );
+    expect(res.status).toBe(403);
+    expect((await res.json()).required).toBe("reports:cash_cut_read");
+  });
+
+  it("400 sin from/to", async () => {
+    const ctrl = makeCashCutController();
+    const res = await ctrl.getCashCutReport(req(`${BASE_URL}/cash-cut`, authHeaders()));
+    expect(res.status).toBe(400);
+  });
+
+  it("400 con from > to", async () => {
+    const ctrl = makeCashCutController();
+    const res = await ctrl.getCashCutReport(
+      req(`${BASE_URL}/cash-cut?from=2026-07-10&to=2026-07-01`, authHeaders())
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("400 con ?format=csv", async () => {
+    const ctrl = makeCashCutController();
+    const res = await ctrl.getCashCutReport(
+      req(`${BASE_URL}/cash-cut?from=2026-06-01&to=2026-06-30&format=csv`, authHeaders())
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid format. Allowed: json, pdf, xlsx" });
+  });
+
+  it("400 con customerId inválido", async () => {
+    const ctrl = makeCashCutController();
+    const res = await ctrl.getCashCutReport(
+      req(`${BASE_URL}/cash-cut?from=2026-06-01&to=2026-06-30&customerId=bad`, authHeaders())
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("200 JSON con filas, totales prorrateados y desglose por forma de pago", async () => {
+    const ctrl = makeCashCutController([cutPayment()]);
+    const res = await ctrl.getCashCutReport(
+      req(`${BASE_URL}/cash-cut?from=2026-06-01&to=2026-06-30`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.rows).toHaveLength(1);
+    expect(body.rows[0].days).toBe(3);
+    expect(body.rows[0].ivaAmount).toBe("16.0000");
+    expect(body.rows[0].taxRatePct).toBe("0.1600");
+    expect(body.totals.totalCollected).toBe("116.0000");
+    expect(body.totals.totalIva).toBe("16.0000");
+    expect(body.byPaymentMethod).toHaveLength(1);
+    expect(body.byPaymentMethod[0].label).toBe("Efectivo");
+  });
+
+  it("periodo vacío devuelve ceros", async () => {
+    const ctrl = makeCashCutController([]);
+    const res = await ctrl.getCashCutReport(
+      req(`${BASE_URL}/cash-cut?from=2026-06-01&to=2026-06-30`, authHeaders())
+    );
+    const body = await res.json();
+    expect(body.rows).toHaveLength(0);
+    expect(body.totals.totalCollected).toBe("0.0000");
+    expect(body.byPaymentMethod).toHaveLength(0);
+  });
+
+  it("200 PDF con Content-Type y Content-Disposition correctos", async () => {
+    const ctrl = makeCashCutController([cutPayment()]);
+    const res = await ctrl.getCashCutReport(
+      req(`${BASE_URL}/cash-cut?from=2026-06-01&to=2026-06-30&format=pdf`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("application/pdf");
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    expect(disposition).toMatch(/^attachment; filename="cash-cut-\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}\.pdf"$/);
+  });
+
+  it("200 xlsx con Content-Type y Content-Disposition correctos", async () => {
+    const ctrl = makeCashCutController([cutPayment()]);
+    const res = await ctrl.getCashCutReport(
+      req(`${BASE_URL}/cash-cut?from=2026-06-01&to=2026-06-30&format=xlsx`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    expect(disposition).toMatch(/^attachment; filename="cash-cut-\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}\.xlsx"$/);
+    const buf = Buffer.from(await res.arrayBuffer());
+    expect(buf.length).toBeGreaterThan(0);
+  });
+
+  it("403 branch scope cross-branch sin bypass", async () => {
+    const authz = makeAuthz({
+      userCan: jest.fn().mockImplementation(async (_id, key) => {
+        if (key === "reports:cash_cut_read") return true;
+        return false;
+      }),
+    });
+    const ctrl = makeCashCutController([], authz);
+    const res = await ctrl.getCashCutReport(
+      req(`${BASE_URL}/cash-cut?from=2026-06-01&to=2026-06-30&branchId=${OTHER_BRANCH}`, authHeaders(BRANCH_ID))
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("abonos cancelados no cuentan", async () => {
+    const ctrl = makeCashCutController([cutPayment({ status: "cancelled" })]);
+    const res = await ctrl.getCashCutReport(
+      req(`${BASE_URL}/cash-cut?from=2026-06-01&to=2026-06-30`, authHeaders())
+    );
+    const body = await res.json();
+    expect(body.rows).toHaveLength(0);
   });
 });

@@ -53,7 +53,7 @@ describe("useStampSaleForm", () => {
     const { result } = renderHook(() => useStampSaleForm("s-123"));
     await act(async () => { await result.current.submit(); });
     expect(mockStamp).toHaveBeenCalledTimes(1);
-    const payload = mockStamp.mock.calls[0][0] as Record<string, unknown>;
+    const payload = mockStamp.mock.calls[0][0] as unknown as Record<string, unknown>;
     expect(payload.saleId).toBe("s-123");
   });
 
@@ -61,7 +61,7 @@ describe("useStampSaleForm", () => {
     mockStamp.mockResolvedValueOnce(makeInvoice());
     const { result } = renderHook(() => useStampSaleForm("s-123"));
     await act(async () => { await result.current.submit(); });
-    const payload = mockStamp.mock.calls[0][0] as Record<string, unknown>;
+    const payload = mockStamp.mock.calls[0][0] as unknown as Record<string, unknown>;
     expect(payload).not.toHaveProperty("customer");
     expect(payload).not.toHaveProperty("branchId");
     expect(payload).not.toHaveProperty("items");

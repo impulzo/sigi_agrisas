@@ -6,6 +6,14 @@ export interface BranchProps {
   email: string | null;
   isHeadquarters: boolean;
   isActive: boolean;
+  addressStreet: string | null;
+  addressExteriorNumber: string | null;
+  addressInteriorNumber: string | null;
+  addressNeighborhood: string | null;
+  addressMunicipality: string | null;
+  addressState: string | null;
+  addressCountry: string | null;
+  addressZipCode: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,6 +27,14 @@ export class Branch {
   readonly email: string | null;
   readonly isHeadquarters: boolean;
   readonly isActive: boolean;
+  readonly addressStreet: string | null;
+  readonly addressExteriorNumber: string | null;
+  readonly addressInteriorNumber: string | null;
+  readonly addressNeighborhood: string | null;
+  readonly addressMunicipality: string | null;
+  readonly addressState: string | null;
+  readonly addressCountry: string | null;
+  readonly addressZipCode: string | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 
@@ -31,6 +47,14 @@ export class Branch {
     this.email = props.email;
     this.isHeadquarters = props.isHeadquarters;
     this.isActive = props.isActive;
+    this.addressStreet = props.addressStreet;
+    this.addressExteriorNumber = props.addressExteriorNumber;
+    this.addressInteriorNumber = props.addressInteriorNumber;
+    this.addressNeighborhood = props.addressNeighborhood;
+    this.addressMunicipality = props.addressMunicipality;
+    this.addressState = props.addressState;
+    this.addressCountry = props.addressCountry;
+    this.addressZipCode = props.addressZipCode;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }

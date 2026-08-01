@@ -53,6 +53,7 @@ export function InventoryPage() {
 
   const canRead = can("inventory:read");
   const canWrite = can("inventory:write");
+  const canViewKardex = can("inventory:kardex_read");
 
   const handleBranchChange = (val: string) => {
     setBranchId(val || undefined);
@@ -178,6 +179,7 @@ export function InventoryPage() {
               <InventoryTable
                 items={items}
                 canWrite={canWrite === true}
+                canViewKardex={canViewKardex === true}
                 onAdjust={(item) => { setAdjustError(null); setModal({ type: "adjust", item }); }}
                 onEdit={(item) => setModal({ type: "edit", item })}
                 onRemove={(item) => setConfirmRemoveId(item.productId)}

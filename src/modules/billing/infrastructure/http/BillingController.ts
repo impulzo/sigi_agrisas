@@ -8,6 +8,7 @@ import { GetInvoiceUseCase } from "../../application/use-cases/GetInvoiceUseCase
 import { ListInvoicesBySaleUseCase } from "../../application/use-cases/ListInvoicesBySaleUseCase";
 import { UploadCsdUseCase } from "../../application/use-cases/UploadCsdUseCase";
 import { GetCsdStatusUseCase } from "../../application/use-cases/GetCsdStatusUseCase";
+import { BillingLookupService } from "../../application/ports/BillingLookupService";
 import { toInvoiceDto } from "../../application/mappers/toInvoiceDto";
 import {
   InvoiceNotFoundError,
@@ -97,7 +98,8 @@ export class BillingController {
     private readonly listBySaleUseCase: ListInvoicesBySaleUseCase,
     private readonly uploadCsdUseCase: UploadCsdUseCase,
     private readonly getCsdStatusUseCase: GetCsdStatusUseCase,
-    private readonly authz: AuthorizationService
+    private readonly authz: AuthorizationService,
+    private readonly lookupService: BillingLookupService
   ) {}
 
   async list(req: NextRequest): Promise<NextResponse> {
@@ -169,11 +171,21 @@ export class BillingController {
     }
     const scoped = await resolveScopedBranchId(req, parsed.data.branchId ?? undefined, this.authz);
     if (scoped instanceof NextResponse) return scoped;
+
+    let resolvedBranchId = scoped.branchId;
+    if (!resolvedBranchId) {
+      const hq = await this.lookupService.findHeadquarters();
+      if (!hq) {
+        return NextResponse.json({ error: "BranchRequired" }, { status: 400 });
+      }
+      resolvedBranchId = hq.id;
+    }
+
     try {
       const invoice = await this.stampUseCase.execute(
         { type: "standalone", ...parsed.data },
         userId,
-        scoped.branchId ?? ""
+        resolvedBranchId
       );
       return NextResponse.json(toInvoiceDto(invoice), { status: 201 });
     } catch (err) {
@@ -317,6 +329,14 @@ export class BillingController {
     if (!idParsed.success) {
       return NextResponse.json({ error: "Invalid sale ID format" }, { status: 400 });
     }
+
+    const sale = await this.lookupService.findSaleWithItems(saleId);
+    if (!sale) {
+      return NextResponse.json({ error: "Sale not found" }, { status: 404 });
+    }
+
+    const scopeError = await enforceBranchScope(req, sale.branchId, this.authz);
+    if (scopeError) return scopeError;
 
     const invoices = await this.listBySaleUseCase.execute(saleId);
     return NextResponse.json({ items: invoices.map(toInvoiceDto) });

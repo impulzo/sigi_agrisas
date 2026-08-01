@@ -6,6 +6,14 @@ export interface BranchDto {
   phone: string | null;
   email: string | null;
   isActive: boolean;
+  addressStreet: string | null;
+  addressExteriorNumber: string | null;
+  addressInteriorNumber: string | null;
+  addressNeighborhood: string | null;
+  addressMunicipality: string | null;
+  addressState: string | null;
+  addressCountry: string | null;
+  addressZipCode: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,6 +32,14 @@ export interface CreateBranchBody {
   phone?: string | null;
   email?: string | null;
   isActive?: boolean;
+  addressStreet?: string | null;
+  addressExteriorNumber?: string | null;
+  addressInteriorNumber?: string | null;
+  addressNeighborhood?: string | null;
+  addressMunicipality?: string | null;
+  addressState?: string | null;
+  addressCountry?: string | null;
+  addressZipCode?: string | null;
 }
 
 export interface UpdateBranchBody {
@@ -32,4 +48,12 @@ export interface UpdateBranchBody {
   phone?: string | null;
   email?: string | null;
   isActive?: boolean;
+  addressStreet?: string | null;
+  addressExteriorNumber?: string | null;
+  addressInteriorNumber?: string | null;
+  addressNeighborhood?: string | null;
+  addressMunicipality?: string | null;
+  addressState?: string | null;
+  addressCountry?: string | null;
+  addressZipCode?: string | null;
 }

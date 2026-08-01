@@ -41,5 +41,6 @@ export const billingController = new BillingController(
   listBySaleUseCase,
   uploadCsdUseCase,
   getCsdStatusUseCase,
-  rbacContainer.authorizationService
+  rbacContainer.authorizationService,
+  lookupService
 );
