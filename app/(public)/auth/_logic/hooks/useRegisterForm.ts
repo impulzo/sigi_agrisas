@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { registerSchema } from "../schemas/register.schema";
 import { register } from "../services/register";
 import { EmailAlreadyExistsError, NetworkError } from "../types/domain";
+import { setAccessToken } from "../../../../_lib/session/accessToken";
 
 interface FormValues {
   name: string;
@@ -71,7 +72,7 @@ export function useRegisterForm(): UseRegisterFormReturn {
     setFormError(null);
     try {
       const { accessToken } = await register(values);
-      sessionStorage.setItem("accessToken", accessToken);
+      setAccessToken(accessToken);
       router.replace("/pos");
     } catch (err) {
       if (err instanceof EmailAlreadyExistsError) {

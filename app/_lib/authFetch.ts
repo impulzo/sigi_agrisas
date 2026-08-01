@@ -1,4 +1,5 @@
 import { schedule as scheduleRefresh } from "./session/refreshScheduler";
+import { setAccessToken } from "./session/accessToken";
 import { logoutClient } from "./logout";
 
 export class UnauthenticatedError extends Error {
@@ -43,9 +44,7 @@ async function doRefreshOnce(): Promise<string | null> {
       });
       if (!res.ok) return null;
       const { accessToken } = (await res.json()) as { accessToken: string };
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("accessToken", accessToken);
-      }
+      setAccessToken(accessToken);
       scheduleRefresh(accessToken);
       return accessToken;
     } catch {

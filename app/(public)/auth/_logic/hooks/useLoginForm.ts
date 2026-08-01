@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { loginSchema } from "../schemas/login.schema";
 import { login } from "../services/login";
 import { InvalidCredentialsError, NetworkError } from "../types/domain";
+import { setAccessToken } from "../../../../_lib/session/accessToken";
 
 interface FormValues {
   email: string;
@@ -68,7 +69,7 @@ export function useLoginForm(): UseLoginFormReturn {
     setFormError(null);
     try {
       const { accessToken } = await login(values);
-      sessionStorage.setItem("accessToken", accessToken);
+      setAccessToken(accessToken);
       router.replace("/pos");
     } catch (err) {
       if (err instanceof InvalidCredentialsError) {

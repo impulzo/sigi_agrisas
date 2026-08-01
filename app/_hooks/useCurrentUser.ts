@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { decodeJwtPayload } from "../_lib/jwt";
 import { authFetch } from "../_lib/authFetch";
+import { onAccessTokenChanged } from "../_lib/session/accessToken";
 
 interface JwtPayload {
   sub: string;
@@ -72,27 +73,38 @@ export function useCurrentUser(): CurrentUser {
   const userIdRef = useRef("");
 
   useEffect(() => {
-    const token = sessionStorage.getItem("accessToken");
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-    const payload = decodeJwtPayload<JwtPayload>(token);
-    if (!payload?.sub) {
-      setIsLoading(false);
-      return;
-    }
-    setUserId(payload.sub);
-    setEmail(payload.email ?? "");
-    setRoles(Array.isArray(payload.roles) ? payload.roles : []);
-    setBranchId(payload.branchId || null);
-    userIdRef.current = payload.sub;
-    setIsLoading(false);
+    function loadFromToken(): void {
+      const token = sessionStorage.getItem("accessToken");
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+      const payload = decodeJwtPayload<JwtPayload>(token);
+      if (!payload?.sub) {
+        setIsLoading(false);
+        return;
+      }
+      if (payload.sub === userIdRef.current) return; // ya resuelto para este usuario
 
-    fetchPermissions(payload.sub).then((perms) => {
-      permissionsRef.current = perms;
-      setPermissionsResolved(true);
-    });
+      setUserId(payload.sub);
+      setEmail(payload.email ?? "");
+      setRoles(Array.isArray(payload.roles) ? payload.roles : []);
+      setBranchId(payload.branchId || null);
+      userIdRef.current = payload.sub;
+      setIsLoading(false);
+      setPermissionsResolved(false);
+
+      fetchPermissions(payload.sub).then((perms) => {
+        permissionsRef.current = perms;
+        setPermissionsResolved(true);
+      });
+    }
+
+    loadFromToken();
+    // El accessToken puede aparecer DESPUÉS del mount (bootstrap en frío por
+    // SessionLifecycleProvider, refresh cross-tab, o login) — sessionStorage no
+    // es reactivo, así que dependemos de este evento para re-resolver el usuario.
+    return onAccessTokenChanged(loadFromToken);
   }, []);
 
   const can = useCallback(
