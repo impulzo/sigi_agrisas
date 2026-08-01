@@ -14,6 +14,7 @@ export interface CreateCustomerData {
   contactName?: string | null;
   notes?: string | null;
   creditLimit?: number | null;
+  creditDays?: number;
   isActive?: boolean;
 }
 
@@ -30,6 +31,7 @@ export interface UpdateCustomerData {
   contactName?: string | null;
   notes?: string | null;
   creditLimit?: number | null;
+  creditDays?: number;
   isActive?: boolean;
 }
 

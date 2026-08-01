@@ -1,0 +1,70 @@
+export interface CustomerDto {
+  id: string;
+  code: string;
+  name: string;
+  rfc: string;
+  legalName: string | null;
+  taxRegime: string | null;
+  cfdiUse: string | null;
+  taxZipCode: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  contactName: string | null;
+  notes: string | null;
+  creditLimit: number | null;
+  currentBalance: number;
+  creditDays: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListCustomersResponse {
+  items: CustomerDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface ListCustomersParams {
+  page: number;
+  pageSize: number;
+  includeInactive?: boolean;
+  search?: string;
+}
+
+export interface CreateCustomerBody {
+  code: string;
+  name: string;
+  rfc: string;
+  legalName?: string | null;
+  taxRegime?: string | null;
+  cfdiUse?: string | null;
+  taxZipCode?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  contactName?: string | null;
+  notes?: string | null;
+  creditLimit?: number | null;
+  creditDays?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateCustomerBody {
+  name?: string;
+  rfc?: string;
+  legalName?: string | null;
+  taxRegime?: string | null;
+  cfdiUse?: string | null;
+  taxZipCode?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  contactName?: string | null;
+  notes?: string | null;
+  creditLimit?: number | null;
+  creditDays?: number;
+  isActive?: boolean;
+}

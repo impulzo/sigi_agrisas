@@ -1,0 +1,297 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { ListPurchasesUseCase } from "../../application/use-cases/ListPurchasesUseCase";
+import { GetPurchaseUseCase } from "../../application/use-cases/GetPurchaseUseCase";
+import { CreatePurchaseUseCase } from "../../application/use-cases/CreatePurchaseUseCase";
+import { CancelPurchaseUseCase } from "../../application/use-cases/CancelPurchaseUseCase";
+import { RegisterProviderPaymentUseCase } from "../../application/use-cases/RegisterProviderPaymentUseCase";
+import { CancelProviderPaymentUseCase } from "../../application/use-cases/CancelProviderPaymentUseCase";
+import { GetProviderPaymentUseCase } from "../../application/use-cases/GetProviderPaymentUseCase";
+import { ListProviderPaymentsByPurchaseUseCase } from "../../application/use-cases/ListProviderPaymentsByPurchaseUseCase";
+import { PurchaseNotFoundError } from "../../domain/errors/PurchaseNotFoundError";
+import { PurchaseAlreadyCancelledError } from "../../domain/errors/PurchaseAlreadyCancelledError";
+import { PurchaseHasActiveProviderPaymentsError } from "../../domain/errors/PurchaseHasActiveProviderPaymentsError";
+import { PurchaseItemsEmptyError } from "../../domain/errors/PurchaseItemsEmptyError";
+import { PurchaseNotPayableError } from "../../domain/errors/PurchaseNotPayableError";
+import { ProviderPaymentExceedsDueAmountError } from "../../domain/errors/ProviderPaymentExceedsDueAmountError";
+import { ProviderPaymentNotFoundError } from "../../domain/errors/ProviderPaymentNotFoundError";
+import { ProviderPaymentAlreadyCancelledError } from "../../domain/errors/ProviderPaymentAlreadyCancelledError";
+import { ProviderNotFoundOrInactiveError } from "../../domain/errors/ProviderNotFoundOrInactiveError";
+import { ProductNotFoundOrInactiveError } from "../../domain/errors/ProductNotFoundOrInactiveError";
+import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
+import {
+  enforceBranchScope,
+  resolveScopedBranchId,
+} from "@/modules/rbac/infrastructure/http/enforceBranchScope";
+import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
+import { PurchaseStatus } from "../../domain/value-objects/PurchaseStatus";
+
+const uuidSchema = z.string().uuid("Invalid ID format");
+
+const STATUS_VALUES: PurchaseStatus[] = ["completed", "cancelled"];
+
+const listQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
+  branchId: z.string().uuid().optional(),
+  providerId: z.string().uuid().optional(),
+  status: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+});
+
+const purchaseItemSchema = z.object({
+  productId: z.string().uuid(),
+  quantity: z.number().positive("quantity must be > 0"),
+  unitCost: z.number().min(0, "unitCost must be >= 0"),
+  discountPct: z.number().min(0).max(100).nullable().optional(),
+});
+
+const createPurchaseSchema = z.object({
+  providerId: z.string().uuid(),
+  branchId: z.string().uuid(),
+  paymentMethodId: z.string().uuid(),
+  notes: z.string().max(1000).nullable().optional(),
+  items: z.array(purchaseItemSchema).min(1, "Purchase must include at least one item"),
+});
+
+const cancelPurchaseSchema = z.object({
+  reason: z.string().trim().min(3).max(500).nullable().optional(),
+});
+
+const registerProviderPaymentSchema = z.object({
+  amount: z.number().positive("amount must be > 0"),
+  notes: z.string().max(1000).nullable().optional(),
+});
+
+const cancelProviderPaymentSchema = z.object({
+  reason: z.string().trim().min(3).max(500).nullable().optional(),
+});
+
+export class PurchasesController {
+  constructor(
+    private readonly listUseCase: ListPurchasesUseCase,
+    private readonly getUseCase: GetPurchaseUseCase,
+    private readonly createUseCase: CreatePurchaseUseCase,
+    private readonly cancelUseCase: CancelPurchaseUseCase,
+    private readonly registerProviderPaymentUseCase: RegisterProviderPaymentUseCase,
+    private readonly cancelProviderPaymentUseCase: CancelProviderPaymentUseCase,
+    private readonly getProviderPaymentUseCase: GetProviderPaymentUseCase,
+    private readonly listProviderPaymentsByPurchaseUseCase: ListProviderPaymentsByPurchaseUseCase,
+    private readonly authzService: AuthorizationService
+  ) {}
+
+  async list(req: NextRequest): Promise<NextResponse> {
+    const { searchParams } = new URL(req.url);
+    const parsed = listQuerySchema.safeParse({
+      page: searchParams.get("page") ?? undefined,
+      pageSize: searchParams.get("pageSize") ?? undefined,
+      branchId: searchParams.get("branchId") ?? undefined,
+      providerId: searchParams.get("providerId") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+      from: searchParams.get("from") ?? undefined,
+      to: searchParams.get("to") ?? undefined,
+    });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const scoped = await resolveScopedBranchId(req, parsed.data.branchId, this.authzService);
+    if (scoped instanceof NextResponse) return scoped;
+
+    const statuses = parsed.data.status
+      ? parsed.data.status
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s): s is PurchaseStatus => (STATUS_VALUES as string[]).includes(s))
+      : undefined;
+
+    const result = await this.listUseCase.execute({
+      page: parsed.data.page,
+      pageSize: parsed.data.pageSize,
+      branchId: scoped.branchId,
+      providerId: parsed.data.providerId,
+      statuses,
+      from: parsed.data.from ? new Date(parsed.data.from) : undefined,
+      to: parsed.data.to ? new Date(parsed.data.to) : undefined,
+    });
+    return NextResponse.json(result);
+  }
+
+  async getById(req: NextRequest, id: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(id);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+    try {
+      const { dto, branchId } = await this.getUseCase.execute(idParsed.data);
+      const scope = await enforceBranchScope(req, branchId, this.authzService);
+      if (scope) return scope;
+      return NextResponse.json(dto);
+    } catch (err) {
+      if (err instanceof PurchaseNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      throw err;
+    }
+  }
+
+  async create(req: NextRequest): Promise<NextResponse> {
+    const body = await req.json().catch(() => ({}));
+    const parsed = createPurchaseSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const scope = await enforceBranchScope(req, parsed.data.branchId, this.authzService);
+    if (scope) return scope;
+
+    const creatorId = req.headers.get("x-user-id") ?? "";
+    try {
+      const { dto } = await this.createUseCase.execute({
+        providerId: parsed.data.providerId,
+        branchId: parsed.data.branchId,
+        paymentMethodId: parsed.data.paymentMethodId,
+        notes: parsed.data.notes ?? null,
+        creatorId,
+        items: parsed.data.items,
+      });
+      return NextResponse.json(dto, { status: 201 });
+    } catch (err) {
+      if (err instanceof PurchaseItemsEmptyError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof ProviderNotFoundOrInactiveError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof ProductNotFoundOrInactiveError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof InactiveResourceError) return NextResponse.json({ error: err.message }, { status: 400 });
+      throw err;
+    }
+  }
+
+  async cancel(req: NextRequest, id: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(id);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+    const body = await req.json().catch(() => ({}));
+    const parsed = cancelPurchaseSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const existing = await this.getUseCase.execute(idParsed.data).catch((err) => {
+      if (err instanceof PurchaseNotFoundError) return null;
+      throw err;
+    });
+    if (!existing) return NextResponse.json({ error: "Purchase not found" }, { status: 404 });
+
+    const scope = await enforceBranchScope(req, existing.branchId, this.authzService);
+    if (scope) return scope;
+
+    const cancelledBy = req.headers.get("x-user-id") ?? "";
+    try {
+      const { dto } = await this.cancelUseCase.execute({
+        id: idParsed.data,
+        cancelledBy,
+        cancellationReason: parsed.data.reason ?? null,
+      });
+      return NextResponse.json(dto);
+    } catch (err) {
+      if (err instanceof PurchaseNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      if (err instanceof PurchaseAlreadyCancelledError) return NextResponse.json({ error: err.message }, { status: 409 });
+      if (err instanceof PurchaseHasActiveProviderPaymentsError) {
+        return NextResponse.json({ error: err.message, providerPaymentIds: err.providerPaymentIds }, { status: 409 });
+      }
+      throw err;
+    }
+  }
+
+  async registerProviderPayment(req: NextRequest, purchaseId: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(purchaseId);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+    const body = await req.json().catch(() => ({}));
+    const parsed = registerProviderPaymentSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const existing = await this.getUseCase.execute(idParsed.data).catch((err) => {
+      if (err instanceof PurchaseNotFoundError) return null;
+      throw err;
+    });
+    if (!existing) return NextResponse.json({ error: "Purchase not found" }, { status: 404 });
+
+    const scope = await enforceBranchScope(req, existing.branchId, this.authzService);
+    if (scope) return scope;
+
+    const creatorId = req.headers.get("x-user-id") ?? "";
+    try {
+      const { dto } = await this.registerProviderPaymentUseCase.execute({
+        purchaseId: idParsed.data,
+        amount: parsed.data.amount,
+        notes: parsed.data.notes ?? null,
+        creatorId,
+      });
+      return NextResponse.json(dto, { status: 201 });
+    } catch (err) {
+      if (err instanceof PurchaseNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      if (err instanceof PurchaseNotPayableError) return NextResponse.json({ error: err.message }, { status: 409 });
+      if (err instanceof ProviderPaymentExceedsDueAmountError) {
+        return NextResponse.json({ error: err.message, due: err.due }, { status: 409 });
+      }
+      throw err;
+    }
+  }
+
+  async listProviderPaymentsByPurchase(req: NextRequest, purchaseId: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(purchaseId);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const existing = await this.getUseCase.execute(idParsed.data).catch((err) => {
+      if (err instanceof PurchaseNotFoundError) return null;
+      throw err;
+    });
+    if (!existing) return NextResponse.json({ error: "Purchase not found" }, { status: 404 });
+
+    const scope = await enforceBranchScope(req, existing.branchId, this.authzService);
+    if (scope) return scope;
+
+    const items = await this.listProviderPaymentsByPurchaseUseCase.execute(idParsed.data);
+    return NextResponse.json({ items });
+  }
+
+  async cancelProviderPayment(req: NextRequest, id: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(id);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+    const body = await req.json().catch(() => ({}));
+    const parsed = cancelProviderPaymentSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const existing = await this.getProviderPaymentUseCase.execute(idParsed.data).catch((err) => {
+      if (err instanceof ProviderPaymentNotFoundError) return null;
+      throw err;
+    });
+    if (!existing) return NextResponse.json({ error: "Provider payment not found" }, { status: 404 });
+
+    const scope = await enforceBranchScope(req, existing.branchId, this.authzService);
+    if (scope) return scope;
+
+    const cancelledBy = req.headers.get("x-user-id") ?? "";
+    try {
+      const { dto } = await this.cancelProviderPaymentUseCase.execute({
+        id: idParsed.data,
+        cancelledBy,
+        cancellationReason: parsed.data.reason ?? null,
+      });
+      return NextResponse.json(dto);
+    } catch (err) {
+      if (err instanceof ProviderPaymentNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      if (err instanceof ProviderPaymentAlreadyCancelledError) return NextResponse.json({ error: err.message }, { status: 409 });
+      throw err;
+    }
+  }
+}

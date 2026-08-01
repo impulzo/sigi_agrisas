@@ -24,6 +24,8 @@ The system SHALL persist a product return as the aggregate `Return` (header) + `
 - Each `ReturnItem` snapshots `productCodeSnapshot`, `productNameSnapshot`, `priceNameSnapshot`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate` so the return is intact even if the sale, product, or price are later edited or deleted.
 - Each `ReturnItem` persists `quantity` (`DECIMAL(14, 4)`, the quantity returned for that sale line — strictly `> 0`), `lineSubtotal`, `lineTax`, `lineTotal` (refund amounts; same formula as the sale's `SaleTotalsCalculator`).
 - The combination `(saleItemId)` MAY appear multiple times across different `Return` rows for the same `saleId` (partial returns done in multiple visits are allowed). The system enforces "sum of `quantity` across active (`status='completed'`) returns ≤ `sale_item.quantity`" via the `ReturnableQuantityCalculator` at write time.
+- **Dosification lines**: when the originating `SaleItem` has a non-null `dosificationId`/`numPartsSnapshot` (see `pos-api` "Sale aggregate model"), the corresponding `ReturnItem` SHALL copy both `dosificationId` (nullable FK to `product_dosifications`, `ON DELETE SET NULL`) and `numPartsSnapshot` (nullable `INT`) from the sale item at return-creation time — same snapshot pattern already used for `priceNameSnapshot`/`productCodeSnapshot`. `ReturnItem.quantity` for such a line represents parts returned, consistent with the sale line's unit (parts, not base units). `ReturnableQuantityCalculator` compares `quantity` (parts) against `sale_item.quantity` (parts) unchanged — no conversion needed there, since both sides are already expressed in the same unit (parts).
+- **Inventory quantity for dosification lines**: any operation that moves `branch_inventory.quantity` from a `ReturnItem` (creation, cancellation) SHALL use `quantity / numPartsSnapshot` as the base-unit amount when `numPartsSnapshot` is non-null, instead of `quantity` directly — mirrors the same rule on the sale side.
 
 #### Scenario: Snapshot survives product rename
 - **WHEN** a return is registered for product `SAC_50KG ("Saco 50kg")`, and later the product is renamed to `"Saco 50kg Mix Premium"`
@@ -32,6 +34,10 @@ The system SHALL persist a product return as the aggregate `Return` (header) + `
 #### Scenario: Snapshot survives sale item deletion path (theoretical)
 - **WHEN** the FK from `return_items.sale_item_id` is `ON DELETE RESTRICT` and a request attempts to delete the underlying `sale_item` row (via SQL or a future module)
 - **THEN** the delete fails because at least one return references that line
+
+#### Scenario: Dosification return copies numPartsSnapshot
+- **WHEN** a return is registered for a sale line whose `numPartsSnapshot=4`
+- **THEN** the resulting `return_items` row has `numPartsSnapshot=4` and the same `dosificationId` as the sale line
 
 ---
 
@@ -189,7 +195,7 @@ Required body:
 Each `ReturnItemInput`:
 
 - `saleItemId: string` (UUID; SHALL belong to the linked `saleId`)
-- `quantity: number` (decimal `> 0`; max 14 integer + 4 decimal digits)
+- `quantity: number` (decimal `> 0`; max 14 integer + 4 decimal digits). For a sale line originating from a dosification, this is parts returned (same unit as the sale line's `quantity`), not base units.
 
 Optional body:
 
@@ -212,19 +218,19 @@ if (!bypass && sale.branchId !== x-user-branch-id) return 403;
 5. For each item:
    a. Verify `saleItemId` belongs to `sale.items` (else HTTP 400 `SaleItemNotPartOfSaleError`).
    b. Load all prior return_items for this `saleItemId` (any status) via the repo.
-   c. `remaining = ReturnableQuantityCalculator.computeRemaining(saleItem.quantity, priorReturnItems)`.
+   c. `remaining = ReturnableQuantityCalculator.computeRemaining(saleItem.quantity, priorReturnItems)` — both `saleItem.quantity` and prior `return_items.quantity` are already in the same unit (parts for dosification lines, base units otherwise); no conversion needed at this step.
    d. If `item.quantity > remaining` → HTTP 409 `ReturnQuantityExceedsRemainingError(saleItemId, requested, remaining)` with body `{"error": "Return quantity exceeds remaining", "saleItemId": "<id>", "requested": <n>, "remaining": <n>}`.
-6. Snapshot per line from the corresponding `sale_item`: `productCodeSnapshot`, `productNameSnapshot`, `priceNameSnapshot`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`.
-7. Compute totals using `ReturnTotalsCalculator`.
-8. For each item, INCREMENT inventory atomically:
+6. Snapshot per line from the corresponding `sale_item`: `productCodeSnapshot`, `productNameSnapshot`, `priceNameSnapshot`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`, and — when the sale item has them — `dosificationId`, `numPartsSnapshot`.
+7. Compute totals using `ReturnTotalsCalculator` — unchanged by dosification lines.
+8. For each item, INCREMENT inventory atomically using the base-unit amount (`quantity / numPartsSnapshot` when the sale item has a dosification, `quantity` otherwise):
    ```
    UPDATE branch_inventory
-   SET quantity = quantity + ${qty}, updated_at = NOW()
+   SET quantity = quantity + ${amount}, updated_at = NOW()
    WHERE branch_id = ? AND product_id = ?
    ```
-   If `UPDATE` affects 0 rows (no inventory record exists for this pair), the system SHALL `INSERT INTO branch_inventory (branch_id, product_id, quantity) VALUES (?, ?, ${qty})` (creates the record with the returned quantity as initial).
+   If `UPDATE` affects 0 rows (no inventory record exists for this pair), the system SHALL `INSERT INTO branch_inventory (branch_id, product_id, quantity) VALUES (?, ?, ${amount})` (creates the record with the returned amount as initial).
 9. `INSERT` the `returns` row with `status='completed'`, snapshotted `branchId`/`customerId` from the sale, `creatorId = userId`, `returnedAt = body.returnedAt`, `reason`, `notes`, refund totals.
-10. `INSERT` the `return_items` rows.
+10. `INSERT` the `return_items` rows (including `dosificationId`/`numPartsSnapshot` when applicable).
 
 Returns HTTP 201 with the `ReturnDetailDto` (including items).
 
@@ -296,6 +302,10 @@ Returns HTTP 201 with the `ReturnDetailDto` (including items).
 - **WHEN** a caller without `returns:create` calls the endpoint
 - **THEN** the system returns HTTP 403 `{"error": "Forbidden", "required": "returns:create"}`
 
+#### Scenario: Return of a dosification line increments a fraction of base stock
+- **WHEN** a return is registered for `quantity=2` parts of a sale line whose `numPartsSnapshot=4`
+- **THEN** `branch_inventory.quantity` is incremented by `2/4 = 0.5` (not by `2`)
+
 ---
 
 ### Requirement: Cancel return
@@ -304,13 +314,13 @@ The system SHALL expose `POST /api/v1/admin/returns/:id/cancel`. Requires `retur
 Behavior (inside a Prisma transaction):
 
 - If `return.status === 'cancelled'` → HTTP 409 `ReturnAlreadyCancelledError` `{"error": "Return is already cancelled"}` (NOT idempotent — re-cancellation is treated as a probable double-click).
-- If `return.status === 'completed'`: for each item, DECREMENT inventory atomically:
+- If `return.status === 'completed'`: for each item, DECREMENT inventory atomically using the base-unit amount (`quantity / numPartsSnapshot` when the return item has a dosification, `quantity` otherwise):
   ```
   UPDATE branch_inventory
-  SET quantity = quantity - ${qty}, updated_at = NOW()
+  SET quantity = quantity - ${amount}, updated_at = NOW()
   WHERE branch_id = ? AND product_id = ?
   ```
-  If `UPDATE` affects 0 rows, the system SHALL `INSERT INTO branch_inventory (branch_id, product_id, quantity) VALUES (?, ?, -${qty})` (creates the row with negative initial quantity). The resulting `quantity` MAY be negative — same rule as the POS sale path (see `inventory-api` Modified Requirement).
+  If `UPDATE` affects 0 rows, the system SHALL `INSERT INTO branch_inventory (branch_id, product_id, quantity) VALUES (?, ?, -${amount})` (creates the row with negative initial quantity). The resulting `quantity` MAY be negative — same rule as the POS sale path (see `inventory-api` Modified Requirement). **After each such decrement**, the system SHALL evaluate the low-stock notification trigger per `admin-notifications-api` "Notify admin on low stock" (best-effort, never blocks or fails this endpoint).
 - Then `UPDATE returns SET status='cancelled', cancelled_at=NOW(), cancelled_by=<userId>, cancellation_reason=?` (one row).
 
 Returns HTTP 200 with the updated `ReturnDetailDto`.
@@ -348,6 +358,14 @@ The cancellation does NOT modify the originating `Sale` or any `SaleItem` row. T
 #### Scenario: Forbidden without returns:cancel
 - **WHEN** a caller without `returns:cancel` calls the endpoint
 - **THEN** the system returns HTTP 403 `{"error": "Forbidden", "required": "returns:cancel"}`
+
+#### Scenario: Cancel a dosification return decrements a fraction of base stock
+- **WHEN** a `completed` return with `numPartsSnapshot=4`, `quantity=2` parts (i.e. `0.5` base units incremented at creation) is cancelled
+- **THEN** `branch_inventory.quantity` is decremented by `0.5` (not by `2`)
+
+#### Scenario: Return cancellation crossing reorder point triggers admin notification
+- **WHEN** cancelling a return decrements `branch_inventory.quantity` below `reorder_point` for that (branch, product), and no notification for that pair was sent in the last 24h
+- **THEN** the system still returns HTTP 200 as normal, AND — per `admin-notifications-api` — an email is sent to the configured admin address and `lastLowStockNotifiedAt` is updated; a failure to send this email does NOT affect the HTTP 200 response
 
 ---
 

@@ -16,6 +16,9 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Agrisas Panel",
   description: "Panel de gestión Agrisas",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({

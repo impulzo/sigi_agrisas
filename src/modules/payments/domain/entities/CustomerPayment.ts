@@ -1,5 +1,11 @@
 import { PaymentStatus } from "../value-objects/PaymentStatus";
 
+export interface CustomerPaymentItemSnapshot {
+  saleItemId: string;
+  productNameSnapshot: string;
+  amount: number;
+}
+
 export interface CustomerPaymentProps {
   saleId: string;
   customerId: string;
@@ -15,6 +21,7 @@ export interface CustomerPaymentProps {
   createdAt: Date;
   cancelledAt: Date | null;
   cancellationReason: string | null;
+  items?: CustomerPaymentItemSnapshot[];
 }
 
 export class CustomerPayment {
@@ -33,6 +40,7 @@ export class CustomerPayment {
   readonly createdAt: Date;
   readonly cancelledAt: Date | null;
   readonly cancellationReason: string | null;
+  readonly items: CustomerPaymentItemSnapshot[];
 
   private constructor(id: string, props: CustomerPaymentProps) {
     this.id = id;
@@ -50,6 +58,7 @@ export class CustomerPayment {
     this.createdAt = props.createdAt;
     this.cancelledAt = props.cancelledAt;
     this.cancellationReason = props.cancellationReason;
+    this.items = props.items ?? [];
   }
 
   static create(id: string, props: CustomerPaymentProps): CustomerPayment {

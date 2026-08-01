@@ -16,6 +16,7 @@ import { FakeFacturamaGateway } from "@/modules/billing/infrastructure/services/
 import { StampInvoiceUseCase } from "@/modules/billing/application/use-cases/StampInvoiceUseCase";
 import { CancelInvoiceUseCase } from "@/modules/billing/application/use-cases/CancelInvoiceUseCase";
 import { DownloadInvoiceFileUseCase } from "@/modules/billing/application/use-cases/DownloadInvoiceFileUseCase";
+import { SendInvoiceEmailUseCase } from "@/modules/billing/application/use-cases/SendInvoiceEmailUseCase";
 import { ListInvoicesUseCase } from "@/modules/billing/application/use-cases/ListInvoicesUseCase";
 import { GetInvoiceUseCase } from "@/modules/billing/application/use-cases/GetInvoiceUseCase";
 import { ListInvoicesBySaleUseCase } from "@/modules/billing/application/use-cases/ListInvoicesBySaleUseCase";
@@ -77,17 +78,20 @@ function buildController(opts: {
   const gateway = opts.gateway ?? new FakeFacturamaGateway();
   const authz = opts.authz ?? makeAuthz();
   const lookup = opts.lookup ?? makeLookup();
+  const downloadUseCase = new DownloadInvoiceFileUseCase(repo, gateway);
+  const mailer = { send: jest.fn().mockResolvedValue(undefined) };
   const controller = new BillingController(
     new StampInvoiceUseCase(repo, gateway, lookup),
     new CancelInvoiceUseCase(repo, gateway),
-    new DownloadInvoiceFileUseCase(repo, gateway),
+    downloadUseCase,
     new ListInvoicesUseCase(repo),
     new GetInvoiceUseCase(repo),
     new ListInvoicesBySaleUseCase(repo),
     new UploadCsdUseCase(gateway),
     new GetCsdStatusUseCase(gateway),
     authz,
-    lookup
+    lookup,
+    new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer)
   );
   return { controller, repo };
 }
@@ -274,6 +278,75 @@ describe("BillingController — branch scoping: download", () => {
       inv.id
     );
     expect(res.status).toBe(200);
+  });
+});
+
+describe("BillingController — sendEmail", () => {
+  it("403 when invoice belongs to OTHER_BRANCH and caller is scoped to VALID_BRANCH", async () => {
+    const repo = new InMemoryInvoiceRepository();
+    const inv = await repo.createStamped(makeInvoiceData(OTHER_BRANCH));
+
+    const { controller } = buildController({ repo, authz: makeAuthz({ grantBilling: true, grantAccessAll: false }) });
+    const res = await controller.sendEmail(req("POST", `/admin/invoices/${inv.id}/send-email`, {}), inv.id);
+    expect(res.status).toBe(403);
+  });
+
+  it("400 when the override email is malformed", async () => {
+    const repo = new InMemoryInvoiceRepository();
+    const inv = await repo.createStamped(makeInvoiceData(VALID_BRANCH));
+
+    const { controller } = buildController({ repo });
+    const res = await controller.sendEmail(
+      req("POST", `/admin/invoices/${inv.id}/send-email`, { email: "not-an-email" }),
+      inv.id
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("400 when customer has no email and no override provided", async () => {
+    const repo = new InMemoryInvoiceRepository();
+    const inv = await repo.createStamped(makeInvoiceData(VALID_BRANCH, { customerId: "cust-1" }));
+    const lookup = makeLookup({
+      findCustomer: jest.fn().mockResolvedValue({
+        id: "cust-1",
+        name: "Cliente",
+        legalName: null,
+        rfc: "XAXX010101000",
+        taxRegime: "601",
+        cfdiUse: "G03",
+        taxZipCode: "45010",
+        email: null,
+      }),
+    });
+
+    const { controller } = buildController({ repo, lookup });
+    const res = await controller.sendEmail(req("POST", `/admin/invoices/${inv.id}/send-email`, {}), inv.id);
+    expect(res.status).toBe(400);
+  });
+
+  it("200 with an override email, sends regardless of customer.email", async () => {
+    const repo = new InMemoryInvoiceRepository();
+    const inv = await repo.createStamped(makeInvoiceData(VALID_BRANCH));
+
+    const { controller } = buildController({ repo });
+    const res = await controller.sendEmail(
+      req("POST", `/admin/invoices/${inv.id}/send-email`, { email: "otra@direccion.com" }),
+      inv.id
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ sentTo: "otra@direccion.com" });
+  });
+
+  it("404 when the invoice does not exist", async () => {
+    const repo = new InMemoryInvoiceRepository();
+    const { controller } = buildController({ repo });
+    const missingId = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee";
+    const res = await controller.sendEmail(
+      req("POST", `/admin/invoices/${missingId}/send-email`, { email: "otra@direccion.com" }),
+      missingId
+    );
+    expect(res.status).toBe(404);
   });
 });
 

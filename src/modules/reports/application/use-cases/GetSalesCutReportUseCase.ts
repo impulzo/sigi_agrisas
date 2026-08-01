@@ -1,10 +1,11 @@
 import { Decimal } from "decimal.js";
 import { SalesCutRepository } from "../ports/SalesCutRepository";
 import { SalesCutAssembler } from "../../domain/services/SalesCutAssembler";
-import { BreakdownRow } from "../../domain/value-objects/SalesCutFilters";
+import { BreakdownRow, ProductBreakdownRow } from "../../domain/value-objects/SalesCutFilters";
 import {
   SalesCutReportResponseDto,
   SalesCutBreakdownRowDto,
+  SalesCutProductBreakdownRowDto,
 } from "../dto/SalesCutReportResponseDto";
 
 export interface GetSalesCutReportRequest {
@@ -33,6 +34,10 @@ function rowDto(r: BreakdownRow): SalesCutBreakdownRowDto {
     taxTotal: money(r.taxTotal),
     total: money(r.total),
   };
+}
+
+function productRowDto(r: ProductBreakdownRow): SalesCutProductBreakdownRowDto {
+  return { ...rowDto(r), quantitySold: money(r.quantitySold) };
 }
 
 export class GetSalesCutReportUseCase {
@@ -81,6 +86,8 @@ export class GetSalesCutReportUseCase {
       byDay: cut.byDay.map(rowDto),
       byCashier: cut.byCashier.map(rowDto),
       byBranch: cut.byBranch.map(rowDto),
+      byDepartment: cut.byDepartment.map(rowDto),
+      byProduct: cut.byProduct.map(productRowDto),
     };
   }
 }

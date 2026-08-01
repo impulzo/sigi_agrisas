@@ -3,9 +3,10 @@ import { render, screen } from "@testing-library/react";
 import { TopAppBar } from "../../../../../app/_components/organisms/TopAppBar/TopAppBar";
 
 describe("TopAppBar", () => {
-  it("renders the Agrisas title", () => {
+  it("renders the Agrisas logo instead of a title", () => {
     render(<TopAppBar userName="Admin" userEmail="admin@agrisas.com" />);
-    expect(screen.getByRole("heading", { name: "Agrisas" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Agrisas" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Agrisas" })).not.toBeInTheDocument();
   });
 
   it("renders icon buttons for notifications, help and settings", () => {

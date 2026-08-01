@@ -14,6 +14,7 @@ export interface SaleDto {
   cashierName: string | null;
   paymentMethodId: string;
   paymentMethodCode: string | null;
+  paymentMethodName: string | null;
   isCredit: boolean;
   quoteId: string | null;
   status: string;

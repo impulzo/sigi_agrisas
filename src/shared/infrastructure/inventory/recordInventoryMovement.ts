@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { shouldNotifyLowStock } from "@/shared/domain/services/checkAndNotifyLowStock";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -10,7 +11,9 @@ export type InventoryMovementType =
   | "return"
   | "return_cancel"
   | "adjustment_in"
-  | "adjustment_out";
+  | "adjustment_out"
+  | "purchase"
+  | "purchase_cancel";
 
 export interface RecordInventoryMovementData {
   branchId: string;
@@ -31,10 +34,25 @@ export interface RecordInventoryMovementData {
   folioNumber?: number | null;
   originFolioCode?: string | null;
   originFolioNumber?: number | null;
-  sourceType: "sale" | "return" | "adjustment";
+  sourceType: "sale" | "return" | "adjustment" | "purchase";
   sourceId: string;
   notes?: string | null;
   createdBy?: string | null;
+}
+
+export interface LowStockSignal {
+  branchId: string;
+  productId: string;
+  productName: string;
+  productCode: string;
+  quantity: number;
+  reorderPoint: number;
+}
+
+export interface RecordInventoryMovementResult {
+  balanceAfter: number;
+  /** Non-null only when this OUT movement just crossed reorderPoint and the 24h debounce allows a new notification. */
+  lowStockSignal: LowStockSignal | null;
 }
 
 /**
@@ -42,21 +60,32 @@ export interface RecordInventoryMovementData {
  * same fallback as the pre-ledger helpers) and inserts the matching
  * `inventory_movements` row in the same statement/transaction, using the
  * `RETURNING` clause so both effects share one round trip.
+ *
+ * For OUT movements, also evaluates the low-stock notification threshold
+ * (`admin-notifications-api` "Notify admin on low stock") and, if it applies,
+ * stamps `last_low_stock_notified_at` in the same transaction. The actual
+ * email send is the caller's responsibility, performed AFTER the transaction
+ * commits (see `AdminNotificationService`) — this function only decides
+ * whether to notify and persists the debounce state.
  */
 export async function recordInventoryMovement(
   tx: TxClient,
   data: RecordInventoryMovementData
-): Promise<{ balanceAfter: number }> {
+): Promise<RecordInventoryMovementResult> {
   const delta = data.direction === "IN" ? data.quantity : -data.quantity;
 
-  const rows = await tx.$queryRaw<{ quantity: Prisma.Decimal }[]>`
+  const rows = await tx.$queryRaw<
+    { quantity: Prisma.Decimal; reorder_point: Prisma.Decimal; last_low_stock_notified_at: Date | null }[]
+  >`
     UPDATE branch_inventory
     SET quantity = quantity + ${delta}::numeric, updated_at = NOW()
     WHERE branch_id = ${data.branchId} AND product_id = ${data.productId}
-    RETURNING quantity
+    RETURNING quantity, reorder_point, last_low_stock_notified_at
   `;
 
   let balanceAfter: number;
+  let reorderPoint: number;
+  let lastLowStockNotifiedAt: Date | null;
   if (rows.length === 0) {
     const created = await tx.branchInventory.create({
       data: {
@@ -68,14 +97,19 @@ export async function recordInventoryMovement(
       },
     });
     balanceAfter = created.quantity.toNumber();
+    reorderPoint = created.reorderPoint.toNumber();
+    lastLowStockNotifiedAt = null;
   } else {
     balanceAfter = rows[0].quantity.toNumber();
+    reorderPoint = rows[0].reorder_point.toNumber();
+    lastLowStockNotifiedAt = rows[0].last_low_stock_notified_at;
   }
 
-  const unit =
-    data.unit ??
-    (await tx.product.findUnique({ where: { id: data.productId }, select: { unit: true } }))?.unit ??
-    "";
+  const product = await tx.product.findUnique({
+    where: { id: data.productId },
+    select: { unit: true, name: true, code: true },
+  });
+  const unit = data.unit ?? product?.unit ?? "";
 
   await tx.inventoryMovement.create({
     data: {
@@ -103,5 +137,25 @@ export async function recordInventoryMovement(
     },
   });
 
-  return { balanceAfter };
+  let lowStockSignal: LowStockSignal | null = null;
+  if (
+    data.direction === "OUT" &&
+    shouldNotifyLowStock(balanceAfter, reorderPoint, lastLowStockNotifiedAt)
+  ) {
+    await tx.$executeRaw`
+      UPDATE branch_inventory
+      SET last_low_stock_notified_at = NOW()
+      WHERE branch_id = ${data.branchId} AND product_id = ${data.productId}
+    `;
+    lowStockSignal = {
+      branchId: data.branchId,
+      productId: data.productId,
+      productName: product?.name ?? data.productId,
+      productCode: product?.code ?? "",
+      quantity: balanceAfter,
+      reorderPoint,
+    };
+  }
+
+  return { balanceAfter, lowStockSignal };
 }

@@ -92,10 +92,12 @@ function setupInvoices(invoices: Invoice[], isLoading = false) {
   mockUseInvoiceMutations.mockReturnValue({
     isDownloading: false,
     isSaving: false,
+    isSendingEmail: false,
     mutationError: null,
     clearError: jest.fn(),
     cancel: jest.fn(),
     download: jest.fn(),
+    sendEmail: jest.fn(),
   });
 }
 

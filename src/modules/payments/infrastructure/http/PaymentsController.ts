@@ -13,6 +13,9 @@ import { PaymentHistoryReportDto, PaymentHistoryRowDto } from "../../application
 import { PaymentNotFoundError } from "../../domain/errors/PaymentNotFoundError";
 import { PaymentAlreadyCancelledError } from "../../domain/errors/PaymentAlreadyCancelledError";
 import { PaymentExceedsDueAmountError } from "../../domain/errors/PaymentExceedsDueAmountError";
+import { PaymentExceedsLineDueAmountError } from "../../domain/errors/PaymentExceedsLineDueAmountError";
+import { PaymentItemsAmountMismatchError } from "../../domain/errors/PaymentItemsAmountMismatchError";
+import { SaleItemNotFoundError } from "../../domain/errors/SaleItemNotFoundError";
 import { SaleNotPayableError } from "../../domain/errors/SaleNotPayableError";
 import { PaymentHistoryPdf } from "../pdf/PaymentHistoryPdf";
 import {
@@ -36,6 +39,9 @@ const registerSchema = z.object({
   folioId: z.string().uuid(),
   amount: z.number().positive("amount must be > 0"),
   notes: z.string().max(1000).nullable().optional(),
+  items: z
+    .array(z.object({ saleItemId: z.string().uuid(), amount: z.number().positive("item amount must be > 0") }))
+    .optional(),
 });
 
 const cancelSchema = z.object({
@@ -112,6 +118,7 @@ export class PaymentsController {
         notes: parsed.data.notes,
         userId,
         callerBranchId,
+        items: parsed.data.items,
       });
 
       return NextResponse.json(dto, { status: 201 });
@@ -127,6 +134,21 @@ export class PaymentsController {
       }
       if (err instanceof PaymentExceedsDueAmountError) {
         return NextResponse.json({ error: "PaymentExceedsDueAmount", due: err.due }, { status: 409 });
+      }
+      if (err instanceof PaymentExceedsLineDueAmountError) {
+        return NextResponse.json(
+          { error: "PaymentExceedsLineDueAmount", saleItemId: err.saleItemId, due: err.due },
+          { status: 409 }
+        );
+      }
+      if (err instanceof PaymentItemsAmountMismatchError) {
+        return NextResponse.json(
+          { error: "PaymentItemsAmountMismatch", expected: err.expected, sum: err.sum },
+          { status: 400 }
+        );
+      }
+      if (err instanceof SaleItemNotFoundError) {
+        return NextResponse.json({ error: "SaleItemNotFound", saleItemId: err.saleItemId }, { status: 400 });
       }
       if (err instanceof FolioScopeMismatchError) {
         return NextResponse.json(
@@ -314,12 +336,20 @@ export class PaymentsController {
           createdAt: p.createdAt.toISOString(),
           cancelledAt: p.cancelledAt ? p.cancelledAt.toISOString() : null,
           cancellationReason: p.cancellationReason,
+          items: p.items.length > 0
+            ? p.items.map((item) => ({
+                saleItemId: item.saleItemId,
+                productNameSnapshot: item.productNameSnapshot,
+                amount: item.amount.toFixed(4),
+              }))
+            : undefined,
         })),
         saleId: result.saleId,
         saleTotal: result.saleTotal,
         salePaidAmount: result.salePaidAmount,
         salePaymentStatus: result.salePaymentStatus,
         saleDueAmount: result.saleDueAmount,
+        lineBalances: result.lineBalances,
       });
     } catch (err) {
       if (err instanceof Error && err.message.includes("not found")) {

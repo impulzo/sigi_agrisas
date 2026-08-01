@@ -12,5 +12,6 @@ export interface CreateCustomerRequest {
   contactName?: string | null;
   notes?: string | null;
   creditLimit?: number | null;
+  creditDays?: number;
   isActive?: boolean;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -150,8 +151,8 @@ export function NavigationRail() {
   return (
     <aside className="fixed left-0 top-0 h-screen w-[80px] bg-surface-container-low border-r border-outline-variant flex flex-col items-center z-50 shadow-sm">
       {/* Header: logo, fixed */}
-      <div className="flex-shrink-0 py-6" aria-hidden="true">
-        <span className="text-headline-lg font-black text-primary">A</span>
+      <div className="relative flex-shrink-0 w-12 h-12 my-6">
+        <Image src="/logo.png" alt="Agrisas" fill className="object-contain" priority />
       </div>
 
       {/* Scrollable section: primary + secondary items */}

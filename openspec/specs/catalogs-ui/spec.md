@@ -2,18 +2,18 @@
 
 ## Purpose
 
-Pantallas de gestión de los seis catálogos administrativos (`payment-methods`, `folios`, `departments`, `branches`, `providers`, `products`) bajo la ruta privada `/catalogs`. Incluye hub de acceso, listado paginado con toggle de inactivos, modal de creación/edición con diff submit, soft delete con confirmación, reactivación directa, errores tipados por módulo, búsqueda configurable client/server, y el átomo `Switch`.
+Pantallas de gestión de los ocho catálogos administrativos (`payment-methods`, `folios`, `departments`, `branches`, `providers`, `products`, `tax-rates`, `customers`) bajo la ruta privada `/catalogs`. Incluye hub de acceso, listado paginado con toggle de inactivos, modal de creación/edición con diff submit, soft delete con confirmación, reactivación directa, errores tipados por módulo, búsqueda configurable client/server, y el átomo `Switch`.
 
 ---
 
 ## Requirements
 
 ### Requirement: Catalogs hub page
-The system SHALL expose a private route `/catalogs` that serves as a hub for the six catalog modules. The hub SHALL render a grid of six entry cards in this order: `payment-methods`, `folios`, `departments`, `branches`, `providers`, `products`. Each card SHALL display the catalog icon, title, a short description, and an "Abrir" link to `/catalogs/<módulo>`. Cards SHALL be visually marked as disabled when the current user lacks the corresponding `<recurso>:read` permission, and SHALL render normally otherwise. The hub itself SHALL be reachable by any authenticated user. The fifth (`providers`) card SHALL be `{ icon: "local_shipping", title: "Proveedores", description: "Gestiona los proveedores y sus datos fiscales.", href: "/catalogs/providers", permission: "providers:read" }`. The sixth (`products`) card SHALL be `{ icon: "inventory_2", title: "Productos", description: "Gestiona el catálogo de productos, precios y dosificaciones.", href: "/catalogs/products", permission: "products:read" }`.
+The system SHALL expose a private route `/catalogs` that serves as a hub for the catalog modules. The hub SHALL render a grid of entry cards in this order: `payment-methods`, `folios`, `departments`, `branches`, `providers`, `products`, `tax-rates`, `customers`. Each card SHALL display the catalog icon, title, a short description, and an "Abrir" link to `/catalogs/<módulo>`. Cards SHALL be visually marked as disabled when the current user lacks the corresponding `<recurso>:read` permission, and SHALL render normally otherwise. The hub itself SHALL be reachable by any authenticated user. The fifth (`providers`) card SHALL be `{ icon: "local_shipping", title: "Proveedores", description: "Gestiona los proveedores y sus datos fiscales.", href: "/catalogs/providers", permission: "providers:read" }`. The sixth (`products`) card SHALL be `{ icon: "inventory_2", title: "Productos", description: "Gestiona el catálogo de productos, precios y dosificaciones.", href: "/catalogs/products", permission: "products:read" }`. The eighth (`customers`) card SHALL be `{ icon: "groups", title: "Clientes", description: "Gestiona los clientes, sus datos fiscales y crédito.", href: "/catalogs/customers", permission: "customers:read" }`.
 
 #### Scenario: Authenticated user opens the hub
 - **WHEN** an authenticated user navigates to `/catalogs`
-- **THEN** the page SHALL render six entry cards (Formas de pago, Folios, Departamentos, Sucursales, Proveedores, Productos) with their icons and short descriptions
+- **THEN** the page SHALL render entry cards including Formas de pago, Folios, Departamentos, Sucursales, Proveedores, Productos, Tasas de Impuesto, and Clientes, each with their icons and short descriptions
 
 #### Scenario: Card states for missing permission
 - **WHEN** the current user does not have `payment_methods:read`
@@ -38,6 +38,18 @@ The system SHALL expose a private route `/catalogs` that serves as a hub for the
 #### Scenario: Unauthenticated request to hub
 - **WHEN** a user without a valid `refreshToken` cookie navigates to `/catalogs`
 - **THEN** the middleware SHALL redirect to `/auth/login` before rendering
+
+#### Scenario: Customers card visible with permission
+- **WHEN** the current user has `customers:read`
+- **THEN** the "Clientes" card SHALL render enabled, with icon `groups` and description "Gestiona los clientes, sus datos fiscales y crédito."
+
+#### Scenario: Customers card disabled without customers:read
+- **WHEN** the current user does not have `customers:read`
+- **THEN** the "Clientes" card SHALL render disabled with a tooltip "Requiere permiso customers:read" and its link SHALL NOT navigate
+
+#### Scenario: Customers card navigates to the customers catalog
+- **WHEN** the user holds `customers:read` and clicks the "Clientes" card
+- **THEN** the router SHALL navigate to `/catalogs/customers`
 
 ---
 
@@ -300,3 +312,34 @@ La columna "Ámbito" en `FoliosTable` SHALL mostrar etiquetas legibles en españ
 
 - **WHEN** un usuario abre el modal para crear o editar un folio
 - **THEN** el select de "Ámbito" muestra opciones derivadas de `SCOPE_LABEL` (consistente con la tabla)
+
+---
+
+### Requirement: Structured fiscal address section in the branch modal
+The branch catalog's edit modal (`BranchEditModal`) SHALL include a "Domicilio fiscal (Carta Porte)" section, independent of the pre-existing free-text `address` field, exposing the 8 structured address fields already supported by the backend (`admin-branches` spec): `addressStreet`, `addressExteriorNumber`, `addressInteriorNumber`, `addressNeighborhood`, `addressMunicipality`, `addressState`, `addressCountry`, `addressZipCode`.
+
+The modal SHALL follow the multi-section layout pattern established by `ProviderEditModal` (grouped `<section>` blocks with a bordered separator between them, a wider dialog, and an `h3` section heading), rather than the flat single-column layout `BranchEditModal` currently uses.
+
+`addressZipCode` SHALL be validated client-side against `^\d{5}$` and `addressState` against `^[A-Z]{2,3}$`, mirroring the backend's validation, before the "Guardar" button is enabled.
+
+Saving only the structured address fields (leaving `code`, `name`, `address`, `phone`, `email`, `isActive` unchanged) SHALL compute a diff containing exclusively the changed structured fields and submit `PATCH /api/v1/admin/branches/:id` with that partial body.
+
+#### Scenario: Structured address section renders independently of free-text address
+- **WHEN** the branch modal opens in either `create` or `edit` mode
+- **THEN** the "Domicilio fiscal (Carta Porte)" section is visible with all 8 fields, separate from the existing "Dirección" free-text field
+
+#### Scenario: Saving only the fiscal address
+- **WHEN** the user fills only `addressStreet`, `addressExteriorNumber`, `addressNeighborhood`, `addressMunicipality`, `addressState`, `addressZipCode` on an existing branch and clicks "Guardar"
+- **THEN** the PATCH body contains only those changed fields, not `code`, `name`, `address`, `phone`, or `email`
+
+#### Scenario: Invalid zip code blocks save
+- **WHEN** the user enters `addressZipCode: "12"` (not 5 digits)
+- **THEN** an inline validation error is shown and "Guardar" remains disabled
+
+#### Scenario: Invalid state key blocks save
+- **WHEN** the user enters `addressState: "son"` (lowercase)
+- **THEN** an inline validation error is shown and "Guardar" remains disabled
+
+#### Scenario: Completing the fiscal address unblocks Carta Porte transfers
+- **WHEN** a branch previously missing structured address fields has all 8 fields saved from this modal
+- **THEN** the branch can subsequently be selected as origin or destination of a `type='carta_porte'` waybill without triggering `BranchAddressIncomplete`

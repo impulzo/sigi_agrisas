@@ -1,5 +1,11 @@
 import { SalePaymentStatus } from "../../domain/value-objects/SalePaymentStatus";
 
+export interface PaymentItemDto {
+  saleItemId: string;
+  productNameSnapshot: string;
+  amount: string;
+}
+
 export interface PaymentDto {
   id: string;
   saleId: string;
@@ -21,6 +27,7 @@ export interface PaymentDto {
   createdAt: string;
   cancelledAt: string | null;
   cancellationReason: string | null;
+  items?: PaymentItemDto[];
 }
 
 export interface PaymentDetailDto extends PaymentDto {

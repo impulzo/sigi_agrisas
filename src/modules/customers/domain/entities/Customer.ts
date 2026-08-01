@@ -14,6 +14,7 @@ export interface CustomerProps {
   notes: string | null;
   creditLimit: number | null;
   currentBalance: number;
+  creditDays: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -35,6 +36,7 @@ export class Customer {
   readonly notes: string | null;
   readonly creditLimit: number | null;
   readonly currentBalance: number;
+  readonly creditDays: number;
   readonly isActive: boolean;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -55,6 +57,7 @@ export class Customer {
     this.notes = props.notes;
     this.creditLimit = props.creditLimit;
     this.currentBalance = props.currentBalance;
+    this.creditDays = props.creditDays;
     this.isActive = props.isActive;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;

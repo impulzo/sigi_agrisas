@@ -8,6 +8,11 @@ function mapPaymentDto(dto: ListPaymentsResponse["items"][number]): Payment {
     amount: parseFloat(dto.amount as unknown as string),
     createdAt: new Date(dto.createdAt),
     updatedAt: new Date(dto.updatedAt),
+    items: dto.items?.map((item) => ({
+      saleItemId: item.saleItemId,
+      productNameSnapshot: item.productNameSnapshot,
+      amount: parseFloat(item.amount),
+    })),
   };
 }
 

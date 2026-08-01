@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Avatar } from "../../atoms/Avatar/Avatar";
 import { IconButton } from "../../atoms/IconButton/IconButton";
 import { SearchInput } from "../../molecules/SearchInput/SearchInput";
@@ -14,7 +15,9 @@ export function TopAppBar({ userName, userEmail, avatarUrl }: TopAppBarProps) {
   return (
     <header className="fixed top-0 right-0 z-40 bg-surface/90 backdrop-blur-md border-b border-outline-variant flex items-center justify-between h-16 w-full pl-24 pr-8">
       <div className="flex items-center gap-md">
-        <h1 className="text-headline-lg font-bold text-primary">Agrisas</h1>
+        <div className="relative w-10 h-10 shrink-0">
+          <Image src="/logo.png" alt="Agrisas" fill className="object-contain" />
+        </div>
         <SearchInput placeholder="Search data..." className="hidden md:flex" />
       </div>
       <div className="flex items-center gap-sm">

@@ -22,6 +22,7 @@ export class CancelReturnUseCase {
     const itemsToUndo = items.map((item) => ({
       productId: item.productId,
       quantity: item.quantity,
+      numPartsSnapshot: item.numPartsSnapshot,
     }));
 
     const cancelled = await this.returnRepo.markCancelled(

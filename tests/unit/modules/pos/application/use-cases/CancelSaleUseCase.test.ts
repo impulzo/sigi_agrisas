@@ -4,6 +4,7 @@ import { Sale, SaleStatus } from "@/modules/pos/domain/entities/Sale";
 import { SaleNotFoundError } from "@/modules/pos/domain/errors/SaleNotFoundError";
 import { SaleHasActivePaymentsError } from "@/modules/payments/domain/errors/SaleHasActivePaymentsError";
 import { ReturnedTotalSaleNotCancellableError } from "@/modules/pos/domain/errors/ReturnedTotalSaleNotCancellableError";
+import type { AdminNotificationService } from "@/shared/application/services/AdminNotificationService";
 
 function makeSummary(status: SaleStatus, opts?: { reason?: string | null; cancelledAt?: Date }): SaleSummary {
   const now = new Date();
@@ -34,7 +35,7 @@ function makeSummary(status: SaleStatus, opts?: { reason?: string | null; cancel
   });
   return {
     sale,
-    joined: { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodIsCredit: false },
+    joined: { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodName: null, paymentMethodIsCredit: false },
   };
 }
 
@@ -141,5 +142,27 @@ describe("CancelSaleUseCase", () => {
     await expect(new CancelSaleUseCase(repo).execute("sale-1", {})).rejects.toBeInstanceOf(
       ReturnedTotalSaleNotCancellableError
     );
+  });
+
+  it("no falla la cancelación aunque el notificador rechace", async () => {
+    const repo: SaleRepository = {
+      findAll: jest.fn(),
+      findByIdWithItems: jest.fn().mockResolvedValue(makeSummary("completed")),
+      createCompleted: jest.fn(),
+      createCompletedFromQuote: jest.fn(),
+      cancel: jest.fn().mockResolvedValue(makeSummary("cancelled", { reason: "test" })),
+      replaceItemsAndRecalculate: jest.fn(),
+      markReturnedTotal: jest.fn(),
+    };
+    const notifier = {
+      notifySaleCancelled: jest.fn().mockRejectedValue(new Error("SMTP down")),
+      notifyLowStock: jest.fn(),
+    } as unknown as AdminNotificationService;
+    jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await new CancelSaleUseCase(repo, notifier).execute("sale-1", { reason: "test" });
+
+    expect(result.dto.status).toBe("cancelled");
+    expect(notifier.notifySaleCancelled).toHaveBeenCalled();
   });
 });

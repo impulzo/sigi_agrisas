@@ -5,9 +5,7 @@
 Define the Products API: CRUD endpoints for the product catalog (SKUs), sub-resource management for prices and dosifications, and the domain service for computing dosification unit prices.
 
 ---
-
 ## Requirements
-
 ### Requirement: List products
 The system SHALL expose `GET /api/v1/admin/products` that returns a paginated list of products. Requires the `products:read` permission. Query parameters control the result set: `page` (default 1), `pageSize` (default 20, max 100), `includeInactive` (default `false`), `search` (optional, min 2 chars when present; matches `name` OR `code` via `OR ILIKE '%search%'`), `departmentId` (optional UUID filter). Response: `{ items: ProductDto[], total: number, page: number, pageSize: number }`. Each `ProductDto` includes `id`, `code`, `name`, `unit`, `satProductCode` (string or `null`), `departmentId`, `departmentName` (joined), `ivaRate` (decimal 0–1 or `null`), `iepsRate` (decimal 0–1 or `null`), `imageUrl` (string or `null`), `isTaxable` (boolean), `isActive`, `createdAt`, `updatedAt`. Results ordered by `createdAt DESC`.
 
@@ -170,17 +168,23 @@ The system SHALL expose `DELETE /api/v1/admin/products/:id` that marks the produ
 ---
 
 ### Requirement: List product prices
-The system SHALL expose `GET /api/v1/admin/products/:id/prices`. Requires `products:read`. Returns `{ items: ProductPriceDto[] }` ordered by `is_default DESC, min_quantity ASC, name ASC`. Each `ProductPriceDto` includes `id`, `productId`, `name`, `price`, `minQuantity`, `discountPct` (or `null`), `isDefault`, `createdAt`, `updatedAt`.
+El sistema SHALL exponer `GET /api/v1/admin/products/:id/prices`. Requiere `products:read`. Retorna `{ items: ProductPriceDto[] }` ordenado por prioridad de negocio: primero el precio con `isDefault=true`, luego los precios cuyo `name` matchea `subdis` (case-insensitive), luego los que matchean `distri` (case-insensitive), luego el resto ordenado por `name ASC`. Cada `ProductPriceDto` incluye `id`, `productId`, `name`, `price`, `minQuantity`, `discountPct` (o `null`), `isDefault`, `createdAt`, `updatedAt`.
 
 #### Scenario: List prices
 - **WHEN** an authorized user gets prices for an existing product
 - **THEN** the response includes all prices, default first
 
+#### Scenario: Orden de prioridad para descuentos por volumen
+- **WHEN** un producto tiene precios "Precio Publico" (`isDefault=true`), "Precio Subdis 10%", "Precio Distri 15%" y "Precio 4"
+- **THEN** el orden de la respuesta es exactamente: Precio Publico, Precio Subdis 10%, Precio Distri 15%, Precio 4
+
+#### Scenario: Precios sin patrón conocido van al final por nombre
+- **WHEN** un producto tiene un precio no-default cuyo `name` no matchea `subdis` ni `distri` (ej. "General")
+- **THEN** ese precio aparece después de los precios "subdis"/"distri" del mismo producto, ordenado alfabéticamente junto a otros precios en la misma situación
+
 #### Scenario: Product not found
 - **WHEN** the URL `:id` does not match any product
 - **THEN** the system returns HTTP 404
-
----
 
 ### Requirement: Create product price
 The system SHALL expose `POST /api/v1/admin/products/:id/prices`. Requires `products:write`. Required body: `name: string` (1–60 chars), `price: number` (>= 0, max 12 integer digits + 4 decimals). Optional: `minQuantity: number` (integer >= 1, default 1), `discountPct: number | null` (0–100), `isDefault: boolean` (default `false`). A product may have at most ONE price with `isDefault: true`; attempting to create a second default returns HTTP 409 `{"error": "Product already has a default price"}`. Two prices with the same `name` on the same product return HTTP 409.
@@ -470,3 +474,4 @@ The `ProductDto` SHALL include `taxRateId: string | null` and, in the detail end
 #### Scenario: List products includes taxRateId and taxRateCode
 - **WHEN** GET /admin/products returns list
 - **THEN** each item includes `taxRateId: string | null` and `taxRateCode: string | null`
+

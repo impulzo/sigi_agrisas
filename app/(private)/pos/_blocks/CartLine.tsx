@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { formatMxCurrency } from "../_logic/lib/formatMxCurrency";
 import type { CartLine as CartLineType } from "../_logic/types/domain";
+
+const QUANTITY_DRAFT_PATTERN = /^\d*\.?\d{0,3}$/;
 
 interface ListItemProps {
   tabIndex: number;
@@ -35,6 +38,15 @@ export function CartLine({
   onChangeTier,
   onRemove,
 }: CartLineProps) {
+  const [quantityDraft, setQuantityDraft] = useState(String(line.quantity));
+  const quantityFocusedRef = useRef(false);
+
+  useEffect(() => {
+    if (!quantityFocusedRef.current) {
+      setQuantityDraft(String(line.quantity));
+    }
+  }, [line.quantity]);
+
   return (
     <div
       {...itemProps}
@@ -73,13 +85,25 @@ export function CartLine({
         <div className="flex items-center gap-1">
           <label className="text-label-sm text-on-surface-variant">Cant.</label>
           <input
-            type="number"
-            min="0.001"
-            step="0.001"
-            value={line.quantity}
+            type="text"
+            inputMode="decimal"
+            value={quantityDraft}
+            onFocus={() => { quantityFocusedRef.current = true; }}
+            onBlur={() => {
+              quantityFocusedRef.current = false;
+              const v = parseFloat(quantityDraft);
+              if (isNaN(v) || v <= 0) {
+                setQuantityDraft(String(line.quantity));
+              } else {
+                setQuantityDraft(String(v));
+              }
+            }}
             onKeyDown={stopShortcutKeys}
             onChange={(e) => {
-              const v = parseFloat(e.target.value);
+              const raw = e.target.value;
+              if (!QUANTITY_DRAFT_PATTERN.test(raw)) return;
+              setQuantityDraft(raw);
+              const v = parseFloat(raw);
               if (!isNaN(v) && v > 0) onUpdateQuantity(line.id, v);
             }}
             className="w-20 rounded border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"

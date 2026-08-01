@@ -30,7 +30,7 @@ export class PrismaTaxRateRepository implements TaxRateRepository {
     const [items, total] = await Promise.all([
       this.prisma.taxRate.findMany({
         where,
-        orderBy: { code: "asc" },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),

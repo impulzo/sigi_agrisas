@@ -18,12 +18,7 @@ export function CancelPaymentModal({ paymentId, onSuccess, onClose }: CancelPaym
   const { isSaving, cancel } = usePaymentMutations();
 
   useEffect(() => {
-    if (dialogRef.current) {
-      dialogRef.current.showModal();
-    }
-    return () => {
-      dialogRef.current?.close();
-    };
+    dialogRef.current?.showModal();
   }, []);
 
   useEffect(() => {

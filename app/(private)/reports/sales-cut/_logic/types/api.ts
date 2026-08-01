@@ -5,6 +5,7 @@ export interface SalesCutBreakdownRowDto {
   subtotal: string;
   taxTotal: string;
   total: string;
+  quantitySold?: string;
 }
 
 export interface SalesCutReportDto {
@@ -36,4 +37,6 @@ export interface SalesCutReportDto {
   byDay: SalesCutBreakdownRowDto[];
   byCashier: SalesCutBreakdownRowDto[];
   byBranch: SalesCutBreakdownRowDto[];
+  byDepartment: SalesCutBreakdownRowDto[];
+  byProduct: SalesCutBreakdownRowDto[];
 }

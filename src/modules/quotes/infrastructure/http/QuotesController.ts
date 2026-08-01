@@ -18,6 +18,8 @@ import { EmptyQuoteError } from "../../domain/errors/EmptyQuoteError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
+import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
+import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
 import { QUOTE_STATUSES, QuoteStatus, isQuoteStatus } from "../../domain/value-objects/QuoteStatus";
 import {
   enforceBranchScope,
@@ -307,6 +309,12 @@ export class QuotesController {
         { error: "FolioScopeMismatch", expected: err.expected, actual: err.actual },
         { status: 400 }
       );
+    }
+    if (err instanceof CustomerHasNoCreditLineError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
+    }
+    if (err instanceof CreditLimitExceededError) {
+      return NextResponse.json({ error: err.message, available: err.available }, { status: 409 });
     }
     if (err instanceof Error && err.message === "expiresAt must be in the future") {
       return NextResponse.json({ error: err.message }, { status: 400 });

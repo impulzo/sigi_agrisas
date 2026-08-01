@@ -176,27 +176,75 @@ The system SHALL expose versioned administrative endpoints under `/api/v1/admin/
 The system SHALL provide an idempotent seed script (`prisma/seed.ts`) that ensures the following base entities exist after `npm run seed`:
 
 - Roles: `admin`, `operator`, `viewer`
-- Permissions: `users:read`, `users:write`, `roles:read`, `roles:write`, `payment_methods:read`, `payment_methods:write`, `folios:read`, `folios:write`, `departments:read`, `departments:write`, `branches:read`, `branches:write`, `providers:read`, `providers:write`, `products:read`, `products:write`, `inventory:read`, `inventory:write`, `customers:read`, `customers:write`, `sales:read`, `sales:create`, `sales:cancel`, `sales:edit_completed`, `branches:access_all`, `quotes:read`, `quotes:create`, `quotes:write`, `quotes:cancel`, `quotes:authorize`, `quotes:convert`, `returns:read`, `returns:create`, `returns:cancel`, `sales:create_credit`, `payments:read`, `payments:create`, `payments:cancel`, `payments:report_read`, `reports:inventory_read`
-- Role grants:
-  - `admin` → all 40 permissions
-  - `operator` → `users:read`, `roles:read`, `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`, `inventory:read`, `inventory:write`, `customers:read`, `customers:write`, `sales:read`, `sales:create`, `sales:cancel`, `sales:create_credit`, `quotes:read`, `quotes:create`, `quotes:write`, `quotes:cancel`, `quotes:authorize`, `quotes:convert`, `returns:read`, `returns:create`, `returns:cancel`, `payments:read`, `payments:create`, `payments:cancel`, `payments:report_read`, `reports:inventory_read`
-  - `viewer` → `users:read`, `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`, `inventory:read`, `customers:read`, `sales:read`, `quotes:read`, `returns:read`, `payments:read`, `payments:report_read`, `reports:inventory_read`
+- Permissions: `users:read`, `users:write`, `roles:read`, `roles:write`, `payment_methods:read`, `payment_methods:write`, `folios:read`, `folios:write`, `departments:read`, `departments:write`, `branches:read`, `branches:write`, `providers:read`, `providers:write`, `products:read`, `products:write`, `inventory:read`, `inventory:write`, `customers:read`, `customers:write`, `sales:read`, `sales:create`, `sales:cancel`, `sales:edit_completed`, `branches:access_all`, `quotes:read`, `quotes:create`, `quotes:write`, `quotes:cancel`, `quotes:authorize`, `quotes:convert`, `returns:read`, `returns:create`, `returns:cancel`, `sales:create_credit`, `payments:read`, `payments:create`, `payments:cancel`, `payments:report_read`, `reports:inventory_read`, plus permissions added by later changes not fully reconciled in this section's prose (`billing:*`, `tax_rates:*`, `waybills:*`, etc.) — `prisma/seed.ts`'s `PERMISSIONS` array is the source of truth for the complete, current list.
+- Role grants (settings, most recently added — accurate as of this change):
+  - `admin` → all permissions, including `settings:read`, `settings:write`
+  - `operator` → gains `settings:read` only — NOT `settings:write`
+  - `viewer` → gains `settings:read` only — NOT `settings:write`
+- Role grants (waybills):
+  - `admin` → all permissions, including `waybills:read`, `waybills:write`, `waybills:cancel`, `waybills:stamp`
+  - `operator` → gains `waybills:read`, `waybills:write`, `waybills:cancel`, `waybills:stamp`
+  - `viewer` → gains `waybills:read` only — NOT `waybills:write`, `waybills:cancel`, or `waybills:stamp`
 
-The seed MUST be safe to run multiple times against the same database without raising errors or producing duplicate rows. The total permission count rises from 39 to 40 after the addition of `reports:inventory_read` (the 5 permissions `sales:create_credit`, `payments:read`, `payments:create`, `payments:cancel`, `payments:report_read` were added by the prior `api-abonos` change).
+`waybills:stamp` gates creating a `type='carta_porte'` waybill (Complemento Carta Porte, timbrado ante el SAT) in addition to the pre-existing `waybills:write`; it is irreversible once stamped, which is why it is withheld from `viewer` and granted only to the two roles that can already write.
+
+`settings:write` gates editing the global ticket template (logo, header/footer text, paper width) and is withheld from `operator`/`viewer` because it's a business-identity configuration, not an operational task — consistent with how the project withholds `*:write` from read-only roles elsewhere in the catalog.
+
+The seed MUST remain safe to run multiple times against the same database without raising errors, duplicating rows, or resetting `current_number` on any seeded `Folio`.
 
 Additionally, the seed SHALL upsert (idempotently) a base `Folio` with `code='RECIBO'`, `name='Recibo de abono'`, `prefix='RECIBO-'`, `isActive=true`. The `current_number` SHALL NOT be reset on re-execution.
 
 #### Scenario: Seed runs on empty database
 - **WHEN** `npm run seed` is run against a database that has the RBAC tables but no rows
-- **THEN** all 3 roles, 35 permissions, and the role-permission grants listed above exist after the script completes
+- **THEN** all 3 roles and the full permission set (see `prisma/seed.ts`), and the role-permission grants listed above, exist after the script completes
 
 #### Scenario: Seed is idempotent
 - **WHEN** `npm run seed` is run a second time against a database already seeded
 - **THEN** no errors are thrown and no duplicate rows are created
 
+#### Scenario: Seed creates waybills permissions
+- **WHEN** `npm run seed` runs against a database that already has the permissions predating this change
+- **THEN** the `permissions` table now contains rows for `waybills:read`, `waybills:write`, `waybills:cancel`, `waybills:stamp`
+
+#### Scenario: Admin role gets all four waybills permissions
+- **WHEN** the seed completes
+- **THEN** the `admin` role has `role_permissions` rows linking it to `waybills:read`, `waybills:write`, `waybills:cancel`, and `waybills:stamp`
+
+#### Scenario: Operator role gets all four waybills permissions
+- **WHEN** the seed completes
+- **THEN** the `operator` role has `role_permissions` rows linking it to `waybills:read`, `waybills:write`, `waybills:cancel`, and `waybills:stamp`
+
+#### Scenario: Viewer role gets only waybills:read
+- **WHEN** the seed completes
+- **THEN** the `viewer` role has a `role_permissions` row linking it to `waybills:read` but NOT to `waybills:write`, `waybills:cancel`, or `waybills:stamp`
+
+#### Scenario: Seed remains idempotent (waybills)
+- **WHEN** `npm run seed` runs twice consecutively after adding the four `waybills:*` permissions
+- **THEN** the second run does not throw and the `permissions` and `role_permissions` tables contain the same rows as after the first run
+
 #### Scenario: Seed adds new permissions to existing database
 - **WHEN** `npm run seed` runs against a database that already has the original 4 permissions but lacks the 8 new catalog permissions
 - **THEN** the 8 new permissions and their role grants are created without modifying existing roles or grants
+
+#### Scenario: Seed creates settings permissions
+- **WHEN** `npm run seed` runs against a database that already has the permissions predating this change
+- **THEN** the `permissions` table now contains rows for `settings:read` and `settings:write`
+
+#### Scenario: Admin role gets both settings permissions
+- **WHEN** the seed completes
+- **THEN** the `admin` role has `role_permissions` rows linking it to `settings:read` and `settings:write`
+
+#### Scenario: Operator role gets only settings:read
+- **WHEN** the seed completes
+- **THEN** the `operator` role has a `role_permissions` row linking it to `settings:read` but NOT to `settings:write`
+
+#### Scenario: Viewer role gets only settings:read
+- **WHEN** the seed completes
+- **THEN** the `viewer` role has a `role_permissions` row linking it to `settings:read` but NOT to `settings:write`
+
+#### Scenario: Seed remains idempotent (settings)
+- **WHEN** `npm run seed` runs twice consecutively after adding the two `settings:*` permissions
+- **THEN** the second run does not throw and the `permissions` and `role_permissions` tables contain the same rows as after the first run
 
 #### Scenario: Seed creates providers permissions
 - **WHEN** `npm run seed` runs against a fresh database

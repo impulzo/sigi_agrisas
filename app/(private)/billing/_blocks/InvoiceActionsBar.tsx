@@ -8,6 +8,7 @@ interface InvoiceActionsBarProps {
   isDownloading: boolean;
   isSaving: boolean;
   onDownload: (format: "pdf" | "xml") => void;
+  onSendEmailClick: () => void;
   onCancelClick: () => void;
 }
 
@@ -17,6 +18,7 @@ export function InvoiceActionsBar({
   isDownloading,
   isSaving,
   onDownload,
+  onSendEmailClick,
   onCancelClick,
 }: InvoiceActionsBarProps) {
   return (
@@ -36,6 +38,13 @@ export function InvoiceActionsBar({
         className="rounded-full border border-outline px-4 py-2 text-label-sm font-medium hover:bg-surface-container transition-colors disabled:opacity-50"
       >
         {isDownloading ? "Descargando..." : "Descargar XML"}
+      </button>
+      <button
+        type="button"
+        onClick={onSendEmailClick}
+        className="rounded-full border border-outline px-4 py-2 text-label-sm font-medium hover:bg-surface-container transition-colors"
+      >
+        Enviar por correo
       </button>
       {inv.status === "stamped" && canCancel === true && (
         <button

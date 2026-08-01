@@ -10,6 +10,8 @@ import { ProductDepartmentInvalidError } from "../_logic/errors";
 import { createProductSchema } from "../_logic/schemas/product.schema";
 import { useTaxRatesOptions } from "../../../../_hooks/useTaxRatesOptions";
 import { useDepartmentsOptions } from "../_logic/hooks/useDepartmentsOptions";
+import { TaxRateSelect } from "./TaxRateSelect";
+import { SatCodeCombobox } from "./SatCodeCombobox";
 import type { Product } from "../_logic/types/domain";
 import type { UpdateProductBody } from "../_logic/types/api";
 
@@ -138,24 +140,12 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
 
       <div>
         <label className="block text-label-lg text-on-surface-variant mb-1">Tasa de impuesto</label>
-        <select
-          value={taxRateId ?? ""}
-          onChange={(e) => setTaxRateId(e.target.value || null)}
-          disabled={!canWrite}
-          className={fieldClass}
-        >
-          <option value="">Sin tasa asignada</option>
-          {taxRateOptions.map((tr) => (
-            <option key={tr.id} value={tr.id}>
-              {tr.code} — {tr.name} ({(tr.rate * 100).toFixed(2)}%)
-            </option>
-          ))}
-        </select>
+        <TaxRateSelect value={taxRateId} onChange={setTaxRateId} options={taxRateOptions} disabled={!canWrite} className={fieldClass} />
       </div>
 
       <div>
         <label className="block text-label-lg text-on-surface-variant mb-1">Cód. SAT (8 dígitos)</label>
-        <input type="text" value={satProductCode} onChange={(e) => setSatProductCode(e.target.value.replace(/\D/g, "").slice(0, 8))} disabled={!canWrite} className={fieldClass} />
+        <SatCodeCombobox value={satProductCode} onChange={setSatProductCode} disabled={!canWrite} className={fieldClass} />
       </div>
 
       <div>

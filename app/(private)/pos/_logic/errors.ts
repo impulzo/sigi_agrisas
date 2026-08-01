@@ -51,3 +51,14 @@ export class FolioScopeMismatchError extends Error {
     this.name = "FolioScopeMismatchError";
   }
 }
+
+export class CreditLimitExceededError extends Error {
+  constructor(public readonly available: string) {
+    super(`Límite de crédito excedido. Disponible: $${available}`);
+    this.name = "CreditLimitExceededError";
+  }
+}
+
+export class CustomerHasNoCreditLineError extends Error {
+  constructor() { super("El cliente no tiene línea de crédito configurada"); this.name = "CustomerHasNoCreditLineError"; }
+}

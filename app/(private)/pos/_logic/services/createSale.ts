@@ -11,6 +11,8 @@ import {
   EmptyCartError,
   SaleScopingForbiddenError,
   SaleCreateForbiddenError,
+  CreditLimitExceededError,
+  CustomerHasNoCreditLineError,
 } from "../errors";
 
 function mapErrorMessage(message: string): Error {
@@ -52,6 +54,13 @@ export async function createSale(
     const msg = (errBody.error ?? "").toLowerCase();
     if (msg.includes("branch") || msg.includes("scope")) throw new SaleScopingForbiddenError();
     throw new SaleCreateForbiddenError();
+  }
+
+  if (res.status === 409) {
+    const errBody = await res.json().catch(() => ({ error: "" })) as { error?: string; available?: string };
+    if (errBody.error === "Credit limit exceeded") throw new CreditLimitExceededError(errBody.available ?? "0");
+    if (errBody.error === "Customer has no credit line (creditLimit is null)") throw new CustomerHasNoCreditLineError();
+    throw new NetworkError();
   }
 
   if (!res.ok) throw new NetworkError();

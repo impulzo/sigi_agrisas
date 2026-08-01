@@ -16,7 +16,7 @@ export async function getProductPrices(
 
   const json = await res.json() as { items: Array<Record<string, unknown>> } | Array<Record<string, unknown>>;
   const body = Array.isArray(json) ? json : (json as { items: Array<Record<string, unknown>> }).items ?? [];
-  const prices: ProductPriceDto[] = body.map((p) => ({
+  return body.map((p) => ({
     id: p.id as string,
     productId: p.productId as string,
     name: p.name as string,
@@ -25,6 +25,4 @@ export async function getProductPrices(
     discountPct: p.discountPct as number,
     isDefault: p.isDefault as boolean,
   }));
-
-  return prices.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
 }

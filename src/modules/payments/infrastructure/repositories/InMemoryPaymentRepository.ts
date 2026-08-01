@@ -7,6 +7,7 @@ import {
   PaymentWithSale,
   PaymentListRow,
   SaleTotals,
+  LineBalance,
   HistoryFilters,
   HistoryResult,
   PaymentHistoryItem,
@@ -17,11 +18,16 @@ import { SalePaymentStatus } from "../../domain/value-objects/SalePaymentStatus"
 import { PaymentNotFoundError } from "../../domain/errors/PaymentNotFoundError";
 import { PaymentAlreadyCancelledError } from "../../domain/errors/PaymentAlreadyCancelledError";
 import { PaymentExceedsDueAmountError } from "../../domain/errors/PaymentExceedsDueAmountError";
+import { PaymentExceedsLineDueAmountError } from "../../domain/errors/PaymentExceedsLineDueAmountError";
+import { PaymentItemsAmountMismatchError } from "../../domain/errors/PaymentItemsAmountMismatchError";
+import { SaleItemNotFoundError } from "../../domain/errors/SaleItemNotFoundError";
 import { SaleNotPayableError } from "../../domain/errors/SaleNotPayableError";
 import { BranchScopeViolationError } from "../../domain/errors/BranchScopeViolationError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 import { FolioScope } from "@/shared/domain/types/FolioScope";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
+
+const AMOUNT_TOLERANCE = 0.0001;
 
 interface SaleMock {
   id: string;
@@ -36,6 +42,13 @@ interface SaleMock {
   status: string;
 }
 
+interface SaleItemMock {
+  id: string;
+  saleId: string;
+  lineTotal: number;
+  productNameSnapshot: string;
+}
+
 interface CustomerMock {
   id: string;
   currentBalance: number;
@@ -48,15 +61,27 @@ interface FolioMock {
   isActive: boolean;
 }
 
+interface PaymentItemMock {
+  customerPaymentId: string;
+  saleItemId: string;
+  amount: number;
+}
+
 export class InMemoryPaymentRepository implements PaymentRepository {
   private payments = new Map<string, CustomerPayment>();
   private sales = new Map<string, SaleMock>();
+  private saleItems = new Map<string, SaleItemMock>();
   private customers = new Map<string, CustomerMock>();
   private folios = new Map<string, FolioMock>();
+  private paymentItems: PaymentItemMock[] = [];
   private folioCounter = 0;
 
   seedSale(sale: SaleMock): void {
     this.sales.set(sale.id, { ...sale });
+  }
+
+  seedSaleItem(item: SaleItemMock): void {
+    this.saleItems.set(item.id, { ...item });
   }
 
   seedCustomer(customer: CustomerMock): void {
@@ -65,6 +90,12 @@ export class InMemoryPaymentRepository implements PaymentRepository {
 
   seedFolio(folio: FolioMock): void {
     this.folios.set(folio.id, { ...folio });
+  }
+
+  private paidAmountForLine(saleItemId: string): number {
+    return this.paymentItems
+      .filter((pi) => pi.saleItemId === saleItemId && this.payments.get(pi.customerPaymentId)?.status === "completed")
+      .reduce((acc, pi) => acc + pi.amount, 0);
   }
 
   async createCompleted(input: CreatePaymentInput): Promise<PaymentWithSale> {
@@ -85,6 +116,27 @@ export class InMemoryPaymentRepository implements PaymentRepository {
 
     const remaining = sale.total - sale.paidAmount;
     if (input.amount > remaining) throw new PaymentExceedsDueAmountError(remaining);
+
+    if (input.items && input.items.length > 0) {
+      for (const item of input.items) {
+        const saleItem = this.saleItems.get(item.saleItemId);
+        if (!saleItem || saleItem.saleId !== input.saleId) throw new SaleItemNotFoundError(item.saleItemId);
+      }
+
+      const sumItems = input.items.reduce((acc, i) => acc + i.amount, 0);
+      if (Math.abs(sumItems - input.amount) > AMOUNT_TOLERANCE) {
+        throw new PaymentItemsAmountMismatchError(input.amount, sumItems);
+      }
+
+      for (const item of input.items) {
+        const saleItem = this.saleItems.get(item.saleItemId)!;
+        const alreadyPaid = this.paidAmountForLine(item.saleItemId);
+        const lineDue = saleItem.lineTotal - alreadyPaid;
+        if (item.amount > lineDue + AMOUNT_TOLERANCE) {
+          throw new PaymentExceedsLineDueAmountError(item.saleItemId, lineDue);
+        }
+      }
+    }
 
     this.folioCounter++;
     const folioNumber = this.folioCounter;
@@ -117,9 +169,20 @@ export class InMemoryPaymentRepository implements PaymentRepository {
       createdAt: new Date(),
       cancelledAt: null,
       cancellationReason: null,
+      items: input.items?.map((i) => ({
+        saleItemId: i.saleItemId,
+        productNameSnapshot: this.saleItems.get(i.saleItemId)?.productNameSnapshot ?? "",
+        amount: i.amount,
+      })),
     });
 
     this.payments.set(payment.id, payment);
+
+    if (input.items && input.items.length > 0) {
+      for (const item of input.items) {
+        this.paymentItems.push({ customerPaymentId: payment.id, saleItemId: item.saleItemId, amount: item.amount });
+      }
+    }
 
     return {
       payment,
@@ -285,6 +348,19 @@ export class InMemoryPaymentRepository implements PaymentRepository {
       },
     }));
 
+    const lineBalances: LineBalance[] = Array.from(this.saleItems.values())
+      .filter((si) => si.saleId === saleId)
+      .map((si) => {
+        const paidAmount = this.paidAmountForLine(si.id);
+        return {
+          saleItemId: si.id,
+          productNameSnapshot: si.productNameSnapshot,
+          lineTotal: si.lineTotal,
+          paidAmount,
+          dueAmount: si.lineTotal - paidAmount,
+        };
+      });
+
     return {
       items,
       saleTotals: {
@@ -293,6 +369,7 @@ export class InMemoryPaymentRepository implements PaymentRepository {
         saleTotal: sale.total,
         salePaidAmount: sale.paidAmount,
         salePaymentStatus: sale.paymentStatus,
+        lineBalances,
       },
     };
   }

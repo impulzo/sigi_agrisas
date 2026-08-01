@@ -62,9 +62,20 @@ export interface PaymentMethodOption {
 
 export interface SaleItemInputBody {
   productId: string;
-  productPriceId: string;
+  productPriceId?: string;
+  dosificationId?: string;
   quantity: number;
   discountPctOverride?: number;
+}
+
+export interface DosificationOptionDto {
+  id: string;
+  productId: string;
+  name: string;
+  numParts: number;
+  isActive: boolean;
+  computedUnitPrice: number | null;
+  requiresDefaultPrice: boolean;
 }
 
 export interface CreateSaleBody {

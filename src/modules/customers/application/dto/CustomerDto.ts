@@ -14,6 +14,7 @@ export interface CustomerDto {
   notes: string | null;
   creditLimit: number | null;
   currentBalance: number;
+  creditDays: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

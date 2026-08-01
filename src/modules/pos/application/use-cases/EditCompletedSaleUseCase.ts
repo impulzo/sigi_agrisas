@@ -7,6 +7,9 @@ import { SaleTotalsCalculator, SaleLineInput } from "../../domain/services/SaleT
 import { SaleNotFoundError } from "../../domain/errors/SaleNotFoundError";
 import { EmptySaleError } from "../../domain/errors/EmptySaleError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
+import { DosificationMismatchError } from "../../domain/errors/DosificationMismatchError";
+import { DosificationRequiresDefaultPriceError } from "../../domain/errors/DosificationRequiresDefaultPriceError";
+import { DosificationPriceCalculator } from "@/modules/products/domain/services/DosificationPriceCalculator";
 import { CancelledSaleNotEditableError } from "../../domain/errors/CancelledSaleNotEditableError";
 import { ReturnedTotalSaleNotEditableError } from "../../domain/errors/ReturnedTotalSaleNotEditableError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
@@ -47,19 +50,51 @@ export class EditCompletedSaleUseCase {
       if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
         throw new Error("quantity must be > 0");
       }
-      const [product, price] = await Promise.all([
-        this.lookups.getProduct(item.productId),
-        this.lookups.getProductPrice(item.productPriceId),
-      ]);
+      if (Boolean(item.productPriceId) === Boolean(item.dosificationId)) {
+        throw new Error("Exactly one of productPriceId or dosificationId is required");
+      }
+
+      const product = await this.lookups.getProduct(item.productId);
       if (!product) throw new InactiveResourceError("Product not found");
       if (!product.isActive) throw new InactiveResourceError("Product");
-      if (!price) throw new InactiveResourceError("Product price not found");
-      if (price.productId !== item.productId) throw new ProductPriceMismatchError();
+
+      let unitPrice: number;
+      let discountPct: number | null;
+      let priceNameSnapshot: string;
+      let productPriceId: string | null;
+      let dosificationId: string | null;
+      let numPartsSnapshot: number | null;
+
+      if (item.dosificationId) {
+        const dosification = await this.lookups.getDosificationForSale(item.dosificationId);
+        if (!dosification) throw new InactiveResourceError("Dosification not found");
+        if (dosification.productId !== item.productId) throw new DosificationMismatchError();
+        if (!dosification.isActive) throw new InactiveResourceError("Dosification");
+        if (dosification.basePrice === null) throw new DosificationRequiresDefaultPriceError();
+
+        unitPrice = DosificationPriceCalculator.computeUnitPrice(dosification.basePrice, dosification.numParts);
+        discountPct = null;
+        priceNameSnapshot = dosification.name;
+        productPriceId = null;
+        dosificationId = dosification.id;
+        numPartsSnapshot = dosification.numParts;
+      } else {
+        const price = await this.lookups.getProductPrice(item.productPriceId!);
+        if (!price) throw new InactiveResourceError("Product price not found");
+        if (price.productId !== item.productId) throw new ProductPriceMismatchError();
+
+        unitPrice = price.price;
+        discountPct = price.discountPct;
+        priceNameSnapshot = price.name;
+        productPriceId = price.id;
+        dosificationId = null;
+        numPartsSnapshot = null;
+      }
 
       calcLines.push({
         quantity: item.quantity,
-        unitPrice: price.price,
-        discountPct: price.discountPct,
+        unitPrice,
+        discountPct,
         ivaRate: product.ivaRate,
         iepsRate: product.iepsRate,
         isTaxable: product.isTaxable,
@@ -67,13 +102,15 @@ export class EditCompletedSaleUseCase {
 
       snapshotInputs.push({
         productId: product.id,
-        productPriceId: price.id,
+        productPriceId,
+        dosificationId,
+        numPartsSnapshot,
         productCodeSnapshot: product.code,
         productNameSnapshot: product.name,
-        priceNameSnapshot: price.name,
+        priceNameSnapshot,
         quantity: item.quantity,
-        unitPrice: price.price,
-        discountPct: price.discountPct,
+        unitPrice,
+        discountPct,
         ivaRate: product.ivaRate,
         iepsRate: product.iepsRate,
       });

@@ -46,6 +46,8 @@ function makeSaleItem(overrides: Partial<{ id: string; quantity: number }> = {})
     saleId: SALE_ID,
     productId: PRODUCT_ID,
     productPriceId: PRICE_ID,
+    dosificationId: null,
+    numPartsSnapshot: null,
     productCodeSnapshot: "PROD001",
     productNameSnapshot: "Producto Test",
     priceNameSnapshot: "Base",
@@ -93,7 +95,7 @@ function makeSaleSummary(opts: {
       updatedAt: NOW,
       items,
     }),
-    joined: { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodIsCredit: false },
+    joined: { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodName: null, paymentMethodIsCredit: false },
   };
 }
 

@@ -148,6 +148,49 @@ describe("NavigationRail — item Devoluciones", () => {
   });
 });
 
+describe("NavigationRail — item Compras", () => {
+  it("usuario con purchases:read ve el item Compras", () => {
+    renderRail("/dashboard", ["purchases:read"]);
+    expect(screen.getByRole("link", { name: /Compras/ })).toBeInTheDocument();
+  });
+
+  it("usuario sin purchases:read NO ve el item Compras", () => {
+    renderRail("/dashboard", ["sales:read"]);
+    expect(screen.queryByRole("link", { name: /Compras/ })).not.toBeInTheDocument();
+  });
+
+  it('muestra Compras optimistamente cuando can() devuelve "loading"', () => {
+    (usePathname as jest.Mock).mockReturnValue("/dashboard");
+    mockUseCurrentUser.mockReturnValue({
+      userId: "u1",
+      email: "test@test.com",
+      roles: [],
+      branchId: null,
+      isLoading: true,
+      can: () => "loading",
+      refresh: jest.fn(),
+    });
+    render(<NavigationRail />);
+    expect(screen.getByRole("link", { name: /Compras/ })).toBeInTheDocument();
+  });
+
+  it("Compras aparece entre Abonos y Facturación", () => {
+    renderRail("/dashboard", ["purchases:read", "payments:read", "billing:read"]);
+    const links = screen.getAllByRole("link");
+    const names = links.map((l) => l.textContent?.trim());
+    const paymentsIdx = names.findIndex((n) => n?.includes("Abonos"));
+    const purchasesIdx = names.findIndex((n) => n?.includes("Compras"));
+    const billingIdx = names.findIndex((n) => n?.includes("Facturación"));
+    expect(paymentsIdx).toBeLessThan(purchasesIdx);
+    expect(purchasesIdx).toBeLessThan(billingIdx);
+  });
+
+  it("Compras apunta a /purchases", () => {
+    renderRail("/dashboard", ["purchases:read"]);
+    expect(screen.getByRole("link", { name: /Compras/ })).toHaveAttribute("href", "/purchases");
+  });
+});
+
 describe("NavigationRail — scroll structure", () => {
   it("nav scrolleable tiene overflow-y-auto y scrollbar-thin", () => {
     renderRail("/dashboard", []);

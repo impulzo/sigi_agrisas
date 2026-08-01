@@ -4,35 +4,48 @@ import { useState, useEffect, useRef } from "react";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { formatMxCurrency } from "../_logic/lib/formatMxCurrency";
-import type { ProductDto, ProductPriceDto } from "../_logic/types/api";
+import type { ProductDto, ProductPriceDto, DosificationOptionDto } from "../_logic/types/api";
+
+const QUANTITY_DRAFT_PATTERN = /^\d*\.?\d{0,3}$/;
 
 interface PriceTierPickerProps {
   product: ProductDto;
   prices: ProductPriceDto[];
+  dosifications?: DosificationOptionDto[];
   isLoading: boolean;
   initialQuantity?: number;
   initialDiscountPct?: number;
   onConfirm: (price: ProductPriceDto, quantity: number, discountPct: number) => void;
+  onConfirmDosification?: (dosification: DosificationOptionDto, quantity: number) => void;
   onClose: () => void;
 }
+
+type Selection = { kind: "price"; id: string } | { kind: "dosification"; id: string };
 
 export function PriceTierPicker({
   product,
   prices,
+  dosifications = [],
   isLoading,
   initialQuantity = 1,
   initialDiscountPct = 0,
   onConfirm,
+  onConfirmDosification,
   onClose,
 }: PriceTierPickerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const defaultPrice = prices.find((p) => p.isDefault) ?? prices[0] ?? null;
-  const [selectedPriceId, setSelectedPriceId] = useState<string>(defaultPrice?.id ?? "");
+  const [selection, setSelection] = useState<Selection | null>(
+    defaultPrice ? { kind: "price", id: defaultPrice.id } : null
+  );
   const [quantity, setQuantity] = useState(initialQuantity);
+  const [quantityDraft, setQuantityDraft] = useState(String(initialQuantity));
   const [discountPct, setDiscountPct] = useState(initialDiscountPct);
 
-  const selectedPrice = prices.find((p) => p.id === selectedPriceId) ?? null;
+  const selectedPrice = selection?.kind === "price" ? prices.find((p) => p.id === selection.id) ?? null : null;
+  const selectedDosification =
+    selection?.kind === "dosification" ? dosifications.find((d) => d.id === selection.id) ?? null : null;
 
   useEffect(() => {
     dialogRef.current?.showModal();
@@ -57,7 +70,12 @@ export function PriceTierPicker({
   }, [isLoading, prices.length]);
 
   function handleConfirm() {
-    if (!selectedPrice || quantity <= 0) return;
+    if (quantity <= 0) return;
+    if (selectedDosification) {
+      onConfirmDosification?.(selectedDosification, quantity);
+      return;
+    }
+    if (!selectedPrice) return;
     onConfirm(selectedPrice, quantity, discountPct);
   }
 
@@ -88,55 +106,108 @@ export function PriceTierPicker({
         <div className="flex justify-center py-6">
           <Spinner size="md" />
         </div>
-      ) : prices.length === 0 ? (
+      ) : prices.length === 0 && dosifications.length === 0 ? (
         <p className="text-body-sm text-on-surface-variant py-4">
           Este producto no tiene precios configurados.
         </p>
       ) : (
         <>
-          <p className="text-label-md text-on-surface-variant mb-2">Selecciona un precio</p>
-          <div className="space-y-2 mb-4">
-            {prices.map((price) => (
-              <button
-                key={price.id}
-                type="button"
-                onClick={() => setSelectedPriceId(price.id)}
-                className={`w-full flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors ${
-                  selectedPriceId === price.id
-                    ? "border-primary bg-primary-container text-on-primary-container"
-                    : "border-outline-variant bg-surface-container-low hover:bg-surface-container"
-                }`}
-              >
-                <div>
-                  <p className="text-body-sm font-medium">{price.name}</p>
-                  {price.minQuantity > 1 && (
-                    <p className="text-label-sm text-on-surface-variant">Mín. {price.minQuantity} uds.</p>
-                  )}
-                </div>
-                <span className="text-body-md font-semibold tabular-nums">
-                  {formatMxCurrency(price.price)}
-                </span>
-              </button>
-            ))}
-          </div>
+          {prices.length > 0 && (
+            <>
+              <p className="text-label-md text-on-surface-variant mb-2">Selecciona un precio</p>
+              <div className="space-y-2 mb-4">
+                {prices.map((price) => (
+                  <button
+                    key={price.id}
+                    type="button"
+                    onClick={() => setSelection({ kind: "price", id: price.id })}
+                    className={`w-full flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors ${
+                      selection?.kind === "price" && selection.id === price.id
+                        ? "border-primary bg-primary-container text-on-primary-container"
+                        : "border-outline-variant bg-surface-container-low hover:bg-surface-container"
+                    }`}
+                  >
+                    <div>
+                      <p className="text-body-sm font-medium">{price.name}</p>
+                      {price.minQuantity > 1 && (
+                        <p className="text-label-sm text-on-surface-variant">Mín. {price.minQuantity} uds.</p>
+                      )}
+                    </div>
+                    <span className="text-body-md font-semibold tabular-nums">
+                      {formatMxCurrency(price.price)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {dosifications.length > 0 && (
+            <>
+              <p className="text-label-md text-on-surface-variant mb-2">Dosificaciones</p>
+              <div className="space-y-2 mb-4">
+                {dosifications.map((dosification) => {
+                  const disabled = dosification.requiresDefaultPrice || dosification.computedUnitPrice === null;
+                  const isSelected = selection?.kind === "dosification" && selection.id === dosification.id;
+                  return (
+                    <button
+                      key={dosification.id}
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => setSelection({ kind: "dosification", id: dosification.id })}
+                      className={`w-full flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors ${
+                        disabled
+                          ? "border-outline-variant bg-surface-container-low opacity-50 cursor-not-allowed"
+                          : isSelected
+                          ? "border-primary bg-primary-container text-on-primary-container"
+                          : "border-outline-variant bg-surface-container-low hover:bg-surface-container"
+                      }`}
+                    >
+                      <div>
+                        <p className="text-body-sm font-medium">{dosification.name}</p>
+                        {disabled && (
+                          <p className="text-label-sm text-error">Requiere precio default</p>
+                        )}
+                      </div>
+                      {dosification.computedUnitPrice !== null && (
+                        <span className="text-body-md font-semibold tabular-nums">
+                          {formatMxCurrency(dosification.computedUnitPrice)}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           <div className="flex gap-3 mb-4">
             <div className="flex-1">
               <label className="text-label-sm text-on-surface-variant mb-1 block">Cantidad</label>
               <input
                 ref={quantityInputRef}
-                type="number"
-                min="0.001"
-                step="0.001"
-                value={quantity}
+                type="text"
+                inputMode="decimal"
+                value={quantityDraft}
+                onBlur={() => {
+                  const v = parseFloat(quantityDraft);
+                  if (isNaN(v) || v <= 0) {
+                    setQuantityDraft(String(quantity));
+                  } else {
+                    setQuantityDraft(String(v));
+                  }
+                }}
                 onChange={(e) => {
-                  const v = parseFloat(e.target.value);
+                  const raw = e.target.value;
+                  if (!QUANTITY_DRAFT_PATTERN.test(raw)) return;
+                  setQuantityDraft(raw);
+                  const v = parseFloat(raw);
                   if (!isNaN(v) && v > 0) setQuantity(v);
                 }}
                 className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
-            <div className="flex-1">
+            <div className={`flex-1 ${selectedDosification ? "invisible" : ""}`}>
               <label className="text-label-sm text-on-surface-variant mb-1 block">Descuento %</label>
               <input
                 type="number"
@@ -164,7 +235,7 @@ export function PriceTierPicker({
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={!selectedPrice || quantity <= 0}
+              disabled={(!selectedPrice && !selectedDosification) || quantity <= 0}
               className="flex-1 rounded-full bg-primary py-2 text-body-sm font-medium text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Añadir al carrito

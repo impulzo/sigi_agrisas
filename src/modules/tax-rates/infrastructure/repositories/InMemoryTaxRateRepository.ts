@@ -16,7 +16,7 @@ export class InMemoryTaxRateRepository implements TaxRateRepository {
   async findAll({ page, pageSize, includeInactive }: FindAllTaxRatesOptions): Promise<{ items: TaxRate[]; total: number }> {
     let results = Array.from(this.taxRates.values());
     if (!includeInactive) results = results.filter((r) => r.isActive);
-    results = [...results].sort((a, b) => a.code.localeCompare(b.code));
+    results = [...results].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     const total = results.length;
     const start = (page - 1) * pageSize;

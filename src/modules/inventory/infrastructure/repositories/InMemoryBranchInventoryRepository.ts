@@ -16,9 +16,21 @@ function makeId(): string {
   return `test-inventory-${++idCounter}`;
 }
 
+export interface RecordedAdjustment {
+  branchId: string;
+  productId: string;
+  delta: number;
+  notes: string | null;
+}
+
 export class InMemoryBranchInventoryRepository implements BranchInventoryRepository {
   private store: BranchInventory[] = [];
   private productInfo = new Map<string, { code: string; name: string }>();
+  private adjustments: RecordedAdjustment[] = [];
+
+  getAdjustments(branchId: string, productId: string): RecordedAdjustment[] {
+    return this.adjustments.filter((a) => a.branchId === branchId && a.productId === productId);
+  }
 
   setProductInfo(productId: string, code: string, name: string): void {
     this.productInfo.set(productId, { code, name });
@@ -94,7 +106,7 @@ export class InMemoryBranchInventoryRepository implements BranchInventoryReposit
     return this.wrap(updated);
   }
 
-  async adjust(id: string, delta: number, _reason?: string | null): Promise<BranchInventoryView> {
+  async adjust(id: string, delta: number, reason?: string | null): Promise<BranchInventoryView> {
     const idx = this.store.findIndex((i) => i.id === id);
     if (idx === -1) throw new BranchInventoryRecordNotFoundError();
     const existing = this.store[idx];
@@ -110,6 +122,14 @@ export class InMemoryBranchInventoryRepository implements BranchInventoryReposit
       updatedAt: new Date(),
     });
     this.store[idx] = updated;
+    if (delta !== 0) {
+      this.adjustments.push({
+        branchId: existing.branchId,
+        productId: existing.productId,
+        delta,
+        notes: reason ?? null,
+      });
+    }
     return this.wrap(updated);
   }
 
@@ -122,6 +142,7 @@ export class InMemoryBranchInventoryRepository implements BranchInventoryReposit
   reset(): void {
     this.store = [];
     this.productInfo.clear();
+    this.adjustments = [];
     idCounter = 0;
   }
 }

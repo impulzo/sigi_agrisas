@@ -3,7 +3,8 @@ export interface CartLine {
   productId: string;
   productCode: string;
   productName: string;
-  productPriceId: string;
+  productPriceId?: string;
+  dosificationId?: string;
   priceName: string;
   unitPrice: number;
   ivaRate: number;

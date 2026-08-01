@@ -66,7 +66,8 @@ export interface EditSaleBody {
   notes?: string | null;
   items?: {
     productId: string;
-    productPriceId: string;
+    productPriceId?: string;
+    dosificationId?: string;
     quantity: number;
     discountPctOverride?: number;
   }[];

@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 
 jest.mock("next/link", () => {
   const Link = ({ href, children }: { href: string; children: React.ReactNode }) => (
@@ -197,8 +197,9 @@ describe("SaleDetailPage — desglose IVA/IEPS", () => {
     render(<SaleDetailPage id="sale-1" />);
     expect(screen.getAllByText("IVA").length).toBeGreaterThan(0);
     expect(screen.getAllByText("IEPS").length).toBeGreaterThan(0);
-    expect(screen.getByText("$32.00")).toBeInTheDocument();
-    expect(screen.getByText("$16.00")).toBeInTheDocument();
+    const totals = within(screen.getByTestId("sale-totals"));
+    expect(totals.getByText("$32.00")).toBeInTheDocument();
+    expect(totals.getByText("$16.00")).toBeInTheDocument();
   });
 
   it("oculta la fila IEPS cuando ningún ítem tiene IEPS", () => {

@@ -5,9 +5,7 @@
 Pantalla de gestión del catálogo de productos (`/catalogs/products`) con listado paginado, búsqueda server-side, filtro por departamento, toggle de inactivos, modal de creación/edición, y vista de detalle en `/catalogs/products/[id]` con tres tabs (General / Precios / Dosificaciones) para gestionar el agregado completo (precios y dosificaciones) sin modales anidados.
 
 ---
-
 ## Requirements
-
 ### Requirement: Products list screen with server-side search and department filter
 The system SHALL provide a screen at `/catalogs/products` that lists products in a paginated table connected to `GET /api/v1/admin/products`. The screen SHALL require the `products:read` permission (gated via `useCurrentUser().can("products:read")`). The toolbar SHALL include: a search input that submits its value to the backend `?search=` query parameter (server-side search) with a 300 ms debounce and a caption "Búsqueda en servidor · 2+ caracteres"; a department `<select>` filter that adds `?departmentId=` to the request and whose options are loaded once via `useDepartmentsOptions()`; a `Switch` "Mostrar inactivos" that toggles `?includeInactive=true`; and a button "Nuevo producto" gated by `products:write`. The table SHALL show columns: `Código` (font-mono), `Nombre`, `Departamento` (the `departmentName`), `Unidad`, `IVA` (the `ivaRate` rendered as percentage `"16%"` or `"—"` when null), `IEPS` (same rule), `Sujeto a impuestos` (badge "Sí"/"No" basado en `isTaxable`), `Estado` (badge "Activo"/"Inactivo"), y `Acciones`. Pagination SHALL follow the same shape as the other catalogs (`page`, `pageSize`, total count, page selector; max 50 in UI). The actions column SHALL only render when the user has `products:write`, except for the "Gestionar" action which navigates to the detail and SHALL always render for `products:read` users.
 
@@ -401,7 +399,7 @@ The system SHALL expose a hook `useProducts({ page, pageSize, search, department
 ---
 
 ### Requirement: Tax rate column in products table
-`ProductsTable` SHALL include a "Tasa" column that displays `taxRateCode` (e.g., `IVA_16`) or "—" if null. Column positioned after "Departamento".
+`ProductsTable` SHALL include a "Tasa" column that displays `taxRateCode` (e.g., `IVA_16`) or "—" if null. Column positioned after "Proveedor".
 
 #### Scenario: Products table shows tax rate
 - **WHEN** a product has `taxRateCode: "IVA_16"`
@@ -410,3 +408,23 @@ The system SHALL expose a hook `useProducts({ page, pageSize, search, department
 #### Scenario: Products table shows dash for no rate
 - **WHEN** a product has `taxRateCode: null`
 - **THEN** the "Tasa" column shows "—"
+
+### Requirement: SAT code selector in product form
+`ProductGeneralTab` (y `ProductEditModal`) SHALL reemplazar el input de texto libre de `satProductCode` por un combobox con búsqueda (`SatCodeCombobox`), que consulta `GET /api/v1/admin/sat-codes?search=` (mediante un hook `useSatCodesSearch`, con debounce ~300ms) y muestra sugerencias en formato `"<code> — <description>"`. Seleccionar una sugerencia establece `satProductCode` al `code` elegido. El campo SHALL seguir aceptando captura manual de un valor de 8 dígitos que no aparezca en las sugerencias (el catálogo sembrado es un subconjunto, no el listado oficial completo) — la validación de formato `^\d{8}$` sigue aplicando igual que hoy, tanto cliente como servidor. Limpiar el campo envía `satProductCode: null` igual que el comportamiento actual.
+
+#### Scenario: Búsqueda de código SAT muestra sugerencias
+- **WHEN** el administrador escribe "fertilizante" en el campo "Cód. SAT"
+- **THEN** aparece una lista de sugerencias `"<code> — <description>"` provenientes de `GET /api/v1/admin/sat-codes?search=fertilizante`
+
+#### Scenario: Seleccionar una sugerencia completa el campo
+- **WHEN** el administrador selecciona una sugerencia de la lista
+- **THEN** `satProductCode` se establece al `code` de esa sugerencia y la lista se cierra
+
+#### Scenario: Captura manual sigue permitida
+- **WHEN** el administrador escribe directamente 8 dígitos que no coinciden con ninguna sugerencia del subconjunto sembrado
+- **THEN** el campo acepta el valor igual que el input de texto libre anterior, sujeto a la misma validación `^\d{8}$`
+
+#### Scenario: Limpiar el campo envía null
+- **WHEN** el administrador borra el campo por completo y guarda
+- **THEN** la solicitud envía `satProductCode: null`, igual que el comportamiento previo a este change
+

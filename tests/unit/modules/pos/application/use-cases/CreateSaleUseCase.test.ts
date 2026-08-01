@@ -5,6 +5,8 @@ import { Sale } from "@/modules/pos/domain/entities/Sale";
 import { SaleItem } from "@/modules/pos/domain/entities/SaleItem";
 import { EmptySaleError } from "@/modules/pos/domain/errors/EmptySaleError";
 import { ProductPriceMismatchError } from "@/modules/pos/domain/errors/ProductPriceMismatchError";
+import { DosificationMismatchError } from "@/modules/pos/domain/errors/DosificationMismatchError";
+import { DosificationRequiresDefaultPriceError } from "@/modules/pos/domain/errors/DosificationRequiresDefaultPriceError";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
 import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
@@ -18,6 +20,8 @@ function makeSummary(data: CreateSaleData): SaleSummary {
       saleId: "sale-1",
       productId: it.productId,
       productPriceId: it.productPriceId,
+      dosificationId: it.dosificationId,
+      numPartsSnapshot: it.numPartsSnapshot,
       productCodeSnapshot: it.productCodeSnapshot,
       productNameSnapshot: it.productNameSnapshot,
       priceNameSnapshot: it.priceNameSnapshot,
@@ -64,6 +68,7 @@ function makeSummary(data: CreateSaleData): SaleSummary {
       customerRfc: "ACM010101AAA",
       cashierName: "Cajero",
       paymentMethodCode: "EFECTIVO",
+      paymentMethodName: "Efectivo",
       paymentMethodIsCredit: false,
     },
   };
@@ -77,6 +82,7 @@ function makeRepo(): SaleRepository {
     createCompletedFromQuote: jest.fn((data) => Promise.resolve(makeSummary(data))),
     cancel: jest.fn(),
     replaceItemsAndRecalculate: jest.fn(),
+    markReturnedTotal: jest.fn(),
   };
 }
 
@@ -101,6 +107,14 @@ function makeLookups(overrides?: Partial<PosLookupService>): PosLookupService {
     getBranch: jest.fn().mockResolvedValue({ id: "b1", isActive: true }),
     getFolio: jest.fn().mockResolvedValue({ id: "f1", code: "VENTA", prefix: null, scope: "POS", isActive: true }),
     getPaymentMethod: jest.fn().mockResolvedValue({ id: "pm1", isActive: true, isCredit: false }),
+    getDosificationForSale: jest.fn().mockResolvedValue({
+      id: "d1",
+      productId: "p1",
+      name: "1/4",
+      numParts: 4,
+      isActive: true,
+      basePrice: 100,
+    }),
     ...overrides,
   };
 }
@@ -190,6 +204,86 @@ describe("CreateSaleUseCase", () => {
     expect(err).toBeInstanceOf(FolioScopeMismatchError);
     expect(err.expected).toBe("POS");
     expect(err.actual).toBe("INVENTORY");
+  });
+
+  describe("ventas por dosificación", () => {
+    const dosReq = {
+      ...baseReq,
+      items: [{ productId: "p1", dosificationId: "d1", quantity: 3 }],
+    };
+
+    it("calcula unitPrice = (basePrice/numParts)*1.07 y snapshotea numParts/dosificationId", async () => {
+      const repo = makeRepo();
+      const result = await new CreateSaleUseCase(repo, makeLookups()).execute(dosReq, "user-1");
+      expect(result.dto.status).toBe("completed");
+      const call = (repo.createCompleted as jest.Mock).mock.calls[0][0] as CreateSaleData;
+      expect(call.items[0].unitPrice).toBeCloseTo(26.75, 4); // (100/4)*1.07
+      expect(call.items[0].productPriceId).toBeNull();
+      expect(call.items[0].dosificationId).toBe("d1");
+      expect(call.items[0].numPartsSnapshot).toBe(4);
+      expect(call.items[0].priceNameSnapshot).toBe("1/4");
+      expect(call.items[0].discountPct).toBeNull();
+    });
+
+    it("permite vender más partes que numParts (sin tope)", async () => {
+      const repo = makeRepo();
+      await new CreateSaleUseCase(repo, makeLookups()).execute(
+        { ...baseReq, items: [{ productId: "p1", dosificationId: "d1", quantity: 6 }] },
+        "user-1"
+      );
+      expect(repo.createCompleted).toHaveBeenCalledTimes(1);
+    });
+
+    it("rechaza dosificación sin precio default con DosificationRequiresDefaultPriceError", async () => {
+      const lookups = makeLookups({
+        getDosificationForSale: jest.fn().mockResolvedValue({
+          id: "d1", productId: "p1", name: "1/4", numParts: 4, isActive: true, basePrice: null,
+        }),
+      });
+      await expect(new CreateSaleUseCase(makeRepo(), lookups).execute(dosReq, "user-1")).rejects.toThrow(
+        DosificationRequiresDefaultPriceError
+      );
+    });
+
+    it("rechaza dosificación inactiva", async () => {
+      const lookups = makeLookups({
+        getDosificationForSale: jest.fn().mockResolvedValue({
+          id: "d1", productId: "p1", name: "1/4", numParts: 4, isActive: false, basePrice: 100,
+        }),
+      });
+      await expect(new CreateSaleUseCase(makeRepo(), lookups).execute(dosReq, "user-1")).rejects.toThrow(
+        InactiveResourceError
+      );
+    });
+
+    it("rechaza dosificación que no pertenece al producto con DosificationMismatchError", async () => {
+      const lookups = makeLookups({
+        getDosificationForSale: jest.fn().mockResolvedValue({
+          id: "d1", productId: "pX", name: "1/4", numParts: 4, isActive: true, basePrice: 100,
+        }),
+      });
+      await expect(new CreateSaleUseCase(makeRepo(), lookups).execute(dosReq, "user-1")).rejects.toThrow(
+        DosificationMismatchError
+      );
+    });
+
+    it("rechaza línea con ambos productPriceId y dosificationId", async () => {
+      await expect(
+        new CreateSaleUseCase(makeRepo(), makeLookups()).execute(
+          { ...baseReq, items: [{ productId: "p1", productPriceId: "pp1", dosificationId: "d1", quantity: 1 }] },
+          "user-1"
+        )
+      ).rejects.toThrow("Exactly one of productPriceId or dosificationId is required");
+    });
+
+    it("rechaza línea sin productPriceId ni dosificationId", async () => {
+      await expect(
+        new CreateSaleUseCase(makeRepo(), makeLookups()).execute(
+          { ...baseReq, items: [{ productId: "p1", quantity: 1 }] },
+          "user-1"
+        )
+      ).rejects.toThrow("Exactly one of productPriceId or dosificationId is required");
+    });
   });
 
   describe("ventas a crédito", () => {

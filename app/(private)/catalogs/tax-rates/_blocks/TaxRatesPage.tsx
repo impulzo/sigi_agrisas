@@ -101,8 +101,12 @@ export function TaxRatesPage() {
   }, [softDeleteOne, refresh, showToast]);
 
   const handleReactivate = useCallback(async (id: string) => {
-    const result = await reactivateOne(id);
-    if (result !== null) { refresh(); showToast("Tasa reactivada."); }
+    try {
+      const result = await reactivateOne(id);
+      if (result !== null) { refresh(); showToast("Tasa reactivada."); }
+    } catch (err) {
+      setMutationError((err as Error).message ?? "Error al reactivar.");
+    }
   }, [reactivateOne, refresh, showToast]);
 
   if (canRead === "loading") {

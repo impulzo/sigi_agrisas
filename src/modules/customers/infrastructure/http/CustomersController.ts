@@ -59,6 +59,7 @@ const createBodySchema = z.object({
   contactName: z.string().max(120).nullable().optional(),
   notes: z.string().nullable().optional(),
   creditLimit: z.number().min(0).nullable().optional(),
+  creditDays: z.coerce.number().int().min(0).default(30),
   isActive: z.boolean().optional(),
 });
 
@@ -81,6 +82,7 @@ const updateBodySchema = z
     contactName: z.string().max(120).nullable().optional(),
     notes: z.string().nullable().optional(),
     creditLimit: z.number().min(0).nullable().optional(),
+    creditDays: z.coerce.number().int().min(0).optional(),
     isActive: z.boolean().optional(),
   })
   .refine(
@@ -97,6 +99,7 @@ const updateBodySchema = z
       d.contactName !== undefined ||
       d.notes !== undefined ||
       d.creditLimit !== undefined ||
+      d.creditDays !== undefined ||
       d.isActive !== undefined,
     { message: "At least one updatable field must be provided" }
   );

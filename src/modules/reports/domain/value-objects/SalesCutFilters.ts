@@ -27,7 +27,7 @@ export interface TaxSplit {
   iepsTotal: number;
 }
 
-/** Fila de un desglose (por método/cajero/sucursal/día). */
+/** Fila de un desglose (por método/cajero/sucursal/día/departamento). */
 export interface BreakdownRow {
   key: string;
   label: string;
@@ -35,6 +35,11 @@ export interface BreakdownRow {
   subtotal: number;
   taxTotal: number;
   total: number;
+}
+
+/** Fila del desglose por producto: incluye piezas vendidas. */
+export interface ProductBreakdownRow extends BreakdownRow {
+  quantitySold: number;
 }
 
 /** Agregado de abonos cobrados (customer_payments completed) del periodo. */
@@ -58,6 +63,8 @@ export interface SalesCutAggregates {
   byDay: BreakdownRow[];
   byCashier: BreakdownRow[];
   byBranch: BreakdownRow[];
+  byDepartment: BreakdownRow[];
+  byProduct: ProductBreakdownRow[];
   paymentsReceived: PaymentsAgg;
   returnsRefunded: ReturnsAgg;
 }

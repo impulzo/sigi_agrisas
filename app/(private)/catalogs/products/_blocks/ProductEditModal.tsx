@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Switch } from "../../../../_components/atoms/Switch/Switch";
 import { createProductSchema, updateProductSchema } from "../_logic/schemas/product.schema";
 import { useTaxRatesOptions } from "../../../../_hooks/useTaxRatesOptions";
+import { TaxRateSelect } from "./TaxRateSelect";
 import type { Product } from "../_logic/types/domain";
 import type { CreateProductBody, UpdateProductBody } from "../_logic/types/api";
 
@@ -247,18 +248,12 @@ export function ProductEditModal({
 
           <div>
             <label className="block text-label-lg text-on-surface-variant mb-1">Tasa de impuesto</label>
-            <select
-              value={taxRateId ?? ""}
-              onChange={(e) => setTaxRateId(e.target.value || null)}
+            <TaxRateSelect
+              value={taxRateId}
+              onChange={setTaxRateId}
+              options={taxRateOptions}
               className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">Sin tasa asignada</option>
-              {taxRateOptions.map((tr) => (
-                <option key={tr.id} value={tr.id}>
-                  {tr.code} — {tr.name} ({(tr.rate * 100).toFixed(2)}%)
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           <div>

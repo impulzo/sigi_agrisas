@@ -94,6 +94,8 @@ export class ConvertQuoteToSaleUseCase {
       items: existing.quote.items.map((it) => ({
         productId: it.productId,
         productPriceId: it.productPriceId,
+        dosificationId: null,
+        numPartsSnapshot: null,
         productCodeSnapshot: it.productCodeSnapshot,
         productNameSnapshot: it.productNameSnapshot,
         priceNameSnapshot: it.priceNameSnapshot,

@@ -4,6 +4,8 @@ export interface ReturnItemProps {
   saleItemId: string;
   productId: string;
   productPriceId: string | null;
+  dosificationId: string | null;
+  numPartsSnapshot: number | null;
   productCodeSnapshot: string;
   productNameSnapshot: string;
   priceNameSnapshot: string;
@@ -23,6 +25,8 @@ export class ReturnItem {
   readonly saleItemId: string;
   readonly productId: string;
   readonly productPriceId: string | null;
+  readonly dosificationId: string | null;
+  readonly numPartsSnapshot: number | null;
   readonly productCodeSnapshot: string;
   readonly productNameSnapshot: string;
   readonly priceNameSnapshot: string;
@@ -41,6 +45,8 @@ export class ReturnItem {
     this.saleItemId = props.saleItemId;
     this.productId = props.productId;
     this.productPriceId = props.productPriceId;
+    this.dosificationId = props.dosificationId;
+    this.numPartsSnapshot = props.numPartsSnapshot;
     this.productCodeSnapshot = props.productCodeSnapshot;
     this.productNameSnapshot = props.productNameSnapshot;
     this.priceNameSnapshot = props.priceNameSnapshot;

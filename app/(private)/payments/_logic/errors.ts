@@ -7,6 +7,33 @@ export class PaymentExceedsDueAmountError extends Error {
   }
 }
 
+export class PaymentExceedsLineDueAmountError extends Error {
+  readonly saleItemId: string;
+  readonly due: string;
+  constructor(saleItemId: string, due: string) {
+    super(`Supera el saldo pendiente de esta línea ($${due})`);
+    this.name = "PaymentExceedsLineDueAmountError";
+    this.saleItemId = saleItemId;
+    this.due = due;
+  }
+}
+
+export class PaymentItemsAmountMismatchError extends Error {
+  constructor() {
+    super("La suma de los montos por línea no coincide con el monto total");
+    this.name = "PaymentItemsAmountMismatchError";
+  }
+}
+
+export class SaleItemNotFoundError extends Error {
+  readonly saleItemId: string;
+  constructor(saleItemId: string) {
+    super("La línea seleccionada no pertenece a esta venta");
+    this.name = "SaleItemNotFoundError";
+    this.saleItemId = saleItemId;
+  }
+}
+
 export class SaleNotPayableError extends Error {
   constructor(opts?: { message?: string }) {
     super(opts?.message ?? "Esta venta no admite abonos");

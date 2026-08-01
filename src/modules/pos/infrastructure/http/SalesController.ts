@@ -8,6 +8,8 @@ import { EditCompletedSaleUseCase } from "../../application/use-cases/EditComple
 import { SaleNotFoundError } from "../../domain/errors/SaleNotFoundError";
 import { EmptySaleError } from "../../domain/errors/EmptySaleError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
+import { DosificationMismatchError } from "../../domain/errors/DosificationMismatchError";
+import { DosificationRequiresDefaultPriceError } from "../../domain/errors/DosificationRequiresDefaultPriceError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 import { CancelledSaleNotEditableError } from "../../domain/errors/CancelledSaleNotEditableError";
@@ -47,11 +49,16 @@ const listQuerySchema = z.object({
     .pipe(z.string().min(2, "search must be at least 2 characters").optional()),
 });
 
-const saleItemSchema = z.object({
-  productId: z.string().uuid(),
-  productPriceId: z.string().uuid(),
-  quantity: z.number().positive("quantity must be > 0"),
-});
+const saleItemSchema = z
+  .object({
+    productId: z.string().uuid(),
+    productPriceId: z.string().uuid().optional(),
+    dosificationId: z.string().uuid().optional(),
+    quantity: z.number().positive("quantity must be > 0"),
+  })
+  .refine((item) => Boolean(item.productPriceId) !== Boolean(item.dosificationId), {
+    message: "Exactly one of productPriceId or dosificationId is required",
+  });
 
 const createSaleSchema = z.object({
   branchId: z.string().uuid(),
@@ -165,6 +172,8 @@ export class SalesController {
     } catch (err) {
       if (err instanceof EmptySaleError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof ProductPriceMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof DosificationMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof DosificationRequiresDefaultPriceError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof InactiveResourceError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof FolioScopeMismatchError) {
         return NextResponse.json(
@@ -256,6 +265,8 @@ export class SalesController {
       if (err instanceof SaleNotEditableHereError) return NextResponse.json({ error: err.message }, { status: 403 });
       if (err instanceof EmptySaleError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof ProductPriceMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof DosificationMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof DosificationRequiresDefaultPriceError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof InactiveResourceError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof SaleHasActivePaymentsError) {
         return NextResponse.json({ error: "SaleHasActivePayments", paymentIds: err.paymentIds }, { status: 409 });

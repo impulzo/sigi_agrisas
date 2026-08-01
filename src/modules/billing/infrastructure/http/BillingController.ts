@@ -3,6 +3,7 @@ import { z } from "zod";
 import { StampInvoiceUseCase } from "../../application/use-cases/StampInvoiceUseCase";
 import { CancelInvoiceUseCase } from "../../application/use-cases/CancelInvoiceUseCase";
 import { DownloadInvoiceFileUseCase } from "../../application/use-cases/DownloadInvoiceFileUseCase";
+import { SendInvoiceEmailUseCase } from "../../application/use-cases/SendInvoiceEmailUseCase";
 import { ListInvoicesUseCase } from "../../application/use-cases/ListInvoicesUseCase";
 import { GetInvoiceUseCase } from "../../application/use-cases/GetInvoiceUseCase";
 import { ListInvoicesBySaleUseCase } from "../../application/use-cases/ListInvoicesBySaleUseCase";
@@ -20,6 +21,9 @@ import {
   FacturamaCancelError,
   FacturamaCsdError,
   BranchScopeViolationError,
+  InvoiceNoEmailError,
+  InvoiceNotStampedError,
+  InvoiceEmailSendFailedError,
 } from "../../domain/errors";
 import { isValidCancellationMotive } from "../../domain/value-objects/CancellationMotive";
 import {
@@ -76,6 +80,10 @@ const stampStandaloneSchema = z.object({
   paymentMethod: z.string().max(4).optional(),
 });
 
+const sendEmailSchema = z.object({
+  email: z.string().email().optional(),
+});
+
 const cancelSchema = z.object({
   motive: z.enum(["01", "02", "03", "04"]),
   uuidReplacement: z.string().max(40).nullable().optional(),
@@ -99,7 +107,8 @@ export class BillingController {
     private readonly uploadCsdUseCase: UploadCsdUseCase,
     private readonly getCsdStatusUseCase: GetCsdStatusUseCase,
     private readonly authz: AuthorizationService,
-    private readonly lookupService: BillingLookupService
+    private readonly lookupService: BillingLookupService,
+    private readonly sendEmailUseCase: SendInvoiceEmailUseCase
   ) {}
 
   async list(req: NextRequest): Promise<NextResponse> {
@@ -316,6 +325,48 @@ export class BillingController {
     } catch (err) {
       if (err instanceof InvoiceNotFoundError) {
         return NextResponse.json({ error: "InvoiceNotFound" }, { status: 404 });
+      }
+      throw err;
+    }
+  }
+
+  async sendEmail(req: NextRequest, id: string): Promise<NextResponse> {
+    const authError = await requirePermission(req, "billing:read", this.authz);
+    if (authError) return authError;
+
+    const idParsed = uuidSchema.safeParse(id);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
+    }
+
+    let body: unknown = {};
+    try {
+      const raw = await req.text();
+      if (raw) body = JSON.parse(raw);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+    const parsed = sendEmailSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+
+    try {
+      const invoice = await this.getUseCase.execute(id);
+      const scopeError = await enforceBranchScope(req, invoice.branchId, this.authz);
+      if (scopeError) return scopeError;
+
+      const result = await this.sendEmailUseCase.execute(id, parsed.data.email);
+      return NextResponse.json(result, { status: 200 });
+    } catch (err) {
+      if (err instanceof InvoiceNotFoundError) {
+        return NextResponse.json({ error: "InvoiceNotFound" }, { status: 404 });
+      }
+      if (err instanceof InvoiceNoEmailError || err instanceof InvoiceNotStampedError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      if (err instanceof InvoiceEmailSendFailedError) {
+        return NextResponse.json({ error: err.message }, { status: 502 });
       }
       throw err;
     }

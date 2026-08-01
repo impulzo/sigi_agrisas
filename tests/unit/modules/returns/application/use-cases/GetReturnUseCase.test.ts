@@ -32,6 +32,8 @@ describe("GetReturnUseCase", () => {
       saleItemId: "si-1",
       productId: "prod-1",
       productPriceId: null,
+      dosificationId: null,
+      numPartsSnapshot: null,
       productCodeSnapshot: "P001",
       productNameSnapshot: "Prod",
       priceNameSnapshot: "Base",

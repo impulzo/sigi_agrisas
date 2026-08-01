@@ -1,0 +1,39 @@
+import { authFetch, NetworkError } from "../../../../_lib/authFetch";
+import type { ProviderDto } from "../types/api";
+
+export interface SearchProvidersParams {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  signal?: AbortSignal;
+}
+
+export async function searchProviders(
+  { search, page = 1, pageSize = 20, signal }: SearchProvidersParams,
+  fetchImpl = authFetch,
+): Promise<{ items: ProviderDto[]; total: number }> {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize), includeInactive: "false" });
+  const trimmed = search?.trim();
+  if (trimmed && trimmed.length >= 2) params.set("search", trimmed);
+
+  let res: Response;
+  try {
+    res = await fetchImpl(`/api/v1/admin/providers?${params.toString()}`, { signal });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new NetworkError();
+  }
+
+  if (!res.ok) throw new NetworkError();
+
+  const body = await res.json() as { items: Array<Record<string, unknown>>; total: number };
+  const items: ProviderDto[] = body.items.map((p) => ({
+    id: p.id as string,
+    code: p.code as string,
+    name: p.name as string,
+    rfc: p.rfc as string,
+    isActive: p.isActive as boolean,
+  }));
+
+  return { items, total: body.total };
+}

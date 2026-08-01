@@ -6,6 +6,7 @@ import { FakeFacturamaGateway } from "../services/FakeFacturamaGateway";
 import { StampInvoiceUseCase } from "../../application/use-cases/StampInvoiceUseCase";
 import { CancelInvoiceUseCase } from "../../application/use-cases/CancelInvoiceUseCase";
 import { DownloadInvoiceFileUseCase } from "../../application/use-cases/DownloadInvoiceFileUseCase";
+import { SendInvoiceEmailUseCase } from "../../application/use-cases/SendInvoiceEmailUseCase";
 import { ListInvoicesUseCase } from "../../application/use-cases/ListInvoicesUseCase";
 import { GetInvoiceUseCase } from "../../application/use-cases/GetInvoiceUseCase";
 import { ListInvoicesBySaleUseCase } from "../../application/use-cases/ListInvoicesBySaleUseCase";
@@ -13,6 +14,7 @@ import { UploadCsdUseCase } from "../../application/use-cases/UploadCsdUseCase";
 import { GetCsdStatusUseCase } from "../../application/use-cases/GetCsdStatusUseCase";
 import { BillingController } from "../http/BillingController";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
+import { mailer } from "@/shared/infrastructure/di/mailerContainer";
 import type { FacturamaGateway } from "../../application/ports/FacturamaGateway";
 
 const isMock = process.env.FACTURAMA_MOCK !== "false";
@@ -26,6 +28,7 @@ const lookupService = new PrismaBillingLookupService(prisma);
 const stampUseCase = new StampInvoiceUseCase(invoiceRepo, gateway, lookupService);
 const cancelUseCase = new CancelInvoiceUseCase(invoiceRepo, gateway);
 const downloadUseCase = new DownloadInvoiceFileUseCase(invoiceRepo, gateway);
+const sendEmailUseCase = new SendInvoiceEmailUseCase(invoiceRepo, lookupService, downloadUseCase, mailer);
 const listUseCase = new ListInvoicesUseCase(invoiceRepo);
 const getUseCase = new GetInvoiceUseCase(invoiceRepo);
 const listBySaleUseCase = new ListInvoicesBySaleUseCase(invoiceRepo);
@@ -42,5 +45,6 @@ export const billingController = new BillingController(
   uploadCsdUseCase,
   getCsdStatusUseCase,
   rbacContainer.authorizationService,
-  lookupService
+  lookupService,
+  sendEmailUseCase
 );

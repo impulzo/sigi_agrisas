@@ -3,6 +3,7 @@ import {
   PosLookupService,
   ProductLookup,
   ProductPriceLookup,
+  DosificationLookup,
   CustomerLookup,
   BranchLookup,
   FolioLookup,
@@ -41,6 +42,26 @@ export class PrismaPosLookupService implements PosLookupService {
       name: row.name,
       price: Number(row.price),
       discountPct: row.discountPct ? Number(row.discountPct) : null,
+    };
+  }
+
+  async getDosificationForSale(id: string): Promise<DosificationLookup | null> {
+    const row = await this.prisma.productDosification.findUnique({
+      where: { id },
+      select: { id: true, productId: true, name: true, numParts: true, isActive: true },
+    });
+    if (!row) return null;
+    const defaultPrice = await this.prisma.productPrice.findFirst({
+      where: { productId: row.productId, isDefault: true },
+      select: { price: true },
+    });
+    return {
+      id: row.id,
+      productId: row.productId,
+      name: row.name,
+      numParts: row.numParts,
+      isActive: row.isActive,
+      basePrice: defaultPrice ? Number(defaultPrice.price) : null,
     };
   }
 

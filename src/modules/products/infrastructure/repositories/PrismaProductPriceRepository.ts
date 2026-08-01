@@ -5,6 +5,7 @@ import {
   UpdateProductPriceData,
 } from "../../application/ports/ProductPriceRepository";
 import { ProductPrice } from "../../domain/entities/ProductPrice";
+import { sortProductPricesForDisplay } from "../../domain/services/sortProductPricesForDisplay";
 import { ProductPriceNotFoundError } from "../../domain/errors/ProductPriceNotFoundError";
 import { DuplicatePriceNameError } from "../../domain/errors/DuplicatePriceNameError";
 import { DuplicateDefaultPriceError } from "../../domain/errors/DuplicateDefaultPriceError";
@@ -51,11 +52,8 @@ export class PrismaProductPriceRepository implements ProductPriceRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async findByProductId(productId: string): Promise<ProductPrice[]> {
-    const rows = await this.prisma.productPrice.findMany({
-      where: { productId },
-      orderBy: [{ isDefault: "desc" }, { minQuantity: "asc" }, { name: "asc" }],
-    });
-    return rows.map(toProductPrice);
+    const rows = await this.prisma.productPrice.findMany({ where: { productId } });
+    return sortProductPricesForDisplay(rows.map(toProductPrice));
   }
 
   async findById(id: string): Promise<ProductPrice | null> {
