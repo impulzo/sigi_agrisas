@@ -1,6 +1,6 @@
 "use client";
 
-import type { WaybillStatus } from "../_logic/types/api";
+import type { WaybillStatus, WaybillType } from "../_logic/types/api";
 
 interface WaybillsToolbarProps {
   branchId: string;
@@ -9,6 +9,8 @@ interface WaybillsToolbarProps {
   showBranchFilter: boolean;
   statusFilter: WaybillStatus[];
   onStatusChange: (v: WaybillStatus[]) => void;
+  typeFilter: WaybillType[];
+  onTypeChange: (v: WaybillType[]) => void;
   from: string;
   to: string;
   onFromChange: (v: string) => void;
@@ -21,6 +23,11 @@ const STATUS_OPTIONS: { value: WaybillStatus; label: string }[] = [
   { value: "cancelled", label: "Cancelado" },
 ];
 
+const TYPE_OPTIONS: { value: WaybillType; label: string }[] = [
+  { value: "simple", label: "Simple" },
+  { value: "carta_porte", label: "Carta Porte" },
+];
+
 export function WaybillsToolbar({
   branchId,
   onBranchChange,
@@ -28,6 +35,8 @@ export function WaybillsToolbar({
   showBranchFilter,
   statusFilter,
   onStatusChange,
+  typeFilter,
+  onTypeChange,
   from,
   to,
   onFromChange,
@@ -40,7 +49,11 @@ export function WaybillsToolbar({
     );
   }
 
-  const hasFilters = !!branchId || statusFilter.length > 0 || !!from || !!to;
+  function toggleType(val: WaybillType) {
+    onTypeChange(typeFilter.includes(val) ? typeFilter.filter((t) => t !== val) : [...typeFilter, val]);
+  }
+
+  const hasFilters = !!branchId || statusFilter.length > 0 || typeFilter.length > 0 || !!from || !!to;
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -59,6 +72,23 @@ export function WaybillsToolbar({
           ))}
         </select>
       )}
+
+      <div className="flex gap-1">
+        {TYPE_OPTIONS.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            onClick={() => toggleType(t.value)}
+            className={`rounded-full px-3 py-1 text-label-sm font-medium transition-colors ${
+              typeFilter.includes(t.value)
+                ? "bg-secondary text-on-secondary"
+                : "bg-surface-container-low text-on-surface hover:bg-surface-container"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
       <div className="flex gap-1">
         {STATUS_OPTIONS.map((s) => (

@@ -4,9 +4,13 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createWaybill } from "../services";
 import { createWaybillSchema } from "../schemas/createWaybill";
-import { InsufficientStockAtOriginError } from "../errors";
+import { InsufficientStockAtOriginError, ProductNotFoundForTransferError } from "../errors";
 import type { WaybillDetail, VehicleInput, DriverInput } from "../types/domain";
-import type { CreateWaybillItemRequest } from "../types/api";
+import type {
+  WaybillType,
+  CreateCartaPorteWaybillItemRequest,
+  CreateSimpleWaybillItemRequest,
+} from "../types/api";
 
 export interface WaybillLineState {
   _key: string;
@@ -22,6 +26,12 @@ export interface WaybillLineState {
 }
 
 interface UseCreateWaybillFormResult {
+  type: WaybillType;
+  setType: (v: WaybillType) => void;
+  transferDate: string;
+  setTransferDate: (v: string) => void;
+  notes: string;
+  setNotes: (v: string) => void;
   originBranchId: string;
   setOriginBranchId: (v: string) => void;
   destinationBranchId: string;
@@ -64,6 +74,9 @@ const EMPTY_DRIVER: DriverInput = { name: "", rfc: "", licenseNumber: "" };
 export function useCreateWaybillForm(): UseCreateWaybillFormResult {
   const router = useRouter();
 
+  const [type, setTypeState] = useState<WaybillType>("simple");
+  const [transferDate, setTransferDate] = useState("");
+  const [notes, setNotes] = useState("");
   const [originBranchId, setOriginBranchId] = useState("");
   const [destinationBranchId, setDestinationBranchId] = useState("");
   const [vehicle, setVehicle] = useState<VehicleInput>(EMPTY_VEHICLE);
@@ -76,6 +89,22 @@ export function useCreateWaybillForm(): UseCreateWaybillFormResult {
   const [error, setError] = useState<Error | null>(null);
 
   const clearError = useCallback(() => setError(null), []);
+
+  const setType = useCallback(
+    (next: WaybillType) => {
+      if (next === "simple" && type === "carta_porte" && lines.some((l) => !l.productId)) {
+        setError(
+          new Error(
+            "El traspaso simple solo acepta productos del catálogo. Elimina las líneas libres antes de cambiar de tipo."
+          )
+        );
+        return;
+      }
+      setError(null);
+      setTypeState(next);
+    },
+    [type, lines]
+  );
 
   const setVehicleField = useCallback(<K extends keyof VehicleInput>(key: K, value: VehicleInput[K]) => {
     setVehicle((prev) => ({ ...prev, [key]: value }));
@@ -100,27 +129,46 @@ export function useCreateWaybillForm(): UseCreateWaybillFormResult {
   const submit = useCallback(async (): Promise<WaybillDetail | null> => {
     setError(null);
 
-    const items: CreateWaybillItemRequest[] = lines.map((l) => ({
-      productId: l.productId,
-      description: l.description,
-      satBienesTranspCode: l.satBienesTranspCode,
-      satUnitCode: l.satUnitCode,
-      quantity: l.quantity,
-      weightKg: l.weightKg,
-      isHazardousMaterial: l.isHazardousMaterial,
-      hazardousMaterialCode: l.hazardousMaterialCode || null,
-    }));
+    const payload =
+      type === "simple"
+        ? {
+            type: "simple" as const,
+            originBranchId,
+            destinationBranchId,
+            transferDate,
+            notes: notes || null,
+            items: lines.map(
+              (l): CreateSimpleWaybillItemRequest => ({
+                productId: l.productId ?? "",
+                description: l.description,
+                quantity: l.quantity,
+              })
+            ),
+          }
+        : {
+            type: "carta_porte" as const,
+            originBranchId,
+            destinationBranchId,
+            vehicle,
+            driver: { name: driver.name, rfc: driver.rfc || null, licenseNumber: driver.licenseNumber },
+            distanceKm,
+            departureAt,
+            arrivalAt,
+            items: lines.map(
+              (l): CreateCartaPorteWaybillItemRequest => ({
+                productId: l.productId,
+                description: l.description,
+                satBienesTranspCode: l.satBienesTranspCode,
+                satUnitCode: l.satUnitCode,
+                quantity: l.quantity,
+                weightKg: l.weightKg,
+                isHazardousMaterial: l.isHazardousMaterial,
+                hazardousMaterialCode: l.hazardousMaterialCode || null,
+              })
+            ),
+          };
 
-    const parsed = createWaybillSchema.safeParse({
-      originBranchId,
-      destinationBranchId,
-      vehicle,
-      driver: { name: driver.name, rfc: driver.rfc || null, licenseNumber: driver.licenseNumber },
-      distanceKm,
-      departureAt,
-      arrivalAt,
-      items,
-    });
+    const parsed = createWaybillSchema.safeParse(payload);
 
     if (!parsed.success) {
       setError(new Error(parsed.error.issues[0]?.message ?? "Datos inválidos"));
@@ -143,14 +191,41 @@ export function useCreateWaybillForm(): UseCreateWaybillFormResult {
           )
         );
       }
+      if (err instanceof ProductNotFoundForTransferError) {
+        const offendingProductId = err.productId;
+        setLines((prev) =>
+          prev.map((l) =>
+            l.productId === offendingProductId ? { ...l, error: "Producto no encontrado en el catálogo" } : l
+          )
+        );
+      }
       setError(err as Error);
       return null;
     } finally {
       setIsSubmitting(false);
     }
-  }, [originBranchId, destinationBranchId, vehicle, driver, distanceKm, departureAt, arrivalAt, lines, router]);
+  }, [
+    type,
+    originBranchId,
+    destinationBranchId,
+    transferDate,
+    notes,
+    vehicle,
+    driver,
+    distanceKm,
+    departureAt,
+    arrivalAt,
+    lines,
+    router,
+  ]);
 
   return {
+    type,
+    setType,
+    transferDate,
+    setTransferDate,
+    notes,
+    setNotes,
     originBranchId,
     setOriginBranchId,
     destinationBranchId,

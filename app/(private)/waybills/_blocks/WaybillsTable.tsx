@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { WaybillStatusBadge } from "./WaybillStatusBadge";
+import { WaybillTypeBadge } from "./WaybillTypeBadge";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import type { WaybillSummary } from "../_logic/types/domain";
 import { useTableKeyboard } from "../../../_hooks/useTableKeyboard";
@@ -46,6 +47,7 @@ export function WaybillsTable({ items, isLoading, branchNameById, onEnter }: Way
         <thead>
           <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
             <th className="px-4 py-3 text-left font-medium">Folio</th>
+            <th className="px-4 py-3 text-left font-medium">Tipo</th>
             <th className="px-4 py-3 text-left font-medium">Origen</th>
             <th className="px-4 py-3 text-left font-medium">Destino</th>
             <th className="px-4 py-3 text-left font-medium">Estado</th>
@@ -61,6 +63,9 @@ export function WaybillsTable({ items, isLoading, branchNameById, onEnter }: Way
               className="border-b border-outline-variant/40 hover:bg-surface-container-low focus:bg-surface-container focus:outline-none transition-colors cursor-default"
             >
               <td className="px-4 py-3 font-mono text-on-surface">{w.folioCode}</td>
+              <td className="px-4 py-3">
+                <WaybillTypeBadge type={w.type} />
+              </td>
               <td className="px-4 py-3 text-on-surface-variant truncate max-w-[140px]">
                 {branchNameById[w.originBranchId] ?? w.originBranchId.slice(0, 8)}
               </td>

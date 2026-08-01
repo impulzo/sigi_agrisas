@@ -20,14 +20,14 @@ export function useWaybillsList(filters: WaybillFilters): UseWaybillsListResult 
   const [error, setError] = useState<Error | null>(null);
   const [tick, setTick] = useState(0);
 
-  const { page, pageSize, status, branchId, from, to } = filters;
+  const { page, pageSize, status, type, branchId, from, to } = filters;
 
   useEffect(() => {
     const controller = new AbortController();
     setIsLoading(true);
     setError(null);
 
-    listWaybills({ page, pageSize, status, branchId, from, to, signal: controller.signal })
+    listWaybills({ page, pageSize, status, type, branchId, from, to, signal: controller.signal })
       .then((result) => {
         setItems(result.items);
         setTotal(result.total);
@@ -41,7 +41,7 @@ export function useWaybillsList(filters: WaybillFilters): UseWaybillsListResult 
 
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, JSON.stringify(status), branchId, from, to, tick]);
+  }, [page, pageSize, JSON.stringify(status), JSON.stringify(type), branchId, from, to, tick]);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 

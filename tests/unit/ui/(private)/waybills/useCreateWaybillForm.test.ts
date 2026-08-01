@@ -23,6 +23,7 @@ const DEST_ID = "22222222-2222-2222-2222-222222222222";
 
 function fillValidForm(result: { current: ReturnType<typeof useCreateWaybillForm> }) {
   act(() => {
+    result.current.setType("carta_porte");
     result.current.setOriginBranchId(ORIGIN_ID);
     result.current.setDestinationBranchId(DEST_ID);
     result.current.setVehicleField("plate", "ABC1234");
@@ -124,6 +125,62 @@ describe("useCreateWaybillForm", () => {
     expect(result.current.originBranchId).toBe(ORIGIN_ID);
     expect(result.current.destinationBranchId).toBe(DEST_ID);
     expect(result.current.vehicle.plate).toBe("ABC1234");
+    expect(result.current.lines).toHaveLength(1);
+  });
+
+  it("submits a simple transfer with type:'simple' by default", async () => {
+    mockCreate.mockResolvedValue({ id: "wb-2" } as Awaited<ReturnType<typeof mockCreate>>);
+    const { result } = renderHook(() => useCreateWaybillForm());
+
+    act(() => {
+      expect(result.current.type).toBe("simple");
+      result.current.setOriginBranchId(ORIGIN_ID);
+      result.current.setDestinationBranchId(DEST_ID);
+      result.current.setTransferDate("2026-08-01T08:00");
+      result.current.addLine({
+        productId: PRODUCT_ID,
+        description: "Fertilizante",
+        satBienesTranspCode: "",
+        satUnitCode: "",
+        quantity: 10,
+        weightKg: 0,
+        isHazardousMaterial: false,
+        hazardousMaterialCode: "",
+      });
+    });
+
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ type: "simple" }));
+    expect(result.current.error).toBeNull();
+  });
+
+  it("blocks switching from carta_porte to simple when a free-text line is present", async () => {
+    const { result } = renderHook(() => useCreateWaybillForm());
+
+    act(() => {
+      result.current.setType("carta_porte");
+      result.current.addLine({
+        productId: null,
+        description: "Materia prima sin catálogo",
+        satBienesTranspCode: "10161500",
+        satUnitCode: "KGM",
+        quantity: 5,
+        weightKg: 20,
+        isHazardousMaterial: false,
+        hazardousMaterialCode: "",
+      });
+    });
+
+    act(() => {
+      result.current.setType("simple");
+    });
+
+    expect(result.current.type).toBe("carta_porte");
+    expect(result.current.error).toBeTruthy();
     expect(result.current.lines).toHaveLength(1);
   });
 

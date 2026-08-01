@@ -71,6 +71,7 @@ class FakeGateway implements WaybillFacturamaGateway {
 
 function request(): CreateWaybillRequest {
   return {
+    type: "carta_porte",
     originBranchId: ORIGIN_ID,
     destinationBranchId: DEST_ID,
     vehicle: {
@@ -98,6 +99,16 @@ function request(): CreateWaybillRequest {
   };
 }
 
+function simpleRequest(): CreateWaybillRequest {
+  return {
+    type: "simple",
+    originBranchId: ORIGIN_ID,
+    destinationBranchId: DEST_ID,
+    transferDate: "2026-08-01T08:00:00.000Z",
+    items: [{ productId: PRODUCT_ID, description: "Fertilizante", quantity: 10 }],
+  };
+}
+
 async function setupWithCompletedWaybill() {
   const repo = new InMemoryWaybillRepository();
   const gateway = new FakeGateway();
@@ -105,11 +116,29 @@ async function setupWithCompletedWaybill() {
   lookup.branches.set(ORIGIN_ID, completeBranch(ORIGIN_ID, "Origen"));
   lookup.branches.set(DEST_ID, completeBranch(DEST_ID, "Destino"));
   lookup.products.set(PRODUCT_ID, { id: PRODUCT_ID, code: "FERT01", name: "Fertilizante", isActive: true });
+  lookup.folio = { id: "folio-ts", isActive: true };
   repo.setStock(ORIGIN_ID, PRODUCT_ID, 50);
 
   const createUseCase = new CreateWaybillUseCase(repo, gateway, lookup);
   const cancelUseCase = new CancelWaybillUseCase(repo, gateway);
   const waybill = await createUseCase.execute(request(), CREATOR_ID);
+
+  return { repo, gateway, cancelUseCase, waybill };
+}
+
+async function setupWithCompletedSimpleWaybill() {
+  const repo = new InMemoryWaybillRepository();
+  const gateway = new FakeGateway();
+  const lookup = new FakeLookupService();
+  lookup.branches.set(ORIGIN_ID, completeBranch(ORIGIN_ID, "Origen"));
+  lookup.branches.set(DEST_ID, completeBranch(DEST_ID, "Destino"));
+  lookup.products.set(PRODUCT_ID, { id: PRODUCT_ID, code: "FERT01", name: "Fertilizante", isActive: true });
+  lookup.folio = { id: "folio-tri", isActive: true };
+  repo.setStock(ORIGIN_ID, PRODUCT_ID, 50);
+
+  const createUseCase = new CreateWaybillUseCase(repo, gateway, lookup);
+  const cancelUseCase = new CancelWaybillUseCase(repo, gateway);
+  const waybill = await createUseCase.execute(simpleRequest(), CREATOR_ID);
 
   return { repo, gateway, cancelUseCase, waybill };
 }
@@ -147,5 +176,19 @@ describe("CancelWaybillUseCase", () => {
     await cancelUseCase.execute(waybill.id, CREATOR_ID, "reconciliación");
 
     expect(repo.getStock(DEST_ID, PRODUCT_ID)).toBe(-8);
+  });
+
+  it("cancels a simple waybill without invoking the gateway, and still reverses inventory", async () => {
+    const { repo, gateway, cancelUseCase, waybill } = await setupWithCompletedSimpleWaybill();
+    expect(waybill.facturamaCfdiId).toBeNull();
+    expect(repo.getStock(ORIGIN_ID, PRODUCT_ID)).toBe(40);
+    expect(repo.getStock(DEST_ID, PRODUCT_ID)).toBe(10);
+
+    const cancelled = await cancelUseCase.execute(waybill.id, CREATOR_ID, "Error de captura");
+
+    expect(cancelled.status).toBe("cancelled");
+    expect(repo.getStock(ORIGIN_ID, PRODUCT_ID)).toBe(50);
+    expect(repo.getStock(DEST_ID, PRODUCT_ID)).toBe(0);
+    expect(gateway.cancelCalls).toHaveLength(0);
   });
 });

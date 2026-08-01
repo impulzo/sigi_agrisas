@@ -5,15 +5,17 @@ import { useWaybillMutations } from "../_logic/hooks/useWaybillMutations";
 import { cancelWaybillSchema } from "../_logic/schemas/cancelWaybill";
 import { WaybillAlreadyCancelledError, WaybillCancelForbiddenError } from "../_logic/errors";
 import type { WaybillDetail } from "../_logic/types/domain";
+import type { WaybillType } from "../_logic/types/api";
 
 interface CancelWaybillModalProps {
   waybillId: string;
+  type: WaybillType;
   open: boolean;
   onClose: () => void;
   onSuccess: (updated: WaybillDetail) => void;
 }
 
-export function CancelWaybillModal({ waybillId, open, onClose, onSuccess }: CancelWaybillModalProps) {
+export function CancelWaybillModal({ waybillId, type, open, onClose, onSuccess }: CancelWaybillModalProps) {
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -80,7 +82,9 @@ export function CancelWaybillModal({ waybillId, open, onClose, onSuccess }: Canc
           Cancelar traspaso
         </h2>
         <p className="text-body-md text-on-surface-variant mb-3">
-          Al cancelar este traspaso, el inventario afectado será revertido y el CFDI se cancelará ante el SAT.
+          {type === "carta_porte"
+            ? "Al cancelar este traspaso, el inventario afectado será revertido y el CFDI se cancelará ante el SAT."
+            : "Al cancelar este traspaso, el inventario afectado será revertido."}
         </p>
         <div className="bg-tertiary-container/30 rounded-lg p-3 mb-4 text-body-sm text-on-surface-variant">
           ⚠️ El stock de destino podría quedar negativo si ya se consumió parte de la mercancía transferida.

@@ -8,11 +8,15 @@ export async function listWaybills(
   req: ListWaybillsRequest & { signal?: AbortSignal },
   fetchImpl = authFetch
 ): Promise<{ items: WaybillSummary[]; total: number; page: number; pageSize: number }> {
-  const { page = 1, pageSize = 20, status, branchId, from, to, signal } = req;
+  const { page = 1, pageSize = 20, status, type, branchId, from, to, signal } = req;
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (status) {
     const arr = Array.isArray(status) ? status : [status];
     if (arr.length) params.set("status", arr.join(","));
+  }
+  if (type) {
+    const arr = Array.isArray(type) ? type : [type];
+    if (arr.length) params.set("type", arr.join(","));
   }
   if (branchId) params.set("branchId", branchId);
   if (from) params.set("from", from);

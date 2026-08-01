@@ -21,6 +21,14 @@ const BASE_ENTITY: Branch = {
   phone: "5512345678",
   email: "cdmx@empresa.com",
   isActive: true,
+  addressStreet: null,
+  addressExteriorNumber: null,
+  addressInteriorNumber: null,
+  addressNeighborhood: null,
+  addressMunicipality: null,
+  addressState: null,
+  addressCountry: null,
+  addressZipCode: null,
   createdAt: new Date("2026-05-01"),
   updatedAt: new Date("2026-05-01"),
 };
@@ -49,9 +57,11 @@ describe("BranchEditModal — modo create", () => {
     expect(screen.getByLabelText("Código")).not.toBeDisabled();
   });
 
-  it("botón Guardar deshabilitado cuando los campos están vacíos", () => {
+  it("guardar con campos vacíos muestra validación y no llama onSave", async () => {
     render(<BranchEditModal {...defaultProps} mode="create" entity={null} />);
-    expect(screen.getByRole("button", { name: /guardar/i })).toBeDisabled();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(defaultProps.onSave).not.toHaveBeenCalled();
   });
 
   it("código con caracteres inválidos no permite guardar", async () => {
@@ -150,5 +160,50 @@ describe("BranchEditModal — modo edit", () => {
     await user.clear(screen.getByLabelText("Email"));
     await user.click(screen.getByRole("button", { name: /guardar/i }));
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ email: null }));
+  });
+});
+
+describe("BranchEditModal — domicilio fiscal estructurado", () => {
+  it("renderiza las tres secciones", () => {
+    render(<BranchEditModal {...defaultProps} mode="edit" entity={BASE_ENTITY} />);
+    expect(screen.getByText("Identificación")).toBeInTheDocument();
+    expect(screen.getByText("Contacto")).toBeInTheDocument();
+    expect(screen.getByText("Domicilio fiscal (Carta Porte)")).toBeInTheDocument();
+  });
+
+  it("guardar solo el domicilio fiscal envía únicamente esos campos en el diff", async () => {
+    const onSave = jest.fn();
+    render(<BranchEditModal {...defaultProps} mode="edit" entity={BASE_ENTITY} onSave={onSave} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Calle"), "Reforma");
+    await user.type(screen.getByLabelText("Núm. exterior"), "100");
+    await user.type(screen.getByLabelText("Colonia"), "Centro");
+    await user.type(screen.getByLabelText("Municipio"), "Hermosillo");
+    await user.type(screen.getByLabelText("Estado (clave SAT)"), "SON");
+    await user.type(screen.getByLabelText("Código postal"), "83000");
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(onSave).toHaveBeenCalledWith({
+      addressStreet: "Reforma",
+      addressExteriorNumber: "100",
+      addressNeighborhood: "Centro",
+      addressMunicipality: "Hermosillo",
+      addressState: "SON",
+      addressZipCode: "83000",
+    });
+  });
+
+  it("código postal inválido bloquea el guardado", async () => {
+    render(<BranchEditModal {...defaultProps} mode="edit" entity={BASE_ENTITY} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Código postal"), "12");
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(defaultProps.onSave).not.toHaveBeenCalled();
+  });
+
+  it("espacios en blanco ya no cuentan como cambio (normalizeOptional con trim)", async () => {
+    render(<BranchEditModal {...defaultProps} mode="edit" entity={BASE_ENTITY} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Calle"), "   ");
+    expect(screen.getByRole("button", { name: /guardar/i })).toBeDisabled();
   });
 });

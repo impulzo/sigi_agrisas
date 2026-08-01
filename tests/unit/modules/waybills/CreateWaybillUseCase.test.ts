@@ -19,7 +19,7 @@ import {
   InsufficientStockAtOriginError,
   FacturamaStampError,
 } from "../../../../src/modules/waybills/domain/errors";
-import { CreateWaybillRequest } from "../../../../src/modules/waybills/application/dto/WaybillDto";
+import { CreateWaybillRequest, CreateCartaPorteWaybillRequest } from "../../../../src/modules/waybills/application/dto/WaybillDto";
 
 const ORIGIN_ID = "11111111-1111-1111-1111-111111111111";
 const DEST_ID = "22222222-2222-2222-2222-222222222222";
@@ -75,7 +75,9 @@ class FakeGateway implements WaybillFacturamaGateway {
   }
 }
 
-function baseRequest(overrides: Partial<CreateWaybillRequest> = {}): CreateWaybillRequest {
+function baseRequest(
+  overrides: Partial<Omit<CreateCartaPorteWaybillRequest, "type">> = {}
+): CreateWaybillRequest {
   return {
     originBranchId: ORIGIN_ID,
     destinationBranchId: DEST_ID,
@@ -102,6 +104,7 @@ function baseRequest(overrides: Partial<CreateWaybillRequest> = {}): CreateWaybi
       },
     ],
     ...overrides,
+    type: "carta_porte",
   };
 }
 

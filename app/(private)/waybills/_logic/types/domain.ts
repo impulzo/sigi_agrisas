@@ -1,6 +1,6 @@
-import type { WaybillStatus, WaybillAddressDto, WaybillItemDto } from "./api";
+import type { WaybillStatus, WaybillType, WaybillAddressDto, WaybillItemDto } from "./api";
 
-export type { WaybillStatus, WaybillAddressDto };
+export type { WaybillStatus, WaybillType, WaybillAddressDto };
 export type WaybillItem = WaybillItemDto;
 
 export interface Waybill {
@@ -8,21 +8,23 @@ export interface Waybill {
   folioCode: string;
   originBranchId: string;
   destinationBranchId: string;
+  type: WaybillType;
   status: WaybillStatus;
-  originAddress: WaybillAddressDto;
-  destinationAddress: WaybillAddressDto;
-  vehiclePlate: string;
-  vehicleConfig: string;
-  vehiclePermitType: string;
-  vehiclePermitNumber: string;
-  insuranceCompany: string;
-  insurancePolicy: string;
-  driverName: string;
+  notes: string | null;
+  originAddress: WaybillAddressDto | null;
+  destinationAddress: WaybillAddressDto | null;
+  vehiclePlate: string | null;
+  vehicleConfig: string | null;
+  vehiclePermitType: string | null;
+  vehiclePermitNumber: string | null;
+  insuranceCompany: string | null;
+  insurancePolicy: string | null;
+  driverName: string | null;
   driverRfc: string | null;
-  driverLicenseNumber: string;
-  distanceKm: number;
+  driverLicenseNumber: string | null;
+  distanceKm: number | null;
   departureAt: Date;
-  arrivalAt: Date;
+  arrivalAt: Date | null;
   cfdiUuid: string | null;
   facturamaCfdiId: string | null;
   xmlUrl: string | null;
@@ -44,9 +46,10 @@ export interface WaybillSummary {
   folioCode: string;
   originBranchId: string;
   destinationBranchId: string;
+  type: WaybillType;
   status: WaybillStatus;
   departureAt: Date;
-  arrivalAt: Date;
+  arrivalAt: Date | null;
   createdAt: Date;
 }
 
@@ -54,6 +57,7 @@ export interface WaybillFilters {
   page: number;
   pageSize: number;
   status: WaybillStatus[];
+  type: WaybillType[];
   branchId?: string;
   from?: string;
   to?: string;

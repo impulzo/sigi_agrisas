@@ -121,6 +121,7 @@ function req(method: string, url: string, body?: unknown, headers: Record<string
 }
 
 const createBody = {
+  type: "carta_porte",
   originBranchId: ORIGIN_BRANCH,
   destinationBranchId: DEST_BRANCH,
   vehicle: {

@@ -6,6 +6,7 @@ import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useWaybillDetail } from "../_logic/hooks/useWaybillDetail";
 import { useWaybillMutations } from "../_logic/hooks/useWaybillMutations";
 import { WaybillStatusBadge } from "./WaybillStatusBadge";
+import { WaybillTypeBadge } from "./WaybillTypeBadge";
 import { WaybillItemsTable } from "./WaybillItemsTable";
 import { WaybillMetaPanel } from "./WaybillMetaPanel";
 import { WaybillActionsBar } from "./WaybillActionsBar";
@@ -110,6 +111,7 @@ export function WaybillDetailPage({ id }: WaybillDetailPageProps) {
               <Icon name="arrow_back" size={20} />
             </Link>
             <h1 className="text-headline-sm font-semibold text-on-surface font-mono">{wb.folioCode}</h1>
+            <WaybillTypeBadge type={wb.type} />
             <WaybillStatusBadge status={wb.status} />
           </div>
           {wb.cfdiUuid && (
@@ -135,7 +137,7 @@ export function WaybillDetailPage({ id }: WaybillDetailPageProps) {
         <div className="px-4 py-3 border-b border-outline-variant">
           <h2 className="text-title-sm font-semibold text-on-surface">Mercancías</h2>
         </div>
-        <WaybillItemsTable items={wb.items} />
+        <WaybillItemsTable items={wb.items} type={wb.type} />
       </div>
 
       {/* Meta */}
@@ -154,6 +156,7 @@ export function WaybillDetailPage({ id }: WaybillDetailPageProps) {
       {showCancel && (
         <CancelWaybillModal
           waybillId={wb.id}
+          type={wb.type}
           open={showCancel}
           onClose={() => setShowCancel(false)}
           onSuccess={() => {

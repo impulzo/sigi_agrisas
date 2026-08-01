@@ -5,7 +5,7 @@ function mapWaybillBase(dto: WaybillDto) {
   return {
     ...dto,
     departureAt: new Date(dto.departureAt),
-    arrivalAt: new Date(dto.arrivalAt),
+    arrivalAt: dto.arrivalAt ? new Date(dto.arrivalAt) : null,
     cancelledAt: dto.cancelledAt ? new Date(dto.cancelledAt) : null,
     createdAt: new Date(dto.createdAt),
     updatedAt: new Date(dto.updatedAt),
@@ -25,9 +25,10 @@ export function mapWaybillSummaryDto(dto: WaybillSummaryDto): WaybillSummary {
     folioCode: dto.folioCode,
     originBranchId: dto.originBranchId,
     destinationBranchId: dto.destinationBranchId,
+    type: dto.type,
     status: dto.status,
     departureAt: new Date(dto.departureAt),
-    arrivalAt: new Date(dto.arrivalAt),
+    arrivalAt: dto.arrivalAt ? new Date(dto.arrivalAt) : null,
     createdAt: new Date(dto.createdAt),
   };
 }

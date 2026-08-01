@@ -6,19 +6,33 @@ import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useCreateWaybillForm } from "../_logic/hooks/useCreateWaybillForm";
 import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
 import { BranchPairSelector } from "./BranchPairSelector";
+import { WaybillTypeToggle } from "./WaybillTypeToggle";
+import { SimpleTransferFields } from "./SimpleTransferFields";
 import { WaybillItemsForm } from "./WaybillItemsForm";
 import { VehicleDriverForm } from "./VehicleDriverForm";
 import { ScheduleFields } from "./ScheduleFields";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
-import { BranchAddressIncompleteError, FacturamaStampError, InvalidBranchPairError } from "../_logic/errors";
+import {
+  BranchAddressIncompleteError,
+  FacturamaStampError,
+  InvalidBranchPairError,
+  ProductNotFoundForTransferError,
+} from "../_logic/errors";
 
 export function NewWaybillPage() {
   const { can } = useCurrentUser();
   const canWrite = can("waybills:write");
+  const canStamp = can("waybills:stamp");
   const { options: branchOptions } = useBranchesOptions();
 
   const {
+    type,
+    setType,
+    transferDate,
+    setTransferDate,
+    notes,
+    setNotes,
     originBranchId,
     setOriginBranchId,
     destinationBranchId,
@@ -70,6 +84,8 @@ export function NewWaybillPage() {
       );
     } else if (error instanceof InvalidBranchPairError) {
       content = "Verifica que origen y destino sean sucursales activas y distintas.";
+    } else if (error instanceof ProductNotFoundForTransferError) {
+      content = "Uno de los productos seleccionados no existe en el catálogo.";
     } else if (error instanceof FacturamaStampError) {
       content = `Facturama rechazó el timbrado: ${error.detail}`;
     } else {
@@ -86,16 +102,22 @@ export function NewWaybillPage() {
     );
   }
 
+  const isCartaPorte = type === "carta_porte";
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-headline-sm font-semibold text-on-surface mb-1">Nuevo traspaso</h1>
         <p className="text-body-md text-on-surface-variant">
-          Traslado de mercancía entre sucursales con Complemento Carta Porte. Se timbra de inmediato al enviar.
+          {isCartaPorte
+            ? "Traslado de mercancía entre sucursales con Complemento Carta Porte. Se timbra de inmediato al enviar."
+            : "Movimiento interno de mercancía entre sucursales, sin CFDI ni Carta Porte."}
         </p>
       </div>
 
       <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-6 space-y-6">
+        <WaybillTypeToggle value={type} onChange={setType} canStamp={canStamp === true} />
+
         <BranchPairSelector
           originBranchId={originBranchId}
           onOriginChange={setOriginBranchId}
@@ -104,23 +126,34 @@ export function NewWaybillPage() {
           branches={branchOptions}
         />
 
-        <WaybillItemsForm lines={lines} addLine={addLine} updateLine={updateLine} removeLine={removeLine} />
+        <WaybillItemsForm type={type} lines={lines} addLine={addLine} updateLine={updateLine} removeLine={removeLine} />
 
-        <VehicleDriverForm
-          vehicle={vehicle}
-          onVehicleChange={setVehicleField}
-          driver={driver}
-          onDriverChange={setDriverField}
-        />
+        {isCartaPorte ? (
+          <>
+            <VehicleDriverForm
+              vehicle={vehicle}
+              onVehicleChange={setVehicleField}
+              driver={driver}
+              onDriverChange={setDriverField}
+            />
 
-        <ScheduleFields
-          departureAt={departureAt}
-          onDepartureAtChange={setDepartureAt}
-          arrivalAt={arrivalAt}
-          onArrivalAtChange={setArrivalAt}
-          distanceKm={distanceKm}
-          onDistanceKmChange={setDistanceKm}
-        />
+            <ScheduleFields
+              departureAt={departureAt}
+              onDepartureAtChange={setDepartureAt}
+              arrivalAt={arrivalAt}
+              onArrivalAtChange={setArrivalAt}
+              distanceKm={distanceKm}
+              onDistanceKmChange={setDistanceKm}
+            />
+          </>
+        ) : (
+          <SimpleTransferFields
+            transferDate={transferDate}
+            onTransferDateChange={setTransferDate}
+            notes={notes}
+            onNotesChange={setNotes}
+          />
+        )}
 
         {renderError()}
 
@@ -131,7 +164,7 @@ export function NewWaybillPage() {
             disabled={isSubmitting}
             className="rounded-full bg-secondary text-on-secondary px-6 py-2.5 text-label-lg font-medium hover:bg-secondary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "Timbrando…" : "Crear traspaso"}
+            {isSubmitting ? (isCartaPorte ? "Timbrando…" : "Guardando…") : isCartaPorte ? "Timbrar traspaso" : "Crear traspaso"}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 export type WaybillStatus = "completed" | "cancelled";
+export type WaybillType = "simple" | "carta_porte";
 
 export interface WaybillAddressDto {
   street: string;
@@ -16,10 +17,10 @@ export interface WaybillItemDto {
   productId: string | null;
   productCodeSnapshot: string | null;
   productNameSnapshot: string;
-  satBienesTranspCode: string;
-  satUnitCode: string;
+  satBienesTranspCode: string | null;
+  satUnitCode: string | null;
   quantity: number;
-  weightKg: number;
+  weightKg: number | null;
   isHazardousMaterial: boolean;
   hazardousMaterialCode: string | null;
 }
@@ -29,21 +30,23 @@ export interface WaybillDto {
   folioCode: string;
   originBranchId: string;
   destinationBranchId: string;
+  type: WaybillType;
   status: WaybillStatus;
-  originAddress: WaybillAddressDto;
-  destinationAddress: WaybillAddressDto;
-  vehiclePlate: string;
-  vehicleConfig: string;
-  vehiclePermitType: string;
-  vehiclePermitNumber: string;
-  insuranceCompany: string;
-  insurancePolicy: string;
-  driverName: string;
+  notes: string | null;
+  originAddress: WaybillAddressDto | null;
+  destinationAddress: WaybillAddressDto | null;
+  vehiclePlate: string | null;
+  vehicleConfig: string | null;
+  vehiclePermitType: string | null;
+  vehiclePermitNumber: string | null;
+  insuranceCompany: string | null;
+  insurancePolicy: string | null;
+  driverName: string | null;
   driverRfc: string | null;
-  driverLicenseNumber: string;
-  distanceKm: number;
+  driverLicenseNumber: string | null;
+  distanceKm: number | null;
   departureAt: string;
-  arrivalAt: string;
+  arrivalAt: string | null;
   cfdiUuid: string | null;
   facturamaCfdiId: string | null;
   xmlUrl: string | null;
@@ -62,15 +65,31 @@ export interface WaybillSummaryDto {
   folioCode: string;
   originBranchId: string;
   destinationBranchId: string;
+  type: WaybillType;
   status: WaybillStatus;
   departureAt: string;
-  arrivalAt: string;
+  arrivalAt: string | null;
   createdAt: string;
 }
 
 // --- Request types ---
 
-export interface CreateWaybillItemRequest {
+export interface CreateSimpleWaybillItemRequest {
+  productId: string;
+  description: string;
+  quantity: number;
+}
+
+export interface CreateSimpleWaybillRequest {
+  type: "simple";
+  originBranchId: string;
+  destinationBranchId: string;
+  transferDate: string;
+  notes?: string | null;
+  items: CreateSimpleWaybillItemRequest[];
+}
+
+export interface CreateCartaPorteWaybillItemRequest {
   productId?: string | null;
   description: string;
   satBienesTranspCode: string;
@@ -81,7 +100,8 @@ export interface CreateWaybillItemRequest {
   hazardousMaterialCode?: string | null;
 }
 
-export interface CreateWaybillRequest {
+export interface CreateCartaPorteWaybillRequest {
+  type: "carta_porte";
   originBranchId: string;
   destinationBranchId: string;
   vehicle: {
@@ -100,8 +120,10 @@ export interface CreateWaybillRequest {
   distanceKm: number;
   departureAt: string;
   arrivalAt: string;
-  items: CreateWaybillItemRequest[];
+  items: CreateCartaPorteWaybillItemRequest[];
 }
+
+export type CreateWaybillRequest = CreateSimpleWaybillRequest | CreateCartaPorteWaybillRequest;
 
 export interface CancelWaybillRequest {
   reason: string;
@@ -111,6 +133,7 @@ export interface ListWaybillsRequest {
   page?: number;
   pageSize?: number;
   status?: WaybillStatus | WaybillStatus[];
+  type?: WaybillType | WaybillType[];
   branchId?: string;
   from?: string;
   to?: string;

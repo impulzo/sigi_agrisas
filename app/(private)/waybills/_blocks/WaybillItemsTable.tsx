@@ -1,12 +1,16 @@
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import type { WaybillItem } from "../_logic/types/domain";
+import type { WaybillType } from "../_logic/types/api";
 
 interface WaybillItemsTableProps {
   items: WaybillItem[];
+  type?: WaybillType;
   isLoading?: boolean;
 }
 
-export function WaybillItemsTable({ items, isLoading }: WaybillItemsTableProps) {
+export function WaybillItemsTable({ items, type = "carta_porte", isLoading }: WaybillItemsTableProps) {
+  const isSimple = type === "simple";
+
   if (isLoading) {
     return (
       <div className="p-4 space-y-2">
@@ -24,11 +28,11 @@ export function WaybillItemsTable({ items, isLoading }: WaybillItemsTableProps) 
           <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
             <th className="px-4 py-3 text-left font-medium">Código</th>
             <th className="px-4 py-3 text-left font-medium">Producto</th>
-            <th className="px-4 py-3 text-left font-medium">Clave SAT transporte</th>
-            <th className="px-4 py-3 text-left font-medium">Unidad SAT</th>
+            {!isSimple && <th className="px-4 py-3 text-left font-medium">Clave SAT transporte</th>}
+            {!isSimple && <th className="px-4 py-3 text-left font-medium">Unidad SAT</th>}
             <th className="px-4 py-3 text-right font-medium">Cant.</th>
-            <th className="px-4 py-3 text-right font-medium">Peso (kg)</th>
-            <th className="px-4 py-3 text-left font-medium">Peligroso</th>
+            {!isSimple && <th className="px-4 py-3 text-right font-medium">Peso (kg)</th>}
+            {!isSimple && <th className="px-4 py-3 text-left font-medium">Peligroso</th>}
           </tr>
         </thead>
         <tbody>
@@ -38,13 +42,17 @@ export function WaybillItemsTable({ items, isLoading }: WaybillItemsTableProps) 
                 {item.productCodeSnapshot ?? "—"}
               </td>
               <td className="px-4 py-3 text-on-surface">{item.productNameSnapshot}</td>
-              <td className="px-4 py-3 font-mono text-label-sm text-on-surface-variant">{item.satBienesTranspCode}</td>
-              <td className="px-4 py-3 text-on-surface-variant">{item.satUnitCode}</td>
+              {!isSimple && (
+                <td className="px-4 py-3 font-mono text-label-sm text-on-surface-variant">{item.satBienesTranspCode}</td>
+              )}
+              {!isSimple && <td className="px-4 py-3 text-on-surface-variant">{item.satUnitCode}</td>}
               <td className="px-4 py-3 text-right tabular-nums">{item.quantity}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{item.weightKg}</td>
-              <td className="px-4 py-3 text-on-surface-variant">
-                {item.isHazardousMaterial ? `Sí (${item.hazardousMaterialCode ?? "—"})` : "No"}
-              </td>
+              {!isSimple && <td className="px-4 py-3 text-right tabular-nums">{item.weightKg}</td>}
+              {!isSimple && (
+                <td className="px-4 py-3 text-on-surface-variant">
+                  {item.isHazardousMaterial ? `Sí (${item.hazardousMaterialCode ?? "—"})` : "No"}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

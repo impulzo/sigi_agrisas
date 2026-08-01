@@ -34,6 +34,24 @@ export class InsufficientStockAtOriginError extends Error {
   }
 }
 
+export class ProductRequiredForSimpleTransferError extends Error {
+  readonly itemIndex: number;
+  constructor(itemIndex: number) {
+    super("El traspaso simple solo acepta productos del catálogo");
+    this.name = "ProductRequiredForSimpleTransferError";
+    this.itemIndex = itemIndex;
+  }
+}
+
+export class ProductNotFoundForTransferError extends Error {
+  readonly productId: string;
+  constructor(productId: string) {
+    super("Producto no encontrado en el catálogo");
+    this.name = "ProductNotFoundForTransferError";
+    this.productId = productId;
+  }
+}
+
 export class FacturamaStampError extends Error {
   readonly detail: string;
   constructor(detail: string) {
@@ -53,6 +71,10 @@ export class WaybillWriteForbiddenError extends Error {
 
 export class WaybillCancelForbiddenError extends Error {
   constructor() { super("No tienes permiso para cancelar este traspaso"); this.name = "WaybillCancelForbiddenError"; }
+}
+
+export class WaybillStampForbiddenError extends Error {
+  constructor() { super("No tienes permiso para timbrar traspasos con Carta Porte"); this.name = "WaybillStampForbiddenError"; }
 }
 
 export class WaybillScopingForbiddenError extends Error {

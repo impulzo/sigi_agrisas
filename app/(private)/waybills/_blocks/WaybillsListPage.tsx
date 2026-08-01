@@ -13,7 +13,7 @@ import { WaybillsEmpty } from "./WaybillsEmpty";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
-import type { WaybillStatus } from "../_logic/types/api";
+import type { WaybillStatus, WaybillType } from "../_logic/types/api";
 
 export function WaybillsListPage() {
   const router = useRouter();
@@ -33,6 +33,7 @@ export function WaybillsListPage() {
   const [pageSize] = useState(20);
   const [branchId, setBranchId] = useState("");
   const [statusFilter, setStatusFilter] = useState<WaybillStatus[]>([]);
+  const [typeFilter, setTypeFilter] = useState<WaybillType[]>([]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
@@ -40,6 +41,7 @@ export function WaybillsListPage() {
     page,
     pageSize,
     status: statusFilter,
+    type: typeFilter,
     branchId: branchId || undefined,
     from: from || undefined,
     to: to || undefined,
@@ -48,6 +50,7 @@ export function WaybillsListPage() {
   function handleReset() {
     setBranchId("");
     setStatusFilter([]);
+    setTypeFilter([]);
     setFrom("");
     setTo("");
     setPage(1);
@@ -72,7 +75,7 @@ export function WaybillsListPage() {
   return (
     <CatalogShell
       title="Traspasos"
-      description="Traspasos de mercancía entre sucursales con Carta Porte"
+      description="Traspasos de mercancía entre sucursales, simples o con Carta Porte"
       toolbar={
         <div className="flex flex-wrap items-center justify-between gap-3 w-full">
           <WaybillsToolbar
@@ -86,6 +89,11 @@ export function WaybillsListPage() {
             statusFilter={statusFilter}
             onStatusChange={(v) => {
               setStatusFilter(v);
+              setPage(1);
+            }}
+            typeFilter={typeFilter}
+            onTypeChange={(v) => {
+              setTypeFilter(v);
               setPage(1);
             }}
             from={from}
