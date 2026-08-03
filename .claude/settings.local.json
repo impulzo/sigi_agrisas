@@ -156,7 +156,8 @@
       "Bash(awk 'NR<=35 {printf \"%d\\\\t%s\\\\n\", NR, $0}' openspec/changes/add-carta-porte/specs/waybills-api/spec.md)",
       "Bash(node -p \"require\\('./package.json'\\).dependencies.zod || require\\('./package.json'\\).devDependencies.zod\")",
       "mcp__codegraph__codegraph_explore",
-      "Bash(xargs -I{} sh -c 'echo {}; cat {}')"
+      "Bash(xargs -I{} sh -c 'echo {}; cat {}')",
+      "Bash(gh auth *)"
     ]
   },
   "enabledMcpjsonServers": [
