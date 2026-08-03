@@ -157,7 +157,14 @@
       "Bash(node -p \"require\\('./package.json'\\).dependencies.zod || require\\('./package.json'\\).devDependencies.zod\")",
       "mcp__codegraph__codegraph_explore",
       "Bash(xargs -I{} sh -c 'echo {}; cat {}')",
-      "Bash(gh auth *)"
+      "Bash(gh auth *)",
+      "Bash(ssh -T git@github.com)",
+      "Bash(git remote *)",
+      "Bash(codegraph --help)",
+      "Bash(codegraph explore *)",
+      "Bash(awk '/^model User /{f=1} f&&/id /{print NR\": \"$0; exit}' prisma/schema.prisma)",
+      "Bash(xargs -0 du -k)",
+      "Bash(awk '/creatorId|cashierId|cancelledBy|authorizedBy/{print NR\": \"$0}' prisma/schema.prisma)"
     ]
   },
   "enabledMcpjsonServers": [
