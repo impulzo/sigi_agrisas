@@ -58,7 +58,7 @@ app/api/v1/<...>/route.ts                # delegan a <módulo>Controller vía DI
 middleware.ts                            # delega a AuthMiddlewareAdapter
 ```
 
-Módulos hexagonales activos: `auth`, `rbac`, `users`, `payment-methods`, `folios`, `departments`, `branches`, `providers`, `products`, `inventory`, `customers`, `pos`, `quotes`, `returns`, `payments`, `billing`, `reports`.
+Módulos hexagonales activos: `auth`, `rbac`, `users`, `payment-methods`, `folios`, `departments`, `branches`, `providers`, `products`, `inventory`, `customers`, `pos`, `quotes`, `returns`, `payments`, `billing`, `reports`, `purchases`, `waybills`, `sat-codes`, `tax-rates`, `settings`.
 
 **Reglas de capas (backend):**
 - El dominio no importa nada de infraestructura ni de Next.js.
@@ -108,6 +108,7 @@ DIRECT_URL    → conexión directa puerto 5432 (migraciones)
 
 - Migraciones: `npx prisma migrate dev --name <descripción>` (dev), `npx prisma migrate deploy` (CI/CD).
 - **FKs en `TEXT`, no `uuid`**. Los IDs son `String @id @default(uuid())` → columna `TEXT`. Las FKs (`department_id`, `product_id`, `branch_id`, etc.) son `TEXT` para coincidir con la PK; un `@db.Uuid` rompería la FK por mismatch. La validación Zod sí usa `z.string().uuid()` porque los **valores** son UUIDs.
+  - **Excepción confirmada en DB**: `users.id` y todas las FK que referencian usuarios (`cashier_id`, `creator_id`, `cancelled_by`, `authorized_by`, `user_id`, `created_by`) SÍ son columna `uuid` real en Supabase (verificado via `information_schema.columns`), y las FKs correspondientes ya llevan `@db.Uuid` en varios modelos (ver `cancelledBy`/`creatorId`/`userId` más abajo). `User.id` en `schema.prisma` no declara `@db.Uuid` explícito pero la columna real ya es `uuid` — desalineación cosmética en el schema fuente, no en la DB. No aplicar la regla general de "TEXT" a FKs de usuario; no "corregir" quitando `@db.Uuid` de esas relaciones.
 - Modelos: `User, Role, Permission, RolePermission, UserRole, PaymentMethod, Folio, Department, Branch, Provider, Product, ProductPrice, ProductDosification, BranchInventory, Customer, Sale, SaleItem, Quote, QuoteItem`.
 
 ## Comandos frecuentes
