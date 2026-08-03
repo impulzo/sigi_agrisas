@@ -19,8 +19,7 @@ import {
   normalizeProductCode,
 } from "../lib/normalize";
 
-const ROOT = path.resolve(__dirname, "..", "..", "..");
-const EXCEL_PATH = path.resolve(ROOT, "INVENTARIO AGRISAS 2.0.xlsx");
+const EXCEL_PATH = path.resolve(__dirname, "INVENTARIO AGRISAS 2.0.xlsx");
 const OUT_PATH = path.resolve(__dirname, "inventario-agrisas-v2.ts");
 const SHEET_NAME = "Hoja1";
 
