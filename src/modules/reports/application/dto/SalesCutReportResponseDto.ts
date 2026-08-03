@@ -7,6 +7,10 @@ export interface SalesCutBreakdownRowDto {
   total: string;
 }
 
+export interface SalesCutProductBreakdownRowDto extends SalesCutBreakdownRowDto {
+  quantitySold: string;
+}
+
 export interface SalesCutReportResponseDto {
   generatedAt: string;
   generatedBy: { userId: string; email: string };
@@ -39,4 +43,6 @@ export interface SalesCutReportResponseDto {
   byDay: SalesCutBreakdownRowDto[];
   byCashier: SalesCutBreakdownRowDto[];
   byBranch: SalesCutBreakdownRowDto[];
+  byDepartment: SalesCutBreakdownRowDto[];
+  byProduct: SalesCutProductBreakdownRowDto[];
 }

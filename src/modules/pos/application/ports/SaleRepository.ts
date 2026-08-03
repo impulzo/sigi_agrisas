@@ -27,6 +27,10 @@ export interface SnapshotItemInput {
    * nullable end-to-end.
    */
   productPriceId: string | null;
+  /** Non-null when this line was sold via a `ProductDosification` instead of a `ProductPrice`. */
+  dosificationId: string | null;
+  /** Snapshot of `dosification.numParts` at sale time. `null` for non-dosification lines. */
+  numPartsSnapshot: number | null;
   productCodeSnapshot: string;
   productNameSnapshot: string;
   priceNameSnapshot: string;

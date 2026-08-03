@@ -14,10 +14,11 @@ import { RebuildInventoryArticleUseCase } from "@/modules/inventory/application/
 import { BranchInventoryController } from "@/modules/inventory/infrastructure/http/BranchInventoryController";
 import { InventoryMovementsController } from "@/modules/inventory/infrastructure/http/InventoryMovementsController";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
+import { adminNotificationService } from "@/shared/infrastructure/di/adminNotificationContainer";
 
 const branchRepo = new PrismaBranchRepository(prisma);
 const productRepo = new PrismaProductRepository(prisma);
-const inventoryRepo = new PrismaBranchInventoryRepository(prisma);
+const inventoryRepo = new PrismaBranchInventoryRepository(prisma, adminNotificationService);
 const movementRepo = new PrismaInventoryMovementRepository(prisma);
 
 export const branchInventoryController = new BranchInventoryController(

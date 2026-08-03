@@ -1,0 +1,327 @@
+## MODIFIED Requirements
+
+### Requirement: Create sale (atomic emission)
+The system SHALL expose `POST /api/v1/admin/sales` that emits a completed sale in a single transaction. Requires `sales:create`. Required body:
+
+- `branchId: string` (UUID of an active branch)
+- `customerId: string` (UUID of an active customer)
+- `paymentMethodId: string` (UUID of an active payment method)
+- `folioId: string` (UUID of an active folio)
+- `items: SaleItemInput[]` (at least 1 item)
+
+Each `SaleItemInput`:
+
+- `productId: string` (UUID of an active product)
+- `productPriceId: string` (UUID of a price belonging to `productId`) **OR** `dosificationId: string` (UUID of a dosification belonging to `productId`) — exactly one of the two SHALL be present; both present or both absent → HTTP 400.
+- `quantity: number` (decimal `> 0`; max 14 integer + 4 decimal digits). For a dosification line, `quantity` is the number of parts sold (MAY exceed the dosification's `numParts`).
+
+Optional body:
+
+- `notes: string | null` (max 1000 chars)
+- `quoteId: string | null` (UUID of an authorized, not-yet-converted quote; defaults to `null`)
+
+The body MUST NOT include any explicit `isCredit` flag; the credit flow is activated automatically when the selected `paymentMethod` has `isCredit=true` (see "Credit flow auto-activation" below).
+
+**Branch scoping**: callers without `branches:access_all` MUST pass `branchId === x-user-branch-id`; mismatch returns HTTP 403. Callers without an assigned branch (`x-user-branch-id` empty) and without `branches:access_all` return HTTP 403.
+
+**Credit flow auto-activation**: after loading the `paymentMethod`, if `paymentMethod.isCredit === true`, the controller SHALL:
+
+1. Verify the caller has `sales:create_credit`; otherwise HTTP 403 `{"error":"Forbidden","required":"sales:create_credit"}`.
+2. Verify `customer.creditLimit !== null`; otherwise HTTP 409 `{"error":"Customer has no credit line (creditLimit is null)"}`.
+3. Verify `customer.currentBalance + sale.total <= customer.creditLimit`; otherwise HTTP 409 `{"error":"Credit limit exceeded","available":"<remaining>"}`.
+
+These checks run AFTER total calculation but BEFORE folio allocation, all within the same transaction.
+
+**`quoteId` validation when present**: if the body includes a non-null `quoteId`, the controller SHALL:
+
+1. Load the quote; if it does not exist → HTTP 400 `{"error": "Quote not found", "reason": "not_found"}`.
+2. Verify `quote.status === 'authorized'` AND `quote.convertedSaleId === null`. If not → HTTP 400 `{"error": "Quote cannot be linked to a new sale (status=<actual>)", "reason": "wrong_status"}`.
+3. Verify `quote.branchId === branchId` and `quote.customerId === customerId` (the sale's branch/customer must match the quote's; mismatch → HTTP 400 `{"error": "...", "reason": "branch_mismatch" | "customer_mismatch"}`). The quote does NOT constrain `paymentMethodId`, `folioId`, or `items` — those are governed by the sale body.
+4. Persist `sale.quoteId = quoteId`; ALSO update the quote in the same transaction: `quote.status='converted'`, `quote.convertedAt=NOW()`, `quote.convertedSaleId=<newSaleId>` (this keeps both sides consistent regardless of whether the caller used `POST /sales` or `POST /quotes/:id/convert`).
+
+The `quoteId` does NOT constrain whether the sale is cash or credit — the `paymentMethodId` of the body decides.
+
+**Atomic flow (inside a Prisma transaction)**:
+
+1. Validate `customer.isActive`, `branch.isActive`, `paymentMethod.isActive`, `folio.isActive`. Any inactive → HTTP 400.
+2. Load `paymentMethod.isCredit` (via `include` or join) so the downstream branching is consistent within the transaction.
+3. If `quoteId` is non-null: validate per the rules above; failure → HTTP 400.
+4. For each item:
+   - If `productPriceId` is present: load the `Product` and `ProductPrice`; verify `productPrice.productId === item.productId` (else `ProductPriceMismatchError` → HTTP 400) and belongs to a product whose `isActive = true` (else HTTP 400).
+   - If `dosificationId` is present instead: load the `Product` and `ProductDosification`; verify `dosification.productId === item.productId` (else HTTP 400) and `dosification.isActive = true` (else HTTP 400); load the product's default `ProductPrice` — if none exists → HTTP 400 `{"error": "Dosification requires a default price"}`; compute `unitPrice = DosificationPriceCalculator.computeUnitPrice(defaultPrice.price, dosification.numParts)`.
+   - `quantity > 0` (else HTTP 400) for either case. The system MAY skip enforcement of `minQuantity` in v1 (documented, applies only to price-based lines).
+5. Snapshot `productCodeSnapshot = product.code`, `productNameSnapshot = product.name`; for price-based lines: `priceNameSnapshot = price.name`, `unitPrice = price.price`, `discountPct = price.discountPct`; for dosification lines: `priceNameSnapshot = dosification.name`, `unitPrice` per above, `discountPct = null`, `dosificationId = dosification.id`, `numPartsSnapshot = dosification.numParts`. Both kinds set `ivaRate = product.ivaRate`, `iepsRate = product.iepsRate`.
+6. Compute totals using `SaleTotalsCalculator` (domain service) — unchanged by dosification lines (operates on `quantity * unitPrice`, agnostic to what `quantity` represents).
+7. If `paymentMethod.isCredit === true`: validate credit line and limit per above; on failure abort with HTTP 409.
+8. Allocate the next folio number atomically: `UPDATE folios SET current_number = current_number + 1 WHERE id = ? AND is_active = true RETURNING current_number, code, prefix`. If `RETURNING` is empty (folio inactive) → HTTP 400.
+9. For each item, decrement inventory using the base-unit amount (`quantity / numPartsSnapshot` for dosification lines, `quantity` otherwise — see "Sale aggregate model"): `UPDATE branch_inventory SET quantity = quantity - ${amount}, updated_at = NOW() WHERE branch_id = ? AND product_id = ?`. If the update affects 0 rows (no inventory record exists for this pair), the system SHALL `INSERT INTO branch_inventory (branch_id, product_id, quantity) VALUES (?, ?, -${amount})` (creates the record with negative initial quantity). The result `quantity` MAY be negative — this is the implementation of the rule "selling with stock 0 leaves negative quantity awaiting transfer". **After each such decrement**, the system SHALL evaluate the low-stock notification trigger per `admin-notifications-api` "Notify admin on low stock" (best-effort, never blocks or fails this endpoint).
+10. Compute `paidAmount` and `paymentStatus`:
+    - If `paymentMethod.isCredit === false`: `paidAmount = total`, `paymentStatus = 'paid'`.
+    - If `paymentMethod.isCredit === true`: `paidAmount = 0`, `paymentStatus = 'pending'`.
+11. `INSERT` the `sales` row with `status='completed'`, `completedAt=NOW()`, snapshotted folio info, `quote_id = quoteId` (or `null`), `paid_amount`, `payment_status`.
+12. `INSERT` the `sale_items` rows.
+13. If `paymentMethod.isCredit === true`: `UPDATE customers SET current_balance = current_balance + ? WHERE id = ?` (sale.customerId).
+14. If `quoteId` non-null: `UPDATE quotes SET status='converted', converted_at=NOW(), converted_sale_id=<newSaleId> WHERE id = quoteId`.
+
+Returns HTTP 201 with the `SaleDetailDto` (including items, `quoteId`, `paidAmount`, `paymentStatus`, and the derived `isCredit` from the JOIN).
+
+#### Scenario: Successful cash sale
+- **WHEN** an `operator` with `x-user-branch-id: B1` and `sales:create` sends a valid body for branch B1 with 2 items, selecting a `paymentMethod` whose `isCredit=false` (no `quoteId`)
+- **THEN** the system returns HTTP 201 with the `SaleDetailDto` (`quoteId: null`, `isCredit: false`, `paidAmount: total`, `paymentStatus: 'paid'`), `branch_inventory.quantity` decremented by each item's quantity, and `folios.current_number` incremented by 1
+- **AND** `customer.currentBalance` is NOT modified
+
+#### Scenario: Successful credit sale via CREDITO payment method
+- **WHEN** an `operator` with `sales:create` and `sales:create_credit` sends a body selecting the `paymentMethod` whose `code='CREDITO'` and `isCredit=true` for a customer with `creditLimit=10000`, `currentBalance=2000`, and the new sale `total=5000`
+- **THEN** the system returns HTTP 201 with `paidAmount=0`, `paymentStatus='pending'`, `isCredit=true` (derived); `customer.currentBalance` becomes `7000` after the transaction commits
+
+#### Scenario: Credit payment method selected without sales:create_credit
+- **WHEN** a caller with `sales:create` (but NOT `sales:create_credit`) selects a `paymentMethod` whose `isCredit=true`
+- **THEN** the system returns HTTP 403 `{"error":"Forbidden","required":"sales:create_credit"}`
+
+#### Scenario: Credit sale exceeds creditLimit
+- **WHEN** the body selects a `paymentMethod` with `isCredit=true` for a customer with `creditLimit=10000`, `currentBalance=8000`, and `sale.total=5000`
+- **THEN** the system returns HTTP 409 `{"error":"Credit limit exceeded","available":"2000.0000"}`; nothing is persisted
+
+#### Scenario: Credit sale for customer without credit line
+- **WHEN** the body selects a `paymentMethod` with `isCredit=true` for a customer with `creditLimit=null`
+- **THEN** the system returns HTTP 409 `{"error":"Customer has no credit line (creditLimit is null)"}`
+
+#### Scenario: Successful sale with quoteId (cash)
+- **WHEN** the body includes `quoteId: Q` and a `paymentMethod` whose `isCredit=false`, where `Q` is an authorized quote with `convertedSaleId: null` and matching `branchId`/`customerId`
+- **THEN** the system returns HTTP 201 with `quoteId: Q`, `isCredit=false`, `paidAmount=total`, `paymentStatus='paid'`; and the quote row has `status='converted'`, `convertedSaleId=<newSaleId>`
+
+#### Scenario: Conversion from quote to credit sale
+- **WHEN** the body includes both `quoteId: Q` and a `paymentMethod` whose `isCredit=true`, and the caller has `sales:create_credit`
+- **THEN** the system applies BOTH the quote conversion AND the credit flow: the sale has `quoteId=Q`, `isCredit=true` (derived), `paidAmount=0`, `paymentStatus='pending'`; `customer.currentBalance += total`; the quote is marked converted
+
+#### Scenario: Invalid quoteId (already converted)
+- **WHEN** the body includes `quoteId: Q` where `Q` has `status='converted'`
+- **THEN** the system returns HTTP 400 `{"error": "Quote cannot be linked to a new sale (status=converted)", "reason": "wrong_status"}` and the transaction does not commit
+
+#### Scenario: Invalid quoteId (draft)
+- **WHEN** the body includes `quoteId: Q` where `Q` has `status='draft'`
+- **THEN** the system returns HTTP 400 `{"error": "Quote cannot be linked to a new sale (status=draft)", "reason": "wrong_status"}`
+
+#### Scenario: Quote branch mismatch
+- **WHEN** the body has `branchId: B1` but `quoteId: Q` where `Q.branchId = B2`
+- **THEN** the system returns HTTP 400 and the transaction does not commit
+
+#### Scenario: Quote customer mismatch
+- **WHEN** the body has `customerId: C1` but `quoteId: Q` where `Q.customerId = C2`
+- **THEN** the system returns HTTP 400
+
+#### Scenario: Selling product with no inventory record
+- **WHEN** the body includes a `productId` that has no `branch_inventory` row for the target branch
+- **THEN** the system creates the row with `quantity = -item.quantity` and returns HTTP 201
+
+#### Scenario: Selling product with stock 0
+- **WHEN** the current `branch_inventory.quantity = 0` and the item `quantity = 5`
+- **THEN** the system updates the row to `quantity = -5` and returns HTTP 201
+
+#### Scenario: Selling more than available (still allowed)
+- **WHEN** the current `branch_inventory.quantity = 3` and the item `quantity = 10`
+- **THEN** the system updates the row to `quantity = -7` and returns HTTP 201
+
+#### Scenario: Branch scoping violation
+- **WHEN** an `operator` with `x-user-branch-id: B1` posts a body with `branchId: B2`
+- **THEN** the system returns HTTP 403 `{"error": "Forbidden", "required": "branches:access_all"}`
+
+#### Scenario: Inactive customer
+- **WHEN** the body's `customerId` references a customer with `isActive=false`
+- **THEN** the system returns HTTP 400 `{"error": "Customer is inactive"}` and the transaction does not commit
+
+#### Scenario: Mismatched productPrice
+- **WHEN** an item has `productId: A` but `productPriceId: P` where `P.product_id !== A`
+- **THEN** the system returns HTTP 400 `{"error": "Product price does not belong to product"}` and the transaction does not commit
+
+#### Scenario: Empty items
+- **WHEN** the body has `items: []`
+- **THEN** the system returns HTTP 400 `{"error": "Sale must include at least one item"}`
+
+#### Scenario: Inactive folio
+- **WHEN** the body's `folioId` references a folio with `isActive=false`
+- **THEN** the system returns HTTP 400
+
+#### Scenario: Forbidden without sales:create
+- **WHEN** a caller without `sales:create` calls the endpoint
+- **THEN** the system returns HTTP 403 `{"error": "Forbidden", "required": "sales:create"}`
+
+#### Scenario: Sale creation crossing reorder point triggers admin notification
+- **WHEN** a sale item's decrement leaves `branch_inventory.quantity < reorder_point` for that (branch, product), and no notification for that pair was sent in the last 24h
+- **THEN** the system still returns HTTP 201 as normal, AND — per `admin-notifications-api` — an email is sent to the configured admin address and `lastLowStockNotifiedAt` is updated; a failure to send this email does NOT affect the HTTP 201 response
+
+#### Scenario: Dosification sale decrements a fraction of base stock
+- **WHEN** the body has one item with `dosificationId` referencing a dosification with `numParts=4` and `quantity=3`, for a product whose default price is `100` and whose `branch_inventory.quantity = 10`
+- **THEN** the system returns HTTP 201 with `unitPrice = (100/4)*1.07 = 26.75` on that line; `branch_inventory.quantity` becomes `10 - (3/4) = 9.25`
+
+#### Scenario: Dosification without default price rejected
+- **WHEN** the body has an item with `dosificationId` referencing a dosification whose product has no default `ProductPrice`
+- **THEN** the system returns HTTP 400 `{"error": "Dosification requires a default price"}` and the transaction does not commit
+
+#### Scenario: Dosification/productPrice mutual exclusivity
+- **WHEN** an item includes both `productPriceId` and `dosificationId`, or neither
+- **THEN** the system returns HTTP 400
+
+#### Scenario: Dosification not belonging to product
+- **WHEN** an item has `productId: A` but `dosificationId: D` where `D.product_id !== A`
+- **THEN** the system returns HTTP 400 and the transaction does not commit
+
+#### Scenario: Inactive dosification rejected
+- **WHEN** an item's `dosificationId` references a dosification with `isActive=false`
+- **THEN** the system returns HTTP 400
+
+### Requirement: Cancel sale
+The system SHALL expose `POST /api/v1/admin/sales/:id/cancel`. Requires `sales:cancel`. Body MAY include `reason: string | null` (max 500 chars). Branch scoping applies (callers without `branches:access_all` can only cancel sales in their assigned branch).
+
+Behavior (inside a Prisma transaction):
+
+- If `sale.status === 'cancelled'`: the operation is idempotent — returns HTTP 200 with the unchanged `SaleDetailDto` and the original `cancelledAt`/`cancellationReason`.
+- If `sale.status === 'completed'` or `'edited'`:
+  1. Load `sale.paymentMethod.isCredit` (via JOIN/include) so the credit-aware logic is consistent within the transaction.
+  2. **Pre-check active payments**: if there is at least one `CustomerPayment` with `status='completed'` linked to this sale → HTTP 409 `{"error":"SaleHasActivePayments","paymentIds":["<id1>","<id2>",...]}`. The transaction does NOT commit. The operator MUST cancel each listed payment first. (In practice only credit sales can have active payments; the check applies unconditionally to all sales.)
+  3. For each item, restore stock using the base-unit amount (`quantity / numPartsSnapshot` when the line has a dosification, `quantity` otherwise — see "Sale aggregate model"): `UPDATE branch_inventory SET quantity = quantity + ${amount}, updated_at = NOW() WHERE branch_id = ? AND product_id = ?`.
+  4. If `paymentMethod.isCredit === true`: `UPDATE customers SET current_balance = current_balance - (sale.total - sale.paidAmount) WHERE id = sale.customerId`. (Since active payments are required to be already cancelled, `paidAmount` reflects only cancelled payments which don't affect balance — so this subtracts the original outstanding.)
+  5. `UPDATE sales SET status='cancelled', cancelled_at=NOW(), cancellation_reason=?`.
+- **After the transaction commits**, the system SHALL trigger the "Notify admin on sale cancellation" behavior per `admin-notifications-api` (best-effort, never blocks or fails this endpoint, never runs inside the Prisma transaction above).
+
+The folio is NOT reusable — the folio number stays consumed. `paidAmount`, `paymentStatus`, `paymentMethodId` are preserved (frozen at the moment of cancellation; not reset).
+
+**Interaction with returns**: cancelling a sale that has one or more `completed` returns DOES NOT cancel those returns and DOES NOT double-restore stock. The cancellation restores ONLY the stock matching the CURRENT `sale_items.quantity` (the original sold quantity, converted to base units per dosification when applicable). Returns continue to exist as standalone records; the operator who wants a fully clean state can cancel each return separately (which decrements stock back) BEFORE cancelling the sale. **Recommended order documented**: cancel returns first, then cancel the sale. The system does NOT enforce this order in v1 — if the sale is cancelled while completed returns exist, the resulting stock will be inflated relative to the post-return state by exactly the returned amount (the returns previously incremented stock; the cancel sale now also increments stock by the full sold quantity). Operators are expected to reconcile manually until a future change introduces a guard.
+
+#### Scenario: Cancel completed cash sale
+- **WHEN** an authorized caller cancels a `completed` sale whose `paymentMethod.isCredit=false` and items totalling X units
+- **THEN** the system returns HTTP 200, the sale `status` becomes `cancelled`, and `branch_inventory.quantity` for each item is incremented by the respective quantity
+- **AND** `customer.currentBalance` is NOT modified
+
+#### Scenario: Cancel credit sale with no payments
+- **WHEN** a `completed` sale has `paymentMethod.isCredit=true`, `total=1000`, `paidAmount=0`, and no `CustomerPayment` rows
+- **THEN** the cancellation proceeds: stock restored, `customer.currentBalance -= 1000`, `sale.status='cancelled'`
+
+#### Scenario: Cancel credit sale with active payments rejected
+- **WHEN** a `completed` sale has `paymentMethod.isCredit=true` and 2 `CustomerPayment` rows with `status='completed'`
+- **THEN** the system returns HTTP 409 `{"error":"SaleHasActivePayments","paymentIds":[...]}` and nothing is persisted
+
+#### Scenario: Cancel credit sale with only cancelled payments
+- **WHEN** a `completed` sale has `paymentMethod.isCredit=true`, two `CustomerPayment` rows both `status='cancelled'`, `paidAmount=0`
+- **THEN** the cancellation proceeds normally (the cancelled payments do not block)
+
+#### Scenario: Cancel idempotent
+- **WHEN** the same sale is cancelled twice
+- **THEN** the second call returns HTTP 200 with no further side effects; `cancelled_at` and `cancellation_reason` remain from the first call
+
+#### Scenario: Cancel edited sale restores edited items
+- **WHEN** a sale was previously edited (status `edited`) and is now cancelled
+- **THEN** the system restores stock based on the items currently in `sale_items` (the post-edit version) and sets `status='cancelled'`
+
+#### Scenario: Cancel sale with returns (inflation risk documented)
+- **WHEN** a `completed` sale had 10 units of product P sold, a `completed` return was registered for 4 units (stock incremented by 4), and the sale is then cancelled
+- **THEN** the sale cancellation increments stock by the full 10 sold units; net effect on inventory is `+14` from a pre-sale-pre-return baseline. The two `Return` rows are unaffected. The operator is expected to reconcile (typically by cancelling the return first; v1 does not enforce the order — see design.md Risks).
+
+#### Scenario: Out-of-branch cancellation
+- **WHEN** an `operator` in branch B1 tries to cancel a sale whose `branchId = B2` and the operator lacks `branches:access_all`
+- **THEN** the system returns HTTP 403
+
+#### Scenario: Sale not found
+- **WHEN** the `:id` does not match any sale
+- **THEN** the system returns HTTP 404
+
+#### Scenario: Folio stays consumed
+- **WHEN** a sale with `folio_number = 1024` is cancelled
+- **THEN** the next emitted sale on the same folio takes `folio_number = 1025`, not `1024`
+
+#### Scenario: Cancel sale with dosification line restores fractional stock
+- **WHEN** a `completed` sale has one line with `numPartsSnapshot=4`, `quantity=3` (i.e. `0.75` base units decremented at emission), and the sale is cancelled
+- **THEN** `branch_inventory.quantity` is incremented by `0.75` (not by `3`)
+
+#### Scenario: Cancellation triggers admin notification after commit
+- **WHEN** a `completed` sale with `folioCode="TK-000042"`, `total=1500` is cancelled with `reason="Cliente cambió de opinión"`
+- **THEN** after the cancellation commits, the system attempts to email `ADMIN_NOTIFICATION_EMAIL` with the folio, total, reason, branch, and cashier; if this email send fails, the sale remains `cancelled` and the endpoint still returns HTTP 200
+
+### Requirement: Edit completed sale (headquarters only)
+The system SHALL expose `PATCH /api/v1/admin/sales/:id`. Requires `sales:edit_completed`. The body MUST include a complete `items: SaleItemInput[]` (the new version of the lines; min 1, same shape as "Create sale" — each item is either `productPriceId`-based or `dosificationId`-based). Optional: `customerId`, `paymentMethodId`, `notes`. The body MUST NOT change `folioId`, `folioNumber`, or `branchId`.
+
+**Headquarters check (combined gate)**: before invoking the use case, the controller SHALL evaluate:
+
+```
+if (NOT user has 'branches:access_all') AND
+   (x-user-branch-id is empty OR
+    headquarters branch does not exist OR
+    x-user-branch-id !== headquarters.id)
+→ HTTP 403 {"error": "Sales can only be edited from the headquarters branch"}
+```
+
+That is: a caller with `branches:access_all` (admin) MAY edit from any branch; a caller without it MUST be assigned to the branch flagged `is_headquarters = TRUE`. Combined with the existing `sales:edit_completed` requirement, only an admin or a specially-granted user physically at HQ can edit.
+
+Behavior (inside a Prisma transaction):
+
+- If `sale.status === 'cancelled'` → HTTP 409 `{"error": "Cancelled sales cannot be edited"}`.
+- **If the sale has one or more `CustomerPayment` rows with `status='completed'`** → HTTP 409 `{"error":"SaleHasActivePayments","paymentIds":[...]}`. The operator MUST cancel each listed payment first.
+- Load the OLD `paymentMethod.isCredit` (from the current sale, before any change) AND the NEW `paymentMethod.isCredit` (if `paymentMethodId` changes in the body). Both flags govern the `currentBalance` delta below.
+- Restore stock for each existing item using the base-unit amount (`quantity / numPartsSnapshot` when the persisted line has a dosification, `quantity` otherwise): `UPDATE branch_inventory SET quantity = quantity + ${oldAmount} WHERE branch_id = ? AND product_id = ?`.
+- Delete all rows from `sale_items` for this `saleId`.
+- Re-run the validation + snapshot + decrement + insert flow from "Create sale" using the new `items[]` (including the `productPriceId`/`dosificationId` resolution and the base-unit decrement for dosification lines).
+- Recompute totals.
+- Recompute `paidAmount` and `paymentStatus` according to the NEW `paymentMethod.isCredit`:
+  - NEW `isCredit=false`: `paidAmount = newTotal`, `paymentStatus = 'paid'`.
+  - NEW `isCredit=true`: `paidAmount = 0`, `paymentStatus = 'pending'`.
+- Update `customer.currentBalance` by `(- oldOutstanding + newOutstanding)` where:
+  - `oldOutstanding = (oldIsCredit ? oldTotal - oldPaidAmount : 0)`.
+  - `newOutstanding = (newIsCredit ? newTotal : 0)`.
+- If the NEW `paymentMethod.isCredit=true`, ALSO validate the credit limit (`customer.currentBalance + newOutstanding <= customer.creditLimit`) and the `sales:create_credit` permission of the caller; failure → HTTP 409/403 respectively.
+- `UPDATE sales SET subtotal=?, tax_total=?, total=?, status='edited', edited_at=NOW(), customer_id=?, payment_method_id=?, notes=?, paid_amount=?, payment_status=?`. `folio_id`/`folio_number`/`folio_code`/`branch_id` are NOT changed.
+
+#### Scenario: Admin edits ticket from any branch
+- **WHEN** an `admin` (has `branches:access_all` and `sales:edit_completed`) PATCHes a completed cash sale (no payments) with a new items array
+- **THEN** the system returns HTTP 200 with the recalculated `SaleDetailDto` and `status='edited'`
+
+#### Scenario: Edit sale with active payments rejected
+- **WHEN** the target sale has at least one `CustomerPayment` with `status='completed'`
+- **THEN** the system returns HTTP 409 `{"error":"SaleHasActivePayments","paymentIds":[...]}` and nothing is persisted
+
+#### Scenario: Edit credit sale recomputes balance
+- **WHEN** a credit sale with `total=1000`, `paidAmount=0` (no active payments) is edited to a new `total=1200`, keeping the same credit `paymentMethodId`
+- **THEN** `customer.currentBalance -= 1000` and `customer.currentBalance += 1200` net `+200`; the sale has `paidAmount=0`, `paymentStatus='pending'`
+
+#### Scenario: Edit cash sale to credit
+- **WHEN** a cash sale with `paymentMethod.isCredit=false`, `total=500` is edited to a new `paymentMethodId` whose `isCredit=true`, and the caller has `sales:create_credit`
+- **THEN** the sale becomes credit: `paidAmount=0`, `paymentStatus='pending'`; `customer.currentBalance += newTotal` (since `oldOutstanding=0` because original was cash)
+
+#### Scenario: Edit credit sale to cash
+- **WHEN** a credit sale with `paymentMethod.isCredit=true`, `total=1000`, `paidAmount=0`, no active payments, is edited to a new `paymentMethodId` whose `isCredit=false`
+- **THEN** the sale becomes cash: `paidAmount=newTotal`, `paymentStatus='paid'`; `customer.currentBalance -= 1000` (the original outstanding)
+
+#### Scenario: Operator at HQ without sales:edit_completed
+- **WHEN** an `operator` with `x-user-branch-id = HQ_id` (no `sales:edit_completed`) PATCHes a sale
+- **THEN** the system returns HTTP 403 `{"error": "Forbidden", "required": "sales:edit_completed"}`
+
+#### Scenario: User with sales:edit_completed but not at HQ
+- **WHEN** a user with `sales:edit_completed` but `x-user-branch-id != HQ_id` and without `branches:access_all` PATCHes a sale
+- **THEN** the system returns HTTP 403 `{"error": "Sales can only be edited from the headquarters branch"}`
+
+#### Scenario: Edit cancelled sale
+- **WHEN** the target sale has `status='cancelled'`
+- **THEN** the system returns HTTP 409 `{"error": "Cancelled sales cannot be edited"}` and does not commit
+
+#### Scenario: Edit zeroes out items
+- **WHEN** the body has `items: []`
+- **THEN** the system returns HTTP 400 `{"error": "Sale must include at least one item"}` and does not commit
+
+#### Scenario: Folio invariants preserved
+- **WHEN** the body includes `folioId` or `folioNumber`
+- **THEN** the system silently ignores those fields and persists the original folio data
+
+#### Scenario: Branch invariant preserved
+- **WHEN** the body includes `branchId` different from the sale's current `branch_id`
+- **THEN** the system silently ignores it and persists the original `branch_id`
+
+#### Scenario: Stock fully recomputed
+- **WHEN** the original items consumed 5 units of product A and 0 of B, and the new items consume 0 of A and 3 of B
+- **THEN** after the edit, `branch_inventory.quantity` for A is restored by 5 and for B is decremented by 3 (allowed to go negative)
+
+#### Scenario: Edit replaces a dosification line with a price line
+- **WHEN** the original line had `numPartsSnapshot=4`, `quantity=3` (0.75 base units decremented), and the new items array replaces it with a normal price-based line of `quantity=2` for the same product
+- **THEN** stock is restored by `0.75` (old dosification line) and then decremented by `2` (new price line) — net `-1.25` from the pre-edit baseline
+
+#### Scenario: Edit's new-item decrement triggers admin notification
+- **WHEN** the "decrement" half of the re-run "Create sale" flow (step re-run above) leaves `branch_inventory.quantity < reorder_point` for the new items, per the same debounce rule as "Create sale"
+- **THEN** the low-stock notification per `admin-notifications-api` fires the same way it would for a direct sale creation — the edit flow does not special-case this

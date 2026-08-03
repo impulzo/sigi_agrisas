@@ -440,6 +440,47 @@ describe("QuotesController.convert", () => {
     expect(res.status).toBe(400);
   });
 
+  it("409 'Credit limit exceeded' cuando el cliente excede su línea de crédito al convertir", async () => {
+    const lookups = makeLookups({
+      getPaymentMethod: async (id) => ({ id, isActive: true, isCredit: true }),
+      getCustomer: async (id) => ({ id, isActive: true, creditLimit: 50, currentBalance: 0 }),
+    });
+    const { controller, quoteRepo } = buildController({ lookups });
+    const created = await seedQuote(quoteRepo, controller);
+    await controller.authorize(req("POST", `/quotes/${created.id}/authorize`, {}), created.id);
+    const res = await controller.convert(
+      req("POST", `/quotes/${created.id}/convert`, {
+        paymentMethodId: PAYMENT_ID,
+        folioId: FISCAL_FOLIO_ID,
+      }),
+      created.id
+    );
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("Credit limit exceeded");
+    expect(body.available).toBe("50.0000");
+  });
+
+  it("409 'Customer has no credit line' cuando el cliente no tiene creditLimit configurado", async () => {
+    const lookups = makeLookups({
+      getPaymentMethod: async (id) => ({ id, isActive: true, isCredit: true }),
+      getCustomer: async (id) => ({ id, isActive: true, creditLimit: null, currentBalance: 0 }),
+    });
+    const { controller, quoteRepo } = buildController({ lookups });
+    const created = await seedQuote(quoteRepo, controller);
+    await controller.authorize(req("POST", `/quotes/${created.id}/authorize`, {}), created.id);
+    const res = await controller.convert(
+      req("POST", `/quotes/${created.id}/convert`, {
+        paymentMethodId: PAYMENT_ID,
+        folioId: FISCAL_FOLIO_ID,
+      }),
+      created.id
+    );
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("Customer has no credit line (creditLimit is null)");
+  });
+
   it("403 cuando el caller sin bypass intenta convertir cotización de otra sucursal", async () => {
     const { controller, quoteRepo } = buildController({ bypass: true });
     // Creamos con bypass=true para poder usar OTHER_BRANCH_ID

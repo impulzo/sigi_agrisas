@@ -136,7 +136,8 @@ export function QuoteEditPage({ id }: QuoteEditPageProps) {
       notes: notes.trim() || null,
       items: lines.map((l) => ({
         productId: l.productId,
-        productPriceId: l.productPriceId,
+        // QuoteEditPage never renders dosification options (PriceTierPicker without `dosifications` prop).
+        productPriceId: l.productPriceId!,
         quantity: l.quantity,
         discountPctOverride: l.discountPct > 0 ? l.discountPct : undefined,
       })),

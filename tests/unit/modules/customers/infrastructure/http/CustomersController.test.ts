@@ -60,6 +60,27 @@ describe("CustomersController — POST create", () => {
     expect(body.code).toBe("CLI001");
     expect(body.currentBalance).toBe(0);
     expect(body.creditLimit).toBeNull();
+    expect(body.creditDays).toBe(30);
+  });
+
+  it("crea con creditDays custom y lo persiste", async () => {
+    const { controller } = makeController();
+    const res = await controller.create(postReq({ ...VALID_BODY, creditDays: 45 }));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.creditDays).toBe(45);
+  });
+
+  it("rechaza creditDays negativo → 400", async () => {
+    const { controller } = makeController();
+    const res = await controller.create(postReq({ ...VALID_BODY, creditDays: -5 }));
+    expect(res.status).toBe(400);
+  });
+
+  it("rechaza creditDays no entero → 400", async () => {
+    const { controller } = makeController();
+    const res = await controller.create(postReq({ ...VALID_BODY, creditDays: 10.5 }));
+    expect(res.status).toBe(400);
   });
 
   it("normaliza code a mayúsculas y trim antes de persistir", async () => {
@@ -270,6 +291,24 @@ describe("CustomersController — PATCH update", () => {
     const createRes = await controller.create(postReq(VALID_BODY));
     const created = await createRes.json();
     const res = await controller.update(patchReq({ creditLimit: -500 }), created.id);
+    expect(res.status).toBe(400);
+  });
+
+  it("creditDays como único campo actualiza y no falla por 'al menos un campo'", async () => {
+    const { controller } = makeController();
+    const createRes = await controller.create(postReq(VALID_BODY));
+    const created = await createRes.json();
+    const res = await controller.update(patchReq({ creditDays: 60 }), created.id);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.creditDays).toBe(60);
+  });
+
+  it("creditDays negativo en update → 400", async () => {
+    const { controller } = makeController();
+    const createRes = await controller.create(postReq(VALID_BODY));
+    const created = await createRes.json();
+    const res = await controller.update(patchReq({ creditDays: -1 }), created.id);
     expect(res.status).toBe(400);
   });
 });

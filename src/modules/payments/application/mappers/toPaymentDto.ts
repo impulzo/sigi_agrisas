@@ -32,6 +32,13 @@ export function toPaymentDto(p: CustomerPayment, joined: JoinedFields): PaymentD
     createdAt: p.createdAt.toISOString(),
     cancelledAt: p.cancelledAt ? p.cancelledAt.toISOString() : null,
     cancellationReason: p.cancellationReason,
+    items: p.items.length > 0
+      ? p.items.map((item) => ({
+          saleItemId: item.saleItemId,
+          productNameSnapshot: item.productNameSnapshot,
+          amount: item.amount.toFixed(4),
+        }))
+      : undefined,
   };
 }
 

@@ -11,7 +11,7 @@ import { useCurrentUser } from "../../../../../app/_hooks/useCurrentUser";
 import { CatalogsHubPage } from "../../../../../app/(private)/catalogs/_blocks/CatalogsHubPage";
 
 describe("CatalogsHubPage", () => {
-  it("renderiza las 7 tarjetas de catálogos incluyendo Productos y Tasas de Impuesto", () => {
+  it("renderiza las 8 tarjetas de catálogos incluyendo Productos, Tasas de Impuesto y Clientes", () => {
     (useCurrentUser as jest.Mock).mockReturnValue({
       can: jest.fn(() => true),
     });
@@ -22,6 +22,7 @@ describe("CatalogsHubPage", () => {
     expect(screen.getByText("Sucursales")).toBeInTheDocument();
     expect(screen.getByText("Proveedores")).toBeInTheDocument();
     expect(screen.getByText("Productos")).toBeInTheDocument();
+    expect(screen.getByText("Clientes")).toBeInTheDocument();
   });
 
   it("la tarjeta de Proveedores aparece como 'Sin acceso' cuando falta providers:read", () => {
@@ -56,7 +57,7 @@ describe("CatalogsHubPage", () => {
       can: jest.fn(() => "loading" as const),
     });
     render(<CatalogsHubPage />);
-    expect(screen.getAllByRole("link", { name: /Abrir/i }).length).toBe(7);
+    expect(screen.getAllByRole("link", { name: /Abrir/i }).length).toBe(8);
     expect(screen.queryByText("Sin acceso")).not.toBeInTheDocument();
   });
 
@@ -73,6 +74,7 @@ describe("CatalogsHubPage", () => {
     expect(hrefs).toContain("/catalogs/branches");
     expect(hrefs).toContain("/catalogs/providers");
     expect(hrefs).toContain("/catalogs/products");
+    expect(hrefs).toContain("/catalogs/customers");
   });
 
   it("tarjeta Productos muestra 'Sin acceso' cuando products:read es false", () => {
@@ -82,5 +84,24 @@ describe("CatalogsHubPage", () => {
     render(<CatalogsHubPage />);
     expect(screen.getByText("Productos")).toBeInTheDocument();
     expect(screen.getAllByText("Sin acceso").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("tarjeta Clientes muestra 'Sin acceso' cuando customers:read es false", () => {
+    (useCurrentUser as jest.Mock).mockReturnValue({
+      can: jest.fn((p: string) => (p === "customers:read" ? false : true)),
+    });
+    render(<CatalogsHubPage />);
+    expect(screen.getByText("Clientes")).toBeInTheDocument();
+    expect(screen.getAllByText("Sin acceso").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("tarjeta Clientes navega a /catalogs/customers cuando customers:read es true", () => {
+    (useCurrentUser as jest.Mock).mockReturnValue({
+      can: jest.fn(() => true),
+    });
+    render(<CatalogsHubPage />);
+    const links = screen.getAllByRole("link", { name: /Abrir/i });
+    const customersLink = links.find((l) => l.getAttribute("href") === "/catalogs/customers");
+    expect(customersLink).toBeInTheDocument();
   });
 });

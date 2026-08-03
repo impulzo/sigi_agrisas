@@ -226,7 +226,7 @@ The shared private layout SHALL render a fixed `NavigationRail` (80px wide) on t
 5. `returns` (icon `assignment_return`, href `/returns`, label `Devoluciones`, declares `requires: "returns:read"`).
 6. `payments` (icon `payments`, href `/payments`, label `Abonos`, declares `requires: "payments:read"`).
 7. `inventory` (icon `inventory_2`, href `/inventory`, label `Inventario`, declares `requires: "inventory:read"`).
-7. `catalogs` (icon `category`, href `/catalogs`, label `Catálogos`, with `children`: `payment-methods` (`payment_methods:read`, icon `payments`, href `/catalogs/payment-methods`), `folios` (`folios:read`, icon `tag`, href `/catalogs/folios`), `departments` (`departments:read`, icon `apartment`, href `/catalogs/departments`), `branches` (`branches:read`, icon `store`, href `/catalogs/branches`), `providers` (`providers:read`, icon `local_shipping`, href `/catalogs/providers`), `products` (`products:read`, icon `inventory_2`, href `/catalogs/products`)).
+7. `catalogs` (icon `category`, href `/catalogs`, label `Catálogos`, with `children`: `payment-methods` (`payment_methods:read`, icon `payments`, href `/catalogs/payment-methods`), `folios` (`folios:read`, icon `tag`, href `/catalogs/folios`), `departments` (`departments:read`, icon `apartment`, href `/catalogs/departments`), `branches` (`branches:read`, icon `store`, href `/catalogs/branches`), `providers` (`providers:read`, icon `local_shipping`, href `/catalogs/providers`), `products` (`products:read`, icon `inventory_2`, href `/catalogs/products`), `customers` (`customers:read`, icon `groups`, href `/catalogs/customers`)).
 8. `users` (icon `group`, href `/users`, label `Usuarios`, declares `requires: "users:read"`).
 9. `roles` (icon `shield_person`, href `/roles`, label `Roles`, declares `requires: "roles:read"`).
 
@@ -331,11 +331,11 @@ When a `RailItem` has `children`, the rail SHALL render the parent item normally
 - **THEN** the button becomes disabled, the session is cleared, and the router navigates to `/auth/login`
 
 #### Scenario: Catalogs parent visible when any child is allowed
-- **WHEN** the user's permissions include at least one of `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`
+- **WHEN** the user's permissions include at least one of `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`, `customers:read`
 - **THEN** the rail SHALL render the `catalogs` parent item between `inventory` and `users`
 
 #### Scenario: Catalogs parent hidden when all children are denied
-- **WHEN** the permission check has resolved and the user holds none of `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`
+- **WHEN** the permission check has resolved and the user holds none of `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`, `customers:read`
 - **THEN** the rail SHALL NOT render the `catalogs` parent item
 
 #### Scenario: Providers child rendered in the flyout
@@ -344,7 +344,15 @@ When a `RailItem` has `children`, the rail SHALL render the parent item normally
 
 #### Scenario: Products child rendered in the flyout
 - **WHEN** the user holds `products:read` and hovers the `catalogs` parent
-- **THEN** the flyout SHALL include a `Productos` entry (icon `inventory_2`, href `/catalogs/products`) as the last child in the list
+- **THEN** the flyout SHALL include a `Productos` entry (icon `inventory_2`, href `/catalogs/products`) in the children list
+
+#### Scenario: Customers child rendered in the flyout
+- **WHEN** the user holds `customers:read` and hovers the `catalogs` parent
+- **THEN** the flyout SHALL include a `Clientes` entry (icon `groups`, href `/catalogs/customers`) as the last child in the list
+
+#### Scenario: Customers child hidden without permission
+- **WHEN** the user's permissions do not include `customers:read` and the check has resolved
+- **THEN** the flyout SHALL NOT include a `Clientes` entry
 
 #### Scenario: Hovering catalogs opens the flyout
 - **WHEN** the pointer enters the `catalogs` parent item
@@ -419,3 +427,35 @@ El item activo (cuya ruta coincide con `usePathname()`) SHALL ser desplazado a l
 #### Scenario: Scrollbar coherente con el rail
 - **WHEN** se inspecciona el HTML del flyout
 - **THEN** tiene la clase `scrollbar-thin` (misma utility que la sección media del rail)
+
+---
+
+### Requirement: Logo oficial de Agrisas en NavigationRail y TopAppBar
+
+El `NavigationRail` SHALL mostrar el asset `logo.png` (servido desde `/public/logo.png`) en su header fijo, en lugar del placeholder tipográfico "A". El `TopAppBar` SHALL mostrar el mismo logo en lugar del texto "Agrisas" (no junto a él). El logo SHALL renderizarse manteniendo proporción (sin distorsión) y SHALL incluir un `alt` descriptivo.
+
+#### Scenario: Logo en el header del NavigationRail
+- **WHEN** un usuario autenticado visualiza cualquier ruta bajo `(private)`
+- **THEN** el header fijo del `NavigationRail` muestra la imagen `logo.png` en lugar del texto "A"
+
+#### Scenario: Logo reemplaza el texto en el TopAppBar
+- **WHEN** un usuario autenticado visualiza cualquier ruta bajo `(private)`
+- **THEN** el `TopAppBar` muestra únicamente la imagen `logo.png`; el `<h1>Agrisas</h1>` textual ya no se renderiza
+
+#### Scenario: Logo mantiene proporción y no rompe layout
+- **WHEN** se inspecciona el markup renderizado del `NavigationRail` y el `TopAppBar`
+- **THEN** la imagen usa `object-contain` (o equivalente) dentro de su contenedor y no distorsiona ni desborda el layout existente
+
+#### Scenario: Logo visible independientemente del rol
+- **WHEN** un usuario con rol `admin`, `operator` o `viewer` visualiza el panel privado
+- **THEN** el logo se muestra igual para los tres roles, sin depender de `useCurrentUser().can()`
+
+---
+
+### Requirement: Favicon global del sistema
+
+El `app/layout.tsx` raíz SHALL declarar `metadata.icons` apuntando a `/logo.png`, de modo que el navegador use ese asset como favicon en toda la aplicación (rutas públicas y privadas).
+
+#### Scenario: Favicon en la pestaña del navegador
+- **WHEN** un usuario (autenticado o no) navega a cualquier ruta de la aplicación
+- **THEN** la pestaña del navegador muestra `logo.png` como ícono, derivado de `metadata.icons` en `app/layout.tsx`

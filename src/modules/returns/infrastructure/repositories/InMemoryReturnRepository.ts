@@ -11,6 +11,7 @@ import {
 import { Return } from "../../domain/entities/Return";
 import { ReturnItem } from "../../domain/entities/ReturnItem";
 import { ReturnStatus } from "../../domain/value-objects/ReturnStatus";
+import { inventoryQuantityOf } from "@/shared/domain/services/inventoryQuantityOf";
 
 function emptyJoined(): ReturnJoinedFields {
   return {
@@ -38,11 +39,16 @@ export class InMemoryReturnRepository implements ReturnRepository {
     return `${branchId}:${productId}`;
   }
 
-  private adjustInventory(branchId: string, delta: number, items: Array<{ productId: string; quantity: number }>): void {
+  private adjustInventory(
+    branchId: string,
+    delta: number,
+    items: Array<{ productId: string; quantity: number; numPartsSnapshot?: number | null }>
+  ): void {
     for (const item of items) {
       const key = this.inventoryKey(branchId, item.productId);
       const current = this.inventory.get(key) ?? 0;
-      this.inventory.set(key, current + delta * item.quantity);
+      const amount = inventoryQuantityOf(item.quantity, item.numPartsSnapshot ?? null);
+      this.inventory.set(key, current + delta * amount);
     }
   }
 
@@ -141,7 +147,7 @@ export class InMemoryReturnRepository implements ReturnRepository {
     this.adjustInventory(
       data.branchId,
       +1,
-      data.items.map((i) => ({ productId: i.productId, quantity: i.quantity }))
+      data.items.map((i) => ({ productId: i.productId, quantity: i.quantity, numPartsSnapshot: i.numPartsSnapshot }))
     );
 
     const ret = Return.create({
@@ -169,6 +175,8 @@ export class InMemoryReturnRepository implements ReturnRepository {
         saleItemId: item.saleItemId,
         productId: item.productId,
         productPriceId: item.productPriceId,
+        dosificationId: item.dosificationId,
+        numPartsSnapshot: item.numPartsSnapshot,
         productCodeSnapshot: item.productCodeSnapshot,
         productNameSnapshot: item.productNameSnapshot,
         priceNameSnapshot: item.priceNameSnapshot,
@@ -193,7 +201,7 @@ export class InMemoryReturnRepository implements ReturnRepository {
     id: string,
     cancelledBy: string,
     cancellationReason: string | null,
-    itemsToUndo: Array<{ productId: string; quantity: number }>
+    itemsToUndo: Array<{ productId: string; quantity: number; numPartsSnapshot: number | null }>
   ): Promise<Return> {
     const existing = this.returns.get(id);
     if (!existing) throw new Error(`Return ${id} not found`);

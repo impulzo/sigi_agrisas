@@ -10,6 +10,7 @@ import { InvoiceItemsTable } from "./InvoiceItemsTable";
 import { InvoiceMetaPanel } from "./InvoiceMetaPanel";
 import { InvoiceActionsBar } from "./InvoiceActionsBar";
 import { CancelInvoiceModal } from "./CancelInvoiceModal";
+import { SendInvoiceEmailModal } from "./SendInvoiceEmailModal";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
@@ -34,6 +35,7 @@ export function InvoiceDetailPage({ id }: InvoiceDetailPageProps) {
   });
 
   const [showCancel, setShowCancel] = useState(false);
+  const [showSendEmail, setShowSendEmail] = useState(false);
 
   if (!isValidId) {
     return (
@@ -137,6 +139,7 @@ export function InvoiceDetailPage({ id }: InvoiceDetailPageProps) {
         isDownloading={isDownloading}
         isSaving={isSaving}
         onDownload={(format) => download(invoice.id, format)}
+        onSendEmailClick={() => setShowSendEmail(true)}
         onCancelClick={() => setShowCancel(true)}
       />
 
@@ -146,6 +149,14 @@ export function InvoiceDetailPage({ id }: InvoiceDetailPageProps) {
           open={showCancel}
           onClose={() => setShowCancel(false)}
           onSuccess={() => { setShowCancel(false); refresh(); }}
+        />
+      )}
+
+      {showSendEmail && (
+        <SendInvoiceEmailModal
+          invoiceId={invoice.id}
+          open={showSendEmail}
+          onClose={() => setShowSendEmail(false)}
         />
       )}
     </div>

@@ -9,8 +9,9 @@ import { ReturnsController } from "@/modules/returns/infrastructure/http/Returns
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
 // Import only the repo from pos/di to avoid coupling the full pos container
 import { PrismaSaleRepository } from "@/modules/pos/infrastructure/repositories/PrismaSaleRepository";
+import { adminNotificationService } from "@/shared/infrastructure/di/adminNotificationContainer";
 
-const returnRepo = new PrismaReturnRepository(prisma);
+const returnRepo = new PrismaReturnRepository(prisma, adminNotificationService);
 const saleRepo = new PrismaSaleRepository(prisma);
 
 const listUseCase = new ListReturnsUseCase(returnRepo);

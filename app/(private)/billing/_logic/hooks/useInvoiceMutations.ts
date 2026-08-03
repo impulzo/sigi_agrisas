@@ -1,22 +1,25 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { cancelInvoice, downloadInvoiceFile } from "../services";
+import { cancelInvoice, downloadInvoiceFile, sendInvoiceEmail } from "../services";
 import type { Invoice } from "../types/domain";
 import type { CancellationMotive } from "../types/domain";
 
 interface UseInvoiceMutationsResult {
   isSaving: boolean;
   isDownloading: boolean;
+  isSendingEmail: boolean;
   mutationError: Error | null;
   clearError: () => void;
   cancel: (id: string, motive: CancellationMotive, uuidReplacement?: string | null) => Promise<Invoice | null>;
   download: (id: string, format: "pdf" | "xml") => Promise<void>;
+  sendEmail: (id: string, email?: string) => Promise<{ sentTo: string } | null>;
 }
 
 export function useInvoiceMutations(onChange?: (updated: Invoice) => void): UseInvoiceMutationsResult {
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [mutationError, setMutationError] = useState<Error | null>(null);
 
   const clearError = useCallback(() => setMutationError(null), []);
@@ -52,5 +55,14 @@ export function useInvoiceMutations(onChange?: (updated: Invoice) => void): UseI
     }
   }, []);
 
-  return { isSaving, isDownloading, mutationError, clearError, cancel, download };
+  const sendEmail = useCallback(async (id: string, email?: string): Promise<{ sentTo: string } | null> => {
+    setIsSendingEmail(true);
+    try {
+      return await sendInvoiceEmail(id, email);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  }, []);
+
+  return { isSaving, isDownloading, isSendingEmail, mutationError, clearError, cancel, download, sendEmail };
 }

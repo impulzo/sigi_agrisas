@@ -4,7 +4,7 @@
 }
 
 .leftPanel {
-  background: linear-gradient(135deg, #1a4d42, #2a6b5f, #1a4d42);
+  background: linear-gradient(135deg, #2a6b5f, #5fae97, #2a6b5f);
   background-size: 200% 200%;
   animation: gradientShift 8s ease infinite;
 }

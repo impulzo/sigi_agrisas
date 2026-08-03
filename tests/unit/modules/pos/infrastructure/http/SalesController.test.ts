@@ -65,7 +65,7 @@ function makeSummary(status: SaleStatus, branchId = VALID_UUID): SaleSummary {
   });
   return {
     sale,
-    joined: { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodIsCredit: false },
+    joined: { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodName: null, paymentMethodIsCredit: false },
   };
 }
 
@@ -77,6 +77,7 @@ function makeRepo(overrides?: Partial<SaleRepository>): SaleRepository {
     createCompletedFromQuote: jest.fn().mockResolvedValue(makeSummary("completed")),
     cancel: jest.fn().mockResolvedValue(makeSummary("cancelled")),
     replaceItemsAndRecalculate: jest.fn().mockResolvedValue(makeSummary("edited")),
+    markReturnedTotal: jest.fn(),
     ...overrides,
   };
 }
@@ -89,6 +90,7 @@ function makeLookups(): PosLookupService {
     getBranch: jest.fn(),
     getFolio: jest.fn(),
     getPaymentMethod: jest.fn(),
+    getDosificationForSale: jest.fn(),
   };
 }
 
@@ -333,6 +335,7 @@ describe("SalesController — quoteId link (task 10.8)", () => {
       getCustomer: jest.fn().mockResolvedValue({ id: SALE_CUSTOMER, isActive: true }),
       getBranch: jest.fn().mockResolvedValue({ id: SALE_BRANCH, isActive: true }),
       getFolio: jest.fn().mockResolvedValue({ id: VALID_UUID, code: "F", prefix: "F", scope: "POS", isActive: true }),
+      getDosificationForSale: jest.fn(),
       getPaymentMethod: jest.fn().mockResolvedValue({ id: VALID_UUID, isActive: true }),
     };
   }
@@ -523,6 +526,7 @@ describe("SalesController — Flujo de crédito y abonos activos", () => {
       getBranch: jest.fn().mockResolvedValue({ id: SALE_BRANCH_CR, isActive: true }),
       getFolio: jest.fn().mockResolvedValue({ id: VALID_UUID, code: "F", prefix: null, scope: "POS", isActive: true }),
       getPaymentMethod: jest.fn().mockResolvedValue({ id: VALID_UUID, isActive: true, isCredit: true }),
+      getDosificationForSale: jest.fn(),
     };
   }
 

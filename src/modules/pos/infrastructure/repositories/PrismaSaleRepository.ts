@@ -14,7 +14,9 @@ import { SaleJoinedFields } from "../../application/mappers/toSaleDto";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { SaleHasActivePaymentsError } from "@/modules/payments/domain/errors/SaleHasActivePaymentsError";
 import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
-import { recordInventoryMovement } from "@/shared/infrastructure/inventory/recordInventoryMovement";
+import { recordInventoryMovement, type LowStockSignal } from "@/shared/infrastructure/inventory/recordInventoryMovement";
+import { inventoryQuantityOf } from "@/shared/domain/services/inventoryQuantityOf";
+import type { AdminNotificationService } from "@/shared/application/services/AdminNotificationService";
 
 /** Suma `days` días naturales a una fecha, devolviendo una nueva instancia. */
 function addDays(base: Date, days: number): Date {
@@ -47,12 +49,14 @@ type PrismaSaleWithJoins = {
   branch: { name: string } | null;
   customer: { name: string; rfc: string } | null;
   cashier: { name: string | null; email: string } | null;
-  paymentMethod: { code: string; isCredit: boolean } | null;
+  paymentMethod: { code: string; name: string; isCredit: boolean } | null;
   items: Array<{
     id: string;
     saleId: string;
     productId: string;
     productPriceId: string | null;
+    dosificationId: string | null;
+    numPartsSnapshot: number | null;
     productCodeSnapshot: string;
     productNameSnapshot: string;
     priceNameSnapshot: string;
@@ -71,7 +75,7 @@ const includeJoins = {
   branch: { select: { name: true } },
   customer: { select: { name: true, rfc: true } },
   cashier: { select: { name: true, email: true } },
-  paymentMethod: { select: { code: true, isCredit: true } },
+  paymentMethod: { select: { code: true, name: true, isCredit: true } },
   items: true,
 } as const;
 
@@ -80,6 +84,8 @@ type TxClient = Prisma.TransactionClient;
 interface SnapshotLike {
   productId: string;
   productPriceId: string | null;
+  dosificationId: string | null;
+  numPartsSnapshot: number | null;
   productCodeSnapshot: string;
   productNameSnapshot: string;
   priceNameSnapshot: string;
@@ -97,6 +103,8 @@ function toSaleItemCreate(it: SnapshotLike) {
   return {
     productId: it.productId,
     productPriceId: it.productPriceId,
+    dosificationId: it.dosificationId,
+    numPartsSnapshot: it.numPartsSnapshot,
     productCodeSnapshot: it.productCodeSnapshot,
     productNameSnapshot: it.productNameSnapshot,
     priceNameSnapshot: it.priceNameSnapshot,
@@ -118,6 +126,8 @@ function toSummary(row: PrismaSaleWithJoins): SaleSummary {
       saleId: it.saleId,
       productId: it.productId,
       productPriceId: it.productPriceId,
+      dosificationId: it.dosificationId,
+      numPartsSnapshot: it.numPartsSnapshot,
       productCodeSnapshot: it.productCodeSnapshot,
       productNameSnapshot: it.productNameSnapshot,
       priceNameSnapshot: it.priceNameSnapshot,
@@ -164,6 +174,7 @@ function toSummary(row: PrismaSaleWithJoins): SaleSummary {
     customerRfc: row.customer?.rfc ?? null,
     cashierName: row.cashier?.name ?? row.cashier?.email ?? null,
     paymentMethodCode: row.paymentMethod?.code ?? null,
+    paymentMethodName: row.paymentMethod?.name ?? null,
     paymentMethodIsCredit: row.paymentMethod?.isCredit ?? false,
   };
 
@@ -171,7 +182,23 @@ function toSummary(row: PrismaSaleWithJoins): SaleSummary {
 }
 
 export class PrismaSaleRepository implements SaleRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly notifier?: AdminNotificationService
+  ) {}
+
+  private async fireLowStockNotifications(signals: LowStockSignal[], branchName: string): Promise<void> {
+    if (!this.notifier) return;
+    for (const signal of signals) {
+      await this.notifier.notifyLowStock({
+        productName: signal.productName,
+        productCode: signal.productCode,
+        branchName,
+        quantity: signal.quantity,
+        reorderPoint: signal.reorderPoint,
+      });
+    }
+  }
 
   async findAll(opts: FindAllSalesOptions): Promise<{ items: SaleSummary[]; total: number }> {
     const skip = (opts.page - 1) * opts.pageSize;
@@ -246,19 +273,20 @@ export class PrismaSaleRepository implements SaleRepository {
 
   async createCompleted(data: CreateSaleData): Promise<SaleSummary> {
     const saleId = randomUUID();
+    const lowStockSignals: LowStockSignal[] = [];
 
     const summary = await this.prisma.$transaction(async (tx) => {
       const { folioNumber, folioCode } = await allocateFolio(tx, data.folioId);
       const completedAt = new Date();
 
       for (const item of data.items) {
-        await recordInventoryMovement(tx, {
+        const { lowStockSignal } = await recordInventoryMovement(tx, {
           branchId: data.branchId,
           productId: item.productId,
           movementAt: completedAt,
           movementType: "sale",
           direction: "OUT",
-          quantity: item.quantity,
+          quantity: inventoryQuantityOf(item.quantity, item.numPartsSnapshot),
           unitPrice: item.unitPrice,
           customerId: data.customerId,
           folioId: data.folioId,
@@ -267,6 +295,7 @@ export class PrismaSaleRepository implements SaleRepository {
           sourceType: "sale",
           sourceId: saleId,
         });
+        if (lowStockSignal) lowStockSignals.push(lowStockSignal);
       }
 
       let dueDate: Date | null = null;
@@ -312,24 +341,26 @@ export class PrismaSaleRepository implements SaleRepository {
       return toSummary(row as unknown as PrismaSaleWithJoins);
     });
 
+    await this.fireLowStockNotifications(lowStockSignals, summary.joined.branchName ?? summary.sale.branchId);
     return summary;
   }
 
   async createCompletedFromQuote(data: CreateSaleFromQuoteData): Promise<SaleSummary> {
     const saleId = randomUUID();
+    const lowStockSignals: LowStockSignal[] = [];
 
     const summary = await this.prisma.$transaction(async (tx) => {
       const { folioNumber, folioCode } = await allocateFolio(tx, data.folioId);
       const completedAt = new Date();
 
       for (const item of data.items) {
-        await recordInventoryMovement(tx, {
+        const { lowStockSignal } = await recordInventoryMovement(tx, {
           branchId: data.branchId,
           productId: item.productId,
           movementAt: completedAt,
           movementType: "sale",
           direction: "OUT",
-          quantity: item.quantity,
+          quantity: inventoryQuantityOf(item.quantity, item.numPartsSnapshot),
           unitPrice: item.unitPrice,
           customerId: data.customerId,
           folioId: data.folioId,
@@ -338,6 +369,7 @@ export class PrismaSaleRepository implements SaleRepository {
           sourceType: "sale",
           sourceId: saleId,
         });
+        if (lowStockSignal) lowStockSignals.push(lowStockSignal);
       }
 
       let dueDate: Date | null = null;
@@ -393,6 +425,7 @@ export class PrismaSaleRepository implements SaleRepository {
       return toSummary(row as unknown as PrismaSaleWithJoins);
     });
 
+    await this.fireLowStockNotifications(lowStockSignals, summary.joined.branchName ?? summary.sale.branchId);
     return summary;
   }
 
@@ -428,7 +461,7 @@ export class PrismaSaleRepository implements SaleRepository {
           movementAt: cancelledAt,
           movementType: "sale_cancel",
           direction: "IN",
-          quantity: Number(item.quantity),
+          quantity: inventoryQuantityOf(Number(item.quantity), item.numPartsSnapshot),
           unitPrice: Number(item.unitPrice),
           customerId: current.customerId,
           folioId: current.folioId,
@@ -465,6 +498,7 @@ export class PrismaSaleRepository implements SaleRepository {
   }
 
   async replaceItemsAndRecalculate(id: string, data: EditSaleData): Promise<SaleSummary> {
+    const lowStockSignals: LowStockSignal[] = [];
     const summary = await this.prisma.$transaction(async (tx) => {
       const current = await tx.sale.findUnique({
         where: { id },
@@ -491,7 +525,7 @@ export class PrismaSaleRepository implements SaleRepository {
           movementAt: editedAt,
           movementType: "sale_edit_restore",
           direction: "IN",
-          quantity: Number(item.quantity),
+          quantity: inventoryQuantityOf(Number(item.quantity), item.numPartsSnapshot),
           unitPrice: Number(item.unitPrice),
           customerId: current.customerId,
           folioId: current.folioId,
@@ -507,13 +541,13 @@ export class PrismaSaleRepository implements SaleRepository {
 
       // 3. Decrement new items' stock + insert new items
       for (const item of data.items) {
-        await recordInventoryMovement(tx, {
+        const { lowStockSignal } = await recordInventoryMovement(tx, {
           branchId: current.branchId,
           productId: item.productId,
           movementAt: editedAt,
           movementType: "sale_edit_apply",
           direction: "OUT",
-          quantity: item.quantity,
+          quantity: inventoryQuantityOf(item.quantity, item.numPartsSnapshot),
           unitPrice: item.unitPrice,
           customerId: data.customerId ?? current.customerId,
           folioId: current.folioId,
@@ -522,11 +556,14 @@ export class PrismaSaleRepository implements SaleRepository {
           sourceType: "sale",
           sourceId: id,
         });
+        if (lowStockSignal) lowStockSignals.push(lowStockSignal);
         await tx.saleItem.create({
           data: {
             saleId: id,
             productId: item.productId,
             productPriceId: item.productPriceId,
+            dosificationId: item.dosificationId,
+            numPartsSnapshot: item.numPartsSnapshot,
             productCodeSnapshot: item.productCodeSnapshot,
             productNameSnapshot: item.productNameSnapshot,
             priceNameSnapshot: item.priceNameSnapshot,
@@ -574,6 +611,7 @@ export class PrismaSaleRepository implements SaleRepository {
       return toSummary(row as unknown as PrismaSaleWithJoins);
     });
 
+    await this.fireLowStockNotifications(lowStockSignals, summary.joined.branchName ?? summary.sale.branchId);
     return summary;
   }
 

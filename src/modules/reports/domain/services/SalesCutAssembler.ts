@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import { BreakdownRow, SalesCutAggregates } from "../value-objects/SalesCutFilters";
+import { BreakdownRow, ProductBreakdownRow, SalesCutAggregates } from "../value-objects/SalesCutFilters";
 
 export interface AssembledSalesCut {
   totals: {
@@ -21,6 +21,8 @@ export interface AssembledSalesCut {
   byDay: BreakdownRow[];
   byCashier: BreakdownRow[];
   byBranch: BreakdownRow[];
+  byDepartment: BreakdownRow[];
+  byProduct: ProductBreakdownRow[];
 }
 
 /**
@@ -34,7 +36,7 @@ export class SalesCutAssembler {
     return new Decimal(n).toDecimalPlaces(4).toNumber();
   }
 
-  private static sortByTotalDesc(rows: BreakdownRow[]): BreakdownRow[] {
+  private static sortByTotalDesc<T extends BreakdownRow>(rows: T[]): T[] {
     return [...rows].sort((a, b) => b.total - a.total);
   }
 
@@ -72,6 +74,8 @@ export class SalesCutAssembler {
       byDay: this.sortByDayAsc(agg.byDay),
       byCashier: this.sortByTotalDesc(agg.byCashier),
       byBranch: this.sortByTotalDesc(agg.byBranch),
+      byDepartment: this.sortByTotalDesc(agg.byDepartment),
+      byProduct: this.sortByTotalDesc(agg.byProduct),
     };
   }
 }

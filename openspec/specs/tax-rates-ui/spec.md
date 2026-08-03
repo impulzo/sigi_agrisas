@@ -49,7 +49,7 @@ The table SHALL show columns: Código, Nombre, Clave SAT, Tipo Factor, Valor, Ta
 
 #### Scenario: Duplicate code on create
 - **WHEN** backend returns 409
-- **THEN** inline error "Código ya en uso" shown on Código field
+- **THEN** inline error "Este código ya está en uso." shown on Código field
 
 #### Scenario: Optional accounting accounts left empty
 - **WHEN** user leaves the 4 cuenta contable fields empty and submits

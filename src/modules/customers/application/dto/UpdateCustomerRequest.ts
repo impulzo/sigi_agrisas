@@ -11,5 +11,6 @@ export interface UpdateCustomerRequest {
   contactName?: string | null;
   notes?: string | null;
   creditLimit?: number | null;
+  creditDays?: number;
   isActive?: boolean;
 }

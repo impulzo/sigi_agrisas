@@ -10,8 +10,9 @@ import { BranchInventory } from "../../domain/entities/BranchInventory";
 import { BranchInventoryRecordNotFoundError } from "../../domain/errors/BranchInventoryRecordNotFoundError";
 import { BranchInventoryAlreadyExistsError } from "../../domain/errors/BranchInventoryAlreadyExistsError";
 import { NegativeStockNotAllowedError } from "../../domain/errors/NegativeStockNotAllowedError";
-import { recordInventoryMovement } from "@/shared/infrastructure/inventory/recordInventoryMovement";
+import { recordInventoryMovement, type LowStockSignal } from "@/shared/infrastructure/inventory/recordInventoryMovement";
 import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
+import type { AdminNotificationService } from "@/shared/application/services/AdminNotificationService";
 
 type InventoryRow = Prisma.BranchInventoryGetPayload<{
   include: { product: { select: { code: true; name: true } } };
@@ -72,7 +73,10 @@ function isNotFoundError(err: unknown): boolean {
 }
 
 export class PrismaBranchInventoryRepository implements BranchInventoryRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly notifier?: AdminNotificationService
+  ) {}
 
   async findAll({
     branchId,
@@ -187,7 +191,7 @@ export class PrismaBranchInventoryRepository implements BranchInventoryRepositor
   }
 
   async adjust(id: string, delta: number, reason?: string | null): Promise<BranchInventoryView> {
-    return this.prisma.$transaction(async (tx) => {
+    const { view, lowStockSignal, branchId } = await this.prisma.$transaction(async (tx) => {
       // Lock the row first (read-only) — the actual mutation happens once, either via
       // recordInventoryMovement (delta != 0) or a plain touch below (delta === 0), never both.
       const rows = await tx.$queryRaw<{ branchId: string; productId: string; quantity: Prisma.Decimal }[]>`
@@ -198,13 +202,15 @@ export class PrismaBranchInventoryRepository implements BranchInventoryRepositor
       if (!current) throw new BranchInventoryRecordNotFoundError();
       if (current.quantity.toNumber() + delta < 0) throw new NegativeStockNotAllowedError();
 
+      let lowStockSignal: LowStockSignal | null = null;
+
       if (delta !== 0) {
         // Resolve the active INVENTORY-scope "TS" folio automatically; a missing/inactive
         // folio must not block a critical stock adjustment (see design.md).
         const folio = await tx.folio.findFirst({ where: { code: "TS", scope: "INVENTORY", isActive: true } });
         const allocated = folio ? await allocateFolio(tx, folio.id) : null;
 
-        await recordInventoryMovement(tx, {
+        const result = await recordInventoryMovement(tx, {
           branchId: current.branchId,
           productId: current.productId,
           movementAt: new Date(),
@@ -218,14 +224,28 @@ export class PrismaBranchInventoryRepository implements BranchInventoryRepositor
           sourceId: id,
           notes: reason ?? null,
         });
+        lowStockSignal = result.lowStockSignal;
       } else {
         await tx.$executeRaw`UPDATE branch_inventory SET updated_at = NOW() WHERE id = ${id}`;
       }
 
       const row = await tx.branchInventory.findUnique({ where: { id }, include: INCLUDE_PRODUCT });
       if (!row) throw new BranchInventoryRecordNotFoundError();
-      return toView(row);
+      return { view: toView(row), lowStockSignal, branchId: current.branchId };
     });
+
+    if (lowStockSignal && this.notifier) {
+      const branch = await this.prisma.branch.findUnique({ where: { id: branchId }, select: { name: true } });
+      await this.notifier.notifyLowStock({
+        productName: lowStockSignal.productName,
+        productCode: lowStockSignal.productCode,
+        branchName: branch?.name ?? branchId,
+        quantity: lowStockSignal.quantity,
+        reorderPoint: lowStockSignal.reorderPoint,
+      });
+    }
+
+    return view;
   }
 
   async delete(id: string): Promise<void> {

@@ -9,6 +9,11 @@ function mapPaymentDetailDto(dto: PaymentDetailDto): PaymentDetail {
     createdAt: new Date(dto.createdAt),
     updatedAt: new Date(dto.updatedAt),
     cancelledAt: dto.cancelledAt ? new Date(dto.cancelledAt) : null,
+    items: dto.items?.map((item) => ({
+      saleItemId: item.saleItemId,
+      productNameSnapshot: item.productNameSnapshot,
+      amount: parseFloat(item.amount),
+    })),
   };
 }
 

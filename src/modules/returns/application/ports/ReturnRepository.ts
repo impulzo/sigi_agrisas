@@ -56,6 +56,8 @@ export interface CreateReturnData {
     saleItemId: string;
     productId: string;
     productPriceId: string | null;
+    dosificationId: string | null;
+    numPartsSnapshot: number | null;
     productCodeSnapshot: string;
     productNameSnapshot: string;
     priceNameSnapshot: string;
@@ -81,6 +83,6 @@ export interface ReturnRepository {
     id: string,
     cancelledBy: string,
     cancellationReason: string | null,
-    itemsToUndo: Array<{ productId: string; quantity: number }>
+    itemsToUndo: Array<{ productId: string; quantity: number; numPartsSnapshot: number | null }>
   ): Promise<Return>;
 }

@@ -101,6 +101,37 @@ describe("Customers use cases", () => {
     expect(updated.creditLimit).toBeNull();
   });
 
+  it("crea sin creditDays y aplica default 30", async () => {
+    const created = await new CreateCustomerUseCase(repo).execute({
+      code: "CLI_001",
+      name: "Acme",
+      rfc: "ACM010101AAA",
+    });
+    expect(created.creditDays).toBe(30);
+  });
+
+  it("crea con creditDays custom y lo persiste", async () => {
+    const created = await new CreateCustomerUseCase(repo).execute({
+      code: "CLI_001",
+      name: "Acme",
+      rfc: "ACM010101AAA",
+      creditDays: 45,
+    });
+    expect(created.creditDays).toBe(45);
+  });
+
+  it("update con creditDays como único campo persiste el nuevo valor", async () => {
+    const created = await new CreateCustomerUseCase(repo).execute({
+      code: "CLI_001",
+      name: "Acme",
+      rfc: "ACM010101AAA",
+    });
+    const updated = await new UpdateCustomerUseCase(repo).execute(created.id, {
+      creditDays: 60,
+    });
+    expect(updated.creditDays).toBe(60);
+  });
+
   it("softDelete marca isActive=false", async () => {
     const created = await new CreateCustomerUseCase(repo).execute({
       code: "CLI_001",

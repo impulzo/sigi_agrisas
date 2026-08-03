@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useHeadquarters } from "../../../_hooks/useHeadquarters";
 import { useSaleDetail } from "../_logic/hooks/useSaleDetail";
 import { useSaleMutations } from "../_logic/hooks/useSaleMutations";
+import { getTicketSettings } from "../../settings/_logic/services/getTicketSettings";
+import type { TicketSettingsDto } from "../../settings/_logic/types/api";
+import { PrintableTicket } from "./PrintableTicket";
 import { SaleStatusBadge } from "./SaleStatusBadge";
 import { SalePaymentStatusBadge } from "./SalePaymentStatusBadge";
 import { SaleItemsTable } from "./SaleItemsTable";
@@ -44,6 +47,13 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
 
   const [showCancel, setShowCancel] = useState(false);
   const [showFullReturn, setShowFullReturn] = useState(false);
+  const [ticketSettings, setTicketSettings] = useState<TicketSettingsDto | null>(null);
+
+  useEffect(() => {
+    getTicketSettings()
+      .then(setTicketSettings)
+      .catch(() => setTicketSettings(null)); // degrade gracefully — print still works without logo/header/footer
+  }, []);
 
   const canCancel = can("sales:cancel");
   const canEditCompleted = can("sales:edit_completed");
@@ -107,6 +117,13 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
         </div>
 
         <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="rounded-full border border-outline px-4 py-2 text-body-sm font-medium hover:bg-surface-container transition-colors"
+          >
+            Imprimir ticket
+          </button>
           {canReturn === true && sale.status === "completed" && hasRemainingItems(sale) && (
             <button
               type="button"
@@ -193,7 +210,7 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
 
       {/* Totals */}
       <div className="flex justify-end">
-        <div className="space-y-2 min-w-[240px]">
+        <div className="space-y-2 min-w-[240px]" data-testid="sale-totals">
           <div className="flex justify-between text-body-sm">
             <span className="text-on-surface-variant">Subtotal</span>
             <span className="tabular-nums">{fmt(sale.subtotal)}</span>
@@ -243,6 +260,8 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
           onClose={() => setShowFullReturn(false)}
         />
       )}
+
+      <PrintableTicket sale={sale} ticketSettings={ticketSettings} />
     </div>
   );
 }

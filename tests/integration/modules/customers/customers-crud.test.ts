@@ -49,6 +49,7 @@ describe("Customers CRUD — integration (real DB)", () => {
     expect(result.currentBalance).toBe(0);
     expect(result.isActive).toBe(true);
     expect(result.creditLimit).toBeNull();
+    expect(result.creditDays).toBe(30);
   });
 
   it("obtiene el cliente por ID", async () => {

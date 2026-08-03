@@ -47,7 +47,8 @@ export function useQuoteSubmission(): UseQuoteSubmissionResult {
       notes: draft.notes ?? null,
       items: draft.lines.map((l) => ({
         productId: l.productId,
-        productPriceId: l.productPriceId,
+        // Dosification lines are never offered in quote mode (see PosPage.handleAddProduct).
+        productPriceId: l.productPriceId!,
         quantity: l.quantity,
         discountPctOverride: l.discountPct > 0 ? l.discountPct : undefined,
       })),

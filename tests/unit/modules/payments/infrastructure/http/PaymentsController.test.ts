@@ -239,6 +239,88 @@ describe("PaymentsController — register (POST /payments)", () => {
   });
 });
 
+const LINE_A = "88888888-8888-8888-8888-888888888888";
+const LINE_B = "99999999-9999-9999-9999-999999999999";
+
+function makeRepoWithLines() {
+  const repo = makeRepo();
+  repo.seedSaleItem({ id: LINE_A, saleId: SALE_ID, lineTotal: 600, productNameSnapshot: "Producto A" });
+  repo.seedSaleItem({ id: LINE_B, saleId: SALE_ID, lineTotal: 400, productNameSnapshot: "Producto B" });
+  return repo;
+}
+
+describe("PaymentsController — register with per-line items (POST /payments)", () => {
+  it("returns 201 with items breakdown on success", async () => {
+    const repo = makeRepoWithLines();
+    const res = await buildController({ bypass: true, repo }).register(
+      postReq("/payments", {
+        ...validRegisterBody,
+        amount: 300,
+        items: [{ saleItemId: LINE_A, amount: 300 }],
+      })
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].saleItemId).toBe(LINE_A);
+  });
+
+  it("returns 409 PaymentExceedsLineDueAmount when a line amount exceeds its own due", async () => {
+    const repo = makeRepoWithLines();
+    const res = await buildController({ bypass: true, repo }).register(
+      postReq("/payments", {
+        ...validRegisterBody,
+        amount: 700,
+        items: [{ saleItemId: LINE_A, amount: 700 }],
+      })
+    );
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("PaymentExceedsLineDueAmount");
+    expect(body.saleItemId).toBe(LINE_A);
+  });
+
+  it("returns 400 PaymentItemsAmountMismatch when items sum != amount", async () => {
+    const repo = makeRepoWithLines();
+    const res = await buildController({ bypass: true, repo }).register(
+      postReq("/payments", {
+        ...validRegisterBody,
+        amount: 300,
+        items: [{ saleItemId: LINE_A, amount: 200 }],
+      })
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("PaymentItemsAmountMismatch");
+  });
+
+  it("returns 400 SaleItemNotFound when saleItemId is foreign to the sale", async () => {
+    const repo = makeRepoWithLines();
+    const res = await buildController({ bypass: true, repo }).register(
+      postReq("/payments", {
+        ...validRegisterBody,
+        amount: 100,
+        items: [{ saleItemId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", amount: 100 }],
+      })
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("SaleItemNotFound");
+  });
+
+  it("returns 400 on Zod validation when an item has a non-uuid saleItemId", async () => {
+    const repo = makeRepoWithLines();
+    const res = await buildController({ bypass: true, repo }).register(
+      postReq("/payments", {
+        ...validRegisterBody,
+        amount: 100,
+        items: [{ saleItemId: "not-a-uuid", amount: 100 }],
+      })
+    );
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("PaymentsController — cancel (POST /payments/:id/cancel)", () => {
   async function seedPayment(bypass = true) {
     const repo = makeRepo();

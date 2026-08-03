@@ -70,4 +70,33 @@ describe("GetSalesCutReportUseCase", () => {
     expect(dto.totals.grossSales).toBe("100.0000");
     expect(dto.byCashier).toHaveLength(1);
   });
+
+  it("byDepartment y byProduct suman piezas del mismo producto en varios tickets, canceladas no cuentan", async () => {
+    const item = {
+      productId: "prod1",
+      productCode: "PROD1",
+      productName: "Fertilizante",
+      departmentId: "dept1",
+      departmentName: "FERTILIZANTES",
+      quantity: 2,
+      subtotal: 100,
+      taxTotal: 16,
+      total: 116,
+    };
+    const dto = await base([
+      sale({ id: "s1", total: 116, items: [item] }),
+      sale({ id: "s2", total: 116, items: [item] }),
+      sale({ id: "s3", status: "cancelled", total: 999, items: [{ ...item, quantity: 99 }] }),
+    ]).execute(req());
+
+    expect(dto.byDepartment).toHaveLength(1);
+    expect(dto.byDepartment[0].label).toBe("FERTILIZANTES");
+    expect(dto.byDepartment[0].ticketCount).toBe(2);
+    expect(dto.byDepartment[0].total).toBe("232.0000");
+
+    expect(dto.byProduct).toHaveLength(1);
+    expect(dto.byProduct[0].label).toBe("Fertilizante (PROD1)");
+    expect(dto.byProduct[0].quantitySold).toBe("4.0000");
+    expect(dto.byProduct[0].total).toBe("232.0000");
+  });
 });

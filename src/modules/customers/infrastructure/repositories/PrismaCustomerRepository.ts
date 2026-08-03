@@ -27,6 +27,7 @@ function toCustomer(row: PrismaCustomer): Customer {
     notes: row.notes,
     creditLimit: row.creditLimit ? Number(row.creditLimit) : null,
     currentBalance: Number(row.currentBalance),
+    creditDays: row.creditDays,
     isActive: row.isActive,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -97,6 +98,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
           contactName: data.contactName ?? null,
           notes: data.notes ?? null,
           creditLimit: data.creditLimit ?? null,
+          creditDays: data.creditDays ?? 30,
           isActive: data.isActive ?? true,
         },
       });
@@ -125,6 +127,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
           ...(data.contactName !== undefined ? { contactName: data.contactName } : {}),
           ...(data.notes !== undefined ? { notes: data.notes } : {}),
           ...(data.creditLimit !== undefined ? { creditLimit: data.creditLimit } : {}),
+          ...(data.creditDays !== undefined ? { creditDays: data.creditDays } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
         },
       });

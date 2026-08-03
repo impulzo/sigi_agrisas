@@ -1,5 +1,13 @@
 import { PaymentRepository, SaleTotals, PaymentListRow } from "../ports/PaymentRepository";
 
+export interface LineBalanceDto {
+  saleItemId: string;
+  productNameSnapshot: string;
+  lineTotal: string;
+  paidAmount: string;
+  dueAmount: string;
+}
+
 export interface ListPaymentsBySaleResult {
   items: PaymentListRow[];
   saleId: string;
@@ -7,6 +15,7 @@ export interface ListPaymentsBySaleResult {
   salePaidAmount: string;
   salePaymentStatus: string;
   saleDueAmount: string;
+  lineBalances: LineBalanceDto[];
 }
 
 export class ListPaymentsBySaleUseCase {
@@ -24,6 +33,13 @@ export class ListPaymentsBySaleUseCase {
         salePaidAmount: saleTotals.salePaidAmount.toFixed(4),
         salePaymentStatus: saleTotals.salePaymentStatus,
         saleDueAmount: due.toFixed(4),
+        lineBalances: saleTotals.lineBalances.map((lb) => ({
+          saleItemId: lb.saleItemId,
+          productNameSnapshot: lb.productNameSnapshot,
+          lineTotal: lb.lineTotal.toFixed(4),
+          paidAmount: lb.paidAmount.toFixed(4),
+          dueAmount: lb.dueAmount.toFixed(4),
+        })),
       },
       branchId: saleTotals.saleBranchId,
     };

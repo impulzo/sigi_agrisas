@@ -28,12 +28,14 @@ function makeReturn(status: "completed" | "cancelled" = "completed"): Return {
   });
 }
 
-function makeReturnItem(returnId = "return-1"): ReturnItem {
+function makeReturnItem(returnId = "return-1", overrides: Partial<Parameters<typeof ReturnItem.create>[0]> = {}): ReturnItem {
   return ReturnItem.create({
     returnId,
     saleItemId: "si-1",
     productId: "prod-1",
     productPriceId: null,
+    dosificationId: null,
+    numPartsSnapshot: null,
     productCodeSnapshot: "PROD001",
     productNameSnapshot: "Producto",
     priceNameSnapshot: "Base",
@@ -45,6 +47,7 @@ function makeReturnItem(returnId = "return-1"): ReturnItem {
     lineSubtotal: 300,
     lineTax: 48,
     lineTotal: 348,
+    ...overrides,
   });
 }
 
@@ -90,6 +93,21 @@ describe("CancelReturnUseCase", () => {
     });
 
     expect(returnRepo.getInventory("branch-1", "prod-1")).toBe(-2);
+  });
+
+  it("decrements only the fraction of base stock for a dosification return (numPartsSnapshot=4, quantity=2 parts → 0.5)", async () => {
+    const ret = makeReturn("completed");
+    const item = makeReturnItem("return-1", { numPartsSnapshot: 4, quantity: 2 });
+    returnRepo.seed(ret, [item]);
+    returnRepo.setInventory("branch-1", "prod-1", 10);
+
+    await useCase.execute({
+      id: "return-1",
+      cancelledBy: CREATOR,
+      cancellationReason: null,
+    });
+
+    expect(returnRepo.getInventory("branch-1", "prod-1")).toBe(9.5);
   });
 
   it("throws ReturnNotFoundError when return does not exist", async () => {

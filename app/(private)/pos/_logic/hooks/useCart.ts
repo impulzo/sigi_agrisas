@@ -3,10 +3,11 @@
 import { useReducer, useCallback } from "react";
 import { computeTotalsClient } from "../lib/computeTotalsClient";
 import type { CartLine, CartState } from "../types/domain";
-import type { ProductDto, ProductPriceDto } from "../types/api";
+import type { ProductDto, ProductPriceDto, DosificationOptionDto } from "../types/api";
 
 type CartAction =
   | { type: "ADD_LINE"; product: ProductDto; price: ProductPriceDto; quantity: number; discountPct: number }
+  | { type: "ADD_DOSIFICATION_LINE"; product: ProductDto; dosification: DosificationOptionDto; quantity: number }
   | { type: "UPDATE_QUANTITY"; lineId: string; quantity: number }
   | { type: "UPDATE_DISCOUNT"; lineId: string; discountPct: number }
   | { type: "CHANGE_TIER"; lineId: string; price: ProductPriceDto }
@@ -73,6 +74,31 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       };
       return buildState([...state.lines, newLine]);
     }
+    case "ADD_DOSIFICATION_LINE": {
+      const existing = state.lines.find(
+        (l) => l.productId === action.product.id && l.dosificationId === action.dosification.id
+      );
+      if (existing) {
+        const updated = state.lines.map((l) =>
+          l.id === existing.id ? { ...l, quantity: l.quantity + action.quantity } : l
+        );
+        return buildState(updated);
+      }
+      const newLine = {
+        id: crypto.randomUUID(),
+        productId: action.product.id,
+        productCode: action.product.code,
+        productName: action.product.name,
+        dosificationId: action.dosification.id,
+        priceName: action.dosification.name,
+        unitPrice: action.dosification.computedUnitPrice ?? 0,
+        ivaRate: action.product.ivaRate ?? 0,
+        iepsRate: action.product.iepsRate ?? 0,
+        quantity: action.quantity,
+        discountPct: 0,
+      };
+      return buildState([...state.lines, newLine]);
+    }
     case "UPDATE_QUANTITY": {
       if (action.quantity <= 0) return state;
       const updated = state.lines.map((l) =>
@@ -118,6 +144,13 @@ export function useCart() {
     []
   );
 
+  const addLineFromDosification = useCallback(
+    (product: ProductDto, dosification: DosificationOptionDto, quantity: number) => {
+      dispatch({ type: "ADD_DOSIFICATION_LINE", product, dosification, quantity });
+    },
+    []
+  );
+
   const updateQuantity = useCallback((lineId: string, quantity: number) => {
     dispatch({ type: "UPDATE_QUANTITY", lineId, quantity });
   }, []);
@@ -142,6 +175,7 @@ export function useCart() {
     lines: state.lines,
     totals: state.totals,
     addLine,
+    addLineFromDosification,
     updateQuantity,
     updateDiscountPct,
     changeTier,

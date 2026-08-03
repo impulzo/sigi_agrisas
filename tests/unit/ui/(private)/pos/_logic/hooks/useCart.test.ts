@@ -3,7 +3,7 @@
  */
 import { renderHook, act } from "@testing-library/react";
 import { useCart } from "../../../../../../../app/(private)/pos/_logic/hooks/useCart";
-import type { ProductDto, ProductPriceDto } from "../../../../../../../app/(private)/pos/_logic/types/api";
+import type { ProductDto, ProductPriceDto, DosificationOptionDto } from "../../../../../../../app/(private)/pos/_logic/types/api";
 
 const product: ProductDto = {
   id: "prod-1",
@@ -35,6 +35,16 @@ const price2: ProductPriceDto = {
   minQuantity: 10,
   discountPct: 0,
   isDefault: false,
+};
+
+const dosification: DosificationOptionDto = {
+  id: "dosif-1",
+  productId: "prod-1",
+  name: "1/4",
+  numParts: 4,
+  isActive: true,
+  computedUnitPrice: 26.75,
+  requiresDefaultPrice: false,
 };
 
 describe("useCart", () => {
@@ -106,5 +116,24 @@ describe("useCart", () => {
     expect(result.current.lines[0].priceName).toBe("Precio mayoreo");
     expect(result.current.lines[0].unitPrice).toBe(80);
     expect(result.current.lines[0].productId).toBe("prod-1");
+  });
+
+  it("addLineFromDosification agrega una línea con dosificationId y unitPrice=computedUnitPrice", () => {
+    const { result } = renderHook(() => useCart());
+    act(() => result.current.addLineFromDosification(product, dosification, 3));
+    expect(result.current.lines).toHaveLength(1);
+    expect(result.current.lines[0].dosificationId).toBe("dosif-1");
+    expect(result.current.lines[0].productPriceId).toBeUndefined();
+    expect(result.current.lines[0].unitPrice).toBe(26.75);
+    expect(result.current.lines[0].priceName).toBe("1/4");
+    expect(result.current.lines[0].quantity).toBe(3);
+  });
+
+  it("addLineFromDosification con misma dosificación acumula cantidad", () => {
+    const { result } = renderHook(() => useCart());
+    act(() => result.current.addLineFromDosification(product, dosification, 2));
+    act(() => result.current.addLineFromDosification(product, dosification, 1));
+    expect(result.current.lines).toHaveLength(1);
+    expect(result.current.lines[0].quantity).toBe(3);
   });
 });

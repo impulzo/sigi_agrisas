@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useSalePayments } from "../../payments/_logic/hooks/useSalePayments";
 import { PaymentStatusBadge } from "../../payments/_blocks/PaymentStatusBadge";
@@ -24,9 +24,10 @@ interface SalePaymentsSectionProps {
 export function SalePaymentsSection({ saleId, sale, onPaymentMutated }: SalePaymentsSectionProps) {
   const { can } = useCurrentUser();
   const canCreate = can("payments:create");
-  const { payments, paidAmount, total, isLoading, refresh } = useSalePayments(saleId);
+  const { payments, paidAmount, total, lineBalances, isLoading, refresh } = useSalePayments(saleId);
   const [showRegister, setShowRegister] = useState(false);
   const [cancelPaymentId, setCancelPaymentId] = useState<string | null>(null);
+  const [expandedPaymentId, setExpandedPaymentId] = useState<string | null>(null);
 
   const dueAmount = Math.max(0, total - paidAmount);
   const progressPct = total > 0 ? Math.min(100, Math.round((paidAmount / total) * 100)) : 0;
@@ -80,55 +81,114 @@ export function SalePaymentsSection({ saleId, sale, onPaymentMutated }: SalePaym
               <Skeleton key={i} height={48} width="100%" />
             ))}
           </div>
-        ) : payments.length === 0 ? (
-          <p className="text-body-sm text-on-surface-variant">Sin abonos registrados.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-body-sm">
-              <thead>
-                <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
-                  <th className="px-3 py-2 text-left font-medium">Folio recibo</th>
-                  <th className="px-3 py-2 text-left font-medium">Cobrador</th>
-                  <th className="px-3 py-2 text-left font-medium">Método</th>
-                  <th className="px-3 py-2 text-right font-medium">Monto</th>
-                  <th className="px-3 py-2 text-left font-medium">Fecha</th>
-                  <th className="px-3 py-2 text-left font-medium">Estado</th>
-                  <th className="px-3 py-2 text-left font-medium" />
-                </tr>
-              </thead>
-              <tbody>
-                {payments.map((p) => {
-                  const folioLabel = p.folioPrefix
-                    ? `${p.folioPrefix}${p.folioNumber}`
-                    : String(p.folioNumber);
-                  const canCancel = can("payments:cancel");
-                  return (
-                    <tr key={p.id} className="border-b border-outline-variant/40 hover:bg-surface-container-low/60 transition-colors">
-                      <td className="px-3 py-2 font-mono text-on-surface-variant">{folioLabel}</td>
-                      <td className="px-3 py-2 text-on-surface-variant max-w-[140px] truncate">{p.userName ?? "—"}</td>
-                      <td className="px-3 py-2 text-on-surface-variant">{p.paymentMethodName ?? "—"}</td>
-                      <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(p.amount)}</td>
-                      <td className="px-3 py-2 text-on-surface-variant tabular-nums">{fmtDate(p.createdAt)}</td>
-                      <td className="px-3 py-2">
-                        <PaymentStatusBadge status={p.status} />
-                      </td>
-                      <td className="px-3 py-2">
-                        {p.status === "completed" && canCancel === true && (
-                          <button
-                            type="button"
-                            onClick={() => setCancelPaymentId(p.id)}
-                            className="text-label-sm text-error hover:underline"
-                          >
-                            Cancelar
-                          </button>
-                        )}
-                      </td>
+          <>
+            {payments.length === 0 ? (
+              <p className="text-body-sm text-on-surface-variant">Sin abonos registrados.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-body-sm">
+                  <thead>
+                    <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
+                      <th className="px-3 py-2 text-left font-medium">Folio recibo</th>
+                      <th className="px-3 py-2 text-left font-medium">Cobrador</th>
+                      <th className="px-3 py-2 text-left font-medium">Método</th>
+                      <th className="px-3 py-2 text-right font-medium">Monto</th>
+                      <th className="px-3 py-2 text-left font-medium">Fecha</th>
+                      <th className="px-3 py-2 text-left font-medium">Estado</th>
+                      <th className="px-3 py-2 text-left font-medium" />
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {payments.map((p) => {
+                      const folioLabel = p.folioPrefix
+                        ? `${p.folioPrefix}${p.folioNumber}`
+                        : String(p.folioNumber);
+                      const canCancel = can("payments:cancel");
+                      const hasItems = !!p.items && p.items.length > 0;
+                      const isExpanded = expandedPaymentId === p.id;
+                      return (
+                        <Fragment key={p.id}>
+                          <tr className="border-b border-outline-variant/40 hover:bg-surface-container-low/60 transition-colors">
+                            <td className="px-3 py-2 font-mono text-on-surface-variant">
+                              {folioLabel}
+                              {hasItems && (
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedPaymentId(isExpanded ? null : p.id)}
+                                  className="ml-2 text-label-sm text-primary hover:underline font-sans"
+                                >
+                                  {isExpanded ? "Ocultar desglose" : "Ver desglose"}
+                                </button>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-on-surface-variant max-w-[140px] truncate">{p.userName ?? "—"}</td>
+                            <td className="px-3 py-2 text-on-surface-variant">{p.paymentMethodName ?? "—"}</td>
+                            <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(p.amount)}</td>
+                            <td className="px-3 py-2 text-on-surface-variant tabular-nums">{fmtDate(p.createdAt)}</td>
+                            <td className="px-3 py-2">
+                              <PaymentStatusBadge status={p.status} />
+                            </td>
+                            <td className="px-3 py-2">
+                              {p.status === "completed" && canCancel === true && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCancelPaymentId(p.id)}
+                                  className="text-label-sm text-error hover:underline"
+                                >
+                                  Cancelar
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                          {isExpanded && hasItems && (
+                            <tr className="bg-surface-container-low/40">
+                              <td colSpan={7} className="px-3 py-2">
+                                <ul className="text-label-sm text-on-surface-variant space-y-0.5">
+                                  {p.items!.map((item) => (
+                                    <li key={item.saleItemId} className="flex justify-between max-w-xs">
+                                      <span className="truncate">{item.productNameSnapshot}</span>
+                                      <span className="tabular-nums">{fmt(item.amount)}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {lineBalances.length > 0 && (
+              <div className="overflow-x-auto pt-2">
+                <p className="text-label-md text-on-surface-variant mb-2">Saldo por producto</p>
+                <table className="w-full text-body-sm">
+                  <thead>
+                    <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
+                      <th className="px-3 py-2 text-left font-medium">Producto</th>
+                      <th className="px-3 py-2 text-right font-medium">Total línea</th>
+                      <th className="px-3 py-2 text-right font-medium">Pagado</th>
+                      <th className="px-3 py-2 text-right font-medium">Pendiente</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lineBalances.map((lb) => (
+                      <tr key={lb.saleItemId} className="border-b border-outline-variant/40">
+                        <td className="px-3 py-2 text-on-surface truncate max-w-[200px]">{lb.productNameSnapshot}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmt(lb.lineTotal)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmt(lb.paidAmount)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(lb.dueAmount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -136,6 +196,7 @@ export function SalePaymentsSection({ saleId, sale, onPaymentMutated }: SalePaym
         <RegisterPaymentModal
           saleId={saleId}
           dueAmount={dueAmount}
+          lineBalances={lineBalances}
           onSuccess={() => {
             setShowRegister(false);
             handlePaymentMutated();

@@ -4,6 +4,7 @@ import {
   UpdateProductPriceData,
 } from "../../application/ports/ProductPriceRepository";
 import { ProductPrice } from "../../domain/entities/ProductPrice";
+import { sortProductPricesForDisplay } from "../../domain/services/sortProductPricesForDisplay";
 import { ProductPriceNotFoundError } from "../../domain/errors/ProductPriceNotFoundError";
 import { DuplicatePriceNameError } from "../../domain/errors/DuplicatePriceNameError";
 import { DuplicateDefaultPriceError } from "../../domain/errors/DuplicateDefaultPriceError";
@@ -18,13 +19,7 @@ export class InMemoryProductPriceRepository implements ProductPriceRepository {
   private store: ProductPrice[] = [];
 
   async findByProductId(productId: string): Promise<ProductPrice[]> {
-    return this.store
-      .filter((p) => p.productId === productId)
-      .sort((a, b) => {
-        if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
-        if (a.minQuantity !== b.minQuantity) return a.minQuantity - b.minQuantity;
-        return a.name.localeCompare(b.name);
-      });
+    return sortProductPricesForDisplay(this.store.filter((p) => p.productId === productId));
   }
 
   async findById(id: string): Promise<ProductPrice | null> {

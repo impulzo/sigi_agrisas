@@ -1,6 +1,8 @@
 export interface SaleItemInput {
   productId: string;
-  productPriceId: string;
+  /** Exactly one of `productPriceId`/`dosificationId` SHALL be present. */
+  productPriceId?: string;
+  dosificationId?: string;
   quantity: number;
 }
 

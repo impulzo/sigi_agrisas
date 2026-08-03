@@ -39,8 +39,17 @@ describe("AdjustStockUseCase", () => {
     ).rejects.toThrow(BranchInventoryRecordNotFoundError);
   });
 
-  it("accepts but ignores the reason field", async () => {
+  it("persists the reason as the concept of the recorded movement", async () => {
     const result = await useCase.execute(BRANCH_ID, PRODUCT_ID, { delta: 5, reason: "Recepción factura 123" });
     expect(result.quantity).toBe(55);
+    const adjustments = repo.getAdjustments(BRANCH_ID, PRODUCT_ID);
+    expect(adjustments).toHaveLength(1);
+    expect(adjustments[0]).toMatchObject({ delta: 5, notes: "Recepción factura 123" });
+  });
+
+  it("records a null concept when no reason is provided", async () => {
+    await useCase.execute(BRANCH_ID, PRODUCT_ID, { delta: 5 });
+    const adjustments = repo.getAdjustments(BRANCH_ID, PRODUCT_ID);
+    expect(adjustments[0]).toMatchObject({ delta: 5, notes: null });
   });
 });

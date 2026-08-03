@@ -38,7 +38,7 @@ function makeSummary(status: SaleStatus): SaleSummary {
   });
   return {
     sale,
-    joined: { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodIsCredit: false },
+    joined: { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodName: null, paymentMethodIsCredit: false },
   };
 }
 
@@ -63,6 +63,14 @@ function makeLookups(overrides?: Partial<PosLookupService>): PosLookupService {
     getBranch: jest.fn().mockResolvedValue({ id: "b1", isActive: true }),
     getFolio: jest.fn().mockResolvedValue({ id: "f1", code: "VENTA", prefix: null, scope: "POS", isActive: true }),
     getPaymentMethod: jest.fn().mockResolvedValue({ id: "pm1", isActive: true, isCredit: false }),
+    getDosificationForSale: jest.fn().mockResolvedValue({
+      id: "d1",
+      productId: "p1",
+      name: "1/4",
+      numParts: 4,
+      isActive: true,
+      basePrice: 100,
+    }),
     ...overrides,
   };
 }
@@ -172,5 +180,17 @@ describe("EditCompletedSaleUseCase", () => {
     await expect(
       new EditCompletedSaleUseCase(makeRepo("returned_total"), makeLookups()).execute("sale-1", baseReq)
     ).rejects.toBeInstanceOf(ReturnedTotalSaleNotEditableError);
+  });
+
+  it("reemplaza una línea de precio por una línea de dosificación", async () => {
+    const repo = makeRepo("completed");
+    await new EditCompletedSaleUseCase(repo, makeLookups()).execute("sale-1", {
+      items: [{ productId: "p1", dosificationId: "d1", quantity: 3 }],
+    });
+    const callArg = (repo.replaceItemsAndRecalculate as jest.Mock).mock.calls[0][1] as EditSaleData;
+    expect(callArg.items[0].dosificationId).toBe("d1");
+    expect(callArg.items[0].numPartsSnapshot).toBe(4);
+    expect(callArg.items[0].productPriceId).toBeNull();
+    expect(callArg.items[0].unitPrice).toBeCloseTo(26.75, 4);
   });
 });

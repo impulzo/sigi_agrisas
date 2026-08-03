@@ -2,7 +2,12 @@ import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { seedTaxRates } from "./seeds/taxRates";
 
-const prisma = new PrismaClient();
+// Uses DIRECT_URL (not the pooled DATABASE_URL) — the long interactive
+// transaction below performs too many round trips for PgBouncer's
+// transaction-mode pooling to keep a single session alive reliably.
+const prisma = new PrismaClient({
+  datasources: { db: { url: process.env.DIRECT_URL } },
+});
 
 const PERMISSIONS = [
   { key: "users:read", description: "Leer usuarios" },
@@ -45,6 +50,11 @@ const PERMISSIONS = [
   { key: "payments:create", description: "Registrar abonos" },
   { key: "payments:cancel", description: "Cancelar abonos" },
   { key: "payments:report_read", description: "Consultar historial de abonos y exportar PDF" },
+  { key: "purchases:read", description: "Leer compras" },
+  { key: "purchases:create", description: "Registrar compras" },
+  { key: "purchases:cancel", description: "Cancelar compras" },
+  { key: "purchases:pay", description: "Registrar abonos a proveedor" },
+  { key: "purchases:pay_cancel", description: "Cancelar abonos a proveedor" },
   { key: "reports:inventory_read", description: "Leer reportes de inventario" },
   { key: "reports:account_statements_read", description: "Leer estados de cuenta de clientes y exportar PDF" },
   { key: "reports:sales_cut_read", description: "Leer corte de ventas y exportar PDF" },
@@ -60,6 +70,8 @@ const PERMISSIONS = [
   { key: "waybills:write", description: "Crear traspasos entre sucursales" },
   { key: "waybills:cancel", description: "Cancelar traspasos entre sucursales" },
   { key: "waybills:stamp", description: "Timbrar traspasos con Complemento Carta Porte ante el SAT" },
+  { key: "settings:read", description: "Ver configuración global del negocio" },
+  { key: "settings:write", description: "Editar configuración global del negocio (plantilla de ticket)" },
 ];
 
 const ROLES: Array<{
@@ -85,6 +97,7 @@ const ROLES: Array<{
       "quotes:authorize", "quotes:convert",
       "returns:read", "returns:create", "returns:cancel",
       "payments:read", "payments:create", "payments:cancel", "payments:report_read",
+      "purchases:read", "purchases:create", "purchases:cancel", "purchases:pay", "purchases:pay_cancel",
       "reports:inventory_read",
       "reports:account_statements_read",
       "reports:sales_cut_read",
@@ -93,6 +106,7 @@ const ROLES: Array<{
       "tax_rates:read", "tax_rates:write",
       "billing:read", "billing:write", "billing:cancel", "billing:manage_csd",
       "waybills:read", "waybills:write", "waybills:cancel", "waybills:stamp",
+      "settings:read", "settings:write",
     ],
   },
   {
@@ -109,6 +123,7 @@ const ROLES: Array<{
       "quotes:authorize", "quotes:convert",
       "returns:read", "returns:create", "returns:cancel",
       "payments:read", "payments:create", "payments:cancel", "payments:report_read",
+      "purchases:read", "purchases:create", "purchases:cancel", "purchases:pay", "purchases:pay_cancel",
       "reports:inventory_read",
       "reports:account_statements_read",
       "reports:sales_cut_read",
@@ -116,6 +131,7 @@ const ROLES: Array<{
       "tax_rates:read", "tax_rates:write",
       "billing:read", "billing:write", "billing:cancel",
       "waybills:read", "waybills:write", "waybills:cancel", "waybills:stamp",
+      "settings:read",
     ],
   },
   {
@@ -131,6 +147,7 @@ const ROLES: Array<{
       "quotes:read",
       "returns:read",
       "payments:read", "payments:report_read",
+      "purchases:read",
       "reports:inventory_read",
       "reports:account_statements_read",
       "reports:sales_cut_read",
@@ -138,6 +155,7 @@ const ROLES: Array<{
       "tax_rates:read",
       "billing:read",
       "waybills:read",
+      "settings:read",
     ],
   },
 ];
@@ -173,7 +191,7 @@ async function main() {
         }
       }
     },
-    { timeout: 30000 }
+    { timeout: 60000 }
   );
 
   // Métodos de pago base (is_credit inmutable tras creación — no se toca en update)

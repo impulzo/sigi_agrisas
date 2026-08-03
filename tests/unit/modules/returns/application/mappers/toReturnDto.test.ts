@@ -8,6 +8,8 @@ function buildItem(overrides: Partial<Parameters<typeof ReturnItem.create>[0]> =
     saleItemId: "sale-item-1",
     productId: "product-1",
     productPriceId: "price-1",
+    dosificationId: null,
+    numPartsSnapshot: null,
     productCodeSnapshot: "SKU-1",
     productNameSnapshot: "Product 1",
     priceNameSnapshot: "Default",

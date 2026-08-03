@@ -11,6 +11,7 @@ import { useQuoteSubmission } from "../_logic/hooks/useQuoteSubmission";
 import { usePosKeyboard } from "../_logic/hooks/usePosKeyboard";
 import { canSubmitCart } from "../_logic/lib/canSubmitCart";
 import { getProductPrices } from "../_logic/services/getProductPrices";
+import { getProductDosifications } from "../_logic/services/getProductDosifications";
 import { PosHeader } from "./PosHeader";
 import { ProductCatalogPanel } from "./ProductCatalogPanel";
 import { CartPanel } from "./CartPanel";
@@ -21,7 +22,7 @@ import { PosShortcutsOverlay } from "./PosShortcutsOverlay";
 import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog/ConfirmDialog";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
-import type { ProductDto, ProductPriceDto, CustomerDto, BranchOption } from "../_logic/types/api";
+import type { ProductDto, ProductPriceDto, DosificationOptionDto, CustomerDto, BranchOption } from "../_logic/types/api";
 
 type Modal = "pricePicker" | "quickAdd" | "confirmed" | "shortcuts" | "clearCart" | null;
 type PosMode = "sale" | "quote";
@@ -29,6 +30,7 @@ type PosMode = "sale" | "quote";
 interface PricePicker {
   product: ProductDto;
   prices: ProductPriceDto[];
+  dosifications: DosificationOptionDto[];
   isLoading: boolean;
   lineId?: string;
 }
@@ -46,6 +48,7 @@ export function PosPage() {
     lines,
     totals,
     addLine,
+    addLineFromDosification,
     updateQuantity,
     updateDiscountPct,
     changeTier,
@@ -161,8 +164,12 @@ export function PosPage() {
 
   async function handleAddProduct(product: ProductDto) {
     lastFocusedRef.current = document.activeElement as HTMLElement;
-    const prices = await getProductPrices(product.id);
-    setPricePicker({ product, prices, isLoading: false });
+    // Dosification lines are not supported by the quotes module (out of scope) — only offered in sale mode.
+    const [prices, dosifications] = await Promise.all([
+      getProductPrices(product.id),
+      isQuoteMode ? Promise.resolve([]) : getProductDosifications(product.id),
+    ]);
+    setPricePicker({ product, prices, dosifications, isLoading: false });
     setModal("pricePicker");
   }
 
@@ -181,7 +188,7 @@ export function PosPage() {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    setPricePicker({ product: fakeProduct, prices: [], isLoading: true, lineId });
+    setPricePicker({ product: fakeProduct, prices: [], dosifications: [], isLoading: true, lineId });
     setModal("pricePicker");
     getProductPrices(line.productId).then((prices) => {
       setPricePicker((prev) => prev ? { ...prev, prices, isLoading: false } : null);
@@ -197,6 +204,13 @@ export function PosPage() {
     } else {
       addLine(pricePicker.product, price, quantity, discountPct);
     }
+    setModal(null);
+    setPricePicker(null);
+  }
+
+  function handleDosificationConfirm(dosification: DosificationOptionDto, quantity: number) {
+    if (!pricePicker) return;
+    addLineFromDosification(pricePicker.product, dosification, quantity);
     setModal(null);
     setPricePicker(null);
   }
@@ -330,8 +344,10 @@ export function PosPage() {
         <PriceTierPicker
           product={pricePicker.product}
           prices={pricePicker.prices}
+          dosifications={pricePicker.dosifications}
           isLoading={pricePicker.isLoading}
           onConfirm={handlePriceConfirm}
+          onConfirmDosification={handleDosificationConfirm}
           onClose={() => { setModal(null); setPricePicker(null); }}
         />
       )}

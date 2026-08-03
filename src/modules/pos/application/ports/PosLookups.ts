@@ -16,6 +16,16 @@ export interface ProductPriceLookup {
   discountPct: number | null;
 }
 
+export interface DosificationLookup {
+  id: string;
+  productId: string;
+  name: string;
+  numParts: number;
+  isActive: boolean;
+  /** The product's default price amount, or `null` when no default price exists. */
+  basePrice: number | null;
+}
+
 export interface CustomerLookup {
   id: string;
   isActive: boolean;
@@ -47,6 +57,7 @@ export interface PaymentMethodLookup {
 export interface PosLookupService {
   getProduct(id: string): Promise<ProductLookup | null>;
   getProductPrice(id: string): Promise<ProductPriceLookup | null>;
+  getDosificationForSale(id: string): Promise<DosificationLookup | null>;
   getCustomer(id: string): Promise<CustomerLookup | null>;
   getBranch(id: string): Promise<BranchLookup | null>;
   getFolio(id: string): Promise<FolioLookup | null>;

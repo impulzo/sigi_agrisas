@@ -70,3 +70,25 @@ export class BranchScopeViolationError extends Error {
     this.name = "BranchScopeViolationError";
   }
 }
+
+export class InvoiceNoEmailError extends Error {
+  constructor() {
+    super("Customer has no email and no override provided");
+    this.name = "InvoiceNoEmailError";
+  }
+}
+
+export class InvoiceNotStampedError extends Error {
+  constructor() {
+    super("Invoice has not been stamped");
+    this.name = "InvoiceNotStampedError";
+  }
+}
+
+export class InvoiceEmailSendFailedError extends Error {
+  constructor(cause: unknown) {
+    super("Failed to send invoice email");
+    this.name = "InvoiceEmailSendFailedError";
+    this.cause = cause;
+  }
+}

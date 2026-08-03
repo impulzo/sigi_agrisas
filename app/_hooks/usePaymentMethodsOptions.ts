@@ -8,6 +8,7 @@ export interface PaymentMethodOption {
   code: string;
   name: string;
   isActive: boolean;
+  isCredit: boolean;
 }
 
 interface CacheEntry {
@@ -31,6 +32,7 @@ async function fetchPaymentMethods(): Promise<PaymentMethodOption[]> {
         code: p.code as string,
         name: p.name as string,
         isActive: p.isActive as boolean,
+        isCredit: p.isCredit as boolean,
       }));
       cache = { options, expiresAt: Date.now() + CACHE_TTL_MS };
       return options;

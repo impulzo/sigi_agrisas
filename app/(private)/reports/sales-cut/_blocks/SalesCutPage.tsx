@@ -140,6 +140,13 @@ export function SalesCutPage() {
           {isBypass === true && (
             <BreakdownTable title="Por sucursal" conceptHeader="Sucursal" rows={report.byBranch} />
           )}
+          <BreakdownTable title="Por departamento" conceptHeader="Departamento" rows={report.byDepartment} />
+          <BreakdownTable
+            title="Por producto"
+            conceptHeader="Producto"
+            rows={report.byProduct}
+            quantityHeader="Piezas"
+          />
         </div>
       )}
 

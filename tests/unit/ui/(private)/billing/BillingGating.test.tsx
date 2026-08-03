@@ -191,6 +191,7 @@ describe("InvoiceActionsBar — cancel button gating", () => {
         isDownloading={false}
         isSaving={false}
         onDownload={jest.fn()}
+        onSendEmailClick={jest.fn()}
         onCancelClick={jest.fn()}
       />
     );
@@ -206,6 +207,7 @@ describe("InvoiceActionsBar — cancel button gating", () => {
         isDownloading={false}
         isSaving={false}
         onDownload={jest.fn()}
+        onSendEmailClick={jest.fn()}
         onCancelClick={jest.fn()}
       />
     );
@@ -221,6 +223,7 @@ describe("InvoiceActionsBar — cancel button gating", () => {
         isDownloading={false}
         isSaving={false}
         onDownload={jest.fn()}
+        onSendEmailClick={jest.fn()}
         onCancelClick={jest.fn()}
       />
     );
@@ -236,6 +239,7 @@ describe("InvoiceActionsBar — cancel button gating", () => {
         isDownloading={false}
         isSaving={false}
         onDownload={jest.fn()}
+        onSendEmailClick={jest.fn()}
         onCancelClick={jest.fn()}
       />
     );

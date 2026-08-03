@@ -1,6 +1,11 @@
 import { CustomerPayment } from "../../domain/entities/CustomerPayment";
 import { SalePaymentStatus } from "../../domain/value-objects/SalePaymentStatus";
 
+export interface CreatePaymentItemInput {
+  saleItemId: string;
+  amount: number;
+}
+
 export interface CreatePaymentInput {
   saleId: string;
   customerId: string;
@@ -12,6 +17,8 @@ export interface CreatePaymentInput {
   notes: string | null;
   /** null = caller has branches:access_all bypass; non-null = must match sale.branchId */
   callerBranchId: string | null;
+  /** Optional per-line breakdown; when present, SUM(items[].amount) must equal amount. */
+  items?: CreatePaymentItemInput[];
 }
 
 export interface PaymentDisplayJoins {
@@ -58,12 +65,21 @@ export interface PaymentWithSale {
   joins?: PaymentDisplayJoins;
 }
 
+export interface LineBalance {
+  saleItemId: string;
+  productNameSnapshot: string;
+  lineTotal: number;
+  paidAmount: number;
+  dueAmount: number;
+}
+
 export interface SaleTotals {
   saleId: string;
   saleBranchId: string;
   saleTotal: number;
   salePaidAmount: number;
   salePaymentStatus: SalePaymentStatus;
+  lineBalances: LineBalance[];
 }
 
 export interface HistoryFilters extends ListPaymentsFilters {

@@ -53,6 +53,8 @@ describe("GetSaleUseCase", () => {
       saleId: "pending",
       productId: "prod-1",
       productPriceId: "price-1",
+      dosificationId: null,
+      numPartsSnapshot: null,
       productCodeSnapshot: "PROD001",
       productNameSnapshot: "Producto Uno",
       priceNameSnapshot: "Lista",
@@ -75,6 +77,8 @@ describe("GetSaleUseCase", () => {
         {
           productId: item.productId,
           productPriceId: item.productPriceId as string,
+          dosificationId: null,
+          numPartsSnapshot: null,
           productCodeSnapshot: item.productCodeSnapshot,
           productNameSnapshot: item.productNameSnapshot,
           priceNameSnapshot: item.priceNameSnapshot,

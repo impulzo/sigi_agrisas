@@ -1,6 +1,20 @@
 export type PaymentStatus = "completed" | "cancelled";
 export type SalePaymentStatus = "paid" | "partial" | "pending";
 
+export interface PaymentItem {
+  saleItemId: string;
+  productNameSnapshot: string;
+  amount: number;
+}
+
+export interface LineBalance {
+  saleItemId: string;
+  productNameSnapshot: string;
+  lineTotal: number;
+  paidAmount: number;
+  dueAmount: number;
+}
+
 export interface Payment {
   id: string;
   saleId: string;
@@ -22,6 +36,7 @@ export interface Payment {
   notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  items?: PaymentItem[];
 }
 
 export interface PaymentDetail extends Payment {
@@ -36,6 +51,7 @@ export interface SalePaymentsData {
   paidAmount: number;
   total: number;
   paymentStatus: SalePaymentStatus;
+  lineBalances: LineBalance[];
 }
 
 export interface PaymentFilters {

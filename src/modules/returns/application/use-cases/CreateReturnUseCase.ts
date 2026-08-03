@@ -91,6 +91,8 @@ export class CreateReturnUseCase {
         saleItemId: saleItem.id,
         productId: saleItem.productId,
         productPriceId: saleItem.productPriceId,
+        dosificationId: saleItem.dosificationId,
+        numPartsSnapshot: saleItem.numPartsSnapshot,
         productCodeSnapshot: saleItem.productCodeSnapshot,
         productNameSnapshot: saleItem.productNameSnapshot,
         priceNameSnapshot: saleItem.priceNameSnapshot,

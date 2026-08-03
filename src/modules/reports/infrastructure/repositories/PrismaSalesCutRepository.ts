@@ -4,6 +4,7 @@ import {
   SalesCutFilters,
   SalesCutAggregates,
   BreakdownRow,
+  ProductBreakdownRow,
 } from "../../domain/value-objects/SalesCutFilters";
 
 const ACTIVE_STATUSES = ["completed", "edited"];
@@ -60,6 +61,8 @@ export class PrismaSalesCutRepository implements SalesCutRepository {
       branchGroup,
       dayRows,
       taxRows,
+      departmentRows,
+      productRows,
       paymentsAgg,
       returnsAgg,
     ] = await Promise.all([
@@ -110,6 +113,55 @@ export class PrismaSalesCutRepository implements SalesCutRepository {
         FROM sale_items si
         JOIN sales s ON s.id = si.sale_id
         WHERE ${salesConds("s.")}
+      `,
+      this.prisma.$queryRaw<
+        Array<{
+          department_id: string;
+          department_name: string;
+          ticket_count: number;
+          subtotal: string;
+          tax_total: string;
+          total: string;
+        }>
+      >`
+        SELECT p.department_id AS department_id,
+               d.name AS department_name,
+               COUNT(DISTINCT si.sale_id)::int AS ticket_count,
+               COALESCE(SUM(si.line_subtotal), 0) AS subtotal,
+               COALESCE(SUM(si.line_tax), 0) AS tax_total,
+               COALESCE(SUM(si.line_total), 0) AS total
+        FROM sale_items si
+        JOIN sales s ON s.id = si.sale_id
+        JOIN products p ON p.id = si.product_id
+        JOIN departments d ON d.id = p.department_id
+        WHERE ${salesConds("s.")}
+        GROUP BY p.department_id, d.name
+      `,
+      this.prisma.$queryRaw<
+        Array<{
+          product_id: string;
+          product_code: string;
+          product_name: string;
+          ticket_count: number;
+          quantity_sold: string;
+          subtotal: string;
+          tax_total: string;
+          total: string;
+        }>
+      >`
+        SELECT si.product_id AS product_id,
+               p.code AS product_code,
+               p.name AS product_name,
+               COUNT(DISTINCT si.sale_id)::int AS ticket_count,
+               COALESCE(SUM(si.quantity), 0) AS quantity_sold,
+               COALESCE(SUM(si.line_subtotal), 0) AS subtotal,
+               COALESCE(SUM(si.line_tax), 0) AS tax_total,
+               COALESCE(SUM(si.line_total), 0) AS total
+        FROM sale_items si
+        JOIN sales s ON s.id = si.sale_id
+        JOIN products p ON p.id = si.product_id
+        WHERE ${salesConds("s.")}
+        GROUP BY si.product_id, p.code, p.name
       `,
       this.prisma.customerPayment.aggregate({
         where: {
@@ -199,6 +251,25 @@ export class PrismaSalesCutRepository implements SalesCutRepository {
       ),
       byBranch: branchGroup.map((g) =>
         toRow(g.branchId, branchMap.get(g.branchId) ?? g.branchId, g._sum, g._count._all)
+      ),
+      byDepartment: departmentRows.map((d) => ({
+        key: d.department_id,
+        label: d.department_name,
+        ticketCount: Number(d.ticket_count),
+        subtotal: Number(d.subtotal),
+        taxTotal: Number(d.tax_total),
+        total: Number(d.total),
+      })),
+      byProduct: productRows.map(
+        (p): ProductBreakdownRow => ({
+          key: p.product_id,
+          label: `${p.product_name} (${p.product_code})`,
+          ticketCount: Number(p.ticket_count),
+          quantitySold: Number(p.quantity_sold),
+          subtotal: Number(p.subtotal),
+          taxTotal: Number(p.tax_total),
+          total: Number(p.total),
+        })
       ),
       paymentsReceived: {
         count: paymentsAgg._count._all,

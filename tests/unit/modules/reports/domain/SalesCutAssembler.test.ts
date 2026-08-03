@@ -1,8 +1,16 @@
 import { SalesCutAssembler } from "@/modules/reports/domain/services/SalesCutAssembler";
-import { SalesCutAggregates, BreakdownRow } from "@/modules/reports/domain/value-objects/SalesCutFilters";
+import {
+  SalesCutAggregates,
+  BreakdownRow,
+  ProductBreakdownRow,
+} from "@/modules/reports/domain/value-objects/SalesCutFilters";
 
 function row(over: Partial<BreakdownRow> & { key: string }): BreakdownRow {
   return { label: over.key, ticketCount: 1, subtotal: 0, taxTotal: 0, total: 0, ...over };
+}
+
+function productRow(over: Partial<ProductBreakdownRow> & { key: string }): ProductBreakdownRow {
+  return { label: over.key, ticketCount: 1, quantitySold: 0, subtotal: 0, taxTotal: 0, total: 0, ...over };
 }
 
 function agg(over: Partial<SalesCutAggregates> = {}): SalesCutAggregates {
@@ -14,6 +22,8 @@ function agg(over: Partial<SalesCutAggregates> = {}): SalesCutAggregates {
     byDay: [],
     byCashier: [],
     byBranch: [],
+    byDepartment: [],
+    byProduct: [],
     paymentsReceived: { count: 2, total: 300 },
     returnsRefunded: { count: 1, total: 120 },
     ...over,
@@ -50,6 +60,21 @@ describe("SalesCutAssembler", () => {
     );
     expect(out.byDay.map((r) => r.key)).toEqual(["2026-07-01", "2026-07-02"]);
     expect(out.byPaymentMethod.map((r) => r.key)).toEqual(["b", "a"]);
+  });
+
+  it("ordena byDepartment y byProduct descendente por total, preservando quantitySold", () => {
+    const out = SalesCutAssembler.assemble(
+      agg({
+        byDepartment: [row({ key: "d1", total: 10 }), row({ key: "d2", total: 90 })],
+        byProduct: [
+          productRow({ key: "p1", total: 10, quantitySold: 3 }),
+          productRow({ key: "p2", total: 90, quantitySold: 7 }),
+        ],
+      })
+    );
+    expect(out.byDepartment.map((r) => r.key)).toEqual(["d2", "d1"]);
+    expect(out.byProduct.map((r) => r.key)).toEqual(["p2", "p1"]);
+    expect(out.byProduct[0].quantitySold).toBe(7);
   });
 
   it("sin drift en decimales", () => {

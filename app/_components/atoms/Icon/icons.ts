@@ -59,6 +59,7 @@ export const ICON_NAMES = [
   "percent",
   "summarize",
   "description",
+  "groups",
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

@@ -9,6 +9,7 @@ interface UseSalePaymentsResult {
   paidAmount: number;
   total: number;
   paymentStatus: SalePaymentsData["paymentStatus"];
+  lineBalances: SalePaymentsData["lineBalances"];
   isLoading: boolean;
   error: Error | null;
   refresh: () => void;
@@ -43,6 +44,7 @@ export function useSalePayments(saleId: string): UseSalePaymentsResult {
     paidAmount: data?.paidAmount ?? 0,
     total: data?.total ?? 0,
     paymentStatus: data?.paymentStatus ?? "pending",
+    lineBalances: data?.lineBalances ?? [],
     isLoading,
     error,
     refresh,

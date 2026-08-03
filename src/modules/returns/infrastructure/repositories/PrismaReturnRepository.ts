@@ -12,7 +12,9 @@ import {
 import { Return } from "../../domain/entities/Return";
 import { ReturnItem } from "../../domain/entities/ReturnItem";
 import { ReturnStatus } from "../../domain/value-objects/ReturnStatus";
-import { recordInventoryMovement } from "@/shared/infrastructure/inventory/recordInventoryMovement";
+import { recordInventoryMovement, type LowStockSignal } from "@/shared/infrastructure/inventory/recordInventoryMovement";
+import { inventoryQuantityOf } from "@/shared/domain/services/inventoryQuantityOf";
+import type { AdminNotificationService } from "@/shared/application/services/AdminNotificationService";
 
 type PrismaReturnWithJoins = {
   id: string;
@@ -42,6 +44,8 @@ type PrismaReturnWithJoins = {
     saleItemId: string;
     productId: string;
     productPriceId: string | null;
+    dosificationId: string | null;
+    numPartsSnapshot: number | null;
     productCodeSnapshot: string;
     productNameSnapshot: string;
     priceNameSnapshot: string;
@@ -100,6 +104,8 @@ function toReturnItem(item: PrismaReturnWithJoins["items"][0]): ReturnItem {
     saleItemId: item.saleItemId,
     productId: item.productId,
     productPriceId: item.productPriceId,
+    dosificationId: item.dosificationId,
+    numPartsSnapshot: item.numPartsSnapshot,
     productCodeSnapshot: item.productCodeSnapshot,
     productNameSnapshot: item.productNameSnapshot,
     priceNameSnapshot: item.priceNameSnapshot,
@@ -141,7 +147,23 @@ function toWithItems(row: PrismaReturnWithJoins): ReturnWithItems {
 type TxClient = Prisma.TransactionClient;
 
 export class PrismaReturnRepository implements ReturnRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly notifier?: AdminNotificationService
+  ) {}
+
+  private async fireLowStockNotifications(signals: LowStockSignal[], branchName: string): Promise<void> {
+    if (!this.notifier) return;
+    for (const signal of signals) {
+      await this.notifier.notifyLowStock({
+        productName: signal.productName,
+        productCode: signal.productCode,
+        branchName,
+        quantity: signal.quantity,
+        reorderPoint: signal.reorderPoint,
+      });
+    }
+  }
 
   async findAll(
     opts: FindAllReturnsOptions
@@ -283,7 +305,7 @@ export class PrismaReturnRepository implements ReturnRepository {
           movementAt: data.returnedAt,
           movementType: "return",
           direction: "IN",
-          quantity: item.quantity,
+          quantity: inventoryQuantityOf(item.quantity, item.numPartsSnapshot),
           unitPrice: item.unitPrice,
           customerId: data.customerId,
           folioId: sale?.folioId ?? null,
@@ -320,6 +342,8 @@ export class PrismaReturnRepository implements ReturnRepository {
               saleItemId: item.saleItemId,
               productId: item.productId,
               productPriceId: item.productPriceId,
+              dosificationId: item.dosificationId,
+              numPartsSnapshot: item.numPartsSnapshot,
               productCodeSnapshot: item.productCodeSnapshot,
               productNameSnapshot: item.productNameSnapshot,
               priceNameSnapshot: item.priceNameSnapshot,
@@ -357,9 +381,10 @@ export class PrismaReturnRepository implements ReturnRepository {
     id: string,
     cancelledBy: string,
     cancellationReason: string | null,
-    itemsToUndo: Array<{ productId: string; quantity: number }>
+    itemsToUndo: Array<{ productId: string; quantity: number; numPartsSnapshot: number | null }>
   ): Promise<Return> {
     const ret = await this.prisma.return.findUniqueOrThrow({ where: { id } });
+    const lowStockSignals: LowStockSignal[] = [];
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const sale = await tx.sale.findUnique({
@@ -371,13 +396,13 @@ export class PrismaReturnRepository implements ReturnRepository {
 
       // Decrement inventory to undo the return (allow negative) + record return_cancel movement
       for (const item of itemsToUndo) {
-        await recordInventoryMovement(tx, {
+        const { lowStockSignal } = await recordInventoryMovement(tx, {
           branchId: ret.branchId,
           productId: item.productId,
           movementAt: cancelledAt,
           movementType: "return_cancel",
           direction: "OUT",
-          quantity: item.quantity,
+          quantity: inventoryQuantityOf(item.quantity, item.numPartsSnapshot),
           customerId: ret.customerId,
           folioId: sale?.folioId ?? null,
           folioCode: sale?.folioCode ?? null,
@@ -387,6 +412,7 @@ export class PrismaReturnRepository implements ReturnRepository {
           sourceType: "return",
           sourceId: id,
         });
+        if (lowStockSignal) lowStockSignals.push(lowStockSignal);
       }
 
       return tx.return.update({
@@ -399,6 +425,11 @@ export class PrismaReturnRepository implements ReturnRepository {
         },
       });
     });
+
+    if (lowStockSignals.length > 0) {
+      const branch = await this.prisma.branch.findUnique({ where: { id: ret.branchId }, select: { name: true } });
+      await this.fireLowStockNotifications(lowStockSignals, branch?.name ?? ret.branchId);
+    }
 
     return Return.create({
       id: updated.id,

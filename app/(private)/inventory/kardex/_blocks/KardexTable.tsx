@@ -29,6 +29,7 @@ export function KardexTable({ movements }: KardexTableProps) {
             <th className="px-3 py-2 font-medium text-right">Costo</th>
             <th className="px-3 py-2 font-medium text-right">Venta</th>
             <th className="px-3 py-2 font-medium">Status</th>
+            <th className="px-3 py-2 font-medium">Concepto</th>
           </tr>
         </thead>
         <tbody>
@@ -43,6 +44,7 @@ export function KardexTable({ movements }: KardexTableProps) {
               <td className="px-3 py-2 text-right text-on-surface-variant">{m.unitCost ?? "—"}</td>
               <td className="px-3 py-2 text-right text-on-surface-variant">{m.unitPrice ?? "—"}</td>
               <td className="px-3 py-2">{m.status}</td>
+              <td className="px-3 py-2 text-on-surface-variant">{m.notes ?? "—"}</td>
             </tr>
           ))}
         </tbody>

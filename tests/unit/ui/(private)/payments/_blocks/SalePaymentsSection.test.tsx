@@ -70,6 +70,7 @@ function setup(canCreate = true) {
     paidAmount: 300,
     total: 1000,
     paymentStatus: "partial",
+    lineBalances: [],
     isLoading: false,
     error: null,
     refresh: jest.fn(),
@@ -113,5 +114,26 @@ describe("SalePaymentsSection", () => {
     setup();
     render(<SalePaymentsSection saleId="s1" sale={makeSale()} onPaymentMutated={jest.fn()} />);
     expect(screen.getByText("Sin abonos registrados.")).toBeInTheDocument();
+  });
+
+  it("muestra la tabla 'Saldo por producto' derivada de lineBalances, incluso sin abonos", () => {
+    setup();
+    mockUseSalePayments.mockReturnValue({
+      payments: [],
+      paidAmount: 0,
+      total: 1000,
+      paymentStatus: "pending",
+      lineBalances: [
+        { saleItemId: "line-a", productNameSnapshot: "Producto A", lineTotal: 600, paidAmount: 0, dueAmount: 600 },
+        { saleItemId: "line-b", productNameSnapshot: "Producto B", lineTotal: 400, paidAmount: 0, dueAmount: 400 },
+      ],
+      isLoading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+    render(<SalePaymentsSection saleId="s1" sale={makeSale()} onPaymentMutated={jest.fn()} />);
+    expect(screen.getByText("Saldo por producto")).toBeInTheDocument();
+    expect(screen.getByText("Producto A")).toBeInTheDocument();
+    expect(screen.getByText("Producto B")).toBeInTheDocument();
   });
 });

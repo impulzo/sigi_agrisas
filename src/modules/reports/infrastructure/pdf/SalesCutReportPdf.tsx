@@ -3,6 +3,7 @@ import { Document, Page, Text, View } from "@react-pdf/renderer";
 import {
   SalesCutReportResponseDto,
   SalesCutBreakdownRowDto,
+  SalesCutProductBreakdownRowDto,
 } from "../../application/dto/SalesCutReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
 
@@ -29,6 +30,38 @@ function BreakdownBlock({ title, rows }: { title: string; rows: SalesCutBreakdow
             <View key={r.key} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
               <Text style={s.cellWide}>{r.label}</Text>
               <Text style={s.cellNarrow}>{r.ticketCount}</Text>
+              <Text style={s.cellNarrow}>{r.subtotal}</Text>
+              <Text style={s.cellNarrow}>{r.taxTotal}</Text>
+              <Text style={s.cellNarrow}>{r.total}</Text>
+            </View>
+          ))}
+        </>
+      )}
+    </View>
+  );
+}
+
+function ProductBreakdownBlock({ title, rows }: { title: string; rows: SalesCutProductBreakdownRowDto[] }) {
+  return (
+    <View style={s.section}>
+      <Text style={s.departmentTitle}>{title}</Text>
+      {rows.length === 0 ? (
+        <Text style={s.emptyMessage}>Sin datos</Text>
+      ) : (
+        <>
+          <View style={s.tableHeader}>
+            <Text style={s.cellWide}>Concepto</Text>
+            <Text style={s.cellNarrow}>Tickets</Text>
+            <Text style={s.cellNarrow}>Piezas</Text>
+            <Text style={s.cellNarrow}>Subtotal</Text>
+            <Text style={s.cellNarrow}>Impuestos</Text>
+            <Text style={s.cellNarrow}>Total</Text>
+          </View>
+          {rows.map((r, i) => (
+            <View key={r.key} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+              <Text style={s.cellWide}>{r.label}</Text>
+              <Text style={s.cellNarrow}>{r.ticketCount}</Text>
+              <Text style={s.cellNarrow}>{r.quantitySold}</Text>
               <Text style={s.cellNarrow}>{r.subtotal}</Text>
               <Text style={s.cellNarrow}>{r.taxTotal}</Text>
               <Text style={s.cellNarrow}>{r.total}</Text>
@@ -102,6 +135,8 @@ export function SalesCutReportPdf({ data }: { data: SalesCutReportResponseDto })
         <BreakdownBlock title="Por día" rows={data.byDay} />
         <BreakdownBlock title="Por cajero" rows={data.byCashier} />
         <BreakdownBlock title="Por sucursal" rows={data.byBranch} />
+        <BreakdownBlock title="Por departamento" rows={data.byDepartment} />
+        <ProductBreakdownBlock title="Por producto" rows={data.byProduct} />
 
         <View style={s.footer} fixed>
           <Text>{data.generatedBy.email}</Text>

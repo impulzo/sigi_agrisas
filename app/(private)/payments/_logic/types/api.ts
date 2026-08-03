@@ -1,3 +1,9 @@
+export interface PaymentItemDto {
+  saleItemId: string;
+  productNameSnapshot: string;
+  amount: string;
+}
+
 export interface PaymentDto {
   id: string;
   saleId: string;
@@ -19,6 +25,7 @@ export interface PaymentDto {
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
+  items?: PaymentItemDto[];
 }
 
 export interface PaymentDetailDto extends PaymentDto {
@@ -45,11 +52,22 @@ export interface ListPaymentsResponse {
   pageSize: number;
 }
 
+export interface LineBalanceDto {
+  saleItemId: string;
+  productNameSnapshot: string;
+  lineTotal: string;
+  paidAmount: string;
+  dueAmount: string;
+}
+
 export interface ListSalePaymentsResponse {
   items: PaymentDto[];
-  paidAmount: number;
-  total: number;
-  paymentStatus: "paid" | "partial" | "pending";
+  saleId: string;
+  saleTotal: string;
+  salePaidAmount: string;
+  salePaymentStatus: "paid" | "partial" | "pending";
+  saleDueAmount: string;
+  lineBalances: LineBalanceDto[];
 }
 
 export interface PaymentHistoryRowDto {
@@ -83,12 +101,18 @@ export interface PaymentHistoryReportDto {
   pageSize: number;
 }
 
+export interface RegisterPaymentItemBody {
+  saleItemId: string;
+  amount: number;
+}
+
 export interface RegisterPaymentBody {
   saleId: string;
   amount: number;
   paymentMethodId: string;
   folioId: string;
   notes?: string;
+  items?: RegisterPaymentItemBody[];
 }
 
 export interface CancelPaymentBody {

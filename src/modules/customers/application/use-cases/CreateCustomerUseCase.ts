@@ -21,6 +21,7 @@ export class CreateCustomerUseCase {
       contactName: req.contactName ?? null,
       notes: req.notes ?? null,
       creditLimit: req.creditLimit ?? null,
+      creditDays: req.creditDays ?? 30,
       isActive: req.isActive ?? true,
     });
     return toCustomerDto(c);

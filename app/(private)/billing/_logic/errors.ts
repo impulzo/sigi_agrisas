@@ -58,3 +58,15 @@ export class FacturamaCsdError extends Error {
 export class BillingForbiddenError extends Error {
   constructor() { super("No tienes permiso para esta operación de facturación"); this.name = "BillingForbiddenError"; }
 }
+
+export class InvoiceNoEmailError extends Error {
+  constructor() { super("El cliente no tiene correo registrado. Captura uno para continuar."); this.name = "InvoiceNoEmailError"; }
+}
+
+export class InvoiceNotStampedError extends Error {
+  constructor() { super("Esta factura no ha sido timbrada"); this.name = "InvoiceNotStampedError"; }
+}
+
+export class InvoiceEmailSendFailedError extends Error {
+  constructor() { super("No se pudo enviar el correo. Intenta de nuevo."); this.name = "InvoiceEmailSendFailedError"; }
+}

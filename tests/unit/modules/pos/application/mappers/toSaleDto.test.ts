@@ -1,5 +1,6 @@
-import { toSaleItemDto } from "@/modules/pos/application/mappers/toSaleDto";
+import { toSaleDto, toSaleItemDto } from "@/modules/pos/application/mappers/toSaleDto";
 import { SaleItem } from "@/modules/pos/domain/entities/SaleItem";
+import { Sale } from "@/modules/pos/domain/entities/Sale";
 
 function buildItem(overrides: Partial<Parameters<typeof SaleItem.create>[0]> = {}) {
   return SaleItem.create({
@@ -7,6 +8,8 @@ function buildItem(overrides: Partial<Parameters<typeof SaleItem.create>[0]> = {
     saleId: "sale-1",
     productId: "product-1",
     productPriceId: "price-1",
+    dosificationId: null,
+    numPartsSnapshot: null,
     productCodeSnapshot: "SKU-1",
     productNameSnapshot: "Product 1",
     priceNameSnapshot: "Default",
@@ -21,6 +24,49 @@ function buildItem(overrides: Partial<Parameters<typeof SaleItem.create>[0]> = {
     ...overrides,
   });
 }
+
+describe("toSaleDto", () => {
+  it("propaga paymentMethodName desde los joined fields", () => {
+    const sale = Sale.create({
+      id: "sale-1",
+      folioId: "folio-1",
+      folioNumber: 1,
+      folioCode: "TK-000001",
+      branchId: "branch-1",
+      customerId: null,
+      cashierId: "cashier-1",
+      paymentMethodId: "pm-1",
+      quoteId: null,
+      status: "completed",
+      paidAmount: 100,
+      paymentStatus: "paid",
+      subtotal: 100,
+      taxTotal: 0,
+      total: 100,
+      notes: null,
+      completedAt: new Date(),
+      cancelledAt: null,
+      cancellationReason: null,
+      editedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      items: [],
+    });
+
+    const dto = toSaleDto(sale, {
+      branchName: "Matriz",
+      customerName: null,
+      customerRfc: null,
+      cashierName: "Admin",
+      paymentMethodCode: "EFECTIVO",
+      paymentMethodName: "Efectivo",
+      paymentMethodIsCredit: false,
+    });
+
+    expect(dto.paymentMethodCode).toBe("EFECTIVO");
+    expect(dto.paymentMethodName).toBe("Efectivo");
+  });
+});
 
 describe("toSaleItemDto", () => {
   it("derives lineIva and lineIeps from lineSubtotal and rates", () => {

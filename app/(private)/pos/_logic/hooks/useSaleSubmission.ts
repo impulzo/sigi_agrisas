@@ -46,7 +46,7 @@ export function useSaleSubmission(): UseSaleSubmissionResult {
       notes: draft.notes,
       items: draft.lines.map((l) => ({
         productId: l.productId,
-        productPriceId: l.productPriceId,
+        ...(l.dosificationId ? { dosificationId: l.dosificationId } : { productPriceId: l.productPriceId }),
         quantity: l.quantity,
         discountPctOverride: l.discountPct > 0 ? l.discountPct : undefined,
       })),

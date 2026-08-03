@@ -5,11 +5,9 @@
 Vista `/inventory/kardex`: filtros de artículo/almacén/fechas, encabezado de saldos, grilla cronológica de movimientos, sub-filtro client-side, export Excel/PDF y reconstrucción de saldos, consumiendo `inventory-kardex-api`.
 
 ---
-
 ## Requirements
-
 ### Requirement: Kardex view
-La ruta `/inventory/kardex` SHALL renderizar: filtros (Combobox de búsqueda de producto por clave/nombre, selector de almacén con opción "Todos" visible solo con `can("branches:access_all")`, rango de fechas Desde/Hasta, botón "Mostrar información" que dispara la consulta), un encabezado de solo lectura (existencia total, existencia en almacén, saldo anterior, saldo final), pestañas "Kardex | Estadísticas" (Estadísticas renderiza un `EmptyState` "Próximamente"), la grilla cronológica de movimientos, un campo de sub-filtro que filtra client-side las filas ya cargadas, y botones "Exportar Excel"/"Imprimir" que descargan xlsx/pdf con los filtros aplicados vía `authFetch`. Los `_blocks` SHALL ser presentacionales (sin `fetch`); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`.
+La ruta `/inventory/kardex` SHALL renderizar: filtros (Combobox de búsqueda de producto por clave/nombre, selector de almacén con opción "Todos" visible solo con `can("branches:access_all")`, rango de fechas Desde/Hasta, botón "Mostrar información" que dispara la consulta), un encabezado de solo lectura (existencia total, existencia en almacén, saldo anterior, saldo final), pestañas "Kardex | Estadísticas" (Estadísticas renderiza un `EmptyState` "Próximamente"), la grilla cronológica de movimientos (columnas: Fecha, Movimiento, Folio, Entrada, Salida, Saldo, Costo, Venta, Status, Concepto), un campo de sub-filtro que filtra client-side las filas ya cargadas, y botones "Exportar Excel"/"Imprimir" que descargan xlsx/pdf con los filtros aplicados vía `authFetch`. La columna "Concepto" SHALL mostrar `movement.notes` cuando esté presente (por ejemplo, el `reason` capturado en un ajuste manual de inventario) y `"—"` cuando sea `null`. Los `_blocks` SHALL ser presentacionales (sin `fetch`); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`.
 
 #### Scenario: Consulta de kardex
 - **WHEN** un usuario con `inventory:kardex_read` selecciona un producto, un almacén y un rango y pulsa "Mostrar información"
@@ -35,7 +33,13 @@ La ruta `/inventory/kardex` SHALL renderizar: filtros (Combobox de búsqueda de 
 - **WHEN** el rango consultado no tiene movimientos
 - **THEN** la grilla muestra un estado vacío y el encabezado muestra `saldoFinal === saldoAnterior`
 
----
+#### Scenario: Concepto de un ajuste manual visible en el Kardex
+- **WHEN** un movimiento tiene `notes: "Recepción factura 123"` (originado por un ajuste manual con `reason`)
+- **THEN** la columna "Concepto" de esa fila muestra "Recepción factura 123"
+
+#### Scenario: Movimiento sin concepto muestra guion
+- **WHEN** un movimiento tiene `notes: null`
+- **THEN** la columna "Concepto" muestra "—"
 
 ### Requirement: Rebuild article action
 La vista `/inventory/kardex` SHALL mostrar un botón "Reconstruir Artículo" visible solo con `can("inventory:write")`, que pide confirmación (`ConfirmDialog`) antes de ejecutar la reconstrucción y, al terminar, refresca el encabezado y la grilla.
@@ -47,3 +51,4 @@ La vista `/inventory/kardex` SHALL mostrar un botón "Reconstruir Artículo" vis
 #### Scenario: Botón oculto sin permiso
 - **WHEN** el usuario no tiene `inventory:write`
 - **THEN** el botón "Reconstruir Artículo" no se muestra
+

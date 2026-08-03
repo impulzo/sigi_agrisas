@@ -58,7 +58,7 @@ app/api/v1/<...>/route.ts                # delegan a <módulo>Controller vía DI
 middleware.ts                            # delega a AuthMiddlewareAdapter
 ```
 
-Módulos hexagonales activos: `auth`, `rbac`, `users`, `payment-methods`, `folios`, `departments`, `branches`, `providers`, `products`, `inventory`, `customers`, `pos`, `quotes`, `returns`, `payments`, `billing`, `reports`.
+Módulos hexagonales activos: `auth`, `rbac`, `users`, `payment-methods`, `folios`, `departments`, `branches`, `providers`, `products`, `inventory`, `customers`, `pos`, `quotes`, `returns`, `payments`, `billing`, `reports`, `purchases`, `waybills`, `sat-codes`, `tax-rates`, `settings`.
 
 **Reglas de capas (backend):**
 - El dominio no importa nada de infraestructura ni de Next.js.
@@ -108,6 +108,7 @@ DIRECT_URL    → conexión directa puerto 5432 (migraciones)
 
 - Migraciones: `npx prisma migrate dev --name <descripción>` (dev), `npx prisma migrate deploy` (CI/CD).
 - **FKs en `TEXT`, no `uuid`**. Los IDs son `String @id @default(uuid())` → columna `TEXT`. Las FKs (`department_id`, `product_id`, `branch_id`, etc.) son `TEXT` para coincidir con la PK; un `@db.Uuid` rompería la FK por mismatch. La validación Zod sí usa `z.string().uuid()` porque los **valores** son UUIDs.
+  - **Excepción confirmada en DB**: `users.id` y todas las FK que referencian usuarios (`cashier_id`, `creator_id`, `cancelled_by`, `authorized_by`, `user_id`, `created_by`) SÍ son columna `uuid` real en Supabase (verificado via `information_schema.columns`), y las FKs correspondientes ya llevan `@db.Uuid` en varios modelos (ver `cancelledBy`/`creatorId`/`userId` más abajo). `User.id` en `schema.prisma` no declara `@db.Uuid` explícito pero la columna real ya es `uuid` — desalineación cosmética en el schema fuente, no en la DB. No aplicar la regla general de "TEXT" a FKs de usuario; no "corregir" quitando `@db.Uuid` de esas relaciones.
 - Modelos: `User, Role, Permission, RolePermission, UserRole, PaymentMethod, Folio, Department, Branch, Provider, Product, ProductPrice, ProductDosification, BranchInventory, Customer, Sale, SaleItem, Quote, QuoteItem`.
 
 ## Comandos frecuentes
@@ -236,7 +237,7 @@ Cada módulo CRUD admin sigue el mismo patrón hexagonal y la misma forma de end
 **Reglas específicas a recordar:**
 - **Users**: admin no puede editar/eliminar su propia cuenta (403); `avatarUrl` jamás `null` en respuesta (fallback Gravatar md5(email)); `PATCH avatarUrl: null` resetea a Gravatar; hard delete.
 - **Providers / Customers**: `rfc` regex `^([A-ZÑ&]{3,4}\d{6}[A-Z\d]{3})$` único, editable, upper-normalizado (409 si duplicado). Datos fiscales MX con regex: `taxRegime` `^\d{3}$`, `cfdiUse` `^[A-Z]\d{2}$`, `taxZipCode` `^\d{5}$`.
-- **Customers**: `currentBalance` read-only (no se mueve desde POST/PATCH/sales — diferido a futuro `add-customer-credit`). `creditLimit >= 0` o `null`.
+- **Customers**: `currentBalance` read-only (no se mueve desde POST/PATCH/sales — diferido a futuro `add-customer-credit`). `creditLimit >= 0` o `null`. `creditDays` entero `>= 0` (default `30`, sin tope superior), administrable vía POST/PATCH; consumido por `PrismaSaleRepository` para calcular `dueDate` en ventas a crédito (`addDays(completedAt, customer.creditDays ?? 30)`).
 - **Products**: `iva_rate`/`ieps_rate` decimal `0–1` nullable; el controller normaliza valores `> 1` dividiendo entre 100 (acepta `16` → `0.16`). `sat_product_code` `^\d{8}$`. `department_id` FK obligatoria a depto **activo** (sino 400).
   - **Prices**: `name` único por producto; máximo un `is_default=true` (partial unique index `product_default_price_idx`); en PATCH `isDefault:true` desactiva el default previo atómicamente. Hard delete.
   - **Dosifications**: `name` único por producto; `num_parts >= 2`. Soft delete. `computedUnitPrice = basePrice / numParts * 1.07` (recargo fijo 7%, `DOSIFICATION_SURCHARGE_PCT = 7.0`). Sin precio default → `computedUnitPrice: null`, `requiresDefaultPrice: true`.
@@ -403,7 +404,7 @@ Módulo `src/modules/payments/`. Spec: `payments-api`. Migración: `202606080000
 
 ### Catálogos (`/catalogs`)
 
-Hub con 7 tarjetas. Rutas bajo `app/(private)/catalogs/`:
+Hub con 8 tarjetas. Rutas bajo `app/(private)/catalogs/`:
 
 - `/catalogs/payment-methods` (`payment_methods:*`)
 - `/catalogs/folios` (`folios:*`)
@@ -411,6 +412,8 @@ Hub con 7 tarjetas. Rutas bajo `app/(private)/catalogs/`:
 - `/catalogs/branches` (`branches:*`)
 - `/catalogs/providers` (`providers:*`) — modal con 3 secciones (Datos básicos / Datos fiscales / Contacto)
 - `/catalogs/products` (`products:*`) — detalle en `/catalogs/products/[id]` con 3 tabs (General / Precios / Dosificaciones) que gestionan el agregado sin modales anidados
+- `/catalogs/tax-rates` (`tax_rates:*`)
+- `/catalogs/customers` (`customers:*`) — modal con 3 secciones (Datos básicos / Datos fiscales / Contacto y crédito, incluye `creditLimit` y `creditDays`); búsqueda server-side; `_logic/` propio, sin imports cruzados con `pos/_logic` (el quick-add del POS/Cotizaciones/Facturación es un flujo separado, ver sección POS)
 
 Bloques compartidos en `app/(private)/catalogs/_blocks/`: `CatalogShell`, `CatalogToolbar`, `CatalogPagination`, `CatalogStatusBadge`, `CatalogEmpty`, `CatalogError`, `CatalogHubCard`, `CatalogsHubPage`.
 
@@ -480,7 +483,7 @@ Items primarios y su `requires`:
 | users | `/users` | `group` | `users:read` |
 | roles | `/roles` | `shield_person` | `roles:read` |
 
-Children de `catalogs`: `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`. Bajo los secundarios (`/support`, `/account`), un botón de logout invoca `useLogout` (deshabilitado mientras está en vuelo).
+Children de `catalogs`: `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`, `customers:read`. Bajo los secundarios (`/support`, `/account`), un botón de logout invoca `useLogout` (deshabilitado mientras está en vuelo).
 
 ## OpenSpec
 

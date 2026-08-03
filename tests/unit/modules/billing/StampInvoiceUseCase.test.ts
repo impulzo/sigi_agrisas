@@ -21,6 +21,7 @@ const CUSTOMER = {
   taxRegime: "601",
   cfdiUse: "G03",
   taxZipCode: "45010",
+  email: "cliente@ejemplo.com",
 };
 
 function makeSale(overrides: Partial<SaleForBilling> = {}): SaleForBilling {

@@ -8,22 +8,28 @@ import {
   PaymentWithSale,
   PaymentListRow,
   SaleTotals,
+  LineBalance,
   HistoryFilters,
   HistoryResult,
   PaymentHistoryItem,
 } from "../../application/ports/PaymentRepository";
-import { CustomerPayment } from "../../domain/entities/CustomerPayment";
+import { CustomerPayment, CustomerPaymentItemSnapshot } from "../../domain/entities/CustomerPayment";
 import { PaymentStatus } from "../../domain/value-objects/PaymentStatus";
 import { SalePaymentStatus } from "../../domain/value-objects/SalePaymentStatus";
 import { PaymentNotFoundError } from "../../domain/errors/PaymentNotFoundError";
 import { PaymentAlreadyCancelledError } from "../../domain/errors/PaymentAlreadyCancelledError";
 import { PaymentExceedsDueAmountError } from "../../domain/errors/PaymentExceedsDueAmountError";
+import { PaymentExceedsLineDueAmountError } from "../../domain/errors/PaymentExceedsLineDueAmountError";
+import { PaymentItemsAmountMismatchError } from "../../domain/errors/PaymentItemsAmountMismatchError";
+import { SaleItemNotFoundError } from "../../domain/errors/SaleItemNotFoundError";
 import { SaleNotPayableError } from "../../domain/errors/SaleNotPayableError";
 import { BranchScopeViolationError } from "../../domain/errors/BranchScopeViolationError";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 import { FolioScope } from "@/shared/domain/types/FolioScope";
+
+const AMOUNT_TOLERANCE = 0.0001;
 
 type TxClient = Prisma.TransactionClient;
 
@@ -49,7 +55,14 @@ function toPayment(row: {
   createdAt: Date;
   cancelledAt: Date | null;
   cancellationReason: string | null;
+  items?: Array<{ saleItemId: string; amount: Prisma.Decimal; saleItem: { productNameSnapshot: string } }>;
 }): CustomerPayment {
+  const items: CustomerPaymentItemSnapshot[] | undefined = row.items?.map((it) => ({
+    saleItemId: it.saleItemId,
+    productNameSnapshot: it.saleItem.productNameSnapshot,
+    amount: Number(it.amount),
+  }));
+
   return CustomerPayment.create(row.id, {
     saleId: row.saleId,
     customerId: row.customerId,
@@ -65,6 +78,7 @@ function toPayment(row: {
     createdAt: row.createdAt,
     cancelledAt: row.cancelledAt,
     cancellationReason: row.cancellationReason,
+    items,
   });
 }
 
@@ -74,6 +88,7 @@ const includePaymentJoins = {
   user: { select: { name: true, email: true } },
   branch: { select: { name: true } },
   paymentMethod: { select: { code: true } },
+  items: { include: { saleItem: { select: { productNameSnapshot: true } } } },
 } as const;
 
 export class PrismaPaymentRepository implements PaymentRepository {
@@ -86,7 +101,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
       // Load sale with paymentMethod to verify credit status
       const saleRow = await tx.sale.findUnique({
         where: { id: input.saleId },
-        include: { paymentMethod: { select: { isCredit: true } } },
+        include: { paymentMethod: { select: { isCredit: true } }, items: true },
       });
       if (!saleRow) throw new Error("Sale not found");
       if (saleRow.status !== "completed") throw new SaleNotPayableError({ status: saleRow.status });
@@ -112,6 +127,39 @@ export class PrismaPaymentRepository implements PaymentRepository {
       const remaining = saleTotal - salePaidAmount;
 
       if (input.amount > remaining) throw new PaymentExceedsDueAmountError(remaining);
+
+      // Validate per-line breakdown (if provided) BEFORE allocating folio or mutating sales/customers
+      if (input.items && input.items.length > 0) {
+        const saleItemIds = new Set(saleRow.items.map((i) => i.id));
+        for (const item of input.items) {
+          if (!saleItemIds.has(item.saleItemId)) throw new SaleItemNotFoundError(item.saleItemId);
+        }
+
+        const sumItems = input.items.reduce((acc, i) => acc + i.amount, 0);
+        if (Math.abs(sumItems - input.amount) > AMOUNT_TOLERANCE) {
+          throw new PaymentItemsAmountMismatchError(input.amount, sumItems);
+        }
+
+        const paidByLine = await tx.customerPaymentItem.groupBy({
+          by: ["saleItemId"],
+          where: {
+            saleItemId: { in: input.items.map((i) => i.saleItemId) },
+            customerPayment: { status: "completed" },
+          },
+          _sum: { amount: true },
+        });
+        const paidByLineMap = new Map(paidByLine.map((p) => [p.saleItemId, Number(p._sum.amount ?? 0)]));
+
+        for (const item of input.items) {
+          const saleItem = saleRow.items.find((i) => i.id === item.saleItemId)!;
+          const lineTotal = Number(saleItem.lineTotal);
+          const alreadyPaid = paidByLineMap.get(item.saleItemId) ?? 0;
+          const lineDue = lineTotal - alreadyPaid;
+          if (item.amount > lineDue + AMOUNT_TOLERANCE) {
+            throw new PaymentExceedsLineDueAmountError(item.saleItemId, lineDue);
+          }
+        }
+      }
 
       // Allocate folio
       const { folioNumber, folioCode } = await allocateFolio(tx, input.folioId);
@@ -154,6 +202,16 @@ export class PrismaPaymentRepository implements PaymentRepository {
           notes: input.notes,
         },
       });
+
+      if (input.items && input.items.length > 0) {
+        await tx.customerPaymentItem.createMany({
+          data: input.items.map((item) => ({
+            customerPaymentId: paymentId,
+            saleItemId: item.saleItemId,
+            amount: new Prisma.Decimal(item.amount),
+          })),
+        });
+      }
 
       const paymentRow = await tx.customerPayment.findUnique({
         where: { id: paymentId },
@@ -337,13 +395,19 @@ export class PrismaPaymentRepository implements PaymentRepository {
   }
 
   async listBySale(saleId: string): Promise<{ items: PaymentListRow[]; saleTotals: SaleTotals }> {
-    const [rows, saleRow] = await Promise.all([
+    const [rows, saleRow, saleItems, paidByLine] = await Promise.all([
       this.prisma.customerPayment.findMany({
         where: { saleId },
         orderBy: { createdAt: "asc" },
         include: includePaymentJoins,
       }),
       this.prisma.sale.findUnique({ where: { id: saleId } }),
+      this.prisma.saleItem.findMany({ where: { saleId } }),
+      this.prisma.customerPaymentItem.groupBy({
+        by: ["saleItemId"],
+        where: { saleItem: { saleId }, customerPayment: { status: "completed" } },
+        _sum: { amount: true },
+      }),
     ]);
 
     if (!saleRow) throw new Error("Sale not found");
@@ -362,6 +426,19 @@ export class PrismaPaymentRepository implements PaymentRepository {
       },
     }));
 
+    const paidByLineMap = new Map(paidByLine.map((p) => [p.saleItemId, Number(p._sum.amount ?? 0)]));
+    const lineBalances: LineBalance[] = saleItems.map((si) => {
+      const lineTotal = Number(si.lineTotal);
+      const paidAmount = paidByLineMap.get(si.id) ?? 0;
+      return {
+        saleItemId: si.id,
+        productNameSnapshot: si.productNameSnapshot,
+        lineTotal,
+        paidAmount,
+        dueAmount: lineTotal - paidAmount,
+      };
+    });
+
     return {
       items,
       saleTotals: {
@@ -370,6 +447,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
         saleTotal,
         salePaidAmount,
         salePaymentStatus: saleRow.paymentStatus as SalePaymentStatus,
+        lineBalances,
       },
     };
   }

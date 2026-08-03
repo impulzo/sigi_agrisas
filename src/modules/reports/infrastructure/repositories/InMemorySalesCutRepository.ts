@@ -3,7 +3,20 @@ import {
   SalesCutFilters,
   SalesCutAggregates,
   BreakdownRow,
+  ProductBreakdownRow,
 } from "../../domain/value-objects/SalesCutFilters";
+
+export interface InMemCutSaleItem {
+  productId: string;
+  productCode: string;
+  productName: string;
+  departmentId: string;
+  departmentName: string;
+  quantity: number;
+  subtotal: number;
+  taxTotal: number;
+  total: number;
+}
 
 export interface InMemCutSale {
   id: string;
@@ -20,6 +33,7 @@ export interface InMemCutSale {
   paymentMethodId: string;
   paymentMethodName: string;
   createdAt: Date;
+  items?: InMemCutSaleItem[];
 }
 
 export interface InMemCutPayment {
@@ -92,6 +106,44 @@ export class InMemorySalesCutRepository implements SalesCutRepository {
 
     const dayKey = (s: InMemCutSale) => s.createdAt.toISOString().split("T")[0];
 
+    interface Accum {
+      label: string;
+      saleIds: Set<string>;
+      quantitySold: number;
+      subtotal: number;
+      taxTotal: number;
+      total: number;
+    }
+    const departmentAcc = new Map<string, Accum>();
+    const productAcc = new Map<string, Accum>();
+    const bump = (map: Map<string, Accum>, key: string, label: string, saleId: string, item: InMemCutSaleItem) => {
+      const acc = map.get(key) ?? { label, saleIds: new Set<string>(), quantitySold: 0, subtotal: 0, taxTotal: 0, total: 0 };
+      acc.saleIds.add(saleId);
+      acc.quantitySold += item.quantity;
+      acc.subtotal += item.subtotal;
+      acc.taxTotal += item.taxTotal;
+      acc.total += item.total;
+      map.set(key, acc);
+    };
+    for (const s of active) {
+      for (const item of s.items ?? []) {
+        bump(departmentAcc, item.departmentId, item.departmentName, s.id, item);
+        bump(productAcc, item.productId, `${item.productName} (${item.productCode})`, s.id, item);
+      }
+    }
+    const toBreakdownRow = (key: string, acc: Accum): BreakdownRow => ({
+      key,
+      label: acc.label,
+      ticketCount: acc.saleIds.size,
+      subtotal: acc.subtotal,
+      taxTotal: acc.taxTotal,
+      total: acc.total,
+    });
+    const toProductRow = (key: string, acc: Accum): ProductBreakdownRow => ({
+      ...toBreakdownRow(key, acc),
+      quantitySold: acc.quantitySold,
+    });
+
     const payments = this.payments.filter(
       (p) => inPeriod(p.createdAt) && p.status === "completed" && (!f.branchId || p.branchId === f.branchId)
     );
@@ -118,6 +170,8 @@ export class InMemorySalesCutRepository implements SalesCutRepository {
       byDay: group(dayKey, dayKey),
       byCashier: group((s) => s.cashierId, (s) => s.cashierName),
       byBranch: group((s) => s.branchId, (s) => s.branchName),
+      byDepartment: [...departmentAcc.entries()].map(([key, acc]) => toBreakdownRow(key, acc)),
+      byProduct: [...productAcc.entries()].map(([key, acc]) => toProductRow(key, acc)),
       paymentsReceived: {
         count: payments.length,
         total: payments.reduce((a, p) => a + p.amount, 0),

@@ -60,6 +60,14 @@ const CATALOG_CARDS = [
     href: "/catalogs/tax-rates",
     permission: "tax_rates:read",
   },
+  {
+    key: "customers",
+    icon: "groups" as const,
+    title: "Clientes",
+    description: "Gestiona los clientes, sus datos fiscales y crédito.",
+    href: "/catalogs/customers",
+    permission: "customers:read",
+  },
 ];
 
 export function CatalogsHubPage() {

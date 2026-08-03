@@ -2,6 +2,11 @@ import { PaymentRepository, CreatePaymentInput } from "../ports/PaymentRepositor
 import { PaymentDetailDto } from "../dto/PaymentDto";
 import { toPaymentDetailDto } from "../mappers/toPaymentDto";
 
+export interface RegisterPaymentItemRequest {
+  saleItemId: string;
+  amount: number;
+}
+
 export interface RegisterPaymentRequest {
   saleId: string;
   paymentMethodId: string;
@@ -11,6 +16,7 @@ export interface RegisterPaymentRequest {
   userId: string;
   /** null = caller has branches:access_all bypass */
   callerBranchId: string | null;
+  items?: RegisterPaymentItemRequest[];
 }
 
 export interface RegisterPaymentResult {
@@ -32,6 +38,7 @@ export class RegisterPaymentUseCase {
       amount: req.amount,
       notes: req.notes ?? null,
       callerBranchId: req.callerBranchId,
+      items: req.items,
     };
 
     const result = await this.repo.createCompleted(input);

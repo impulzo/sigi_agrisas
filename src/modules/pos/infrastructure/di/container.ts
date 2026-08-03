@@ -10,8 +10,9 @@ import { EditCompletedSaleUseCase } from "@/modules/pos/application/use-cases/Ed
 import { SalesController } from "@/modules/pos/infrastructure/http/SalesController";
 import { branchRepo } from "@/modules/branches/infrastructure/di/container";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
+import { adminNotificationService } from "@/shared/infrastructure/di/adminNotificationContainer";
 
-const saleRepo = new PrismaSaleRepository(prisma);
+const saleRepo = new PrismaSaleRepository(prisma, adminNotificationService);
 const lookups = new PrismaPosLookupService(prisma);
 // Local quote repo to validate `quoteId` when `POST /sales` includes one.
 // Instantiated here (not imported from quotes/di) to avoid a circular module dependency.
@@ -20,7 +21,7 @@ const quoteRepo = new PrismaQuoteRepository(prisma);
 const listUseCase = new ListSalesUseCase(saleRepo);
 const getUseCase = new GetSaleUseCase(saleRepo);
 const createUseCase = new CreateSaleUseCase(saleRepo, lookups, quoteRepo);
-const cancelUseCase = new CancelSaleUseCase(saleRepo);
+const cancelUseCase = new CancelSaleUseCase(saleRepo, adminNotificationService);
 const editUseCase = new EditCompletedSaleUseCase(saleRepo, lookups);
 
 export const salesController = new SalesController(

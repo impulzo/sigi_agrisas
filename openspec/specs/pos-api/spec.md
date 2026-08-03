@@ -27,6 +27,8 @@ The system SHALL persist a sale as the aggregate `Sale` (header) + `SaleItem` (l
 - `Sale.quoteId` is a nullable reference to a `Quote` (FK `ON DELETE SET NULL`). Indexed via `sales(quote_id)`. When the sale was emitted directly via `POST /api/v1/admin/sales` without a quote, the column is `null`. When the sale was emitted via `POST /api/v1/admin/quotes/:id/convert`, the column points to the originating quote.
 - Each `SaleItem` snapshots `productCodeSnapshot`, `productNameSnapshot`, `priceNameSnapshot`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate` so the ticket survives later changes to the catalog. `productId` (FK `ON DELETE RESTRICT`) and `productPriceId` (FK `ON DELETE SET NULL`) are retained for reporting.
 - Each `SaleItem` persists `lineSubtotal`, `lineTax`, `lineTotal`.
+- **Dosification lines**: a `SaleItem` MAY originate from a `ProductDosification` instead of a `ProductPrice`. In that case `productPriceId` SHALL be `null`, and the line additionally persists `dosificationId` (nullable FK to `product_dosifications`, `ON DELETE SET NULL`) and `numPartsSnapshot` (nullable `INT`, the dosification's `numParts` at the time of sale). `priceNameSnapshot` SHALL hold the dosification's `name` for these lines (same column, same display purpose as for price-based lines). Exactly one of `productPriceId`/`dosificationId` SHALL be non-null per `SaleItem` — never both, never neither. `unitPrice` for a dosification line is `DosificationPriceCalculator.computeUnitPrice(defaultPrice.price, numParts)`. `quantity` for a dosification line represents the number of dosification parts sold and MAY exceed `numParts` (selling more than one full container in a single line is allowed, e.g. 6 parts of a `numParts=4` dosification).
+- **Inventory quantity for dosification lines**: any operation that moves `branch_inventory.quantity` from a `SaleItem` (creation, cancellation, edit) SHALL use `quantity / numPartsSnapshot` as the base-unit amount when `numPartsSnapshot` is non-null, instead of `quantity` directly. For lines without a dosification (`numPartsSnapshot = null`), the amount is `quantity` unchanged (no behavior change).
 
 #### Scenario: Snapshot survives product rename
 - **WHEN** a sale is completed for product `ARROZ_001 ("Arroz 1kg")`, and later the product is renamed to `"Arroz Integral 1kg"`
@@ -59,6 +61,14 @@ The system SHALL persist a sale as the aggregate `Sale` (header) + `SaleItem` (l
 #### Scenario: SaleDetailDto exposes isCredit as derived field
 - **WHEN** an authorized caller fetches `GET /api/v1/admin/sales/:id` for a sale whose `paymentMethod.isCredit=true`
 - **THEN** the response includes `isCredit: true` derived from the JOIN; the field is read-only and not persisted on the `sales` table
+
+#### Scenario: Dosification line snapshots numParts and dosificationId
+- **WHEN** a sale is emitted with a line whose `dosificationId` references a dosification with `numParts=4`
+- **THEN** the persisted `sale_items` row has `productPriceId: null`, `dosificationId` set, `numPartsSnapshot=4`, and `priceNameSnapshot` equal to the dosification's `name`
+
+#### Scenario: Dosification quantity may exceed numParts
+- **WHEN** a sale line sells `quantity=6` parts of a dosification with `numParts=4`
+- **THEN** the line is accepted (no upper bound on `quantity` relative to `numParts`); `lineTotal = 6 * computedUnitPrice`
 
 ---
 
@@ -164,8 +174,8 @@ The system SHALL expose `POST /api/v1/admin/sales` that emits a completed sale i
 Each `SaleItemInput`:
 
 - `productId: string` (UUID of an active product)
-- `productPriceId: string` (UUID of a price belonging to `productId`)
-- `quantity: number` (decimal `> 0`; max 14 integer + 4 decimal digits)
+- `productPriceId: string` (UUID of a price belonging to `productId`) **OR** `dosificationId: string` (UUID of a dosification belonging to `productId`) — exactly one of the two SHALL be present; both present or both absent → HTTP 400.
+- `quantity: number` (decimal `> 0`; max 14 integer + 4 decimal digits). For a dosification line, `quantity` is the number of parts sold (MAY exceed the dosification's `numParts`).
 
 Optional body:
 
@@ -198,12 +208,15 @@ The `quoteId` does NOT constrain whether the sale is cash or credit — the `pay
 1. Validate `customer.isActive`, `branch.isActive`, `paymentMethod.isActive`, `folio.isActive`. Any inactive → HTTP 400.
 2. Load `paymentMethod.isCredit` (via `include` or join) so the downstream branching is consistent within the transaction.
 3. If `quoteId` is non-null: validate per the rules above; failure → HTTP 400.
-4. For each item: load the `Product` and `ProductPrice`; verify `productPrice.productId === item.productId` (else `ProductPriceMismatchError` → HTTP 400) and `productPrice` belongs to a product whose `isActive = true` (else HTTP 400). `quantity > 0` (else HTTP 400). The system MAY skip enforcement of `minQuantity` in v1 (documented).
-5. Snapshot `productCodeSnapshot = product.code`, `productNameSnapshot = product.name`, `priceNameSnapshot = price.name`, `unitPrice = price.price`, `discountPct = price.discountPct`, `ivaRate = product.ivaRate`, `iepsRate = product.iepsRate`.
-6. Compute totals using `SaleTotalsCalculator` (domain service).
+4. For each item:
+   - If `productPriceId` is present: load the `Product` and `ProductPrice`; verify `productPrice.productId === item.productId` (else `ProductPriceMismatchError` → HTTP 400) and belongs to a product whose `isActive = true` (else HTTP 400).
+   - If `dosificationId` is present instead: load the `Product` and `ProductDosification`; verify `dosification.productId === item.productId` (else HTTP 400) and `dosification.isActive = true` (else HTTP 400); load the product's default `ProductPrice` — if none exists → HTTP 400 `{"error": "Dosification requires a default price"}`; compute `unitPrice = DosificationPriceCalculator.computeUnitPrice(defaultPrice.price, dosification.numParts)`.
+   - `quantity > 0` (else HTTP 400) for either case. The system MAY skip enforcement of `minQuantity` in v1 (documented, applies only to price-based lines).
+5. Snapshot `productCodeSnapshot = product.code`, `productNameSnapshot = product.name`; for price-based lines: `priceNameSnapshot = price.name`, `unitPrice = price.price`, `discountPct = price.discountPct`; for dosification lines: `priceNameSnapshot = dosification.name`, `unitPrice` per above, `discountPct = null`, `dosificationId = dosification.id`, `numPartsSnapshot = dosification.numParts`. Both kinds set `ivaRate = product.ivaRate`, `iepsRate = product.iepsRate`.
+6. Compute totals using `SaleTotalsCalculator` (domain service) — unchanged by dosification lines (operates on `quantity * unitPrice`, agnostic to what `quantity` represents).
 7. If `paymentMethod.isCredit === true`: validate credit line and limit per above; on failure abort with HTTP 409.
 8. Allocate the next folio number atomically: `UPDATE folios SET current_number = current_number + 1 WHERE id = ? AND is_active = true RETURNING current_number, code, prefix`. If `RETURNING` is empty (folio inactive) → HTTP 400.
-9. For each item, decrement inventory: `UPDATE branch_inventory SET quantity = quantity - ${qty}, updated_at = NOW() WHERE branch_id = ? AND product_id = ?`. If the update affects 0 rows (no inventory record exists for this pair), the system SHALL `INSERT INTO branch_inventory (branch_id, product_id, quantity) VALUES (?, ?, -${qty})` (creates the record with negative initial quantity). The result `quantity` MAY be negative — this is the implementation of the rule "selling with stock 0 leaves negative quantity awaiting transfer".
+9. For each item, decrement inventory using the base-unit amount (`quantity / numPartsSnapshot` for dosification lines, `quantity` otherwise — see "Sale aggregate model"): `UPDATE branch_inventory SET quantity = quantity - ${amount}, updated_at = NOW() WHERE branch_id = ? AND product_id = ?`. If the update affects 0 rows (no inventory record exists for this pair), the system SHALL `INSERT INTO branch_inventory (branch_id, product_id, quantity) VALUES (?, ?, -${amount})` (creates the record with negative initial quantity). The result `quantity` MAY be negative — this is the implementation of the rule "selling with stock 0 leaves negative quantity awaiting transfer". **After each such decrement**, the system SHALL evaluate the low-stock notification trigger per `admin-notifications-api` "Notify admin on low stock" (best-effort, never blocks or fails this endpoint).
 10. Compute `paidAmount` and `paymentStatus`:
     - If `paymentMethod.isCredit === false`: `paidAmount = total`, `paymentStatus = 'paid'`.
     - If `paymentMethod.isCredit === true`: `paidAmount = 0`, `paymentStatus = 'pending'`.
@@ -295,6 +308,30 @@ Returns HTTP 201 with the `SaleDetailDto` (including items, `quoteId`, `paidAmou
 - **WHEN** a caller without `sales:create` calls the endpoint
 - **THEN** the system returns HTTP 403 `{"error": "Forbidden", "required": "sales:create"}`
 
+#### Scenario: Sale creation crossing reorder point triggers admin notification
+- **WHEN** a sale item's decrement leaves `branch_inventory.quantity < reorder_point` for that (branch, product), and no notification for that pair was sent in the last 24h
+- **THEN** the system still returns HTTP 201 as normal, AND — per `admin-notifications-api` — an email is sent to the configured admin address and `lastLowStockNotifiedAt` is updated; a failure to send this email does NOT affect the HTTP 201 response
+
+#### Scenario: Dosification sale decrements a fraction of base stock
+- **WHEN** the body has one item with `dosificationId` referencing a dosification with `numParts=4` and `quantity=3`, for a product whose default price is `100` and whose `branch_inventory.quantity = 10`
+- **THEN** the system returns HTTP 201 with `unitPrice = (100/4)*1.07 = 26.75` on that line; `branch_inventory.quantity` becomes `10 - (3/4) = 9.25`
+
+#### Scenario: Dosification without default price rejected
+- **WHEN** the body has an item with `dosificationId` referencing a dosification whose product has no default `ProductPrice`
+- **THEN** the system returns HTTP 400 `{"error": "Dosification requires a default price"}` and the transaction does not commit
+
+#### Scenario: Dosification/productPrice mutual exclusivity
+- **WHEN** an item includes both `productPriceId` and `dosificationId`, or neither
+- **THEN** the system returns HTTP 400
+
+#### Scenario: Dosification not belonging to product
+- **WHEN** an item has `productId: A` but `dosificationId: D` where `D.product_id !== A`
+- **THEN** the system returns HTTP 400 and the transaction does not commit
+
+#### Scenario: Inactive dosification rejected
+- **WHEN** an item's `dosificationId` references a dosification with `isActive=false`
+- **THEN** the system returns HTTP 400
+
 ---
 
 ### Requirement: Cancel sale
@@ -306,13 +343,14 @@ Behavior (inside a Prisma transaction):
 - If `sale.status === 'completed'` or `'edited'`:
   1. Load `sale.paymentMethod.isCredit` (via JOIN/include) so the credit-aware logic is consistent within the transaction.
   2. **Pre-check active payments**: if there is at least one `CustomerPayment` with `status='completed'` linked to this sale → HTTP 409 `{"error":"SaleHasActivePayments","paymentIds":["<id1>","<id2>",...]}`. The transaction does NOT commit. The operator MUST cancel each listed payment first. (In practice only credit sales can have active payments; the check applies unconditionally to all sales.)
-  3. For each item, `UPDATE branch_inventory SET quantity = quantity + ${qty}, updated_at = NOW() WHERE branch_id = ? AND product_id = ?` (restores stock).
+  3. For each item, restore stock using the base-unit amount (`quantity / numPartsSnapshot` when the line has a dosification, `quantity` otherwise — see "Sale aggregate model"): `UPDATE branch_inventory SET quantity = quantity + ${amount}, updated_at = NOW() WHERE branch_id = ? AND product_id = ?`.
   4. If `paymentMethod.isCredit === true`: `UPDATE customers SET current_balance = current_balance - (sale.total - sale.paidAmount) WHERE id = sale.customerId`. (Since active payments are required to be already cancelled, `paidAmount` reflects only cancelled payments which don't affect balance — so this subtracts the original outstanding.)
   5. `UPDATE sales SET status='cancelled', cancelled_at=NOW(), cancellation_reason=?`.
+- **After the transaction commits**, the system SHALL trigger the "Notify admin on sale cancellation" behavior per `admin-notifications-api` (best-effort, never blocks or fails this endpoint, never runs inside the Prisma transaction above).
 
 The folio is NOT reusable — the folio number stays consumed. `paidAmount`, `paymentStatus`, `paymentMethodId` are preserved (frozen at the moment of cancellation; not reset).
 
-**Interaction with returns**: cancelling a sale that has one or more `completed` returns DOES NOT cancel those returns and DOES NOT double-restore stock. The cancellation restores ONLY the stock matching the CURRENT `sale_items.quantity` (the original sold quantity). Returns continue to exist as standalone records; the operator who wants a fully clean state can cancel each return separately (which decrements stock back) BEFORE cancelling the sale. **Recommended order documented**: cancel returns first, then cancel the sale. The system does NOT enforce this order in v1 — if the sale is cancelled while completed returns exist, the resulting stock will be inflated relative to the post-return state by exactly the returned amount (the returns previously incremented stock; the cancel sale now also increments stock by the full sold quantity). Operators are expected to reconcile manually until a future change introduces a guard.
+**Interaction with returns**: cancelling a sale that has one or more `completed` returns DOES NOT cancel those returns and DOES NOT double-restore stock. The cancellation restores ONLY the stock matching the CURRENT `sale_items.quantity` (the original sold quantity, converted to base units per dosification when applicable). Returns continue to exist as standalone records; the operator who wants a fully clean state can cancel each return separately (which decrements stock back) BEFORE cancelling the sale. **Recommended order documented**: cancel returns first, then cancel the sale. The system does NOT enforce this order in v1 — if the sale is cancelled while completed returns exist, the resulting stock will be inflated relative to the post-return state by exactly the returned amount (the returns previously incremented stock; the cancel sale now also increments stock by the full sold quantity). Operators are expected to reconcile manually until a future change introduces a guard.
 
 #### Scenario: Cancel completed cash sale
 - **WHEN** an authorized caller cancels a `completed` sale whose `paymentMethod.isCredit=false` and items totalling X units
@@ -355,10 +393,18 @@ The folio is NOT reusable — the folio number stays consumed. `paidAmount`, `pa
 - **WHEN** a sale with `folio_number = 1024` is cancelled
 - **THEN** the next emitted sale on the same folio takes `folio_number = 1025`, not `1024`
 
+#### Scenario: Cancel sale with dosification line restores fractional stock
+- **WHEN** a `completed` sale has one line with `numPartsSnapshot=4`, `quantity=3` (i.e. `0.75` base units decremented at emission), and the sale is cancelled
+- **THEN** `branch_inventory.quantity` is incremented by `0.75` (not by `3`)
+
+#### Scenario: Cancellation triggers admin notification after commit
+- **WHEN** a `completed` sale with `folioCode="TK-000042"`, `total=1500` is cancelled with `reason="Cliente cambió de opinión"`
+- **THEN** after the cancellation commits, the system attempts to email `ADMIN_NOTIFICATION_EMAIL` with the folio, total, reason, branch, and cashier; if this email send fails, the sale remains `cancelled` and the endpoint still returns HTTP 200
+
 ---
 
 ### Requirement: Edit completed sale (headquarters only)
-The system SHALL expose `PATCH /api/v1/admin/sales/:id`. Requires `sales:edit_completed`. The body MUST include a complete `items: SaleItemInput[]` (the new version of the lines; min 1). Optional: `customerId`, `paymentMethodId`, `notes`. The body MUST NOT change `folioId`, `folioNumber`, or `branchId`.
+The system SHALL expose `PATCH /api/v1/admin/sales/:id`. Requires `sales:edit_completed`. The body MUST include a complete `items: SaleItemInput[]` (the new version of the lines; min 1, same shape as "Create sale" — each item is either `productPriceId`-based or `dosificationId`-based). Optional: `customerId`, `paymentMethodId`, `notes`. The body MUST NOT change `folioId`, `folioNumber`, or `branchId`.
 
 **Headquarters check (combined gate)**: before invoking the use case, the controller SHALL evaluate:
 
@@ -377,9 +423,9 @@ Behavior (inside a Prisma transaction):
 - If `sale.status === 'cancelled'` → HTTP 409 `{"error": "Cancelled sales cannot be edited"}`.
 - **If the sale has one or more `CustomerPayment` rows with `status='completed'`** → HTTP 409 `{"error":"SaleHasActivePayments","paymentIds":[...]}`. The operator MUST cancel each listed payment first.
 - Load the OLD `paymentMethod.isCredit` (from the current sale, before any change) AND the NEW `paymentMethod.isCredit` (if `paymentMethodId` changes in the body). Both flags govern the `currentBalance` delta below.
-- Restore stock for each existing item: `UPDATE branch_inventory SET quantity = quantity + ${oldQty} WHERE branch_id = ? AND product_id = ?`.
+- Restore stock for each existing item using the base-unit amount (`quantity / numPartsSnapshot` when the persisted line has a dosification, `quantity` otherwise): `UPDATE branch_inventory SET quantity = quantity + ${oldAmount} WHERE branch_id = ? AND product_id = ?`.
 - Delete all rows from `sale_items` for this `saleId`.
-- Re-run the validation + snapshot + decrement + insert flow from "Create sale" using the new `items[]`.
+- Re-run the validation + snapshot + decrement + insert flow from "Create sale" using the new `items[]` (including the `productPriceId`/`dosificationId` resolution and the base-unit decrement for dosification lines).
 - Recompute totals.
 - Recompute `paidAmount` and `paymentStatus` according to the NEW `paymentMethod.isCredit`:
   - NEW `isCredit=false`: `paidAmount = newTotal`, `paymentStatus = 'paid'`.
@@ -437,6 +483,14 @@ Behavior (inside a Prisma transaction):
 #### Scenario: Stock fully recomputed
 - **WHEN** the original items consumed 5 units of product A and 0 of B, and the new items consume 0 of A and 3 of B
 - **THEN** after the edit, `branch_inventory.quantity` for A is restored by 5 and for B is decremented by 3 (allowed to go negative)
+
+#### Scenario: Edit replaces a dosification line with a price line
+- **WHEN** the original line had `numPartsSnapshot=4`, `quantity=3` (0.75 base units decremented), and the new items array replaces it with a normal price-based line of `quantity=2` for the same product
+- **THEN** stock is restored by `0.75` (old dosification line) and then decremented by `2` (new price line) — net `-1.25` from the pre-edit baseline
+
+#### Scenario: Edit's new-item decrement triggers admin notification
+- **WHEN** the "decrement" half of the re-run "Create sale" flow (step re-run above) leaves `branch_inventory.quantity < reorder_point` for the new items, per the same debounce rule as "Create sale"
+- **THEN** the low-stock notification per `admin-notifications-api` fires the same way it would for a direct sale creation — the edit flow does not special-case this
 
 ---
 

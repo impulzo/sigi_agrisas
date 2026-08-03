@@ -1,6 +1,7 @@
 import { ReturnTotalsCalculator } from "@/modules/returns/domain/services/ReturnTotalsCalculator";
 import { SaleTotalsCalculator } from "@/modules/pos/domain/services/SaleTotalsCalculator";
 import { QuoteTotalsCalculator } from "@/modules/quotes/domain/services/QuoteTotalsCalculator";
+import { PurchaseTotalsCalculator } from "@/modules/purchases/domain/services/PurchaseTotalsCalculator";
 import { totalsVectors } from "../../../../../fixtures/totals-vectors";
 
 describe("ReturnTotalsCalculator", () => {
@@ -85,12 +86,14 @@ describe("ReturnTotalsCalculator", () => {
     ).toThrow("discountPct must be between 0 and 100");
   });
 
-  describe("equivalence with SaleTotalsCalculator and QuoteTotalsCalculator", () => {
+  describe("equivalence with SaleTotalsCalculator, QuoteTotalsCalculator and PurchaseTotalsCalculator", () => {
     totalsVectors.forEach((vector, i) => {
       it(`vector ${i + 1}`, () => {
         const returnResult = ReturnTotalsCalculator.computeTotals(vector as Parameters<typeof ReturnTotalsCalculator.computeTotals>[0]);
         const saleResult = SaleTotalsCalculator.computeTotals(vector as Parameters<typeof SaleTotalsCalculator.computeTotals>[0]);
         const quoteResult = QuoteTotalsCalculator.computeTotals(vector as Parameters<typeof QuoteTotalsCalculator.computeTotals>[0]);
+        const purchaseVector = vector.map(({ unitPrice, ...rest }) => ({ ...rest, unitCost: unitPrice }));
+        const purchaseResult = PurchaseTotalsCalculator.computeTotals(purchaseVector);
 
         expect(returnResult.subtotal).toBe(saleResult.subtotal);
         expect(returnResult.taxTotal).toBe(saleResult.taxTotal);
@@ -100,7 +103,17 @@ describe("ReturnTotalsCalculator", () => {
         expect(returnResult.taxTotal).toBe(quoteResult.taxTotal);
         expect(returnResult.total).toBe(quoteResult.total);
 
+        expect(purchaseResult.subtotal).toBe(saleResult.subtotal);
+        expect(purchaseResult.taxTotal).toBe(saleResult.taxTotal);
+        expect(purchaseResult.total).toBe(saleResult.total);
+
         returnResult.lines.forEach((line, j) => {
+          expect(line.lineSubtotal).toBe(saleResult.lines[j].lineSubtotal);
+          expect(line.lineTax).toBe(saleResult.lines[j].lineTax);
+          expect(line.lineTotal).toBe(saleResult.lines[j].lineTotal);
+        });
+
+        purchaseResult.lines.forEach((line, j) => {
           expect(line.lineSubtotal).toBe(saleResult.lines[j].lineSubtotal);
           expect(line.lineTax).toBe(saleResult.lines[j].lineTax);
           expect(line.lineTotal).toBe(saleResult.lines[j].lineTotal);

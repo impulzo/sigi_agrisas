@@ -25,14 +25,14 @@ export function useTaxRateMutations(): UseTaxRateMutationsResult {
   const createOne = useCallback(async (body: CreateTaxRateBody): Promise<TaxRate | null> => {
     setIsSaving(true); setMutationError(null);
     try { return await createTaxRate(body); }
-    catch (err) { setMutationError((err as Error).message ?? "Error al crear"); return null; }
+    catch (err) { setMutationError((err as Error).message ?? "Error al crear"); throw err; }
     finally { setIsSaving(false); }
   }, []);
 
   const updateOne = useCallback(async (id: string, body: UpdateTaxRateBody): Promise<TaxRate | null> => {
     setIsSaving(true); setMutationError(null);
     try { return await updateTaxRate(id, body); }
-    catch (err) { setMutationError((err as Error).message ?? "Error al actualizar"); return null; }
+    catch (err) { setMutationError((err as Error).message ?? "Error al actualizar"); throw err; }
     finally { setIsSaving(false); }
   }, []);
 

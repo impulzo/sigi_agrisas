@@ -57,6 +57,7 @@ export class PrismaBillingLookupService implements BillingLookupService {
       taxRegime: c.taxRegime,
       cfdiUse: c.cfdiUse,
       taxZipCode: c.taxZipCode,
+      email: c.email,
     };
   }
 

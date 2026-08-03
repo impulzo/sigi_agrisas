@@ -13,7 +13,7 @@ import { ReturnInvalidQuantityError } from "@/modules/returns/domain/errors/Retu
 
 const NOW = new Date("2026-06-01T10:00:00Z");
 
-type SaleItemOverrides = { id: string; saleId: string; productId?: string; productPriceId?: string | null; quantity?: number; unitPrice?: number; discountPct?: number | null; ivaRate?: number | null; iepsRate?: number | null; lineSubtotal?: number; lineTax?: number; lineTotal?: number };
+type SaleItemOverrides = { id: string; saleId: string; productId?: string; productPriceId?: string | null; dosificationId?: string | null; numPartsSnapshot?: number | null; quantity?: number; unitPrice?: number; discountPct?: number | null; ivaRate?: number | null; iepsRate?: number | null; lineSubtotal?: number; lineTax?: number; lineTotal?: number };
 
 function makeSaleItem(overrides: SaleItemOverrides): SaleItem {
   return SaleItem.create({
@@ -21,6 +21,8 @@ function makeSaleItem(overrides: SaleItemOverrides): SaleItem {
     saleId: overrides.saleId,
     productId: overrides.productId ?? "prod-1",
     productPriceId: overrides.productPriceId ?? "price-1",
+    dosificationId: overrides.dosificationId ?? null,
+    numPartsSnapshot: overrides.numPartsSnapshot ?? null,
     productCodeSnapshot: "PROD001",
     productNameSnapshot: "Producto Test",
     priceNameSnapshot: "Precio Base",
@@ -118,6 +120,29 @@ describe("CreateReturnUseCase", () => {
       });
 
       expect(returnRepo.getInventory("branch-1", "prod-1")).toBe(8);
+    });
+
+    it("propaga dosificationId/numPartsSnapshot y decrementa sólo la fracción del stock base", async () => {
+      const item = makeSaleItem({
+        id: "si-1", saleId: "sale-1", productId: "prod-1", quantity: 3,
+        dosificationId: "dosif-1", numPartsSnapshot: 4,
+      });
+      const sale = makeCompletedSale([item]);
+      seedSale(saleRepo, sale);
+      returnRepo.setInventory("branch-1", "prod-1", 10);
+
+      const dto = await useCase.execute({
+        saleId: "sale-1",
+        creatorId: "00000000-0000-0000-0000-000000000001",
+        reason: "Defecto",
+        returnedAt: NOW,
+        notes: null,
+        items: [{ saleItemId: "si-1", quantity: 2 }],
+      });
+
+      expect(dto.items[0].quantity).toBe(2);
+      // 2 partes de numParts=4 → 0.5 unidades base incrementadas
+      expect(returnRepo.getInventory("branch-1", "prod-1")).toBe(10.5);
     });
   });
 
@@ -289,6 +314,8 @@ describe("CreateReturnUseCase", () => {
         saleItemId: "si-1",
         productId: "prod-1",
         productPriceId: null,
+        dosificationId: null,
+        numPartsSnapshot: null,
         productCodeSnapshot: "PROD001",
         productNameSnapshot: "P",
         priceNameSnapshot: "Base",
@@ -344,6 +371,8 @@ describe("CreateReturnUseCase", () => {
         saleItemId: "si-1",
         productId: "prod-1",
         productPriceId: null,
+        dosificationId: null,
+        numPartsSnapshot: null,
         productCodeSnapshot: "PROD001",
         productNameSnapshot: "P",
         priceNameSnapshot: "Base",

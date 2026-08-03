@@ -5,9 +5,7 @@
 Define la interfaz de usuario del módulo de abonos (pagos de crédito): listado paginado de abonos, detalle con acciones, sección de abonos embebida en el detalle de venta, modal de registro, historial exportable a PDF y componentes de estado de pago.
 
 ---
-
 ## Requirements
-
 ### Requirement: Payments list page
 
 El sistema SHALL proveer la ruta `app/(private)/payments/page.tsx` (Server Component) con `metadata.title = "Abonos"`. Renderiza `<PaymentsListPage />` (Client Component) que consume `usePaymentsList`.
@@ -73,9 +71,10 @@ El sistema SHALL proveer `app/(private)/payments/[id]/page.tsx` (Server Componen
 Contenido:
 - Título "Abonos" con contador `(N)`.
 - Barra de progreso visual: `paidAmount / total` redondeado a 2 dec MXN; texto `"$X.XX abonado de $Y.YY"`.
-- Tabla de abonos: columnas — Folio recibo, Cobrador, Método, Monto, Fecha, Estado. Sin paginación (máx abonos por venta es razonable).
+- Tabla de abonos: columnas — Folio recibo, Cobrador, Método, Monto, Fecha, Estado. Sin paginación (máx abonos por venta es razonable). Un abono con desglose por línea (`items` no vacío) SHALL mostrar un indicador expandible ("Ver desglose") listando `{productNameSnapshot, amount}` por línea.
+- Tabla de saldo por línea ("Saldo por producto"): columnas — Producto, Total línea, Pagado, Pendiente, derivada de `lineBalances` de la respuesta. Visible solo cuando `sale.isCredit === true`, independiente de si hay abonos aún (líneas sin abono muestran `Pagado: $0.00`).
 - CTA "+ Registrar abono" visible si `sale.status === 'completed'` y `can("payments:create")`; abre `RegisterPaymentModal`.
-- Sección vacía (sin abonos aún) muestra texto "Sin abonos registrados".
+- Sección vacía (sin abonos aún) muestra texto "Sin abonos registrados" (la tabla de saldo por línea SHALL seguir visible aunque no haya abonos, mostrando el pendiente completo de cada línea).
 
 Tras registrar o cancelar un abono, la sección llama `onPaymentMutated()` prop que propaga al padre (`SaleDetailPage`) para re-fetch del `sale` (actualiza `paidAmount`, `paymentStatus`).
 
@@ -94,6 +93,16 @@ Tras registrar o cancelar un abono, la sección llama `onPaymentMutated()` prop 
 - **WHEN** `sale.status === 'cancelled'`
 - **THEN** el botón "+ Registrar abono" no se muestra
 
+#### Scenario: Tabla de saldo por línea visible sin abonos
+
+- **WHEN** `sale.isCredit === true` y aún no hay abonos registrados
+- **THEN** la tabla "Saldo por producto" muestra cada línea con `Pagado: $0.00` y `Pendiente` igual al total de la línea
+
+#### Scenario: Desglose de un abono por línea es expandible
+
+- **WHEN** un abono en la tabla tiene `items` no vacío
+- **THEN** la fila muestra un control "Ver desglose" que al expandirse lista cada `{producto, monto}` del abono
+
 ---
 
 ### Requirement: RegisterPaymentModal
@@ -103,9 +112,12 @@ Modal lanzado desde `SalePaymentsSection`. Campos:
 - `paymentMethodId: string` — selector usando `usePaymentMethodsOptions()` (solo activos). Default: primer método no-crédito disponible.
 - `folioId: string` — selector usando `useFoliosOptions()` (solo activos). Default: folio cuyo `code='RECIBO'` si existe en la lista.
 - `notes?: string` — campo de texto opcional, max 1000 chars.
+- Un toggle opcional "Repartir por producto" (`off` por default, preserva el flujo actual). Al activarlo, el modal reemplaza el campo `amount` único por una lista de las líneas de la venta (`lineBalances`), cada una con un input de monto independiente (placeholder: saldo pendiente de esa línea, `0` por default) y un badge con su saldo pendiente. `amount` del body SHALL calcularse como la suma de los montos de línea capturados (no editable directamente en este modo). Líneas con `dueAmount = 0` SHALL aparecer deshabilitadas (ya liquidadas).
 
-Validación Zod client-side en `_logic/schemas/registerPayment.ts`. En submit: llama `registerPayment(saleId, body)` del service. Errores:
+Validación Zod client-side en `_logic/schemas/registerPayment.ts`. En submit: llama `registerPayment(saleId, body)` del service, incluyendo `items` cuando el toggle está activo. Errores:
 - 409 `PaymentExceedsDueAmount` → error inline en campo `amount`: "El monto supera el saldo pendiente ($X.XX)".
+- 409 `PaymentExceedsLineDueAmount {saleItemId, due}` → error inline en el input de esa línea específica: "Supera el saldo pendiente de esta línea ($X.XX)"; las demás líneas conservan su valor capturado.
+- 400 `PaymentItemsAmountMismatch` → no debería ocurrir desde la UI (el total se deriva de la suma), pero si el backend lo rechaza se muestra como error genérico.
 - 409 `SaleNotPayable` → error genérico: "Esta venta no admite abonos".
 - 400 → mensaje del backend.
 
@@ -121,11 +133,29 @@ En éxito: cierra modal, llama `onSuccess()`.
 - **WHEN** el operador ingresa `amount=500` y el saldo pendiente es `300`
 - **THEN** el submit falla con error inline "El monto supera el saldo pendiente ($300.00)" sin cerrar el modal
 
----
+#### Scenario: Modo repartir por producto activo
+
+- **WHEN** el operador activa "Repartir por producto"
+- **THEN** el campo `amount` único se oculta y aparece un input de monto por cada línea de la venta con saldo pendiente, mostrando su saldo como hint
+
+#### Scenario: Envío en modo repartir por producto
+
+- **WHEN** el operador captura `$60` en la línea A y `$50` en la línea B, y confirma
+- **THEN** el servicio llama `registerPayment(saleId, { amount: 110, items: [{saleItemId: A, amount: 60}, {saleItemId: B, amount: 50}], ... })`
+
+#### Scenario: Línea ya liquidada aparece deshabilitada
+
+- **WHEN** una línea tiene `dueAmount = 0`
+- **THEN** su input de monto aparece deshabilitado en modo "Repartir por producto"
+
+#### Scenario: Error de línea excedida resalta solo esa línea
+
+- **WHEN** el backend responde `409 PaymentExceedsLineDueAmount` para la línea B
+- **THEN** solo el input de la línea B muestra el error inline; los demás inputs conservan su valor capturado
 
 ### Requirement: SalePaymentStatusBadge
 
-Nuevo componente `app/(private)/sales/_blocks/SalePaymentStatusBadge.tsx` (presentational). Props: `status: "paid" | "partial" | "pending"`.
+El sistema SHALL exponer el componente `app/(private)/sales/_blocks/SalePaymentStatusBadge.tsx` (presentational). Props: `status: "paid" | "partial" | "pending"`.
 
 - `paid` → chip verde — "Pagado"
 - `partial` → chip ámbar — "Parcial"
@@ -219,3 +249,4 @@ El módulo frontend de pagos (`app/(private)/payments/_logic/`) SHALL definir la
 
 - **WHEN** la submisión del abono resulta en `FolioScopeMismatchError`
 - **THEN** el modal muestra el error como `formError` (banner inline) en lugar de cerrar el modal o mostrar un mensaje genérico irrecuperable
+

@@ -23,7 +23,7 @@ function makeItemId(): string {
 }
 
 function emptyJoined() {
-  return { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodIsCredit: false };
+  return { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodName: null, paymentMethodIsCredit: false };
 }
 
 /**
@@ -70,6 +70,8 @@ export class InMemorySaleRepository implements SaleRepository {
         saleId: "pending",
         productId: it.productId,
         productPriceId: it.productPriceId,
+        dosificationId: it.dosificationId,
+        numPartsSnapshot: it.numPartsSnapshot,
         productCodeSnapshot: it.productCodeSnapshot,
         productNameSnapshot: it.productNameSnapshot,
         priceNameSnapshot: it.priceNameSnapshot,
@@ -149,6 +151,8 @@ export class InMemorySaleRepository implements SaleRepository {
         saleId: id,
         productId: it.productId,
         productPriceId: it.productPriceId,
+        dosificationId: it.dosificationId,
+        numPartsSnapshot: it.numPartsSnapshot,
         productCodeSnapshot: it.productCodeSnapshot,
         productNameSnapshot: it.productNameSnapshot,
         priceNameSnapshot: it.priceNameSnapshot,

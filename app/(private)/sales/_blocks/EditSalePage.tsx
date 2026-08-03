@@ -17,14 +17,16 @@ import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { getProductPrices } from "../../pos/_logic/services/getProductPrices";
+import { getProductDosifications } from "../../pos/_logic/services/getProductDosifications";
 import { formatMxCurrency } from "../../pos/_logic/lib/formatMxCurrency";
-import type { ProductDto, ProductPriceDto, CustomerDto } from "../../pos/_logic/types/api";
+import type { ProductDto, ProductPriceDto, DosificationOptionDto, CustomerDto } from "../../pos/_logic/types/api";
 import type { EditSaleBody } from "../_logic/types/api";
 import Link from "next/link";
 
 type PricePicker = {
   product: ProductDto;
   prices: ProductPriceDto[];
+  dosifications: DosificationOptionDto[];
   isLoading: boolean;
   lineId?: string;
 };
@@ -55,6 +57,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
     changeTier,
     removeLine,
     clear,
+    addLineFromDosification,
   } = useCart();
 
   const [initialized, setInitialized] = useState(false);
@@ -83,8 +86,11 @@ export function EditSalePage({ id }: EditSalePageProps) {
   }, [sale, initialized]);
 
   async function handleAddProduct(product: ProductDto) {
-    const prices = await getProductPrices(product.id);
-    setPricePicker({ product, prices, isLoading: false });
+    const [prices, dosifications] = await Promise.all([
+      getProductPrices(product.id),
+      getProductDosifications(product.id),
+    ]);
+    setPricePicker({ product, prices, dosifications, isLoading: false });
   }
 
   function handleChangeTier(lineId: string) {
@@ -101,9 +107,12 @@ export function EditSalePage({ id }: EditSalePageProps) {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    setPricePicker({ product: fakeProduct, prices: [], isLoading: true, lineId });
-    getProductPrices(line.productId).then((prices) => {
-      setPricePicker((prev) => prev ? { ...prev, prices, isLoading: false } : null);
+    setPricePicker({ product: fakeProduct, prices: [], dosifications: [], isLoading: true, lineId });
+    Promise.all([
+      getProductPrices(line.productId),
+      getProductDosifications(line.productId),
+    ]).then(([prices, dosifications]) => {
+      setPricePicker((prev) => prev ? { ...prev, prices, dosifications, isLoading: false } : null);
     });
   }
 
@@ -119,6 +128,12 @@ export function EditSalePage({ id }: EditSalePageProps) {
     setPricePicker(null);
   }
 
+  function handleDosificationConfirm(dosification: DosificationOptionDto, quantity: number) {
+    if (!pricePicker) return;
+    addLineFromDosification(pricePicker.product, dosification, quantity);
+    setPricePicker(null);
+  }
+
   async function handleSubmit() {
     if (!sale) return;
     const body: EditSaleBody = {
@@ -127,7 +142,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
       notes: notes.trim() || null,
       items: lines.length > 0 ? lines.map((l) => ({
         productId: l.productId,
-        productPriceId: l.productPriceId,
+        ...(l.dosificationId ? { dosificationId: l.dosificationId } : { productPriceId: l.productPriceId }),
         quantity: l.quantity,
         discountPctOverride: l.discountPct > 0 ? l.discountPct : undefined,
       })) : undefined,
@@ -228,8 +243,10 @@ export function EditSalePage({ id }: EditSalePageProps) {
         <PriceTierPicker
           product={pricePicker.product}
           prices={pricePicker.prices}
+          dosifications={pricePicker.dosifications}
           isLoading={pricePicker.isLoading}
           onConfirm={handlePriceConfirm}
+          onConfirmDosification={handleDosificationConfirm}
           onClose={() => setPricePicker(null)}
         />
       )}

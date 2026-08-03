@@ -31,6 +31,7 @@ export interface CustomerForBilling {
   taxRegime: string | null;
   cfdiUse: string | null;
   taxZipCode: string | null;
+  email: string | null;
 }
 
 export interface BranchForBilling {

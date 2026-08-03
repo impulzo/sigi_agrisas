@@ -1,6 +1,13 @@
 import { authFetch, NetworkError } from "../../../../_lib/authFetch";
 import type { RegisterPaymentBody } from "../types/api";
-import { PaymentExceedsDueAmountError, SaleNotPayableError, FolioScopeMismatchError } from "../errors";
+import {
+  PaymentExceedsDueAmountError,
+  PaymentExceedsLineDueAmountError,
+  PaymentItemsAmountMismatchError,
+  SaleItemNotFoundError,
+  SaleNotPayableError,
+  FolioScopeMismatchError,
+} from "../errors";
 
 export async function registerPayment(
   body: RegisterPaymentBody,
@@ -20,9 +27,12 @@ export async function registerPayment(
   if (res.ok) return;
 
   if (res.status === 409) {
-    const data = await res.json() as { error: string; due?: string; message?: string };
+    const data = await res.json() as { error: string; due?: string; message?: string; saleItemId?: string };
     if (data.error === "PaymentExceedsDueAmount") {
       throw new PaymentExceedsDueAmountError(data.due ?? "0.00");
+    }
+    if (data.error === "PaymentExceedsLineDueAmount") {
+      throw new PaymentExceedsLineDueAmountError(data.saleItemId ?? "", data.due ?? "0.00");
     }
     if (data.error === "SaleNotPayable") {
       throw new SaleNotPayableError({ message: data.message });
@@ -30,8 +40,12 @@ export async function registerPayment(
   }
 
   if (res.status === 400) {
-    const data = await res.json() as { error?: string; message?: string; expected?: string; actual?: string };
+    const data = await res.json() as {
+      error?: string; message?: string; expected?: string; actual?: string; saleItemId?: string;
+    };
     if (data.error === "FolioScopeMismatch") throw new FolioScopeMismatchError(data.expected ?? "", data.actual ?? "");
+    if (data.error === "PaymentItemsAmountMismatch") throw new PaymentItemsAmountMismatchError();
+    if (data.error === "SaleItemNotFound") throw new SaleItemNotFoundError(data.saleItemId ?? "");
     throw new Error(data.message ?? "Error al registrar el abono");
   }
 

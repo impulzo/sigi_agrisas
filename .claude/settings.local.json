@@ -154,7 +154,10 @@
       "Bash(git -C /Users/kevdany17/Documents/Proyects/sigi/agrisas/agrisas_panel status --porcelain openspec)",
       "Bash(git -C /Users/kevdany17/Documents/Proyects/sigi/agrisas/agrisas_panel log --oneline -5 -- openspec/changes/add-carta-porte openspec/changes/carta-porte-ui)",
       "Bash(awk 'NR<=35 {printf \"%d\\\\t%s\\\\n\", NR, $0}' openspec/changes/add-carta-porte/specs/waybills-api/spec.md)",
-      "Bash(node -p \"require\\('./package.json'\\).dependencies.zod || require\\('./package.json'\\).devDependencies.zod\")"
+      "Bash(node -p \"require\\('./package.json'\\).dependencies.zod || require\\('./package.json'\\).devDependencies.zod\")",
+      "mcp__codegraph__codegraph_explore",
+      "Bash(xargs -I{} sh -c 'echo {}; cat {}')",
+      "Bash(gh auth *)"
     ]
   },
   "enabledMcpjsonServers": [
