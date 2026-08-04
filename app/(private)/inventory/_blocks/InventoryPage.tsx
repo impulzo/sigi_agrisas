@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useDebounce } from "../../../_hooks/useDebounce";
 import { useBranchInventory } from "../_logic/hooks/useBranchInventory";
@@ -27,10 +27,17 @@ type ModalType = "assign" | "adjust" | "edit" | null;
 interface ActiveModal { type: ModalType; item: InventoryItem | null; }
 
 export function InventoryPage() {
-  const { can } = useCurrentUser();
+  const { can, branchId: myBranchId } = useCurrentUser();
   const { options: branchOptions, isLoading: branchesLoading } = useBranchesOptions();
+  const isBypass = can("branches:access_all");
 
   const [branchId, setBranchId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (isBypass !== true) {
+      setBranchId(myBranchId ?? undefined);
+    }
+  }, [isBypass, myBranchId]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [searchInput, setSearchInput] = useState("");
@@ -122,23 +129,38 @@ export function InventoryPage() {
         <p className="text-body-md text-on-surface-variant mt-1">Gestión de stock por sucursal.</p>
       </div>
 
-      <div className="flex items-center gap-3">
-        <label className="text-label-lg text-on-surface-variant">Sucursal:</label>
-        <select
-          value={branchId ?? ""}
-          onChange={(e) => handleBranchChange(e.target.value)}
-          disabled={branchesLoading}
-          className="rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary min-w-[200px]"
-        >
-          <option value="">Selecciona una sucursal</option>
-          {branchOptions.map((b) => (
-            <option key={b.id} value={b.id}>{b.name}</option>
-          ))}
-        </select>
-      </div>
+      {isBypass === true ? (
+        <div className="flex items-center gap-3">
+          <label className="text-label-lg text-on-surface-variant">Sucursal:</label>
+          <select
+            value={branchId ?? ""}
+            onChange={(e) => handleBranchChange(e.target.value)}
+            disabled={branchesLoading}
+            className="rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary min-w-[200px]"
+          >
+            <option value="">Selecciona una sucursal</option>
+            {branchOptions.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        branchId && (
+          <div className="flex items-center gap-2">
+            <label className="text-label-lg text-on-surface-variant">Sucursal:</label>
+            <span className="text-body-md font-medium text-on-surface">
+              {branchOptions.find((b) => b.id === branchId)?.name ?? "—"}
+            </span>
+          </div>
+        )
+      )}
 
       {!branchId ? (
-        <EmptyState icon="store" title="Selecciona una sucursal" description="Elige una sucursal para ver su inventario." />
+        isBypass === true ? (
+          <EmptyState icon="store" title="Selecciona una sucursal" description="Elige una sucursal para ver su inventario." />
+        ) : (
+          <EmptyState icon="store" title="Sin sucursal asignada" description="Tu usuario no tiene una sucursal asignada. Contacta a un administrador." />
+        )
       ) : (
         <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
           <div className="px-4 py-4 border-b border-outline-variant flex flex-col gap-3">

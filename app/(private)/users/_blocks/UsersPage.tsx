@@ -24,12 +24,13 @@ export function UsersPage() {
   const [search, setSearch] = useState("");
   const [activeRoles, setActiveRoles] = useState<string[]>([]);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { users, total, isLoading, error, refresh } = useUsers({ page, pageSize });
   const { roles: catalog, isLoading: catalogLoading } = useRolesCatalog();
-  const { isSaving, mutationError, clearError, saveUserDiff, removeUser } = useUserMutations();
+  const { isSaving, mutationError, clearError, createNewUser, saveUserDiff, removeUser } = useUserMutations();
 
   const availableRoles = useMemo(() => {
     const roleSet = new Set<string>();
@@ -81,16 +82,43 @@ export function UsersPage() {
     setEditingUser(user);
   }, [clearError]);
 
-  const handleCloseModal = useCallback(() => setEditingUser(null), []);
+  const handleOpenCreate = useCallback(() => {
+    clearError();
+    setIsCreating(true);
+  }, [clearError]);
+
+  const handleCloseModal = useCallback(() => {
+    setEditingUser(null);
+    setIsCreating(false);
+  }, []);
 
   const handleSave = useCallback(
     async (params: {
       name: string;
       email: string;
+      password: string;
       avatarUrlInput: string;
       avatarReset: boolean;
+      branchId: string | null;
       stagedRoleIds: Set<string>;
     }) => {
+      if (isCreating) {
+        const created = await createNewUser({
+          name: params.name,
+          email: params.email,
+          password: params.password,
+          avatarUrlInput: params.avatarUrlInput,
+          branchId: params.branchId,
+          stagedRoleIds: params.stagedRoleIds,
+          catalog,
+        });
+        if (created !== null) {
+          setIsCreating(false);
+          setPage(1);
+          refresh();
+        }
+        return;
+      }
       if (!editingUser) return;
       const result = await saveUserDiff({
         userId: editingUser.id,
@@ -103,7 +131,7 @@ export function UsersPage() {
         refresh();
       }
     },
-    [editingUser, saveUserDiff, catalog, refresh]
+    [isCreating, editingUser, createNewUser, saveUserDiff, catalog, refresh]
   );
 
   const handleDelete = useCallback((user: User) => {
@@ -174,6 +202,8 @@ export function UsersPage() {
             availableRoles={availableRoles}
             onToggleRole={handleToggleRole}
             onClearFilters={handleClearFilters}
+            canCreate={canWrite !== false}
+            onCreateClick={handleOpenCreate}
           />
         </div>
 
@@ -204,7 +234,8 @@ export function UsersPage() {
       </div>
 
       <UserEditModal
-        open={editingUser !== null}
+        open={editingUser !== null || isCreating}
+        mode={isCreating ? "create" : "edit"}
         user={editingUser}
         catalog={catalog}
         catalogLoading={catalogLoading}

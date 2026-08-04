@@ -1,7 +1,7 @@
 import { authFetch, ForbiddenError, NetworkError } from "../../../../_lib/authFetch";
 import type { UpdateUserBody, UpdateUserResponse } from "../types/api";
 import type { User } from "../types/domain";
-import { UserNotFoundError, EmailAlreadyInUseError, SelfModificationError } from "../errors";
+import { UserNotFoundError, EmailAlreadyInUseError, SelfModificationError, BranchNotFoundError } from "../errors";
 import { toUser } from "./listUsers";
 
 export async function updateUser(
@@ -26,6 +26,11 @@ export async function updateUser(
   }
   if (res.status === 409) throw new EmailAlreadyInUseError();
   if (res.status === 404) throw new UserNotFoundError();
+  if (res.status === 400) {
+    const body = await res.json().catch(() => ({}));
+    if (body?.error === "Branch not found") throw new BranchNotFoundError();
+    throw new NetworkError();
+  }
   if (!res.ok) throw new NetworkError();
   const data = (await res.json()) as UpdateUserResponse;
   return toUser(data);

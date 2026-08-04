@@ -4,6 +4,7 @@ import type { WaybillDetail } from "../types/domain";
 import {
   InvalidBranchPairError,
   BranchAddressIncompleteError,
+  ProductRequiredForSimpleTransferError,
   ProductNotFoundForTransferError,
   InsufficientStockAtOriginError,
   FacturamaStampError,
@@ -41,6 +42,9 @@ export async function createWaybill(body: CreateWaybillRequest, fetchImpl = auth
     const errBody = await res.json().catch(() => ({}));
     if (errBody.error === "BranchAddressIncomplete") {
       throw new BranchAddressIncompleteError(errBody.branchId, errBody.missingFields ?? []);
+    }
+    if (errBody.error === "ProductRequiredForSimpleTransfer") {
+      throw new ProductRequiredForSimpleTransferError(errBody.itemIndex);
     }
     if (errBody.error === "ProductNotFound") {
       throw new ProductNotFoundForTransferError(errBody.productId);

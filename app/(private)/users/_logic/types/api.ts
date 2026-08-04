@@ -3,6 +3,8 @@ export interface UserDto {
   name?: string;
   email: string;
   avatarUrl: string;
+  branchId: string | null;
+  branchName: string | null;
   roles: string[];
   createdAt: string;
   updatedAt: string;
@@ -15,10 +17,22 @@ export interface ListUsersResponse {
   pageSize: number;
 }
 
+export interface CreateUserBody {
+  name: string;
+  email: string;
+  password: string;
+  avatarUrl?: string | null;
+  branchId?: string | null;
+  roleIds?: string[];
+}
+
+export type CreateUserResponse = UserDto;
+
 export interface UpdateUserBody {
   name?: string;
   email?: string;
   avatarUrl?: string | null;
+  branchId?: string | null;
 }
 
 export type UpdateUserResponse = UserDto;

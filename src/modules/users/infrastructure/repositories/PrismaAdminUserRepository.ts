@@ -1,8 +1,13 @@
 import { PrismaClient } from "@prisma/client";
-import { AdminUserRepository, AdminUserUpdateData } from "@/modules/users/application/ports/AdminUserRepository";
+import {
+  AdminUserRepository,
+  AdminUserCreateData,
+  AdminUserUpdateData,
+} from "@/modules/users/application/ports/AdminUserRepository";
 import { AdminUser } from "@/modules/users/domain/entities/AdminUser";
 import { UserNotFoundError } from "@/modules/users/domain/errors/UserNotFoundError";
 import { EmailAlreadyInUseError } from "@/modules/users/domain/errors/EmailAlreadyInUseError";
+import { RoleNotFoundError } from "@/modules/rbac/domain/errors/RoleNotFoundError";
 import { resolveAvatarUrl } from "@/modules/users/domain/utils/avatarUrl";
 
 type PrismaUserWithRoles = {
@@ -62,6 +67,33 @@ export class PrismaAdminUserRepository implements AdminUserRepository {
   async findById(id: string): Promise<AdminUser | null> {
     const row = await this.prisma.user.findUnique({ where: { id }, include });
     return row ? toAdminUser(row) : null;
+  }
+
+  async create(data: AdminUserCreateData): Promise<AdminUser> {
+    try {
+      const row = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.user.create({
+          data: {
+            name: data.name,
+            email: data.email,
+            passwordHash: data.passwordHash,
+            avatarUrl: data.avatarUrl ?? null,
+            branchId: data.branchId ?? null,
+          },
+        });
+        if (data.roleIds && data.roleIds.length > 0) {
+          await tx.userRole.createMany({
+            data: data.roleIds.map((roleId) => ({ userId: created.id, roleId })),
+          });
+        }
+        return tx.user.findUniqueOrThrow({ where: { id: created.id }, include });
+      });
+      return toAdminUser(row);
+    } catch (err) {
+      if (isPrismaUniqueError(err)) throw new EmailAlreadyInUseError();
+      if (isPrismaFkConstraintError(err)) throw new RoleNotFoundError("one or more roleIds");
+      throw err;
+    }
   }
 
   async update(id: string, data: AdminUserUpdateData): Promise<AdminUser> {

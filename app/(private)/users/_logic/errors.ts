@@ -12,6 +12,13 @@ export class EmailAlreadyInUseError extends Error {
   }
 }
 
+export class BranchNotFoundError extends Error {
+  constructor() {
+    super("Branch not found");
+    this.name = "BranchNotFoundError";
+  }
+}
+
 export class SelfModificationError extends Error {
   action: "modify" | "delete";
   constructor(action: "modify" | "delete") {

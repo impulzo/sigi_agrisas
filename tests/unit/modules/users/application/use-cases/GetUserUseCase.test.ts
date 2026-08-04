@@ -7,6 +7,7 @@ function makeRepo(user: AdminUser | null): AdminUserRepository {
   return {
     findAll: jest.fn(),
     findById: jest.fn().mockResolvedValue(user),
+    create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
   };

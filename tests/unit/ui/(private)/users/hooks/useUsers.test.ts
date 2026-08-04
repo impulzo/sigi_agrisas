@@ -2,7 +2,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { useUsers } from "../../../../../../app/(private)/users/_logic/hooks/useUsers";
 import * as listUsersModule from "../../../../../../app/(private)/users/_logic/services/listUsers";
 
-const MOCK_RESULT = { users: [{ id: "u1", email: "a@test.com", avatarUrl: "", roles: [], createdAt: new Date(), updatedAt: new Date() }], total: 1, page: 1, pageSize: 20 };
+const MOCK_RESULT = { users: [{ id: "u1", email: "a@test.com", avatarUrl: "", branchId: null, branchName: null, roles: [], createdAt: new Date(), updatedAt: new Date() }], total: 1, page: 1, pageSize: 20 };
 
 describe("useUsers", () => {
   beforeEach(() => jest.clearAllMocks());

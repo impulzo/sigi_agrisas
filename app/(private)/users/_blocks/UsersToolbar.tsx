@@ -8,6 +8,8 @@ interface UsersToolbarProps {
   availableRoles: string[];
   onToggleRole: (role: string) => void;
   onClearFilters: () => void;
+  canCreate?: boolean;
+  onCreateClick?: () => void;
 }
 
 export function UsersToolbar({
@@ -17,20 +19,34 @@ export function UsersToolbar({
   availableRoles,
   onToggleRole,
   onClearFilters,
+  canCreate = false,
+  onCreateClick,
 }: UsersToolbarProps) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">
-          <Icon name="search" size={18} />
-        </span>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Buscar por nombre o email"
-          className="w-full pl-10 pr-4 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary"
-        />
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">
+            <Icon name="search" size={18} />
+          </span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Buscar por nombre o email"
+            className="w-full pl-10 pr-4 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        {canCreate && (
+          <button
+            type="button"
+            onClick={onCreateClick}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
+          >
+            <Icon name="person_add" size={18} />
+            Crear usuario
+          </button>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <button

@@ -4,12 +4,15 @@ import { useState, useEffect, useRef } from "react";
 import { Avatar } from "../../../_components/atoms/Avatar/Avatar";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
+import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import { updateUserSchema } from "../_logic/schemas/updateUser.schema";
+import { createUserSchema } from "../_logic/schemas/createUser.schema";
 import type { User } from "../_logic/types/domain";
 import type { RoleOption } from "../_logic/services/listAvailableRoles";
 
 interface UserEditModalProps {
   open: boolean;
+  mode: "create" | "edit";
   user: User | null;
   catalog: RoleOption[];
   catalogLoading: boolean;
@@ -18,15 +21,25 @@ interface UserEditModalProps {
   onSave: (params: {
     name: string;
     email: string;
+    password: string;
     avatarUrlInput: string;
     avatarReset: boolean;
+    branchId: string | null;
     stagedRoleIds: Set<string>;
   }) => void;
   onClose: () => void;
 }
 
+interface ValidationErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+  avatarUrl?: string;
+}
+
 export function UserEditModal({
   open,
+  mode,
   user,
   catalog,
   catalogLoading,
@@ -36,13 +49,16 @@ export function UserEditModal({
   onClose,
 }: UserEditModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const { options: branchOptions } = useBranchesOptions();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [avatarUrlInput, setAvatarUrlInput] = useState("");
   const [avatarReset, setAvatarReset] = useState(false);
+  const [branchId, setBranchId] = useState<string | null>(null);
   const [stagedRoleIds, setStagedRoleIds] = useState<Set<string>>(new Set());
-  const [validationErrors, setValidationErrors] = useState<{ email?: string; avatarUrl?: string }>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -60,32 +76,71 @@ export function UserEditModal({
   }, [onClose]);
 
   useEffect(() => {
-    if (!user || !open) return;
-    setName(user.name ?? "");
-    setEmail(user.email);
+    if (!open) return;
+    setPassword("");
     setAvatarUrlInput("");
     setAvatarReset(false);
     setValidationErrors({});
-    const initialRoleIds = new Set(
-      catalog.filter((r) => user.roles.includes(r.name)).map((r) => r.id)
-    );
-    setStagedRoleIds(initialRoleIds);
-  }, [user, open, catalog]);
+    if (mode === "edit" && user) {
+      setName(user.name ?? "");
+      setEmail(user.email);
+      setBranchId(user.branchId);
+      const initialRoleIds = new Set(
+        catalog.filter((r) => user.roles.includes(r.name)).map((r) => r.id)
+      );
+      setStagedRoleIds(initialRoleIds);
+    } else if (mode === "create") {
+      setName("");
+      setEmail("");
+      setBranchId(null);
+      setStagedRoleIds(new Set());
+    }
+  }, [user, open, catalog, mode]);
 
-  if (!user) return null;
+  if (mode === "edit" && !user) return null;
 
-  const originalRoleIds = new Set(
-    catalog.filter((r) => user.roles.includes(r.name)).map((r) => r.id)
-  );
-  const isDirty =
-    name !== (user.name ?? "") ||
-    email !== user.email ||
-    avatarReset ||
-    avatarUrlInput !== "" ||
-    stagedRoleIds.size !== originalRoleIds.size ||
-    [...stagedRoleIds].some((id) => !originalRoleIds.has(id));
+  const originalRoleIds =
+    mode === "edit" && user
+      ? new Set(catalog.filter((r) => user.roles.includes(r.name)).map((r) => r.id))
+      : new Set<string>();
+
+  const isEditDirty =
+    mode === "edit" &&
+    user !== null &&
+    (name !== (user.name ?? "") ||
+      email !== user.email ||
+      avatarReset ||
+      avatarUrlInput !== "" ||
+      branchId !== user.branchId ||
+      stagedRoleIds.size !== originalRoleIds.size ||
+      [...stagedRoleIds].some((id) => !originalRoleIds.has(id)));
+
+  const isCreateValid = name.trim() !== "" && email.trim() !== "" && password.length >= 8;
 
   function validate(): boolean {
+    if (mode === "create") {
+      const result = createUserSchema.safeParse({
+        name,
+        email,
+        password,
+        avatarUrl: avatarUrlInput || undefined,
+      });
+      if (!result.success) {
+        const errs: ValidationErrors = {};
+        for (const issue of result.error.issues) {
+          const key = issue.path[0];
+          if (key === "email") errs.email = issue.message;
+          if (key === "avatarUrl") errs.avatarUrl = issue.message;
+          if (key === "password") errs.password = issue.message;
+          if (key === "name") errs.name = issue.message;
+        }
+        setValidationErrors(errs);
+        return false;
+      }
+      setValidationErrors({});
+      return true;
+    }
+
     const partial = {
       name: name || undefined,
       email: email !== user!.email ? email : undefined,
@@ -93,7 +148,7 @@ export function UserEditModal({
     };
     const result = updateUserSchema.safeParse(partial);
     if (!result.success) {
-      const errs: { email?: string; avatarUrl?: string } = {};
+      const errs: ValidationErrors = {};
       for (const issue of result.error.issues) {
         if (issue.path[0] === "email") errs.email = issue.message;
         if (issue.path[0] === "avatarUrl") errs.avatarUrl = issue.message;
@@ -107,7 +162,7 @@ export function UserEditModal({
 
   function handleSave() {
     if (!validate()) return;
-    onSave({ name, email, avatarUrlInput, avatarReset, stagedRoleIds });
+    onSave({ name, email, password, avatarUrlInput, avatarReset, branchId, stagedRoleIds });
   }
 
   function toggleRole(roleId: string) {
@@ -119,13 +174,22 @@ export function UserEditModal({
     });
   }
 
+  const avatarSrc = mode === "edit" ? (avatarReset ? undefined : (avatarUrlInput || user?.avatarUrl)) : (avatarUrlInput || undefined);
+  const avatarFallback = (name || email || user?.name || user?.email || "?")[0]?.toUpperCase() ?? "?";
+  const isBusy = isSaving;
+  const isSubmitDisabled = mode === "create"
+    ? !isCreateValid || isBusy || Object.keys(validationErrors).length > 0
+    : !isEditDirty || isBusy || Object.keys(validationErrors).length > 0;
+
   return (
     <dialog
       ref={dialogRef}
       className="rounded-2xl bg-surface-container p-0 shadow-lg w-full max-w-lg backdrop:bg-black/40"
     >
       <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
-        <h2 className="text-title-md font-semibold text-on-surface">Editar Usuario</h2>
+        <h2 className="text-title-md font-semibold text-on-surface">
+          {mode === "create" ? "Crear usuario" : "Editar Usuario"}
+        </h2>
         <button
           type="button"
           onClick={onClose}
@@ -139,10 +203,10 @@ export function UserEditModal({
         {/* Avatar preview */}
         <div className="flex items-center gap-4">
           <Avatar
-            src={avatarReset ? undefined : (avatarUrlInput || user.avatarUrl)}
-            alt={user.name ?? user.email}
+            src={avatarSrc}
+            alt={name || email || user?.email || ""}
             size="lg"
-            fallbackInitials={(user.name ?? user.email)[0].toUpperCase()}
+            fallbackInitials={avatarFallback}
           />
           <div className="flex-1">
             <p className="text-label-lg text-on-surface-variant mb-1">Foto de perfil (URL)</p>
@@ -156,13 +220,15 @@ export function UserEditModal({
             {validationErrors.avatarUrl && (
               <p className="text-label-sm text-error mt-1">{validationErrors.avatarUrl}</p>
             )}
-            <button
-              type="button"
-              onClick={() => { setAvatarUrlInput(""); setAvatarReset(true); }}
-              className="mt-1.5 text-label-sm text-primary underline underline-offset-2"
-            >
-              Resetear a Gravatar
-            </button>
+            {mode === "edit" && (
+              <button
+                type="button"
+                onClick={() => { setAvatarUrlInput(""); setAvatarReset(true); }}
+                className="mt-1.5 text-label-sm text-primary underline underline-offset-2"
+              >
+                Resetear a Gravatar
+              </button>
+            )}
           </div>
         </div>
 
@@ -178,6 +244,9 @@ export function UserEditModal({
             onChange={(e) => setName(e.target.value)}
             className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
           />
+          {validationErrors.name && (
+            <p className="text-label-sm text-error mt-1">{validationErrors.name}</p>
+          )}
         </div>
 
         {/* Email */}
@@ -195,6 +264,45 @@ export function UserEditModal({
           {validationErrors.email && (
             <p className="text-label-sm text-error mt-1">{validationErrors.email}</p>
           )}
+        </div>
+
+        {/* Password (create only) */}
+        {mode === "create" && (
+          <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="create-password">
+              Contraseña
+            </label>
+            <input
+              id="create-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {(validationErrors.password || (password.length > 0 && password.length < 8)) && (
+              <p className="text-label-sm text-error mt-1">
+                {validationErrors.password ?? "La contraseña debe tener al menos 8 caracteres"}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Sucursal */}
+        <div>
+          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="branch-select">
+            Sucursal
+          </label>
+          <select
+            id="branch-select"
+            value={branchId ?? ""}
+            onChange={(e) => setBranchId(e.target.value === "" ? null : e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">Sin sucursal</option>
+            {branchOptions.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
         </div>
 
         {/* Roles */}
@@ -235,7 +343,7 @@ export function UserEditModal({
         <button
           type="button"
           onClick={onClose}
-          disabled={isSaving}
+          disabled={isBusy}
           className="px-5 py-2.5 rounded-xl border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
         >
           Cancelar
@@ -243,14 +351,16 @@ export function UserEditModal({
         <button
           type="button"
           onClick={handleSave}
-          disabled={!isDirty || isSaving || Object.keys(validationErrors).length > 0}
+          disabled={isSubmitDisabled}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {isSaving ? (
+          {isBusy ? (
             <>
               <Icon name="progress_activity" size={16} className="animate-spin" />
-              Guardando...
+              {mode === "create" ? "Creando..." : "Guardando..."}
             </>
+          ) : mode === "create" ? (
+            "Crear usuario"
           ) : (
             "Guardar Cambios"
           )}

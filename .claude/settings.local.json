@@ -157,7 +157,10 @@
       "Bash(node -p \"require\\('./package.json'\\).dependencies.zod || require\\('./package.json'\\).devDependencies.zod\")",
       "mcp__codegraph__codegraph_explore",
       "Bash(xargs -I{} sh -c 'echo {}; cat {}')",
-      "Bash(gh auth *)"
+      "Bash(gh auth *)",
+      "Bash(git clean *)",
+      "Bash(git status *)",
+      "Bash(awk '{print $1, $2}')"
     ]
   },
   "enabledMcpjsonServers": [

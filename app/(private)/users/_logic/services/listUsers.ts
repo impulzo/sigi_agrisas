@@ -8,6 +8,8 @@ function toUser(dto: UserDto): User {
     name: dto.name,
     email: dto.email,
     avatarUrl: dto.avatarUrl,
+    branchId: dto.branchId,
+    branchName: dto.branchName,
     roles: dto.roles,
     createdAt: new Date(dto.createdAt),
     updatedAt: new Date(dto.updatedAt),

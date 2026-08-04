@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { ListUsersUseCase } from "@/modules/users/application/use-cases/ListUsersUseCase";
 import { GetUserUseCase } from "@/modules/users/application/use-cases/GetUserUseCase";
+import { CreateAdminUserUseCase } from "@/modules/users/application/use-cases/CreateAdminUserUseCase";
 import { UpdateUserUseCase } from "@/modules/users/application/use-cases/UpdateUserUseCase";
 import { DeleteUserUseCase } from "@/modules/users/application/use-cases/DeleteUserUseCase";
 import { UserNotFoundError } from "@/modules/users/domain/errors/UserNotFoundError";
 import { SelfModificationError } from "@/modules/users/domain/errors/SelfModificationError";
 import { EmailAlreadyInUseError } from "@/modules/users/domain/errors/EmailAlreadyInUseError";
 import { BranchNotFoundForUserError } from "@/modules/users/domain/errors/BranchNotFoundForUserError";
+import { RoleNotFoundError } from "@/modules/rbac/domain/errors/RoleNotFoundError";
 
 const uuidParamSchema = z.string().uuid("Invalid user ID format");
 
@@ -32,13 +34,40 @@ const updateUserBodySchema = z
     { message: "At least one field (name, email, avatarUrl, branchId) must be provided" }
   );
 
+const createUserBodySchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(8),
+  avatarUrl: z.string().url().nullable().optional(),
+  branchId: z.string().uuid().nullable().optional(),
+  roleIds: z.array(z.string().uuid()).optional(),
+});
+
 export class UsersController {
   constructor(
     private readonly listUsersUseCase: ListUsersUseCase,
     private readonly getUserUseCase: GetUserUseCase,
+    private readonly createUserUseCase: CreateAdminUserUseCase,
     private readonly updateUserUseCase: UpdateUserUseCase,
     private readonly deleteUserUseCase: DeleteUserUseCase
   ) {}
+
+  async createUser(req: NextRequest): Promise<NextResponse> {
+    const body = await req.json().catch(() => ({}));
+    const parsed = createUserBodySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+    try {
+      const user = await this.createUserUseCase.execute(parsed.data);
+      return NextResponse.json(user, { status: 201 });
+    } catch (err) {
+      if (err instanceof EmailAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
+      if (err instanceof BranchNotFoundForUserError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof RoleNotFoundError) return NextResponse.json({ error: err.message }, { status: 400 });
+      throw err;
+    }
+  }
 
   async listUsers(req: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(req.url);

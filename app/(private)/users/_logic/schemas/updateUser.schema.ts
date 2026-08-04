@@ -5,9 +5,14 @@ export const updateUserSchema = z
     name: z.string().min(1).optional(),
     email: z.string().email("Email inválido").optional(),
     avatarUrl: z.union([z.string().url("URL inválida"), z.literal("")]).optional(),
+    branchId: z.string().uuid().nullable().optional(),
   })
   .refine(
-    (d) => d.name !== undefined || d.email !== undefined || d.avatarUrl !== undefined,
+    (d) =>
+      d.name !== undefined ||
+      d.email !== undefined ||
+      d.avatarUrl !== undefined ||
+      d.branchId !== undefined,
     { message: "Al menos un campo debe estar presente" }
   );
 

@@ -225,10 +225,16 @@ The shared private layout SHALL render a fixed `NavigationRail` (80px wide) on t
 4. `quotes` (icon `request_quote`, href `/quotes`, label `Cotizaciones`, declares `requires: "quotes:read"`).
 5. `returns` (icon `assignment_return`, href `/returns`, label `Devoluciones`, declares `requires: "returns:read"`).
 6. `payments` (icon `payments`, href `/payments`, label `Abonos`, declares `requires: "payments:read"`).
-7. `inventory` (icon `inventory_2`, href `/inventory`, label `Inventario`, declares `requires: "inventory:read"`).
-7. `catalogs` (icon `category`, href `/catalogs`, label `Catálogos`, with `children`: `payment-methods` (`payment_methods:read`, icon `payments`, href `/catalogs/payment-methods`), `folios` (`folios:read`, icon `tag`, href `/catalogs/folios`), `departments` (`departments:read`, icon `apartment`, href `/catalogs/departments`), `branches` (`branches:read`, icon `store`, href `/catalogs/branches`), `providers` (`providers:read`, icon `local_shipping`, href `/catalogs/providers`), `products` (`products:read`, icon `inventory_2`, href `/catalogs/products`), `customers` (`customers:read`, icon `groups`, href `/catalogs/customers`)).
-8. `users` (icon `group`, href `/users`, label `Usuarios`, declares `requires: "users:read"`).
-9. `roles` (icon `shield_person`, href `/roles`, label `Roles`, declares `requires: "roles:read"`).
+7. `purchases` (icon `shopping_cart`, href `/purchases`, label `Compras`, declares `requires: "purchases:read"`).
+8. `billing` (icon `description`, href `/billing`, label `Facturación`, declares `requires: "billing:read"`).
+9. `inventory` (icon `inventory_2`, href `/inventory`, label `Inventario`, declares `requires: "inventory:read"`).
+10. `waybills` (icon `swap_horiz`, href `/waybills`, label `Traspasos`, declares `requires: "waybills:read"`).
+11. `reports` (icon `summarize`, href `/reports`, label `Reportes`, declares `requires: "reports:account_statements_read"`).
+12. `catalogs` (icon `category`, href `/catalogs`, label `Catálogos`, with `children`: `payment-methods` (`payment_methods:read`, icon `payments`, href `/catalogs/payment-methods`), `folios` (`folios:read`, icon `tag`, href `/catalogs/folios`), `departments` (`departments:read`, icon `apartment`, href `/catalogs/departments`), `branches` (`branches:read`, icon `store`, href `/catalogs/branches`), `providers` (`providers:read`, icon `local_shipping`, href `/catalogs/providers`), `products` (`products:read`, icon `inventory_2`, href `/catalogs/products`), `customers` (`customers:read`, icon `groups`, href `/catalogs/customers`)).
+13. `users` (icon `group`, href `/users`, label `Usuarios`, declares `requires: "users:read"`).
+14. `roles` (icon `shield_person`, href `/roles`, label `Roles`, declares `requires: "roles:read"`).
+
+(Nota: `billing`, `waybills` y `reports` ya existían en el código antes de este change y no estaban documentados en la versión previa de este requirement — se incluyen aquí para que la lista quede completa y verificable, cerrando esa deriva preexistente de paso.)
 
 Below the secondary items, the rail SHALL render a standalone logout action button (icon `logout`, `title="Cerrar sesión"`) that invokes `useLogout` and is disabled while the logout is in flight.
 
@@ -252,7 +258,7 @@ When a `RailItem` has `children`, the rail SHALL render the parent item normally
 
 #### Scenario: Authorized user sees the returns item
 - **WHEN** the current user's effective permissions include `returns:read`
-- **THEN** the rail SHALL render the `returns` item (label "Devoluciones", href `/returns`, icon `assignment_return`) between `quotes` and `inventory`
+- **THEN** the rail SHALL render the `returns` item (label "Devoluciones", href `/returns`, icon `assignment_return`) between `quotes` and `payments`
 
 #### Scenario: Unauthorized user does not see the returns item
 - **WHEN** the current user's effective permissions do not include `returns:read` and the permission check has resolved
@@ -268,7 +274,7 @@ When a `RailItem` has `children`, the rail SHALL render the parent item normally
 
 #### Scenario: Usuario con payments:read ve el item Abonos
 - **WHEN** las permissions efectivas del usuario incluyen `payments:read`
-- **THEN** el rail renderiza el item con label "Abonos", href `/payments`, icon `payments` entre "Devoluciones" e "Inventario"
+- **THEN** el rail renderiza el item con label "Abonos", href `/payments`, icon `payments` entre "Devoluciones" y "Compras"
 
 #### Scenario: Usuario sin payments:read no ve el item
 - **WHEN** las permissions efectivas del usuario NO incluyen `payments:read` y el check ha resuelto
@@ -277,6 +283,22 @@ When a `RailItem` has `children`, the rail SHALL render the parent item normally
 #### Scenario: Item Abonos se muestra optimistamente durante loading
 - **WHEN** `can("payments:read")` devuelve `"loading"` (check en vuelo)
 - **THEN** el item "Abonos" es visible (comportamiento optimista, evita layout shift)
+
+#### Scenario: Usuario con purchases:read ve el item Compras
+- **WHEN** las permissions efectivas del usuario incluyen `purchases:read`
+- **THEN** el rail renderiza el item con label "Compras", href `/purchases`, icon `shopping_cart` entre "Abonos" y "Facturación"
+
+#### Scenario: Usuario sin purchases:read no ve el item Compras
+- **WHEN** las permissions efectivas del usuario NO incluyen `purchases:read` y el check ha resuelto
+- **THEN** el rail NO renderiza el item "Compras"
+
+#### Scenario: Item Compras se muestra optimistamente durante loading
+- **WHEN** `can("purchases:read")` devuelve `"loading"` (check en vuelo)
+- **THEN** el item "Compras" es visible (comportamiento optimista, evita layout shift)
+
+#### Scenario: Purchases item active for detail routes
+- **WHEN** the current pathname is `/purchases/abc-123` (or `/purchases/new`)
+- **THEN** the `purchases` item SHALL render with the active styling because `pathname.startsWith("/purchases/")` or matches `/purchases` exactly
 
 #### Scenario: Authorized user sees the sales item
 - **WHEN** the current user's effective permissions include `sales:read`
@@ -288,7 +310,7 @@ When a `RailItem` has `children`, the rail SHALL render the parent item normally
 
 #### Scenario: Authorized user sees the inventory item
 - **WHEN** the current user's effective permissions include `inventory:read`
-- **THEN** the rail SHALL render the `inventory` item (label "Inventario", href `/inventory`) between `payments` and `catalogs`
+- **THEN** the rail SHALL render the `inventory` item (label "Inventario", href `/inventory`) between `billing` and `waybills`
 
 #### Scenario: Unauthorized user does not see the inventory item
 - **WHEN** the current user's effective permissions do not include `inventory:read` and the permission check has resolved
@@ -332,7 +354,7 @@ When a `RailItem` has `children`, the rail SHALL render the parent item normally
 
 #### Scenario: Catalogs parent visible when any child is allowed
 - **WHEN** the user's permissions include at least one of `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`, `customers:read`
-- **THEN** the rail SHALL render the `catalogs` parent item between `inventory` and `users`
+- **THEN** the rail SHALL render the `catalogs` parent item between `reports` and `users`
 
 #### Scenario: Catalogs parent hidden when all children are denied
 - **WHEN** the permission check has resolved and the user holds none of `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`, `customers:read`
