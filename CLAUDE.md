@@ -15,6 +15,10 @@ Usa estas skills en cada sesión:
 - **`caveman`** — modo de comunicación ultra-comprimido. Actívalo siempre con `/caveman` al inicio. Elimina artículos, relleno y cortesías; conserva toda la sustancia técnica. Nivel por defecto: `full`. Cambiar con `/caveman lite|full|ultra`.
 - **`searching-sourcegraph`** — búsqueda en código indexado. Úsala para localizar patrones, ejemplos de uso de una función o entender cómo fluye una feature antes de proponer cambios. Actívala cuando la pregunta sea "¿cómo funciona X?", "¿dónde se usa Y?", o antes de cualquier refactor que cruce módulos.
 
+## Flujo Git
+
+**Todo PR va contra `develop`. Nunca contra `master`/`main`.** `master` es release; `develop` es integración. Al crear PR con `gh pr create`, usar siempre `--base develop`.
+
 ## CodeGraph
 
 Este repo tiene `.codegraph/` indexado. Úsalo ANTES de grep/find o leer archivos cuando necesites localizar o entender código.
