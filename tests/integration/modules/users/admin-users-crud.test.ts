@@ -2,15 +2,20 @@ import { prisma } from "@/shared/infrastructure/prisma/client";
 import { PrismaAdminUserRepository } from "@/modules/users/infrastructure/repositories/PrismaAdminUserRepository";
 import { ListUsersUseCase } from "@/modules/users/application/use-cases/ListUsersUseCase";
 import { GetUserUseCase } from "@/modules/users/application/use-cases/GetUserUseCase";
+import { CreateAdminUserUseCase } from "@/modules/users/application/use-cases/CreateAdminUserUseCase";
 import { UpdateUserUseCase } from "@/modules/users/application/use-cases/UpdateUserUseCase";
 import { DeleteUserUseCase } from "@/modules/users/application/use-cases/DeleteUserUseCase";
 import { UserNotFoundError } from "@/modules/users/domain/errors/UserNotFoundError";
 import { SelfModificationError } from "@/modules/users/domain/errors/SelfModificationError";
+import { EmailAlreadyInUseError } from "@/modules/users/domain/errors/EmailAlreadyInUseError";
 import { PrismaBranchRepository } from "@/modules/branches/infrastructure/repositories/PrismaBranchRepository";
 import { randomUUID } from "crypto";
 
 const TEST_ID = randomUUID();
 const TEST_EMAIL = `test_admin_crud_${Date.now()}@test.local`;
+const createdUserIds: string[] = [];
+
+const stubHasher = { hash: async (p: string) => `hashed-${p}`, compare: async () => true };
 
 beforeAll(async () => {
   await prisma.user.create({ data: { id: TEST_ID, email: TEST_EMAIL, passwordHash: "hash-test" } });
@@ -18,12 +23,34 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.user.deleteMany({ where: { id: TEST_ID } });
+  if (createdUserIds.length > 0) {
+    await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
+  }
   await prisma.$disconnect();
 });
 
 describe("Admin users CRUD integration", () => {
   const repo = new PrismaAdminUserRepository(prisma);
   const branchRepo = new PrismaBranchRepository(prisma);
+
+  it("create crea un usuario con password hasheado", async () => {
+    const email = `test_create_crud_${Date.now()}@test.local`;
+    const useCase = new CreateAdminUserUseCase(repo, branchRepo, stubHasher);
+    const created = await useCase.execute({ name: "Test Create", email, password: "supersecret" });
+    createdUserIds.push(created.id);
+    expect(created.name).toBe("Test Create");
+    expect(created.branchId).toBeNull();
+
+    const stored = await prisma.user.findUniqueOrThrow({ where: { id: created.id } });
+    expect(stored.passwordHash).toBe("hashed-supersecret");
+  });
+
+  it("create lanza EmailAlreadyInUseError si el email ya existe", async () => {
+    const useCase = new CreateAdminUserUseCase(repo, branchRepo, stubHasher);
+    await expect(
+      useCase.execute({ name: "Dup", email: TEST_EMAIL, password: "supersecret" })
+    ).rejects.toThrow(EmailAlreadyInUseError);
+  });
 
   it("findAll incluye el usuario de prueba", async () => {
     const useCase = new ListUsersUseCase(repo);

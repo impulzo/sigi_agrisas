@@ -191,7 +191,7 @@ async function main() {
         }
       }
     },
-    { timeout: 60000 }
+    { timeout: 300000 }
   );
 
   // Métodos de pago base (is_credit inmutable tras creación — no se toca en update)

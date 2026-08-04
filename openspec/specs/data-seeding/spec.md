@@ -99,7 +99,7 @@ The system SHALL perform idempotent upserts per product WITHOUT wrapping them in
 
 ### Requirement: Folios Seed Script Existence
 
-El sistema SHALL proveer un script TypeScript en `prisma/seeds/folios.ts` invocable mediante `npm run seed:folios`, que materializa el catálogo canónico de 8 folios del cliente. El script SHALL ser independiente del seed RBAC (`prisma/seed.ts`) y del seed de inventario (`prisma/seeds/inventory.ts`).
+El sistema SHALL proveer un script TypeScript en `prisma/seeds/folios.ts` invocable mediante `npm run seed:folios`, que materializa el catálogo canónico de 10 folios del cliente. El script SHALL ser independiente del seed RBAC (`prisma/seed.ts`) y del seed de inventario (`prisma/seeds/inventory.ts`).
 
 #### Scenario: Script ejecutable con un comando
 
@@ -115,7 +115,7 @@ El sistema SHALL proveer un script TypeScript en `prisma/seeds/folios.ts` invoca
 
 ### Requirement: Canonical Folios List
 
-El script SHALL definir como constante en código el conjunto canónico de 9 folios con los siguientes campos exactos:
+El script SHALL definir como constante en código el conjunto canónico de 10 folios con los siguientes campos exactos:
 
 | code | name | prefix | scope |
 |---|---|---|---|
@@ -123,6 +123,7 @@ El script SHALL definir como constante en código el conjunto canónico de 9 fol
 | TC | Folio de Venta Crédito | TC- | POS |
 | COT | Cotización | COT- | POS |
 | TS | Traspaso entre inventarios | TS- | INVENTORY |
+| TRI | Traspaso interno (sin Carta Porte) | TRI- | INVENTORY |
 | RB | Recibo de Pago - Cobranza | RB- | OPERATIONS |
 | AB | Cobranza/Abono | AB- | OPERATIONS |
 | DEV | Devolución | DEV- | OPERATIONS |
@@ -134,7 +135,12 @@ Cada folio canónico SHALL crearse con `isActive=true`. Modificar la lista requi
 #### Scenario: Resultado tras corrida limpia
 
 - **WHEN** `npm run seed:folios` corre sobre una DB sin folios
-- **THEN** tras la ejecución existen exactamente 9 filas en `folios`, una por cada code canónico, todas con `isActive=true` y `currentNumber=0`
+- **THEN** tras la ejecución existen exactamente 10 filas en `folios`, una por cada code canónico, todas con `isActive=true` y `currentNumber=0`
+
+#### Scenario: TRI se agrega sin afectar TS
+
+- **WHEN** el folio `TS` ya existe con `currentNumber=32` y se ejecuta el seed tras agregar `TRI` a la lista canónica
+- **THEN** `TS.currentNumber` sigue siendo `32` y se crea `TRI` nuevo con `currentNumber=0`
 
 ---
 
@@ -194,8 +200,8 @@ El script SHALL imprimir al finalizar un resumen estructurado con: `{ canonicalU
 
 #### Scenario: Resumen exitoso
 
-- **WHEN** el seed corre y procesa los 8 canónicos sin folios legacy bloqueando
-- **THEN** stdout incluye al menos `canonicalUpserted: 8` y `legacyDeleted: 0` (o el conteo real) y `abortedReferences: []`
+- **WHEN** el seed corre y procesa los 10 canónicos sin folios legacy bloqueando
+- **THEN** stdout incluye al menos `canonicalUpserted: 10` y `legacyDeleted: 0` (o el conteo real) y `abortedReferences: []`
 
 #### Scenario: Resumen con fallo por referencias
 

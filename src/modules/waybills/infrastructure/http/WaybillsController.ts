@@ -93,7 +93,7 @@ const createCartaPorteWaybillSchema = z.object({
   items: z.array(createCartaPorteItemSchema).min(1),
 });
 
-const createWaybillSchema = z
+export const createWaybillSchema = z
   .discriminatedUnion("type", [createSimpleWaybillSchema, createCartaPorteWaybillSchema])
   .superRefine((d, ctx) => {
     if (d.type === "carta_porte" && new Date(d.arrivalAt) <= new Date(d.departureAt)) {

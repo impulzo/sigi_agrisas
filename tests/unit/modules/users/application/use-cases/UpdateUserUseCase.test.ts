@@ -24,6 +24,7 @@ function makeRepo(impl?: Partial<AdminUserRepository>): AdminUserRepository {
   return {
     findAll: jest.fn(),
     findById: jest.fn(),
+    create: jest.fn(),
     update: jest.fn().mockResolvedValue(makeUser()),
     delete: jest.fn(),
     ...impl,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { createUser as createUserService } from "../services/createUser";
 import { updateUser } from "../services/updateUser";
 import { deleteUser } from "../services/deleteUser";
 import { assignRoleToUser } from "../services/assignRoleToUser";
@@ -16,8 +17,19 @@ interface SaveDiffParams {
     email: string;
     avatarUrlInput: string;
     avatarReset: boolean;
+    branchId: string | null;
     stagedRoleIds: Set<string>;
   };
+  catalog: RoleOption[];
+}
+
+interface CreateUserParams {
+  name: string;
+  email: string;
+  password: string;
+  avatarUrlInput: string;
+  branchId: string | null;
+  stagedRoleIds: Set<string>;
   catalog: RoleOption[];
 }
 
@@ -25,6 +37,7 @@ interface UseUserMutationsResult {
   isSaving: boolean;
   mutationError: string | null;
   clearError: () => void;
+  createNewUser: (params: CreateUserParams) => Promise<User | null>;
   saveUserDiff: (params: SaveDiffParams) => Promise<User | null>;
   removeUser: (userId: string) => Promise<boolean>;
 }
@@ -35,12 +48,34 @@ export function useUserMutations(): UseUserMutationsResult {
 
   const clearError = useCallback(() => setMutationError(null), []);
 
+  const createNewUser = useCallback(async ({ name, email, password, avatarUrlInput, branchId, stagedRoleIds, catalog }: CreateUserParams): Promise<User | null> => {
+    setIsSaving(true);
+    setMutationError(null);
+    try {
+      const roleIds = catalog.filter((r) => stagedRoleIds.has(r.id)).map((r) => r.id);
+      const created = await createUserService({
+        name: name.trim(),
+        email,
+        password,
+        avatarUrl: avatarUrlInput || undefined,
+        branchId,
+        roleIds: roleIds.length > 0 ? roleIds : undefined,
+      });
+      return created;
+    } catch (err: unknown) {
+      setMutationError(err instanceof Error ? err.message : "Error al crear usuario");
+      return null;
+    } finally {
+      setIsSaving(false);
+    }
+  }, []);
+
   const saveUserDiff = useCallback(async ({ userId, original, edited, catalog }: SaveDiffParams): Promise<User | null> => {
     setIsSaving(true);
     setMutationError(null);
 
     try {
-      const patchBody: { name?: string; email?: string; avatarUrl?: string | null } = {};
+      const patchBody: { name?: string; email?: string; avatarUrl?: string | null; branchId?: string | null } = {};
       let hasPatch = false;
 
       if (edited.name !== (original.name ?? "") && edited.name.trim() !== "") {
@@ -56,6 +91,10 @@ export function useUserMutations(): UseUserMutationsResult {
         hasPatch = true;
       } else if (edited.avatarUrlInput !== "") {
         patchBody.avatarUrl = edited.avatarUrlInput;
+        hasPatch = true;
+      }
+      if (edited.branchId !== original.branchId) {
+        patchBody.branchId = edited.branchId;
         hasPatch = true;
       }
 
@@ -98,5 +137,5 @@ export function useUserMutations(): UseUserMutationsResult {
     }
   }, []);
 
-  return { isSaving, mutationError, clearError, saveUserDiff, removeUser };
+  return { isSaving, mutationError, clearError, createNewUser, saveUserDiff, removeUser };
 }

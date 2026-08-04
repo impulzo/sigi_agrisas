@@ -7,3 +7,9 @@ export async function GET(req: NextRequest) {
   if (guard) return guard;
   return usersController.listUsers(req);
 }
+
+export async function POST(req: NextRequest) {
+  const guard = await requirePermission(req, "users:write");
+  if (guard) return guard;
+  return usersController.createUser(req);
+}

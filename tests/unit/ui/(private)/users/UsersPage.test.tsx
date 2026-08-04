@@ -33,6 +33,7 @@ jest.spyOn(useUserMutationsModule, "useUserMutations").mockReturnValue({
   isSaving: false,
   mutationError: null,
   clearError: jest.fn(),
+  createNewUser: jest.fn(),
   saveUserDiff: jest.fn(),
   removeUser: jest.fn(),
 });
@@ -57,7 +58,7 @@ describe("UsersPage", () => {
   it("muestra tabla cuando can=true y hay usuarios", () => {
     mockCan.mockReturnValue(true);
     jest.spyOn(useUsersModule, "useUsers").mockReturnValue({
-      users: [{ id: "u1", name: "Alice", email: "a@test.com", avatarUrl: "https://g.com/a", roles: ["admin"], createdAt: new Date(), updatedAt: new Date() }],
+      users: [{ id: "u1", name: "Alice", email: "a@test.com", avatarUrl: "https://g.com/a", branchId: null, branchName: null, roles: ["admin"], createdAt: new Date(), updatedAt: new Date() }],
       total: 1,
       isLoading: false,
       error: null,
