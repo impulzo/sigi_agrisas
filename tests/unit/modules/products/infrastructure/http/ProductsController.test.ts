@@ -105,6 +105,21 @@ describe("ProductsController — Zod validation", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects an invalid branchId format", async () => {
+    const { ctrl } = await buildController();
+    const res = await ctrl.list(makeListReq({ branchId: "not-a-uuid" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("includes stock:null in every item when branchId is omitted", async () => {
+    const { ctrl, departmentId } = await buildController();
+    await ctrl.create(makeCreateReq({ code: "P1", name: "Arroz", unit: "kg", departmentId }));
+    const res = await ctrl.list(makeListReq({}));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items.every((p: { stock: number | null }) => p.stock === null)).toBe(true);
+  });
+
   it("rejects isTaxable when value is not a boolean (string 'yes')", async () => {
     const { ctrl, departmentId } = await buildController();
     const res = await ctrl.create(

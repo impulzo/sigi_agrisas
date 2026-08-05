@@ -9,6 +9,7 @@ import {
   ProductInactiveError,
   ProductPriceMismatchError,
   EmptyQuoteError,
+  QuoteCreateValidationError,
 } from "../errors";
 import type { CreateQuoteBody, QuoteDetailDto } from "../types/api";
 import type { QuoteDetail } from "../types/domain";
@@ -40,7 +41,7 @@ export async function createQuote(
     if (msg.includes("product") && msg.includes("inactive")) throw new ProductInactiveError();
     if (msg.includes("price") && msg.includes("mismatch")) throw new ProductPriceMismatchError();
     if (msg.includes("empty") || msg.includes("items")) throw new EmptyQuoteError();
-    throw new NetworkError();
+    throw new QuoteCreateValidationError(typeof err.error === "string" ? err.error : "Solicitud inválida");
   }
 
   if (res.status === 409) {

@@ -4,4 +4,5 @@ export interface ListProductsRequest {
   includeInactive: boolean;
   search?: string;
   departmentId?: string;
+  branchId?: string;
 }

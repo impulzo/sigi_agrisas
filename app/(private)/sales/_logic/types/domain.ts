@@ -38,6 +38,7 @@ export interface SaleSummary {
   isCredit: boolean;
   createdAt: Date;
   updatedAt: Date;
+  creditLimitExceeded?: boolean;
 }
 
 export interface SaleDetail extends SaleSummary {

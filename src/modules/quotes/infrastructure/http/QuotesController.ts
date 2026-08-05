@@ -18,8 +18,6 @@ import { EmptyQuoteError } from "../../domain/errors/EmptyQuoteError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
-import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
-import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
 import { QUOTE_STATUSES, QuoteStatus, isQuoteStatus } from "../../domain/value-objects/QuoteStatus";
 import {
   enforceBranchScope,
@@ -254,8 +252,8 @@ export class QuotesController {
       const scope = await enforceBranchScope(req, existing.branchId, this.authzService);
       if (scope) return scope;
       const cashierId = req.headers.get("x-user-id") ?? "";
-      const { dto } = await this.convertUseCase.execute(idParsed.data, parsed.data, cashierId);
-      return NextResponse.json(dto);
+      const { dto, creditLimitExceeded } = await this.convertUseCase.execute(idParsed.data, parsed.data, cashierId);
+      return NextResponse.json({ ...dto, creditLimitExceeded });
     } catch (err) {
       return this.mapErrorToResponse(err);
     }
@@ -309,12 +307,6 @@ export class QuotesController {
         { error: "FolioScopeMismatch", expected: err.expected, actual: err.actual },
         { status: 400 }
       );
-    }
-    if (err instanceof CustomerHasNoCreditLineError) {
-      return NextResponse.json({ error: err.message }, { status: 409 });
-    }
-    if (err instanceof CreditLimitExceededError) {
-      return NextResponse.json({ error: err.message, available: err.available }, { status: 409 });
     }
     if (err instanceof Error && err.message === "expiresAt must be in the future") {
       return NextResponse.json({ error: err.message }, { status: 400 });

@@ -18,6 +18,7 @@ const makeProduct = (n: number): ProductDto => ({
   departmentName: `Depto ${n}`,
   createdAt: new Date(),
   updatedAt: new Date(),
+  stock: null,
 });
 
 const items = [makeProduct(1), makeProduct(2), makeProduct(3)];

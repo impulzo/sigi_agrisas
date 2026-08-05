@@ -1,7 +1,7 @@
 import { ProductWithDepartment } from "../ports/ProductRepository";
 import { ProductDto } from "../dto/ProductDto";
 
-export function toProductDto({ product, departmentName, taxRateCode, taxRate, providerName, providerId }: ProductWithDepartment): ProductDto {
+export function toProductDto({ product, departmentName, taxRateCode, taxRate, providerName, providerId, stock }: ProductWithDepartment): ProductDto {
   return {
     id: product.id,
     code: product.code,
@@ -22,5 +22,6 @@ export function toProductDto({ product, departmentName, taxRateCode, taxRate, pr
     isActive: product.isActive,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
+    stock,
   };
 }

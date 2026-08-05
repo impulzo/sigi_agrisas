@@ -85,7 +85,8 @@ function buildController(bypass: boolean): ReturnsController {
     new CreateReturnUseCase(returnRepo, saleRepo),
     new CancelReturnUseCase(returnRepo),
     saleRepo,
-    makeAuthz(bypass)
+    makeAuthz(bypass),
+    returnRepo
   );
 }
 

@@ -5,24 +5,24 @@ import { claimRefreshLeadership } from "../../../../app/_lib/session/claimRefres
 
 // Minimal BroadcastChannel stub that lets tests inject messages manually
 function makeMockChannel() {
-  const listeners: Array<(evt: MessageEvent) => void> = [];
+  const listeners: EventListenerOrEventListenerObject[] = [];
   const sent: unknown[] = [];
 
   const channel = {
     postMessage(data: unknown) {
       sent.push(data);
     },
-    addEventListener(_type: string, listener: (evt: MessageEvent) => void) {
+    addEventListener(_type: string, listener: EventListenerOrEventListenerObject) {
       listeners.push(listener);
     },
-    removeEventListener(_type: string, listener: (evt: MessageEvent) => void) {
+    removeEventListener(_type: string, listener: EventListenerOrEventListenerObject) {
       const idx = listeners.indexOf(listener);
       if (idx !== -1) listeners.splice(idx, 1);
     },
     /** Simulate an incoming message from another tab */
     receive(data: unknown) {
       const evt = { data } as MessageEvent;
-      listeners.forEach((l) => l(evt));
+      listeners.forEach((l) => (typeof l === "function" ? l(evt) : l.handleEvent(evt)));
     },
   };
 

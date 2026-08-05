@@ -19,6 +19,7 @@ export interface ProductDto {
   departmentName?: string;
   createdAt: Date;
   updatedAt: Date;
+  stock: number | null;
 }
 
 export interface CustomerDto {
@@ -130,4 +131,5 @@ export interface SaleDetailDto {
   items: SaleItemDto[];
   createdAt: string;
   updatedAt: string;
+  creditLimitExceeded?: boolean;
 }

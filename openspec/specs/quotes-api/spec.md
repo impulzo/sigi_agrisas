@@ -360,11 +360,14 @@ Behavior (inside a Prisma transaction):
   - `notes = body.notes ?? quote.notes`
   - `quoteId = quote.id`
 - The created sale follows all POS rules: fiscal folio incremented, `branch_inventory.quantity` decremented per item (allowed to go negative), `sale.status='completed'`, `sale.quoteId = quote.id`.
+- **Credit flow (non-blocking)**: if `paymentMethod.isCredit === true`, the system SHALL NOT reject the conversion for lacking a credit line or for exceeding `creditLimit` — the conversion always completes (same rule as `POST /api/v1/admin/sales`, see `pos-api` "Create sale (atomic emission)" § Credit flow auto-activation). The resulting `SaleDetailDto` includes the informational flag `creditLimitExceeded = customer.creditLimit !== null && (customer.currentBalance + sale.total) > customer.creditLimit` (`false` when `creditLimit === null`).
 - `UPDATE quotes SET status='converted', converted_at=NOW(), converted_sale_id=<saleId>`.
 
 Branch scoping applies (the quote's `branchId` must match `x-user-branch-id` unless the caller has `branches:access_all`).
 
-Returns HTTP 200 with the resulting `SaleDetailDto`.
+Returns HTTP 200 with the resulting `SaleDetailDto` (including `creditLimitExceeded: boolean`).
+
+**BREAKING**: this endpoint no longer returns HTTP 409 for a credit limit or missing credit line on the resulting sale. Callers MUST read `creditLimitExceeded` from the HTTP 200 body instead.
 
 #### Scenario: Convert authorized quote successfully
 - **WHEN** an authorized caller converts an `authorized` quote with a valid `paymentMethodId` and fiscal `folioId`
@@ -421,6 +424,14 @@ Returns HTTP 200 with the resulting `SaleDetailDto`.
 #### Scenario: Quote cancellation after conversion forbidden
 - **WHEN** a converted quote is sent to `DELETE /api/v1/admin/quotes/:id`
 - **THEN** the system returns HTTP 409 with the related `saleId`, instructing to cancel the sale instead (see "Cancel quote" requirement)
+
+#### Scenario: Credit conversion exceeds creditLimit — conversion still completes with warning flag
+- **WHEN** the conversion selects a `paymentMethod` with `isCredit=true` for a customer with `creditLimit=10000`, `currentBalance=8000`, and the resulting sale `total=5000`
+- **THEN** the system returns HTTP 200 (NOT 409) with `creditLimitExceeded=true`; the sale, folio increment, and inventory decrement are all persisted; `customer.currentBalance` becomes `13000`
+
+#### Scenario: Credit conversion for customer without credit line — conversion still completes
+- **WHEN** the conversion selects a `paymentMethod` with `isCredit=true` for a customer with `creditLimit=null`
+- **THEN** the system returns HTTP 200 (NOT 409) with `creditLimitExceeded=false`; the sale is persisted normally
 
 ---
 

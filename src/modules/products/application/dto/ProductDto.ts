@@ -18,4 +18,5 @@ export interface ProductDto {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  stock: number | null;
 }

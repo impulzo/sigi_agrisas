@@ -10,7 +10,7 @@ describe("InvoiceTotalsCalculator equivalence with SaleTotalsCalculator", () => 
   test.each(taxableVectors.map((v, i) => [i, v]))(
     "vector %i: subtotal/taxTotal/total match SaleTotalsCalculator",
     (_idx, lines) => {
-      const saleResult = SaleTotalsCalculator.computeTotals(lines);
+      const saleResult = SaleTotalsCalculator.computeTotals([...lines]);
       const invoiceResult = InvoiceTotalsCalculator.computeTotals(
         lines.map((l) => ({
           quantity: l.quantity,

@@ -27,6 +27,7 @@ interface CartPanelProps {
   totals: CartTotalsType;
   folios: FolioOption[];
   paymentMethods: PaymentMethodOption[];
+  selectedBranchId: string;
   selectedFolioId: string;
   selectedPaymentMethodId: string;
   selectedCustomerId: string;
@@ -55,6 +56,7 @@ export function CartPanel({
   totals,
   folios,
   paymentMethods,
+  selectedBranchId,
   selectedFolioId,
   selectedPaymentMethodId,
   selectedCustomerId,
@@ -82,6 +84,7 @@ export function CartPanel({
   const canSubmit = canSubmitCart({
     canCreate,
     linesCount: lines.length,
+    selectedBranchId,
     selectedFolioId,
     selectedPaymentMethodId,
     isQuoteMode,

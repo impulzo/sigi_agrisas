@@ -8,13 +8,12 @@ import { QuoteNotFoundError } from "../../domain/errors/QuoteNotFoundError";
 import { QuoteNotAuthorizedError } from "../../domain/errors/QuoteNotAuthorizedError";
 import { QuoteExpiredError } from "../../domain/errors/QuoteExpiredError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
-import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
-import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 
 export interface ConvertQuoteResult {
   dto: SaleDetailDto;
   branchId: string;
+  creditLimitExceeded: boolean;
 }
 
 export class ConvertQuoteToSaleUseCase {
@@ -45,6 +44,7 @@ export class ConvertQuoteToSaleUseCase {
       return {
         dto: toSaleDetailDto(sale.sale, sale.joined),
         branchId: sale.sale.branchId,
+        creditLimitExceeded: false,
       };
     }
 
@@ -66,14 +66,16 @@ export class ConvertQuoteToSaleUseCase {
     if (!payment) throw new InactiveResourceError("Payment method not found");
     if (!payment.isActive) throw new InactiveResourceError("Payment method");
 
-    // Credit validation for quote conversion
+    // Credit flow (non-blocking): compute an informational flag, never abort the conversion.
     let paidAmount = existing.quote.total;
     let paymentStatus = "paid";
+    let creditLimitExceeded = false;
     if (payment.isCredit && existing.quote.customerId) {
       const customer = await this.lookups.getCustomer(existing.quote.customerId);
-      if (!customer || customer.creditLimit === null) throw new CustomerHasNoCreditLineError();
-      const available = customer.creditLimit - customer.currentBalance;
-      if (available < existing.quote.total) throw new CreditLimitExceededError(available);
+      if (customer && customer.creditLimit !== null) {
+        const available = customer.creditLimit - customer.currentBalance;
+        creditLimitExceeded = available < existing.quote.total;
+      }
       paidAmount = 0;
       paymentStatus = "pending";
     }
@@ -120,6 +122,7 @@ export class ConvertQuoteToSaleUseCase {
     return {
       dto: toSaleDetailDto(sale.sale, sale.joined),
       branchId: sale.sale.branchId,
+      creditLimitExceeded,
     };
   }
 }

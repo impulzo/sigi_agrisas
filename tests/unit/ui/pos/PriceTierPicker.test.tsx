@@ -11,6 +11,7 @@ const product: ProductDto = {
   id: "p1", code: "P001", name: "Producto Test",
   ivaRate: 0.16, iepsRate: null, isActive: true,
   departmentId: "d1", createdAt: new Date(), updatedAt: new Date(),
+  stock: null,
 };
 
 const prices: ProductPriceDto[] = [

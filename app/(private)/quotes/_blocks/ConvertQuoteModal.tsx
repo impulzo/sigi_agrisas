@@ -42,7 +42,9 @@ export function ConvertQuoteModal({
       await convert(
         quote.id,
         { folioId, paymentMethodId, ...(notes.trim() ? { notes: notes.trim() } : {}) },
-        (sale) => { router.push(`/sales/${sale.id}`); },
+        (sale) => {
+          router.push(`/sales/${sale.id}${sale.creditLimitExceeded === true ? "?creditLimitExceeded=1" : ""}`);
+        },
       );
     } catch (err) {
       if (err instanceof QuoteExpiredError) {

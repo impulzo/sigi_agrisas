@@ -106,6 +106,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
       departmentId: "",
       createdAt: new Date(),
       updatedAt: new Date(),
+      stock: null,
     };
     setPricePicker({ product: fakeProduct, prices: [], dosifications: [], isLoading: true, lineId });
     Promise.all([
@@ -218,6 +219,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
             totals={totals}
             folios={folios}
             paymentMethods={paymentMethods}
+            selectedBranchId={sale.branchId}
             selectedFolioId={sale.folioId}
             selectedPaymentMethodId={selectedPaymentMethodId}
             selectedCustomerId={selectedCustomerId}

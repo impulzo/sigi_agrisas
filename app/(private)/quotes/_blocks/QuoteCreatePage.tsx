@@ -87,6 +87,7 @@ export function QuoteCreatePage() {
       departmentId: "",
       createdAt: new Date(),
       updatedAt: new Date(),
+      stock: null,
     };
     setPricePicker({ product: fakeProduct, prices: [], isLoading: true, lineId });
     setModal("pricePicker");

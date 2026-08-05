@@ -53,6 +53,7 @@ export async function searchProducts(
     departmentName: item.departmentName as string | undefined,
     createdAt: new Date(item.createdAt as string),
     updatedAt: new Date(item.updatedAt as string),
+    stock: item.stock as number | null,
   }));
 
   return { items, total: body.total, page: body.page, pageSize: body.pageSize };

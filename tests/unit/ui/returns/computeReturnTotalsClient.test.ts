@@ -11,8 +11,8 @@ const returnVectors = totalsVectors.filter((v) =>
 describe("computeReturnTotalsClient equivalence with ReturnTotalsCalculator", () => {
   returnVectors.forEach((lines, idx) => {
     it(`vector ${idx + 1}: client matches server`, () => {
-      const server = ReturnTotalsCalculator.computeTotals(lines);
-      const client = computeReturnTotalsClient(lines);
+      const server = ReturnTotalsCalculator.computeTotals([...lines]);
+      const client = computeReturnTotalsClient([...lines]);
       expect(client.subtotal).toBe(server.subtotal);
       expect(client.taxTotal).toBe(server.taxTotal);
       expect(client.total).toBe(server.total);
