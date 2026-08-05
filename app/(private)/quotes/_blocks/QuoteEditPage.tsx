@@ -65,6 +65,7 @@ export function QuoteEditPage({ id }: QuoteEditPageProps) {
           departmentId: "",
           createdAt: new Date(),
           updatedAt: new Date(),
+          stock: null,
         };
         const fakePrice: ProductPriceDto = {
           id: item.productPriceId,
@@ -108,6 +109,7 @@ export function QuoteEditPage({ id }: QuoteEditPageProps) {
       departmentId: "",
       createdAt: new Date(),
       updatedAt: new Date(),
+      stock: null,
     };
     setPricePicker({ product: fakeProduct, prices: [], isLoading: true, lineId });
     setModal("pricePicker");

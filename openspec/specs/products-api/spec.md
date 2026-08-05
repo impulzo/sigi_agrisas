@@ -7,7 +7,9 @@ Define the Products API: CRUD endpoints for the product catalog (SKUs), sub-reso
 ---
 ## Requirements
 ### Requirement: List products
-The system SHALL expose `GET /api/v1/admin/products` that returns a paginated list of products. Requires the `products:read` permission. Query parameters control the result set: `page` (default 1), `pageSize` (default 20, max 100), `includeInactive` (default `false`), `search` (optional, min 2 chars when present; matches `name` OR `code` via `OR ILIKE '%search%'`), `departmentId` (optional UUID filter). Response: `{ items: ProductDto[], total: number, page: number, pageSize: number }`. Each `ProductDto` includes `id`, `code`, `name`, `unit`, `satProductCode` (string or `null`), `departmentId`, `departmentName` (joined), `ivaRate` (decimal 0–1 or `null`), `iepsRate` (decimal 0–1 or `null`), `imageUrl` (string or `null`), `isTaxable` (boolean), `isActive`, `createdAt`, `updatedAt`. Results ordered by `createdAt DESC`.
+The system SHALL expose `GET /api/v1/admin/products` that returns a paginated list of products. Requires the `products:read` permission. Query parameters control the result set: `page` (default 1), `pageSize` (default 20, max 100), `includeInactive` (default `false`), `search` (optional, min 2 chars when present; matches `name` OR `code` via `OR ILIKE '%search%'`), `departmentId` (optional UUID filter), `branchId` (optional UUID). Response: `{ items: ProductDto[], total: number, page: number, pageSize: number }`. Each `ProductDto` includes `id`, `code`, `name`, `unit`, `satProductCode` (string or `null`), `departmentId`, `departmentName` (joined), `ivaRate` (decimal 0–1 or `null`), `iepsRate` (decimal 0–1 or `null`), `imageUrl` (string or `null`), `isTaxable` (boolean), `isActive`, `createdAt`, `updatedAt`, and `stock: number | null`. Results ordered by `createdAt DESC`.
+
+**`stock` field**: when the request includes `branchId`, the system SHALL join `branch_inventory` filtered by `(branch_id = branchId, product_id = product.id)` (unique pair) and set `stock = branch_inventory.quantity` for that product, or `stock = null` if no `branch_inventory` row exists for that pair. When the request omits `branchId`, `stock` is always `null` (no branch context to resolve stock against). This does NOT require the `inventory:read` permission — `products:read` alone is sufficient, since it is the same list endpoint, only enriched with an extra field.
 
 #### Scenario: Admin lists active products
 - **WHEN** an authenticated user with `products:read` sends `GET /api/v1/admin/products`
@@ -32,6 +34,22 @@ The system SHALL expose `GET /api/v1/admin/products` that returns a paginated li
 #### Scenario: Forbidden without permission
 - **WHEN** an authenticated user without `products:read` calls the endpoint
 - **THEN** the system returns HTTP 403 `{"error": "Forbidden", "required": "products:read"}`
+
+#### Scenario: branchId present returns stock per product
+- **WHEN** an authenticated user with `products:read` sends `GET /api/v1/admin/products?branchId=<B1>` and product `P1` has a `branch_inventory` row for `(B1, P1)` with `quantity=42`
+- **THEN** the response item for `P1` includes `stock: 42`
+
+#### Scenario: branchId present but no inventory row for product
+- **WHEN** the request includes `?branchId=<B1>` and product `P2` has no `branch_inventory` row for `(B1, P2)`
+- **THEN** the response item for `P2` includes `stock: null`
+
+#### Scenario: branchId omitted — stock always null
+- **WHEN** the request omits `branchId`
+- **THEN** every item in the response includes `stock: null`, regardless of any existing `branch_inventory` data
+
+#### Scenario: Invalid branchId format rejected
+- **WHEN** the request includes `?branchId=not-a-uuid`
+- **THEN** the system returns HTTP 400
 
 ---
 

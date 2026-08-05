@@ -31,7 +31,7 @@ mockUseCurrentUser.mockReturnValue({
 const folios: FolioOption[] = [{ id: "f1", code: "PRINC", name: "Principal", prefix: "A", currentNumber: 100, isActive: true }];
 const paymentMethods: PaymentMethodOption[] = [{ id: "pm1", code: "EFE", name: "Efectivo", isActive: true }];
 
-const zeroTotals: CartTotals = { subtotal: 0, taxTotal: 0, total: 0 };
+const zeroTotals: CartTotals = { subtotal: 0, ivaTotal: 0, iepsTotal: 0, taxTotal: 0, total: 0 };
 
 const baseLine: CartLine = {
   id: "line-1",
@@ -56,6 +56,7 @@ const baseProps = {
   totals: zeroTotals,
   folios,
   paymentMethods,
+  selectedBranchId: "b1",
   selectedFolioId: "",
   selectedPaymentMethodId: "",
   selectedCustomerId: "",
@@ -151,5 +152,10 @@ describe("CartPanel — botón Finalizar venta", () => {
   it("muestra el conteo de artículos en el carrito", () => {
     render(<CartPanel {...baseProps} lines={[baseLine, { ...baseLine, id: "line-2" }]} selectedFolioId="f1" selectedPaymentMethodId="pm1" />);
     expect(screen.getByText(/2 artículos/i)).toBeInTheDocument();
+  });
+
+  it("está deshabilitado cuando no hay sucursal seleccionada (admin bypass sin elegir sucursal)", () => {
+    render(<CartPanel {...baseProps} lines={[baseLine]} selectedFolioId="f1" selectedPaymentMethodId="pm1" selectedBranchId="" />);
+    expect(screen.getByRole("button", { name: /Finalizar venta/i })).toBeDisabled();
   });
 });

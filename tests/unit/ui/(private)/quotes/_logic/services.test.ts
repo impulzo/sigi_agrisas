@@ -21,7 +21,9 @@ import {
   FolioInactiveError,
   ProductInactiveError,
   PaymentMethodInactiveError,
+  QuoteCreateValidationError,
 } from "../../../../../../app/(private)/quotes/_logic/errors";
+import { NetworkError } from "../../../../../../app/_lib/authFetch";
 import type { QuoteDetailDto, QuoteDto } from "../../../../../../app/(private)/quotes/_logic/types/api";
 
 function makeRes(status: number, body: unknown): Response {
@@ -150,6 +152,26 @@ describe("createQuote", () => {
     const fetch = jest.fn().mockResolvedValue(makeRes(403, { error: "Forbidden" }));
     await expect(createQuote(body, fetch as typeof globalThis.fetch))
       .rejects.toBeInstanceOf(QuoteCreateForbiddenError);
+  });
+
+  it("lanza QuoteCreateValidationError con el mensaje real en 400 no mapeado (expiresAt)", async () => {
+    const fetch = jest.fn().mockResolvedValue(makeRes(400, { error: "expiresAt must be in the future" }));
+    const err = await createQuote(body, fetch as typeof globalThis.fetch).catch((e) => e);
+    expect(err).toBeInstanceOf(QuoteCreateValidationError);
+    expect(err.message).toBe("expiresAt must be in the future");
+  });
+
+  it("lanza QuoteCreateValidationError con el mensaje real en 400 no mapeado (uuid inválido)", async () => {
+    const fetch = jest.fn().mockResolvedValue(makeRes(400, { error: "Invalid uuid" }));
+    const err = await createQuote(body, fetch as typeof globalThis.fetch).catch((e) => e);
+    expect(err).toBeInstanceOf(QuoteCreateValidationError);
+    expect(err.message).toBe("Invalid uuid");
+  });
+
+  it("sigue lanzando NetworkError en fallo real de red", async () => {
+    const fetch = jest.fn().mockRejectedValue(new Error("connection refused"));
+    await expect(createQuote(body, fetch as typeof globalThis.fetch))
+      .rejects.toBeInstanceOf(NetworkError);
   });
 });
 

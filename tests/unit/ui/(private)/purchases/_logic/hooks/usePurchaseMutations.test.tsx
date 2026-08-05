@@ -67,7 +67,7 @@ function makeProviderPayment(overrides = {}) {
     cancelledAt: null,
     cancelledBy: null,
     cancellationReason: null,
-    purchase: { id: "p1", folioCode: "CP-000001", folioNumber: 1, total: 116, paidAmount: 50, paymentStatus: "partial" },
+    purchase: { id: "p1", folioCode: "CP-000001", folioNumber: 1, total: 116, paidAmount: 50, paymentStatus: "partial" as const },
     ...overrides,
   };
 }

@@ -84,6 +84,7 @@ export function PosPage() {
   const canSubmit = canSubmitCart({
     canCreate: mode === "quote" ? canQuote : canCreate,
     linesCount: lines.length,
+    selectedBranchId,
     selectedFolioId,
     selectedPaymentMethodId,
     isQuoteMode,
@@ -187,6 +188,7 @@ export function PosPage() {
       departmentId: "",
       createdAt: new Date(),
       updatedAt: new Date(),
+      stock: null,
     };
     setPricePicker({ product: fakeProduct, prices: [], dosifications: [], isLoading: true, lineId });
     setModal("pricePicker");
@@ -315,6 +317,7 @@ export function PosPage() {
             totals={totals}
             folios={folios}
             paymentMethods={paymentMethods}
+            selectedBranchId={selectedBranchId}
             selectedFolioId={selectedFolioId}
             selectedPaymentMethodId={selectedPaymentMethodId}
             selectedCustomerId={selectedCustomerId}

@@ -12,13 +12,12 @@ import { DosificationRequiresDefaultPriceError } from "../../domain/errors/Dosif
 import { DosificationPriceCalculator } from "@/modules/products/domain/services/DosificationPriceCalculator";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { QuoteLinkInvalidError } from "../../domain/errors/QuoteLinkInvalidError";
-import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
-import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 
 export interface CreateSaleResult {
   dto: SaleDetailDto;
   branchId: string;
+  creditLimitExceeded: boolean;
 }
 
 export class CreateSaleUseCase {
@@ -54,13 +53,13 @@ export class CreateSaleUseCase {
     if (!payment) throw new InactiveResourceError("Payment method not found");
     if (!payment.isActive) throw new InactiveResourceError("Payment method");
 
-    // Credit pre-check: validate credit line exists before processing items
-    let creditAvailable: number | null = null;
-    if (payment.isCredit) {
-      if (!customer) throw new InactiveResourceError("Customer required for credit sales");
-      if (customer.creditLimit === null) throw new CustomerHasNoCreditLineError();
-      creditAvailable = customer.creditLimit - customer.currentBalance;
+    // Credit pre-check: credit sales never block on missing credit line or exceeded limit
+    // (business decision: always allow the sale, only warn via creditLimitExceeded below).
+    if (payment.isCredit && !customer) {
+      throw new InactiveResourceError("Customer required for credit sales");
     }
+    const creditAvailable: number | null =
+      payment.isCredit && customer!.creditLimit !== null ? customer!.creditLimit - customer!.currentBalance : null;
 
     // 1b. Validate quoteId when provided
     let validatedQuoteId: string | null = null;
@@ -170,13 +169,12 @@ export class CreateSaleUseCase {
     // 3. Compute totals via pure domain service
     const totals = SaleTotalsCalculator.computeTotals(calcLines);
 
-    // 3b. Validate credit limit now that we have the final total
+    // 3b. Compute informational credit-limit-exceeded flag now that we have the final total.
+    // Non-blocking: the sale always proceeds, even over the limit or without a credit line.
     let paidAmount = totals.total;
     let paymentStatus = "paid";
+    const creditLimitExceeded = payment.isCredit && creditAvailable !== null && creditAvailable < totals.total;
     if (payment.isCredit) {
-      if (creditAvailable! < totals.total) {
-        throw new CreditLimitExceededError(creditAvailable!);
-      }
       paidAmount = 0;
       paymentStatus = "pending";
     }
@@ -225,6 +223,7 @@ export class CreateSaleUseCase {
     return {
       dto: toSaleDetailDto(summary.sale, summary.joined),
       branchId: summary.sale.branchId,
+      creditLimitExceeded,
     };
   }
 }

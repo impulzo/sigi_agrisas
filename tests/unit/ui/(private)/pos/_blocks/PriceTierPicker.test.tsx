@@ -24,6 +24,7 @@ const product: ProductDto = {
   departmentId: "dep-1",
   createdAt: new Date(),
   updatedAt: new Date(),
+  stock: null,
 };
 
 const prices: ProductPriceDto[] = [

@@ -52,6 +52,13 @@ export class EmptyQuoteError extends Error {
   constructor() { super("La cotización debe tener al menos un artículo"); this.name = "EmptyQuoteError"; }
 }
 
+export class QuoteCreateValidationError extends Error {
+  constructor(public readonly backendMessage: string) {
+    super(backendMessage);
+    this.name = "QuoteCreateValidationError";
+  }
+}
+
 export class QuoteScopingForbiddenError extends Error {
   constructor() { super("Sin acceso a la sucursal de la cotización"); this.name = "QuoteScopingForbiddenError"; }
 }

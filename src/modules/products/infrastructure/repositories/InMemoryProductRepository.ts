@@ -18,6 +18,7 @@ export class InMemoryProductRepository implements ProductRepository {
   private store: Product[] = [];
   private departmentNames = new Map<string, string>();
   private taxRates = new Map<string, { code: string; name: string; rate: number }>();
+  private inventory = new Map<string, number>();
 
   setDepartmentName(departmentId: string, name: string): void {
     this.departmentNames.set(departmentId, name);
@@ -27,7 +28,11 @@ export class InMemoryProductRepository implements ProductRepository {
     this.taxRates.set(taxRateId, data);
   }
 
-  private wrap(product: Product): ProductWithDepartment {
+  setStock(branchId: string, productId: string, quantity: number): void {
+    this.inventory.set(`${branchId}:${productId}`, quantity);
+  }
+
+  private wrap(product: Product, branchId?: string): ProductWithDepartment {
     const taxRate = product.taxRateId ? this.taxRates.get(product.taxRateId) ?? null : null;
     return {
       product,
@@ -36,6 +41,7 @@ export class InMemoryProductRepository implements ProductRepository {
       taxRate: taxRate && product.taxRateId ? { id: product.taxRateId, code: taxRate.code, name: taxRate.name, rate: taxRate.rate } : null,
       providerName: null,
       providerId: null,
+      stock: branchId ? this.inventory.get(`${branchId}:${product.id}`) ?? null : null,
     };
   }
 
@@ -45,6 +51,7 @@ export class InMemoryProductRepository implements ProductRepository {
     includeInactive,
     search,
     departmentId,
+    branchId,
   }: FindAllProductsOptions): Promise<{ items: ProductWithDepartment[]; total: number }> {
     let items = includeInactive ? this.store : this.store.filter((p) => p.isActive);
 
@@ -61,7 +68,7 @@ export class InMemoryProductRepository implements ProductRepository {
 
     const total = items.length;
     const start = (page - 1) * pageSize;
-    return { items: items.slice(start, start + pageSize).map((p) => this.wrap(p)), total };
+    return { items: items.slice(start, start + pageSize).map((p) => this.wrap(p, branchId)), total };
   }
 
   async findById(id: string): Promise<ProductWithDepartment | null> {

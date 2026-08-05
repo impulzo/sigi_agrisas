@@ -21,7 +21,7 @@ function decToNullableNumber(value: Prisma.Decimal | null): number | null {
   return value === null ? null : value.toNumber();
 }
 
-function toProductWithDepartment(row: ProductRow): ProductWithDepartment {
+function toProductWithDepartment(row: ProductRow, stock: number | null = null): ProductWithDepartment {
   return {
     product: Product.create({
       id: row.id,
@@ -46,6 +46,7 @@ function toProductWithDepartment(row: ProductRow): ProductWithDepartment {
       : null,
     providerId: row.department?.provider?.id ?? null,
     providerName: row.department?.provider?.name ?? null,
+    stock,
   };
 }
 
@@ -75,6 +76,7 @@ export class PrismaProductRepository implements ProductRepository {
     search,
     departmentId,
     providerId,
+    branchId,
   }: FindAllProductsOptions): Promise<{ items: ProductWithDepartment[]; total: number }> {
     const skip = (page - 1) * pageSize;
 
@@ -92,18 +94,29 @@ export class PrismaProductRepository implements ProductRepository {
         : {}),
     };
 
+    const include: Prisma.ProductInclude = {
+      ...INCLUDE_WITH_RELATIONS,
+      ...(branchId ? { inventory: { where: { branchId }, select: { quantity: true } } } : {}),
+    };
+
     const [rows, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
         skip,
         take: pageSize,
         orderBy: { createdAt: "desc" },
-        include: INCLUDE_WITH_RELATIONS,
+        include,
       }),
       this.prisma.product.count({ where }),
     ]);
 
-    return { items: rows.map(toProductWithDepartment), total };
+    return {
+      items: (rows as unknown as (ProductRow & { inventory?: { quantity: Prisma.Decimal }[] })[]).map((row) => {
+        const stockRow = row.inventory?.[0];
+        return toProductWithDepartment(row, stockRow ? stockRow.quantity.toNumber() : null);
+      }),
+      total,
+    };
   }
 
   async findById(id: string): Promise<ProductWithDepartment | null> {

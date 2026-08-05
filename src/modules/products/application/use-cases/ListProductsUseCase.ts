@@ -19,6 +19,7 @@ export class ListProductsUseCase {
       includeInactive: req.includeInactive,
       search: req.search,
       departmentId: req.departmentId,
+      branchId: req.branchId,
     });
 
     return {

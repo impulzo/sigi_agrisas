@@ -6,8 +6,6 @@ import {
   FolioInactiveError,
   FolioScopeMismatchError,
   PaymentMethodInactiveError,
-  CreditLimitExceededError,
-  CustomerHasNoCreditLineError,
 } from "../errors";
 import type { ConvertQuoteBody } from "../types/api";
 import type { SaleDetailDto } from "../../../sales/_logic/types/api";
@@ -35,8 +33,6 @@ export async function convertQuote(
     const err = await res.json().catch(() => ({})) as Record<string, unknown>;
     const msg = typeof err.error === "string" ? err.error.toLowerCase() : "";
     if (msg.includes("expir")) throw new QuoteExpiredError();
-    if (msg === "credit limit exceeded") throw new CreditLimitExceededError((err.available as string) ?? "0");
-    if (msg === "customer has no credit line (creditlimit is null)") throw new CustomerHasNoCreditLineError();
     const status = err.status as string | undefined;
     throw new QuoteNotEditableError(status ?? "unknown");
   }

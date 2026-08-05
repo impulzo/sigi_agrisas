@@ -7,6 +7,7 @@ export interface ProductWithDepartment {
   taxRate: { id: string; code: string; name: string; rate: number } | null;
   providerName: string | null;
   providerId: string | null;
+  stock: number | null;
 }
 
 export interface FindAllProductsOptions {
@@ -16,6 +17,7 @@ export interface FindAllProductsOptions {
   search?: string;
   departmentId?: string;
   providerId?: string;
+  branchId?: string;
 }
 
 export interface CreateProductData {

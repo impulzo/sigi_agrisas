@@ -29,8 +29,6 @@ import { QuoteRepository, QuoteSummary } from "@/modules/quotes/application/port
 import { Quote } from "@/modules/quotes/domain/entities/Quote";
 import { QuoteStatus } from "@/modules/quotes/domain/value-objects/QuoteStatus";
 import { SaleHasActivePaymentsError } from "@/modules/payments/domain/errors/SaleHasActivePaymentsError";
-import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
-import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
 
 const VALID_UUID = "11111111-1111-1111-1111-111111111111";
 const HQ_ID = "22222222-2222-2222-2222-222222222222";
@@ -580,22 +578,21 @@ describe("SalesController — Flujo de crédito y abonos activos", () => {
     expect(body.required).toBe("sales:create_credit");
   });
 
-  it("409 CustomerHasNoCreditLine cuando usuario tiene sales:create_credit pero cliente sin línea", async () => {
+  it("201 con creditLimitExceeded=false cuando cliente no tiene línea de crédito (ya no bloquea)", async () => {
     const ctl = buildCreditCtl({ creditLimit: null, creditPermission: true });
     const res = await ctl.create(postReq(creditBody, operatorHeaders));
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.error).toContain("credit line");
+    expect(body.creditLimitExceeded).toBe(false);
   });
 
-  it("409 CreditLimitExceeded cuando usuario tiene permiso pero el total supera el límite disponible", async () => {
+  it("201 con creditLimitExceeded=true cuando el total supera el límite disponible (ya no bloquea)", async () => {
     // price=100, qty=1 → total=100; creditLimit=50 → excedido
     const ctl = buildCreditCtl({ creditLimit: 50, currentBalance: 0, creditPermission: true });
     const res = await ctl.create(postReq(creditBody, operatorHeaders));
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.error).toContain("limit exceeded");
-    expect(typeof body.available).toBe("string");
+    expect(body.creditLimitExceeded).toBe(true);
   });
 
   it("409 SaleHasActivePayments al cancelar una venta con abonos activos", async () => {

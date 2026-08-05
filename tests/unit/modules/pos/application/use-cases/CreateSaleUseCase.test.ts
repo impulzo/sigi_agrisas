@@ -8,8 +8,6 @@ import { ProductPriceMismatchError } from "@/modules/pos/domain/errors/ProductPr
 import { DosificationMismatchError } from "@/modules/pos/domain/errors/DosificationMismatchError";
 import { DosificationRequiresDefaultPriceError } from "@/modules/pos/domain/errors/DosificationRequiresDefaultPriceError";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
-import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
-import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 
 function makeSummary(data: CreateSaleData): SaleSummary {
@@ -302,29 +300,28 @@ describe("CreateSaleUseCase", () => {
       expect(call.paymentStatus).toBe("pending");
     });
 
-    it("lanza CustomerHasNoCreditLineError cuando creditLimit es null", async () => {
+    it("no bloquea la venta cuando creditLimit es null; creditLimitExceeded=false", async () => {
       const lookups = creditLookups(null);
-      await expect(
-        new CreateSaleUseCase(makeRepo(), lookups).execute(baseReq, "user-1")
-      ).rejects.toThrow(CustomerHasNoCreditLineError);
+      const result = await new CreateSaleUseCase(makeRepo(), lookups).execute(baseReq, "user-1");
+      expect(result.creditLimitExceeded).toBe(false);
+      expect(result.dto.paymentStatus).toBe("pending");
     });
 
-    it("lanza CreditLimitExceededError cuando el total supera el crédito disponible", async () => {
+    it("no bloquea la venta cuando el total supera el crédito disponible; creditLimitExceeded=true", async () => {
       // Product price=100, qty=2, total=232. Available = 5000 - 4900 = 100 < 232
       const lookups = creditLookups(5000, 4900);
-      const err = await new CreateSaleUseCase(makeRepo(), lookups)
-        .execute(baseReq, "user-1")
-        .catch((e) => e);
-      expect(err).toBeInstanceOf(CreditLimitExceededError);
-      expect(err.available).toBe("100.0000");
+      const result = await new CreateSaleUseCase(makeRepo(), lookups).execute(baseReq, "user-1");
+      expect(result.creditLimitExceeded).toBe(true);
+      expect(result.dto.paymentStatus).toBe("pending");
     });
 
-    it("crea venta a crédito cuando el total cabe exactamente en el crédito disponible", async () => {
+    it("crea venta a crédito cuando el total cabe exactamente en el crédito disponible; creditLimitExceeded=false", async () => {
       // total = 232 (qty=2 * price=100 * 1.16 IVA). creditLimit=5000, balance=4768 → available=232
       const lookups = creditLookups(5000, 4768);
       const repo = makeRepo();
       const result = await new CreateSaleUseCase(repo, lookups).execute(baseReq, "user-1");
       expect(result.dto.paymentStatus).toBe("pending");
+      expect(result.creditLimitExceeded).toBe(false);
     });
   });
 });

@@ -38,6 +38,7 @@ export interface SaleSummaryDto {
   isCredit: boolean;
   createdAt: string;
   updatedAt: string;
+  creditLimitExceeded?: boolean;
 }
 
 export interface SaleDetailDto extends SaleSummaryDto {

@@ -54,12 +54,15 @@ function makeLookups(overrides: Partial<PosLookupService> = {}): PosLookupServic
     async getProduct(id) {
       return overrides.getProduct
         ? overrides.getProduct(id)
-        : { id, code: "FERT_001", name: "Fert", ivaRate: 0.16, iepsRate: null, isActive: true };
+        : { id, code: "FERT_001", name: "Fert", ivaRate: 0.16, iepsRate: null, isTaxable: true, isActive: true };
     },
     async getProductPrice(id) {
       return overrides.getProductPrice
         ? overrides.getProductPrice(id)
         : { id, productId: PRODUCT_ID, name: "Menudeo", price: 100, discountPct: null };
+    },
+    async getDosificationForSale(id) {
+      return overrides.getDosificationForSale ? overrides.getDosificationForSale(id) : null;
     },
   };
 }
@@ -440,7 +443,7 @@ describe("QuotesController.convert", () => {
     expect(res.status).toBe(400);
   });
 
-  it("409 'Credit limit exceeded' cuando el cliente excede su línea de crédito al convertir", async () => {
+  it("200 con creditLimitExceeded=true cuando el cliente excede su línea de crédito al convertir (ya no bloquea)", async () => {
     const lookups = makeLookups({
       getPaymentMethod: async (id) => ({ id, isActive: true, isCredit: true }),
       getCustomer: async (id) => ({ id, isActive: true, creditLimit: 50, currentBalance: 0 }),
@@ -455,13 +458,12 @@ describe("QuotesController.convert", () => {
       }),
       created.id
     );
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.error).toBe("Credit limit exceeded");
-    expect(body.available).toBe("50.0000");
+    expect(body.creditLimitExceeded).toBe(true);
   });
 
-  it("409 'Customer has no credit line' cuando el cliente no tiene creditLimit configurado", async () => {
+  it("200 con creditLimitExceeded=false cuando el cliente no tiene creditLimit configurado (ya no bloquea)", async () => {
     const lookups = makeLookups({
       getPaymentMethod: async (id) => ({ id, isActive: true, isCredit: true }),
       getCustomer: async (id) => ({ id, isActive: true, creditLimit: null, currentBalance: 0 }),
@@ -476,9 +478,9 @@ describe("QuotesController.convert", () => {
       }),
       created.id
     );
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.error).toBe("Customer has no credit line (creditLimit is null)");
+    expect(body.creditLimitExceeded).toBe(false);
   });
 
   it("403 cuando el caller sin bypass intenta convertir cotización de otra sucursal", async () => {

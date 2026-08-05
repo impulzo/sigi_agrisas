@@ -3,8 +3,6 @@ import {
   CustomerInactiveError,
   SaleScopingForbiddenError,
   SaleCreateForbiddenError,
-  CreditLimitExceededError,
-  CustomerHasNoCreditLineError,
 } from "../../../../../../../app/(private)/pos/_logic/errors";
 import { NetworkError } from "../../../../../../../app/_lib/authFetch";
 
@@ -52,20 +50,15 @@ describe("createSale", () => {
     await expect(createSale(minimalBody, fetch as never)).rejects.toBeInstanceOf(NetworkError);
   });
 
-  it("mapea 409 'Credit limit exceeded' a CreditLimitExceededError con available", async () => {
-    const fetch = mockFetch(409, { error: "Credit limit exceeded", available: "1207.9800" });
-    const err = await createSale(minimalBody, fetch as never).catch((e) => e);
-    expect(err).toBeInstanceOf(CreditLimitExceededError);
-    expect((err as CreditLimitExceededError).available).toBe("1207.9800");
-  });
-
-  it("mapea 409 'Customer has no credit line' a CustomerHasNoCreditLineError", async () => {
-    const fetch = mockFetch(409, { error: "Customer has no credit line (creditLimit is null)" });
-    await expect(createSale(minimalBody, fetch as never)).rejects.toBeInstanceOf(CustomerHasNoCreditLineError);
-  });
-
-  it("mapea 409 desconocido a NetworkError", async () => {
+  it("mapea 409 a NetworkError (crédito ya no bloquea vía 409)", async () => {
     const fetch = mockFetch(409, { error: "Some other conflict" });
     await expect(createSale(minimalBody, fetch as never)).rejects.toBeInstanceOf(NetworkError);
+  });
+
+  it("propaga creditLimitExceeded del 201 sin lanzar", async () => {
+    const dto = { id: "sale-1", status: "completed", total: 116, items: [], creditLimitExceeded: true };
+    const fetch = mockFetch(201, dto);
+    const result = await createSale(minimalBody, fetch as never);
+    expect(result.creditLimitExceeded).toBe(true);
   });
 });

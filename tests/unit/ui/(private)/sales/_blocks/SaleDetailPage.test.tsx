@@ -11,6 +11,10 @@ jest.mock("next/link", () => {
   Link.displayName = "Link";
   return Link;
 });
+const mockSearchParamsGet = jest.fn<string | null, [string]>(() => null);
+jest.mock("next/navigation", () => ({
+  useSearchParams: () => ({ get: mockSearchParamsGet }),
+}));
 jest.mock("../../../../../../app/_hooks/useCurrentUser");
 jest.mock("../../../../../../app/_hooks/useHeadquarters");
 jest.mock("../../../../../../app/(private)/sales/_logic/hooks/useSaleDetail");
@@ -99,7 +103,7 @@ function setup({
   });
 }
 
-describe("SaleDetailPage — guard de edición HQ", () => {
+describe("SaleDetailPage — botón 'Editar venta' oculto en UI (SALE_EDIT_UI_ENABLED=false)", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("oculta 'Editar venta' cuando sales:edit_completed=false", () => {
@@ -122,17 +126,17 @@ describe("SaleDetailPage — guard de edición HQ", () => {
     expect(screen.queryByRole("link", { name: /Editar venta/i })).not.toBeInTheDocument();
   });
 
-  it("muestra 'Editar venta' cuando edit=true y el usuario está asignado a la sucursal HQ", () => {
+  it("oculta 'Editar venta' aunque el usuario esté asignado a la sucursal HQ y el guard pase (UI deshabilitada a propósito)", () => {
     setup({
       can: jest.fn((perm: string) => perm === "sales:edit_completed"),
       hq: { id: "hq-1", code: "HQ", name: "Matriz" },
       branchId: "hq-1",
     });
     render(<SaleDetailPage id="sale-1" />);
-    expect(screen.getByRole("link", { name: /Editar venta/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Editar venta/i })).not.toBeInTheDocument();
   });
 
-  it("muestra 'Editar venta' cuando edit=true y el usuario tiene branches:access_all (bypass)", () => {
+  it("oculta 'Editar venta' aunque el usuario tenga branches:access_all (bypass) (UI deshabilitada a propósito)", () => {
     setup({
       can: jest.fn(
         (perm: string) => perm === "sales:edit_completed" || perm === "branches:access_all",
@@ -141,7 +145,7 @@ describe("SaleDetailPage — guard de edición HQ", () => {
       branchId: "otra-sucursal",
     });
     render(<SaleDetailPage id="sale-1" />);
-    expect(screen.getByRole("link", { name: /Editar venta/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Editar venta/i })).not.toBeInTheDocument();
   });
 
   it("oculta 'Editar venta' cuando la venta está cancelada aunque el usuario pueda editar y esté en HQ", () => {
@@ -154,18 +158,25 @@ describe("SaleDetailPage — guard de edición HQ", () => {
     render(<SaleDetailPage id="sale-1" />);
     expect(screen.queryByRole("link", { name: /Editar venta/i })).not.toBeInTheDocument();
   });
+});
 
-  it("el enlace 'Editar venta' apunta a /sales/[id]/edit", () => {
-    setup({
-      can: jest.fn((perm: string) => perm === "sales:edit_completed"),
-      hq: { id: "hq-1", code: "HQ", name: "Matriz" },
-      branchId: "hq-1",
-    });
+describe("SaleDetailPage — aviso de límite de crédito excedido", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSearchParamsGet.mockReturnValue(null);
+  });
+
+  it("muestra el banner cuando ?creditLimitExceeded=1", () => {
+    mockSearchParamsGet.mockImplementation((key: string) => (key === "creditLimitExceeded" ? "1" : null));
+    setup({ can: jest.fn(() => false) });
     render(<SaleDetailPage id="sale-1" />);
-    expect(screen.getByRole("link", { name: /Editar venta/i })).toHaveAttribute(
-      "href",
-      "/sales/sale-1/edit",
-    );
+    expect(screen.getByText(/excedido el límite de crédito/i)).toBeInTheDocument();
+  });
+
+  it("no muestra el banner sin el query param", () => {
+    setup({ can: jest.fn(() => false) });
+    render(<SaleDetailPage id="sale-1" />);
+    expect(screen.queryByText(/excedido el límite de crédito/i)).not.toBeInTheDocument();
   });
 });
 

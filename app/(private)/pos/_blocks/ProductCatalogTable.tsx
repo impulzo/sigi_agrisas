@@ -98,6 +98,7 @@ export function ProductCatalogTable({
               <th className="px-4 py-2 font-medium">Código</th>
               <th className="px-4 py-2 font-medium">Nombre</th>
               <th className="px-4 py-2 font-medium hidden md:table-cell">Departamento</th>
+              <th className="px-4 py-2 font-medium text-right">Existencias</th>
               <th className="px-4 py-2 font-medium text-right">Acción</th>
             </tr>
           </thead>
@@ -113,6 +114,13 @@ export function ProductCatalogTable({
                 <td className="px-4 py-2 text-body-sm font-medium">{product.name}</td>
                 <td className="px-4 py-2 text-body-sm text-on-surface-variant hidden md:table-cell">
                   {product.departmentName ?? "—"}
+                </td>
+                <td
+                  className={`px-4 py-2 text-right text-body-sm tabular-nums ${
+                    product.stock !== null && product.stock <= 0 ? "text-error font-medium" : "text-on-surface-variant"
+                  }`}
+                >
+                  {product.stock ?? "—"}
                 </td>
                 <td className="px-4 py-2 text-right">
                   <span className="inline-flex items-center gap-1 text-label-sm text-primary font-medium">

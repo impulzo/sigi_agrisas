@@ -19,8 +19,6 @@ import { ReturnedTotalSaleNotEditableError } from "../../domain/errors/ReturnedT
 import { QuoteLinkInvalidError } from "../../domain/errors/QuoteLinkInvalidError";
 import { SaleStatus } from "../../domain/entities/Sale";
 import { SaleHasActivePaymentsError } from "@/modules/payments/domain/errors/SaleHasActivePaymentsError";
-import { CustomerHasNoCreditLineError } from "@/modules/payments/domain/errors/CustomerHasNoCreditLineError";
-import { CreditLimitExceededError } from "@/modules/payments/domain/errors/CreditLimitExceededError";
 import {
   enforceBranchScope,
   resolveScopedBranchId,
@@ -167,8 +165,8 @@ export class SalesController {
 
     const cashierId = req.headers.get("x-user-id") ?? "";
     try {
-      const { dto } = await this.createUseCase.execute(parsed.data, cashierId);
-      return NextResponse.json(dto, { status: 201 });
+      const { dto, creditLimitExceeded } = await this.createUseCase.execute(parsed.data, cashierId);
+      return NextResponse.json({ ...dto, creditLimitExceeded }, { status: 201 });
     } catch (err) {
       if (err instanceof EmptySaleError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof ProductPriceMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
@@ -183,12 +181,6 @@ export class SalesController {
       }
       if (err instanceof QuoteLinkInvalidError) {
         return NextResponse.json({ error: err.message, reason: err.reason }, { status: 400 });
-      }
-      if (err instanceof CustomerHasNoCreditLineError) {
-        return NextResponse.json({ error: err.message }, { status: 409 });
-      }
-      if (err instanceof CreditLimitExceededError) {
-        return NextResponse.json({ error: err.message, available: err.available }, { status: 409 });
       }
       throw err;
     }

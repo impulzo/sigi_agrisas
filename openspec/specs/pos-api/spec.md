@@ -186,13 +186,12 @@ The body MUST NOT include any explicit `isCredit` flag; the credit flow is activ
 
 **Branch scoping**: callers without `branches:access_all` MUST pass `branchId === x-user-branch-id`; mismatch returns HTTP 403. Callers without an assigned branch (`x-user-branch-id` empty) and without `branches:access_all` return HTTP 403.
 
-**Credit flow auto-activation**: after loading the `paymentMethod`, if `paymentMethod.isCredit === true`, the controller SHALL:
+**Credit flow auto-activation (non-blocking)**: after loading the `paymentMethod`, if `paymentMethod.isCredit === true`, the controller SHALL:
 
 1. Verify the caller has `sales:create_credit`; otherwise HTTP 403 `{"error":"Forbidden","required":"sales:create_credit"}`.
-2. Verify `customer.creditLimit !== null`; otherwise HTTP 409 `{"error":"Customer has no credit line (creditLimit is null)"}`.
-3. Verify `customer.currentBalance + sale.total <= customer.creditLimit`; otherwise HTTP 409 `{"error":"Credit limit exceeded","available":"<remaining>"}`.
+2. The system SHALL NOT reject the sale for lacking a credit line or for exceeding `creditLimit`. Instead, once the final total is known, it computes an informational flag: `creditLimitExceeded = customer.creditLimit !== null && (customer.currentBalance + sale.total) > customer.creditLimit`. When `customer.creditLimit === null` (no credit line configured), `creditLimitExceeded` is `false` — there is no limit to exceed.
 
-These checks run AFTER total calculation but BEFORE folio allocation, all within the same transaction.
+This computation runs AFTER total calculation but BEFORE folio allocation, all within the same transaction; it never aborts the transaction.
 
 **`quoteId` validation when present**: if the body includes a non-null `quoteId`, the controller SHALL:
 
@@ -214,39 +213,41 @@ The `quoteId` does NOT constrain whether the sale is cash or credit — the `pay
    - `quantity > 0` (else HTTP 400) for either case. The system MAY skip enforcement of `minQuantity` in v1 (documented, applies only to price-based lines).
 5. Snapshot `productCodeSnapshot = product.code`, `productNameSnapshot = product.name`; for price-based lines: `priceNameSnapshot = price.name`, `unitPrice = price.price`, `discountPct = price.discountPct`; for dosification lines: `priceNameSnapshot = dosification.name`, `unitPrice` per above, `discountPct = null`, `dosificationId = dosification.id`, `numPartsSnapshot = dosification.numParts`. Both kinds set `ivaRate = product.ivaRate`, `iepsRate = product.iepsRate`.
 6. Compute totals using `SaleTotalsCalculator` (domain service) — unchanged by dosification lines (operates on `quantity * unitPrice`, agnostic to what `quantity` represents).
-7. If `paymentMethod.isCredit === true`: validate credit line and limit per above; on failure abort with HTTP 409.
+7. If `paymentMethod.isCredit === true`: compute the informational `creditLimitExceeded` flag per "Credit flow auto-activation" above. This step never aborts the transaction.
 8. Allocate the next folio number atomically: `UPDATE folios SET current_number = current_number + 1 WHERE id = ? AND is_active = true RETURNING current_number, code, prefix`. If `RETURNING` is empty (folio inactive) → HTTP 400.
 9. For each item, decrement inventory using the base-unit amount (`quantity / numPartsSnapshot` for dosification lines, `quantity` otherwise — see "Sale aggregate model"): `UPDATE branch_inventory SET quantity = quantity - ${amount}, updated_at = NOW() WHERE branch_id = ? AND product_id = ?`. If the update affects 0 rows (no inventory record exists for this pair), the system SHALL `INSERT INTO branch_inventory (branch_id, product_id, quantity) VALUES (?, ?, -${amount})` (creates the record with negative initial quantity). The result `quantity` MAY be negative — this is the implementation of the rule "selling with stock 0 leaves negative quantity awaiting transfer". **After each such decrement**, the system SHALL evaluate the low-stock notification trigger per `admin-notifications-api` "Notify admin on low stock" (best-effort, never blocks or fails this endpoint).
 10. Compute `paidAmount` and `paymentStatus`:
     - If `paymentMethod.isCredit === false`: `paidAmount = total`, `paymentStatus = 'paid'`.
-    - If `paymentMethod.isCredit === true`: `paidAmount = 0`, `paymentStatus = 'pending'`.
+    - If `paymentMethod.isCredit === true`: `paidAmount = 0`, `paymentStatus = 'pending'` (regardless of `creditLimitExceeded`).
 11. `INSERT` the `sales` row with `status='completed'`, `completedAt=NOW()`, snapshotted folio info, `quote_id = quoteId` (or `null`), `paid_amount`, `payment_status`.
 12. `INSERT` the `sale_items` rows.
-13. If `paymentMethod.isCredit === true`: `UPDATE customers SET current_balance = current_balance + ? WHERE id = ?` (sale.customerId).
+13. If `paymentMethod.isCredit === true`: `UPDATE customers SET current_balance = current_balance + ? WHERE id = ?` (sale.customerId) — regardless of `creditLimitExceeded`.
 14. If `quoteId` non-null: `UPDATE quotes SET status='converted', converted_at=NOW(), converted_sale_id=<newSaleId> WHERE id = quoteId`.
 
-Returns HTTP 201 with the `SaleDetailDto` (including items, `quoteId`, `paidAmount`, `paymentStatus`, and the derived `isCredit` from the JOIN).
+Returns HTTP 201 with the `SaleDetailDto` (including items, `quoteId`, `paidAmount`, `paymentStatus`, the derived `isCredit` from the JOIN, and `creditLimitExceeded: boolean` — always `false` for non-credit sales).
+
+**BREAKING**: this endpoint no longer returns HTTP 409 for `CreditLimitExceededError` or `CustomerHasNoCreditLineError`. Callers that previously branched on those 409 responses MUST instead read `creditLimitExceeded` from the HTTP 201 body.
 
 #### Scenario: Successful cash sale
 - **WHEN** an `operator` with `x-user-branch-id: B1` and `sales:create` sends a valid body for branch B1 with 2 items, selecting a `paymentMethod` whose `isCredit=false` (no `quoteId`)
-- **THEN** the system returns HTTP 201 with the `SaleDetailDto` (`quoteId: null`, `isCredit: false`, `paidAmount: total`, `paymentStatus: 'paid'`), `branch_inventory.quantity` decremented by each item's quantity, and `folios.current_number` incremented by 1
+- **THEN** the system returns HTTP 201 with the `SaleDetailDto` (`quoteId: null`, `isCredit: false`, `paidAmount: total`, `paymentStatus: 'paid'`, `creditLimitExceeded: false`), `branch_inventory.quantity` decremented by each item's quantity, and `folios.current_number` incremented by 1
 - **AND** `customer.currentBalance` is NOT modified
 
 #### Scenario: Successful credit sale via CREDITO payment method
 - **WHEN** an `operator` with `sales:create` and `sales:create_credit` sends a body selecting the `paymentMethod` whose `code='CREDITO'` and `isCredit=true` for a customer with `creditLimit=10000`, `currentBalance=2000`, and the new sale `total=5000`
-- **THEN** the system returns HTTP 201 with `paidAmount=0`, `paymentStatus='pending'`, `isCredit=true` (derived); `customer.currentBalance` becomes `7000` after the transaction commits
+- **THEN** the system returns HTTP 201 with `paidAmount=0`, `paymentStatus='pending'`, `isCredit=true` (derived), `creditLimitExceeded=false` (7000 ≤ 10000); `customer.currentBalance` becomes `7000` after the transaction commits
 
 #### Scenario: Credit payment method selected without sales:create_credit
 - **WHEN** a caller with `sales:create` (but NOT `sales:create_credit`) selects a `paymentMethod` whose `isCredit=true`
 - **THEN** the system returns HTTP 403 `{"error":"Forbidden","required":"sales:create_credit"}`
 
-#### Scenario: Credit sale exceeds creditLimit
+#### Scenario: Credit sale exceeds creditLimit — sale still completes with warning flag
 - **WHEN** the body selects a `paymentMethod` with `isCredit=true` for a customer with `creditLimit=10000`, `currentBalance=8000`, and `sale.total=5000`
-- **THEN** the system returns HTTP 409 `{"error":"Credit limit exceeded","available":"2000.0000"}`; nothing is persisted
+- **THEN** the system returns HTTP 201 (NOT 409) with `creditLimitExceeded=true`, `paidAmount=0`, `paymentStatus='pending'`; the sale, sale items, folio increment, and inventory decrement are all persisted; `customer.currentBalance` becomes `13000`
 
-#### Scenario: Credit sale for customer without credit line
+#### Scenario: Credit sale for customer without credit line — sale still completes
 - **WHEN** the body selects a `paymentMethod` with `isCredit=true` for a customer with `creditLimit=null`
-- **THEN** the system returns HTTP 409 `{"error":"Customer has no credit line (creditLimit is null)"}`
+- **THEN** the system returns HTTP 201 (NOT 409) with `creditLimitExceeded=false` (no limit configured, so nothing to exceed); the sale is persisted normally with `paidAmount=0`, `paymentStatus='pending'`
 
 #### Scenario: Successful sale with quoteId (cash)
 - **WHEN** the body includes `quoteId: Q` and a `paymentMethod` whose `isCredit=false`, where `Q` is an authorized quote with `convertedSaleId: null` and matching `branchId`/`customerId`

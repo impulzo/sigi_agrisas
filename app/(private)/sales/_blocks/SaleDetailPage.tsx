@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useHeadquarters } from "../../../_hooks/useHeadquarters";
 import { useSaleDetail } from "../_logic/hooks/useSaleDetail";
@@ -33,6 +34,9 @@ function fmtDate(d: Date) {
   return new Intl.DateTimeFormat("es-MX", { dateStyle: "long", timeStyle: "short" }).format(d);
 }
 
+// Editar venta oculto en UI a pedido del negocio; ruta/permiso/endpoint siguen activos.
+const SALE_EDIT_UI_ENABLED = false;
+
 interface SaleDetailPageProps {
   id: string;
 }
@@ -44,10 +48,14 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
   const { isSaving, cancel } = useSaleMutations((updated) => {
     refresh();
   });
+  const searchParams = useSearchParams();
 
   const [showCancel, setShowCancel] = useState(false);
   const [showFullReturn, setShowFullReturn] = useState(false);
   const [ticketSettings, setTicketSettings] = useState<TicketSettingsDto | null>(null);
+  const [showCreditLimitBanner, setShowCreditLimitBanner] = useState(
+    searchParams.get("creditLimitExceeded") === "1"
+  );
 
   useEffect(() => {
     getTicketSettings()
@@ -98,6 +106,20 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {showCreditLimitBanner && (
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-error/10 text-error px-4 py-2 text-body-sm">
+          <span>Se ha excedido el límite de crédito establecido para este cliente.</span>
+          <button
+            type="button"
+            onClick={() => setShowCreditLimitBanner(false)}
+            className="text-error hover:opacity-70"
+            aria-label="Cerrar aviso"
+          >
+            <Icon name="close" size={18} />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -142,7 +164,7 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
               Cancelar venta
             </button>
           )}
-          {canEdit && sale.status !== "cancelled" && sale.status !== "returned_total" && (
+          {SALE_EDIT_UI_ENABLED && canEdit && sale.status !== "cancelled" && sale.status !== "returned_total" && (
             <Link
               href={`/sales/${sale.id}/edit`}
               className="rounded-full bg-tertiary text-on-tertiary px-4 py-2 text-body-sm font-medium hover:bg-tertiary/90 transition-colors"

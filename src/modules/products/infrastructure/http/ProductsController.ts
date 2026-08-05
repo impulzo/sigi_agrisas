@@ -45,6 +45,7 @@ const listQuerySchema = z.object({
     .pipe(z.string().min(2, "search must be at least 2 characters").optional()),
   departmentId: z.string().uuid("departmentId must be a valid UUID").optional(),
   providerId: z.string().uuid("providerId must be a valid UUID").optional(),
+  branchId: z.string().uuid("branchId must be a valid UUID").optional(),
 });
 
 const createBodySchema = z.object({
@@ -122,6 +123,7 @@ export class ProductsController {
       search: searchParams.get("search") ?? undefined,
       departmentId: searchParams.get("departmentId") ?? undefined,
       providerId: searchParams.get("providerId") ?? undefined,
+      branchId: searchParams.get("branchId") ?? undefined,
     });
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });

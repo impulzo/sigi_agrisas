@@ -57,11 +57,15 @@ function makeLookups(overrides: Partial<PosLookupService> = {}): PosLookupServic
     },
     async getProduct(id) {
       if (overrides.getProduct) return overrides.getProduct(id);
-      return { id, code: "FERT_001", name: "Fertilizante", ivaRate: 0.16, iepsRate: null, isActive: true };
+      return { id, code: "FERT_001", name: "Fertilizante", ivaRate: 0.16, iepsRate: null, isTaxable: true, isActive: true };
     },
     async getProductPrice(id) {
       if (overrides.getProductPrice) return overrides.getProductPrice(id);
       return { id, productId: PRODUCT_ID, name: "Menudeo", price: 100, discountPct: null };
+    },
+    async getDosificationForSale(id) {
+      if (overrides.getDosificationForSale) return overrides.getDosificationForSale(id);
+      return null;
     },
   };
 }
@@ -139,7 +143,7 @@ describe("CreateQuoteUseCase", () => {
       repo,
       makeLookups({
         async getProduct(id) {
-          return { id, code: "X", name: "X", ivaRate: null, iepsRate: null, isActive: false };
+          return { id, code: "X", name: "X", ivaRate: null, iepsRate: null, isTaxable: true, isActive: false };
         },
       })
     );

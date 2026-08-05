@@ -4,7 +4,7 @@ import type { ProductLookup } from "@/modules/pos/application/ports/PosLookups";
 const mockFindUnique = jest.fn();
 const mockPrisma = {
   product: { findUnique: mockFindUnique },
-} as unknown as Parameters<typeof PrismaPosLookupService.prototype.constructor>[0];
+} as unknown as ConstructorParameters<typeof PrismaPosLookupService>[0];
 
 describe("PrismaPosLookupService — image exclusion (task 8.6)", () => {
   const svc = new PrismaPosLookupService(mockPrisma as any);
@@ -18,6 +18,7 @@ describe("PrismaPosLookupService — image exclusion (task 8.6)", () => {
       name: "Test",
       ivaRate: null,
       iepsRate: null,
+      isTaxable: true,
       isActive: true,
     };
     expect("imageUrl" in lookup).toBe(false);

@@ -51,4 +51,27 @@ describe("ListProductsUseCase", () => {
     const byCode = await useCase.execute({ page: 1, pageSize: 20, includeInactive: false, search: "frijol_0" });
     expect(byCode.items.map((p) => p.code)).toContain("FRIJOL_001");
   });
+
+  describe("stock por sucursal", () => {
+    const BRANCH_A = "33333333-3333-3333-3333-333333333333";
+
+    it("sin branchId, stock es siempre null", async () => {
+      const result = await useCase.execute({ page: 1, pageSize: 20, includeInactive: false });
+      expect(result.items.every((p) => p.stock === null)).toBe(true);
+    });
+
+    it("con branchId, devuelve la existencia registrada", async () => {
+      const listed = await useCase.execute({ page: 1, pageSize: 20, includeInactive: false, search: "arroz" });
+      const arrozId = listed.items[0].id;
+      repo.setStock(BRANCH_A, arrozId, 42);
+
+      const result = await useCase.execute({ page: 1, pageSize: 20, includeInactive: false, branchId: BRANCH_A, search: "arroz" });
+      expect(result.items[0].stock).toBe(42);
+    });
+
+    it("con branchId pero sin registro de inventario, stock es null", async () => {
+      const result = await useCase.execute({ page: 1, pageSize: 20, includeInactive: false, branchId: BRANCH_A, search: "frijol" });
+      expect(result.items[0].stock).toBeNull();
+    });
+  });
 });

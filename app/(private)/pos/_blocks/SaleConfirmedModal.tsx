@@ -63,6 +63,12 @@ export function SaleConfirmedModal({ sale, onNewSale }: SaleConfirmedModalProps)
         Folio <strong className="font-mono">{folioLabel}</strong>
       </p>
 
+      {sale.creditLimitExceeded === true && (
+        <div className="mb-4 rounded-xl bg-error/10 text-error px-4 py-2 text-body-sm text-left">
+          Se ha excedido el límite de crédito establecido para este cliente.
+        </div>
+      )}
+
       <div className="space-y-2 mb-6 text-left bg-surface-container-low rounded-xl p-4">
         <div className="flex justify-between text-body-sm">
           <span className="text-on-surface-variant">Total</span>
