@@ -5,7 +5,8 @@ import { ProductDosificationDto } from "../dto/ProductDosificationDto";
 
 export function toProductDosificationDto(
   dosification: ProductDosification,
-  defaultPrice?: ProductPrice | null
+  defaultPrice: ProductPrice | null | undefined,
+  surchargePct: number
 ): ProductDosificationDto {
   const hasDefault = defaultPrice != null;
   return {
@@ -15,7 +16,7 @@ export function toProductDosificationDto(
     numParts: dosification.numParts,
     isActive: dosification.isActive,
     computedUnitPrice: hasDefault
-      ? DosificationPriceCalculator.computeUnitPrice(defaultPrice!.price, dosification.numParts)
+      ? DosificationPriceCalculator.computeUnitPrice(defaultPrice!.price, dosification.numParts, surchargePct)
       : null,
     requiresDefaultPrice: !hasDefault,
     createdAt: dosification.createdAt.toISOString(),

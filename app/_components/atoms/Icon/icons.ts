@@ -60,6 +60,8 @@ export const ICON_NAMES = [
   "summarize",
   "description",
   "groups",
+  "mail",
+  "credit_card",
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

@@ -28,11 +28,11 @@ describe("CartTotals", () => {
     expect(screen.getAllByText(/\$/).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("muestra ceros cuando el carrito está vacío (sin impuestos)", () => {
+  it("muestra ceros cuando el carrito está vacío (IVA e IEPS igual visibles)", () => {
     render(<CartTotals totals={makeTotals(0, 0, 0, 0)} />);
-    // Sin impuestos solo aparecen subtotal y total
+    // Subtotal, IVA, IEPS y Total siempre se renderizan, aunque sean $0
     const moneyValues = screen.getAllByText(/\$/);
-    expect(moneyValues.length).toBeGreaterThanOrEqual(2);
+    expect(moneyValues.length).toBeGreaterThanOrEqual(4);
   });
 
   it("los spans de monto tienen clase tabular-nums", () => {
@@ -47,9 +47,9 @@ describe("CartTotals", () => {
     expect(screen.getByText("IEPS")).toBeInTheDocument();
   });
 
-  it("oculta IVA e IEPS cuando ambos son cero", () => {
+  it("muestra IVA e IEPS aunque ambos sean cero (nunca se ocultan)", () => {
     render(<CartTotals totals={makeTotals(200, 0, 0, 200)} />);
-    expect(screen.queryByText("IVA")).not.toBeInTheDocument();
-    expect(screen.queryByText("IEPS")).not.toBeInTheDocument();
+    expect(screen.getByText("IVA")).toBeInTheDocument();
+    expect(screen.getByText("IEPS")).toBeInTheDocument();
   });
 });

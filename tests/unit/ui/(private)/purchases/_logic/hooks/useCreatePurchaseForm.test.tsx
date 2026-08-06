@@ -52,9 +52,9 @@ describe("useCreatePurchaseForm", () => {
     act(() => result.current.updateQuantity(PRODUCT.id, 2));
     act(() => result.current.updateUnitCost(PRODUCT.id, 100));
 
-    expect(result.current.totals.subtotal).toBe(200);
-    expect(result.current.totals.ivaTotal).toBe(32);
-    expect(result.current.totals.total).toBe(232);
+    expect(result.current.totals.subtotal).toBe(172.4138);
+    expect(result.current.totals.ivaTotal).toBe(27.5862);
+    expect(result.current.totals.total).toBe(200);
   });
 
   it("removeLine quita la línea", () => {

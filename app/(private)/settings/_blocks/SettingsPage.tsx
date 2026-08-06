@@ -2,7 +2,9 @@
 
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useTicketSettings } from "../_logic/hooks/useTicketSettings";
+import { usePricingSettings } from "../_logic/hooks/usePricingSettings";
 import { TicketSettingsForm } from "./TicketSettingsForm";
+import { PricingSettingsForm } from "./PricingSettingsForm";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 
@@ -12,6 +14,7 @@ export function SettingsPage() {
   const canWrite = can("settings:write");
 
   const { settings, isLoading, error, refresh } = useTicketSettings();
+  const { settings: pricingSettings, isLoading: isPricingLoading, error: pricingError, refresh: refreshPricing } = usePricingSettings();
 
   if (canRead === "loading") {
     return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
@@ -22,22 +25,44 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <h1 className="text-headline-sm font-semibold text-on-surface">Configuración del ticket</h1>
+    <div className="max-w-3xl mx-auto space-y-10">
+      <h1 className="text-headline-sm font-semibold text-on-surface">Configuración</h1>
 
-      {isLoading && <div className="flex h-32 items-center justify-center"><Spinner size="lg" /></div>}
+      <section className="space-y-6">
+        <h2 className="text-title-md font-semibold text-on-surface">Ticket de venta</h2>
 
-      {error && !isLoading && (
-        <EmptyState icon="warning" title="Error al cargar la configuración" description={error.message} />
-      )}
+        {isLoading && <div className="flex h-32 items-center justify-center"><Spinner size="lg" /></div>}
 
-      {settings && !isLoading && (
-        <TicketSettingsForm
-          settings={settings}
-          canWrite={canWrite === true}
-          onChange={() => refresh()}
-        />
-      )}
+        {error && !isLoading && (
+          <EmptyState icon="warning" title="Error al cargar la configuración" description={error.message} />
+        )}
+
+        {settings && !isLoading && (
+          <TicketSettingsForm
+            settings={settings}
+            canWrite={canWrite === true}
+            onChange={() => refresh()}
+          />
+        )}
+      </section>
+
+      <section className="space-y-6">
+        <h2 className="text-title-md font-semibold text-on-surface">Precios</h2>
+
+        {isPricingLoading && <div className="flex h-32 items-center justify-center"><Spinner size="lg" /></div>}
+
+        {pricingError && !isPricingLoading && (
+          <EmptyState icon="warning" title="Error al cargar la configuración" description={pricingError.message} />
+        )}
+
+        {pricingSettings && !isPricingLoading && (
+          <PricingSettingsForm
+            settings={pricingSettings}
+            canWrite={canWrite === true}
+            onChange={() => refreshPricing()}
+          />
+        )}
+      </section>
     </div>
   );
 }

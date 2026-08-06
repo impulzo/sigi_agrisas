@@ -4,6 +4,8 @@ import { GetTicketSettingsUseCase } from "../../application/use-cases/GetTicketS
 import { UpdateTicketSettingsUseCase, EmptyUpdateError } from "../../application/use-cases/UpdateTicketSettingsUseCase";
 import { UploadTicketLogoUseCase } from "../../application/use-cases/UploadTicketLogoUseCase";
 import { DeleteTicketLogoUseCase } from "../../application/use-cases/DeleteTicketLogoUseCase";
+import { GetPricingSettingsUseCase } from "../../application/use-cases/GetPricingSettingsUseCase";
+import { UpdatePricingSettingsUseCase } from "../../application/use-cases/UpdatePricingSettingsUseCase";
 import { InvalidImageFormatError } from "../../domain/errors/InvalidImageFormatError";
 import { ImageTooLargeError } from "../../domain/errors/ImageTooLargeError";
 
@@ -13,12 +15,18 @@ const updateTicketSchema = z.object({
   paperWidth: z.enum(["58mm", "80mm"]).optional(),
 });
 
+const updatePricingSchema = z.object({
+  dosificationSurchargePct: z.number().finite().min(0),
+});
+
 export class SettingsController {
   constructor(
     private readonly getTicketUseCase: GetTicketSettingsUseCase,
     private readonly updateTicketUseCase: UpdateTicketSettingsUseCase,
     private readonly uploadLogoUseCase: UploadTicketLogoUseCase,
-    private readonly deleteLogoUseCase: DeleteTicketLogoUseCase
+    private readonly deleteLogoUseCase: DeleteTicketLogoUseCase,
+    private readonly getPricingUseCase: GetPricingSettingsUseCase,
+    private readonly updatePricingUseCase: UpdatePricingSettingsUseCase
   ) {}
 
   async getTicket(): Promise<NextResponse> {
@@ -77,5 +85,25 @@ export class SettingsController {
   async deleteLogo(): Promise<NextResponse> {
     await this.deleteLogoUseCase.execute();
     return NextResponse.json({ success: true });
+  }
+
+  async getPricing(): Promise<NextResponse> {
+    const settings = await this.getPricingUseCase.execute();
+    return NextResponse.json(settings);
+  }
+
+  async updatePricing(req: NextRequest): Promise<NextResponse> {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+    const parsed = updatePricingSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+    const settings = await this.updatePricingUseCase.execute(parsed.data);
+    return NextResponse.json(settings);
   }
 }

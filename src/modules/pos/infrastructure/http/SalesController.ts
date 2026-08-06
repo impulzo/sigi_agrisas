@@ -5,7 +5,10 @@ import { GetSaleUseCase } from "../../application/use-cases/GetSaleUseCase";
 import { CreateSaleUseCase } from "../../application/use-cases/CreateSaleUseCase";
 import { CancelSaleUseCase } from "../../application/use-cases/CancelSaleUseCase";
 import { EditCompletedSaleUseCase } from "../../application/use-cases/EditCompletedSaleUseCase";
+import { SendSaleTicketEmailUseCase } from "../../application/use-cases/SendSaleTicketEmailUseCase";
 import { SaleNotFoundError } from "../../domain/errors/SaleNotFoundError";
+import { SaleNoEmailError } from "../../domain/errors/SaleNoEmailError";
+import { SaleEmailSendFailedError } from "../../domain/errors/SaleEmailSendFailedError";
 import { EmptySaleError } from "../../domain/errors/EmptySaleError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
 import { DosificationMismatchError } from "../../domain/errors/DosificationMismatchError";
@@ -72,6 +75,10 @@ const cancelSaleSchema = z.object({
   reason: z.string().max(500).nullable().optional(),
 });
 
+const sendTicketEmailSchema = z.object({
+  email: z.string().email().optional(),
+});
+
 const editSaleSchema = z.object({
   customerId: z.string().uuid().optional(),
   paymentMethodId: z.string().uuid().optional(),
@@ -86,6 +93,7 @@ export class SalesController {
     private readonly createUseCase: CreateSaleUseCase,
     private readonly cancelUseCase: CancelSaleUseCase,
     private readonly editUseCase: EditCompletedSaleUseCase,
+    private readonly sendTicketEmailUseCase: SendSaleTicketEmailUseCase,
     private readonly branchRepo: BranchRepository,
     private readonly lookups: PosLookupService,
     private readonly authzService: AuthorizationService
@@ -263,6 +271,30 @@ export class SalesController {
       if (err instanceof SaleHasActivePaymentsError) {
         return NextResponse.json({ error: "SaleHasActivePayments", paymentIds: err.paymentIds }, { status: 409 });
       }
+      throw err;
+    }
+  }
+
+  async sendTicketEmail(req: NextRequest, id: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(id);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+    const body = await req.json().catch(() => ({}));
+    const parsed = sendTicketEmailSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+    try {
+      const existing = await this.getUseCase.execute(idParsed.data);
+      const scope = await enforceBranchScope(req, existing.branchId, this.authzService);
+      if (scope) return scope;
+      const result = await this.sendTicketEmailUseCase.execute(idParsed.data, parsed.data.email);
+      return NextResponse.json(result);
+    } catch (err) {
+      if (err instanceof SaleNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      if (err instanceof SaleNoEmailError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof SaleEmailSendFailedError) return NextResponse.json({ error: err.message }, { status: 502 });
       throw err;
     }
   }

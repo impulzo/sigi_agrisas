@@ -22,28 +22,28 @@ describe("computeTotalsClient", () => {
     expect(result.total).toBe(90);
   });
 
-  it("línea con IVA 16%", () => {
+  it("línea con IVA 16% (extraído del precio final)", () => {
     const result = computeTotalsClient([
       { quantity: 1, unitPrice: 100, discountPct: 0, ivaRate: 0.16, iepsRate: 0 },
     ]);
-    expect(result.lines[0].lineSubtotal).toBe(100);
-    expect(result.lines[0].lineIva).toBe(16);
+    expect(result.lines[0].lineSubtotal).toBe(86.2069);
+    expect(result.lines[0].lineIva).toBe(13.7931);
     expect(result.lines[0].lineIeps).toBe(0);
-    expect(result.lines[0].lineTotal).toBe(116);
-    expect(result.subtotal).toBe(100);
-    expect(result.taxTotal).toBe(16);
-    expect(result.total).toBe(116);
+    expect(result.lines[0].lineTotal).toBe(100);
+    expect(result.subtotal).toBe(86.2069);
+    expect(result.taxTotal).toBe(13.7931);
+    expect(result.total).toBe(100);
   });
 
-  it("línea con IVA + IEPS", () => {
+  it("línea con IVA + IEPS (extraídos simultáneamente)", () => {
     const result = computeTotalsClient([
       { quantity: 1, unitPrice: 100, discountPct: 0, ivaRate: 0.16, iepsRate: 0.08 },
     ]);
-    expect(result.lines[0].lineIva).toBe(16);
-    expect(result.lines[0].lineIeps).toBe(8);
-    expect(result.lines[0].lineTotal).toBe(124);
-    expect(result.taxTotal).toBe(24);
-    expect(result.total).toBe(124);
+    expect(result.lines[0].lineIva).toBe(12.9032);
+    expect(result.lines[0].lineIeps).toBe(6.4516);
+    expect(result.lines[0].lineTotal).toBe(100);
+    expect(result.taxTotal).toBe(19.3548);
+    expect(result.total).toBe(100);
   });
 
   it("null rates se tratan como 0 a través del caller (ivaRate=0, iepsRate=0)", () => {
@@ -59,11 +59,11 @@ describe("computeTotalsClient", () => {
       { quantity: 2, unitPrice: 100, discountPct: 0, ivaRate: 0.16, iepsRate: 0 },
       { quantity: 3, unitPrice: 50,  discountPct: 0, ivaRate: 0.16, iepsRate: 0 },
     ]);
-    expect(result.lines[0].lineSubtotal).toBe(200);
-    expect(result.lines[1].lineSubtotal).toBe(150);
-    expect(result.subtotal).toBe(350);
-    expect(result.taxTotal).toBe(56);
-    expect(result.total).toBe(406);
+    expect(result.lines[0].lineSubtotal).toBe(172.4138);
+    expect(result.lines[1].lineSubtotal).toBe(129.3103);
+    expect(result.subtotal).toBe(301.7241);
+    expect(result.taxTotal).toBe(48.2758);
+    expect(result.total).toBe(350);
   });
 
   it("banker's rounding .12345 → redondea a par (a 4 decimales)", () => {

@@ -152,9 +152,9 @@ describe("Returns — create y cancel (integration real DB)", () => {
     });
     firstReturnId = dto.id;
     expect(dto.status).toBe("completed");
-    expect(dto.refundSubtotal).toBeCloseTo(300, 2);
-    expect(dto.refundTax).toBeCloseTo(48, 2);
-    expect(dto.refundTotal).toBeCloseTo(348, 2);
+    expect(dto.refundSubtotal).toBeCloseTo(258.6207, 2);
+    expect(dto.refundTax).toBeCloseTo(41.3793, 2);
+    expect(dto.refundTotal).toBeCloseTo(300, 2);
     expect(await currentStock()).toBe(stockBefore + 3);
   });
 

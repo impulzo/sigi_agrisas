@@ -1,12 +1,10 @@
 ## Purpose
 
 Define el comportamiento del backend para registrar compras que la empresa hace a proveedores, incluyendo el incremento de inventario resultante y el control de cuentas por pagar (abonos a proveedor) cuando la compra es a crédito.
-
 ## Requirements
-
 ### Requirement: Registro de una compra a un proveedor
 
-El sistema SHALL permitir registrar una compra (`Purchase`) contra un proveedor activo, compuesta de una o más líneas (`PurchaseItem`). Al confirmarse, SHALL asignar un folio del catálogo con `code="CP"` y `scope="OPERATIONS"` (resuelto automáticamente por el backend, no seleccionable por el cliente), SHALL incrementar el inventario de la sucursal por cada línea, y SHALL snapshotear código, nombre y costo unitario del producto en el momento de la compra. Los totales (`subtotal`, `ivaTotal`, `iepsTotal`, `total`) SHALL calcularse con redondeo half-to-even a 4 decimales, misma fórmula que Sale/Quote/Return.
+El sistema SHALL permitir registrar una compra (`Purchase`) contra un proveedor activo, compuesta de una o más líneas (`PurchaseItem`). Al confirmarse, SHALL asignar un folio del catálogo con `code="CP"` y `scope="OPERATIONS"` (resuelto automáticamente por el backend, no seleccionable por el cliente), SHALL incrementar el inventario de la sucursal por cada línea, y SHALL snapshotear código, nombre y costo unitario del producto en el momento de la compra. Los totales (`subtotal`, `ivaTotal`, `iepsTotal`, `total`) SHALL calcularse con redondeo half-to-even a 4 decimales, misma fórmula que Sale/Quote/Return — incluyendo la extracción de impuesto descrita abajo.
 
 #### Scenario: Compra de contado registrada exitosamente
 - **WHEN** un usuario con `purchases:create` envía una compra con proveedor activo, forma de pago sin crédito (`paymentMethod.isCredit=false`) y líneas válidas (producto activo, cantidad > 0, costo ≥ 0)
@@ -18,7 +16,7 @@ El sistema SHALL permitir registrar una compra (`Purchase`) contra un proveedor 
 
 #### Scenario: Totales calculados con redondeo half-to-even
 - **WHEN** se registra una compra con líneas que incluyen `ivaRate`/`iepsRate` del producto
-- **THEN** `lineSubtotal = round(quantity * unitCost * (1 - discountPct/100), 4)`, `lineIva`/`lineIeps` se calculan sobre `lineSubtotal`, y los totales agregados usan la misma fórmula de banker's rounding que `SaleTotalsCalculator`/`QuoteTotalsCalculator`/`ReturnTotalsCalculator`
+- **THEN** `unitCost` se trata como el costo final que Agrisas paga (impuesto ya incluido): `lineGross = round(quantity * unitCost * (1 - discountPct/100), 4)`, `divisor = 1 + ivaRate + iepsRate`, `lineSubtotal = round(lineGross / divisor, 4)`, `lineIva`/`lineIeps` se calculan sobre `lineSubtotal`, `lineTotal = lineGross` — misma fórmula de banker's rounding que `SaleTotalsCalculator`/`QuoteTotalsCalculator`/`ReturnTotalsCalculator`, preservando la equivalencia byte-a-byte entre los 4 calculadores
 
 #### Scenario: Proveedor inactivo o inexistente rechazado
 - **WHEN** el `providerId` enviado no existe o corresponde a un proveedor con `isActive=false`
@@ -115,3 +113,4 @@ Cada endpoint de compras y abonos a proveedor SHALL requerir el permiso RBAC cor
 #### Scenario: Permiso faltante rechazado
 - **WHEN** un usuario sin el permiso RBAC requerido para la operación (por ejemplo `purchases:pay` para registrar un abono) intenta ejecutarla
 - **THEN** la API responde 403 indicando el permiso faltante
+

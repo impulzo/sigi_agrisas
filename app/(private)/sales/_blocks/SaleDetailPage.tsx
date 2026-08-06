@@ -139,6 +139,12 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
         </div>
 
         <div className="flex gap-2">
+          <Link
+            href={`/sales/${sale.id}/ticket`}
+            className="rounded-full border border-outline px-4 py-2 text-body-sm font-medium hover:bg-surface-container transition-colors"
+          >
+            Ver Ticket
+          </Link>
           <button
             type="button"
             onClick={() => window.print()}

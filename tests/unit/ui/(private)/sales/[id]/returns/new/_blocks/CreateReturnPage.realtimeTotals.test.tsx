@@ -30,7 +30,8 @@ const mockUseCurrentUser = useCurrentUser as jest.MockedFunction<typeof useCurre
 
 const NOW = new Date("2026-06-01T10:00:00Z");
 
-// item: unitPrice=100, ivaRate=0.16, qty=10 → qty=3 → subtotal=300, tax=48, total=348
+// item: unitPrice=100, ivaRate=0.16, qty=10 → qty=3 → IVA extraído del precio final (tax-inclusive):
+// lineGross=300, subtotal≈258.62, tax≈41.38, total=300
 const SALE: SaleDetail = {
   id: "sale-rt",
   branchId: "b1",
@@ -111,7 +112,7 @@ describe("CreateReturnPage — real-time totals (integration)", () => {
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "3" } });
 
     expect(submitBtn).toBeEnabled();
-    expect(totalLabel.nextElementSibling?.textContent).toMatch(/348/);
+    expect(totalLabel.nextElementSibling?.textContent).toMatch(/300/);
   });
 
   it("subtotal y tax también se actualizan al ingresar cantidad", () => {
@@ -120,10 +121,10 @@ describe("CreateReturnPage — real-time totals (integration)", () => {
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "3" } });
 
     const subtotalLabel = screen.getByText("Subtotal reembolso");
-    expect(subtotalLabel.nextElementSibling?.textContent).toMatch(/300/);
+    expect(subtotalLabel.nextElementSibling?.textContent).toMatch(/258\.6/);
 
     const taxLabel = screen.getByText("Impuestos");
-    expect(taxLabel.nextElementSibling?.textContent).toMatch(/48/);
+    expect(taxLabel.nextElementSibling?.textContent).toMatch(/41\.3/);
   });
 
   it("botón vuelve a deshabilitarse si se borra la cantidad", () => {

@@ -7,10 +7,12 @@ import { GetSaleUseCase } from "@/modules/pos/application/use-cases/GetSaleUseCa
 import { CreateSaleUseCase } from "@/modules/pos/application/use-cases/CreateSaleUseCase";
 import { CancelSaleUseCase } from "@/modules/pos/application/use-cases/CancelSaleUseCase";
 import { EditCompletedSaleUseCase } from "@/modules/pos/application/use-cases/EditCompletedSaleUseCase";
+import { SendSaleTicketEmailUseCase } from "@/modules/pos/application/use-cases/SendSaleTicketEmailUseCase";
 import { SalesController } from "@/modules/pos/infrastructure/http/SalesController";
 import { branchRepo } from "@/modules/branches/infrastructure/di/container";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
 import { adminNotificationService } from "@/shared/infrastructure/di/adminNotificationContainer";
+import { mailer } from "@/shared/infrastructure/di/mailerContainer";
 
 const saleRepo = new PrismaSaleRepository(prisma, adminNotificationService);
 const lookups = new PrismaPosLookupService(prisma);
@@ -23,6 +25,7 @@ const getUseCase = new GetSaleUseCase(saleRepo);
 const createUseCase = new CreateSaleUseCase(saleRepo, lookups, quoteRepo);
 const cancelUseCase = new CancelSaleUseCase(saleRepo, adminNotificationService);
 const editUseCase = new EditCompletedSaleUseCase(saleRepo, lookups);
+const sendTicketEmailUseCase = new SendSaleTicketEmailUseCase(saleRepo, lookups, mailer);
 
 export const salesController = new SalesController(
   listUseCase,
@@ -30,6 +33,7 @@ export const salesController = new SalesController(
   createUseCase,
   cancelUseCase,
   editUseCase,
+  sendTicketEmailUseCase,
   branchRepo,
   lookups,
   rbacContainer.authorizationService

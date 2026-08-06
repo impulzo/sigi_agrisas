@@ -113,6 +113,10 @@ function makeLookups(overrides?: Partial<PosLookupService>): PosLookupService {
       isActive: true,
       basePrice: 100,
     }),
+    // Mock devuelve 7% (no el default 5%) para mantener los mismos valores esperados
+    // en los tests existentes de dosificación — este test verifica el "plumbing" del
+    // use case, no el valor default de settings (cubierto en DosificationPriceCalculator.test.ts).
+    getDosificationSurchargePct: jest.fn().mockResolvedValue(7),
     ...overrides,
   };
 }
@@ -130,9 +134,9 @@ describe("CreateSaleUseCase", () => {
     const repo = makeRepo();
     const result = await new CreateSaleUseCase(repo, makeLookups()).execute(baseReq, "user-1");
     expect(result.dto.status).toBe("completed");
-    expect(result.dto.subtotal).toBe(200);
-    expect(result.dto.taxTotal).toBe(32);
-    expect(result.dto.total).toBe(232);
+    expect(result.dto.subtotal).toBe(172.4138);
+    expect(result.dto.taxTotal).toBe(27.5862);
+    expect(result.dto.total).toBe(200);
     expect(repo.createCompleted).toHaveBeenCalledTimes(1);
   });
 
@@ -308,7 +312,7 @@ describe("CreateSaleUseCase", () => {
     });
 
     it("no bloquea la venta cuando el total supera el crédito disponible; creditLimitExceeded=true", async () => {
-      // Product price=100, qty=2, total=232. Available = 5000 - 4900 = 100 < 232
+      // Product price=100, qty=2, total=200 (tax extracted, not added). Available = 5000 - 4900 = 100 < 200
       const lookups = creditLookups(5000, 4900);
       const result = await new CreateSaleUseCase(makeRepo(), lookups).execute(baseReq, "user-1");
       expect(result.creditLimitExceeded).toBe(true);
@@ -316,8 +320,8 @@ describe("CreateSaleUseCase", () => {
     });
 
     it("crea venta a crédito cuando el total cabe exactamente en el crédito disponible; creditLimitExceeded=false", async () => {
-      // total = 232 (qty=2 * price=100 * 1.16 IVA). creditLimit=5000, balance=4768 → available=232
-      const lookups = creditLookups(5000, 4768);
+      // total = 200 (qty=2 * price=100, IVA extracted from the tax-inclusive price, not added). creditLimit=5000, balance=4800 → available=200
+      const lookups = creditLookups(5000, 4800);
       const repo = makeRepo();
       const result = await new CreateSaleUseCase(repo, lookups).execute(baseReq, "user-1");
       expect(result.dto.paymentStatus).toBe("pending");

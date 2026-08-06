@@ -16,6 +16,8 @@ interface PrintableTicketProps {
 export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) {
   const paperWidth = ticketSettings?.paperWidth ?? "80mm";
   const folioLabel = sale.folioPrefix ? `${sale.folioPrefix}-${sale.folioNumber}` : String(sale.folioNumber);
+  const ivaTotal = sale.items.reduce((sum, item) => sum + item.lineIva, 0);
+  const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
 
   return (
     <div className="printable-ticket hidden print:block">
@@ -62,8 +64,12 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
         <span>{fmt(sale.subtotal)}</span>
       </p>
       <p style={{ display: "flex", justifyContent: "space-between" }}>
-        <span>Impuestos</span>
-        <span>{fmt(sale.taxTotal)}</span>
+        <span>IVA</span>
+        <span>{fmt(ivaTotal)}</span>
+      </p>
+      <p style={{ display: "flex", justifyContent: "space-between" }}>
+        <span>IEPS</span>
+        <span>{fmt(iepsTotal)}</span>
       </p>
       <p style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
         <span>Total</span>

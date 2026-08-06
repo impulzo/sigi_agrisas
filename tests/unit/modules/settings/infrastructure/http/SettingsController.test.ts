@@ -4,19 +4,25 @@ import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cas
 import { UpdateTicketSettingsUseCase } from "@/modules/settings/application/use-cases/UpdateTicketSettingsUseCase";
 import { UploadTicketLogoUseCase } from "@/modules/settings/application/use-cases/UploadTicketLogoUseCase";
 import { DeleteTicketLogoUseCase } from "@/modules/settings/application/use-cases/DeleteTicketLogoUseCase";
+import { GetPricingSettingsUseCase } from "@/modules/settings/application/use-cases/GetPricingSettingsUseCase";
+import { UpdatePricingSettingsUseCase } from "@/modules/settings/application/use-cases/UpdatePricingSettingsUseCase";
 import { InMemoryTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 import { InMemoryTicketLogoStorage } from "@/modules/settings/infrastructure/services/InMemoryTicketLogoStorage";
+import { InMemoryPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryPricingSettingsRepository";
 
 function buildController() {
   const repo = new InMemoryTicketSettingsRepository();
   const storage = new InMemoryTicketLogoStorage();
+  const pricingRepo = new InMemoryPricingSettingsRepository();
   const controller = new SettingsController(
     new GetTicketSettingsUseCase(repo),
     new UpdateTicketSettingsUseCase(repo),
     new UploadTicketLogoUseCase(repo, storage),
-    new DeleteTicketLogoUseCase(repo, storage)
+    new DeleteTicketLogoUseCase(repo, storage),
+    new GetPricingSettingsUseCase(pricingRepo),
+    new UpdatePricingSettingsUseCase(pricingRepo)
   );
-  return { controller, repo, storage };
+  return { controller, repo, storage, pricingRepo };
 }
 
 function req(method: string, body?: unknown): NextRequest {
@@ -74,6 +80,44 @@ describe("SettingsController", () => {
       const { controller } = buildController();
       const res = await controller.deleteLogo();
       expect(res.status).toBe(200);
+    });
+  });
+
+  describe("getPricing", () => {
+    it("returns 200 with default 5% when nothing configured", async () => {
+      const { controller } = buildController();
+      const res = await controller.getPricing();
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toEqual({ dosificationSurchargePct: 5 });
+    });
+  });
+
+  describe("updatePricing", () => {
+    it("returns 200 on a valid update", async () => {
+      const { controller } = buildController();
+      const res = await controller.updatePricing(req("PATCH", { dosificationSurchargePct: 8 }));
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toEqual({ dosificationSurchargePct: 8 });
+    });
+
+    it("returns 400 on an empty body", async () => {
+      const { controller } = buildController();
+      const res = await controller.updatePricing(req("PATCH", {}));
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 on a negative value", async () => {
+      const { controller } = buildController();
+      const res = await controller.updatePricing(req("PATCH", { dosificationSurchargePct: -1 }));
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 on a non-numeric value", async () => {
+      const { controller } = buildController();
+      const res = await controller.updatePricing(req("PATCH", { dosificationSurchargePct: "abc" }));
+      expect(res.status).toBe(400);
     });
   });
 });

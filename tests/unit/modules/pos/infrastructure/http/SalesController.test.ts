@@ -19,6 +19,7 @@ import { GetSaleUseCase } from "@/modules/pos/application/use-cases/GetSaleUseCa
 import { CreateSaleUseCase } from "@/modules/pos/application/use-cases/CreateSaleUseCase";
 import { CancelSaleUseCase } from "@/modules/pos/application/use-cases/CancelSaleUseCase";
 import { EditCompletedSaleUseCase } from "@/modules/pos/application/use-cases/EditCompletedSaleUseCase";
+import { SendSaleTicketEmailUseCase } from "@/modules/pos/application/use-cases/SendSaleTicketEmailUseCase";
 import { SaleRepository, SaleSummary } from "@/modules/pos/application/ports/SaleRepository";
 import { PosLookupService } from "@/modules/pos/application/ports/PosLookups";
 import { BranchRepository } from "@/modules/branches/application/ports/BranchRepository";
@@ -185,6 +186,10 @@ function makeQuoteSummary(opts: {
   };
 }
 
+function makeMailer() {
+  return { send: jest.fn().mockResolvedValue(undefined) };
+}
+
 function buildController(opts: {
   repo?: SaleRepository;
   quoteRepo?: QuoteRepository;
@@ -199,6 +204,7 @@ function buildController(opts: {
     new CreateSaleUseCase(repo, lookups, opts.quoteRepo),
     new CancelSaleUseCase(repo),
     new EditCompletedSaleUseCase(repo, lookups),
+    new SendSaleTicketEmailUseCase(repo, lookups, makeMailer()),
     makeBranchRepo(opts.hq ?? null),
     lookups,
     makeAuthz(opts.bypass ?? false)
@@ -346,6 +352,7 @@ describe("SalesController — quoteId link (task 10.8)", () => {
       new CreateSaleUseCase(repo, activeLookups(), opts.quoteRepo),
       new CancelSaleUseCase(repo),
       new EditCompletedSaleUseCase(repo, activeLookups()),
+      new SendSaleTicketEmailUseCase(repo, activeLookups(), makeMailer()),
       makeBranchRepo(null),
       activeLookups(),
       makeAuthz(false)
@@ -554,6 +561,7 @@ describe("SalesController — Flujo de crédito y abonos activos", () => {
       new CreateSaleUseCase(repo, lookups, makeQuoteRepo()),
       new CancelSaleUseCase(repo),
       new EditCompletedSaleUseCase(repo, lookups),
+      new SendSaleTicketEmailUseCase(repo, lookups, makeMailer()),
       makeBranchRepo(null),
       lookups,
       authz
@@ -625,6 +633,7 @@ describe("SalesController — Flujo de crédito y abonos activos", () => {
       new CreateSaleUseCase(repo, lookups, makeQuoteRepo()),
       new CancelSaleUseCase(repo),
       new EditCompletedSaleUseCase(repo, lookups),
+      new SendSaleTicketEmailUseCase(repo, lookups, makeMailer()),
       makeBranchRepo(makeHq()),
       lookups,
       makeAuthz(false)
@@ -671,5 +680,46 @@ describe("SalesController.getById — returnedQuantityBySaleItem", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.returnedQuantityBySaleItem).toEqual({});
+  });
+});
+
+describe("SalesController.sendTicketEmail", () => {
+  it("200 con override email, ignora el email del cliente", async () => {
+    const ctl = buildController({ bypass: true });
+    const res = await ctl.sendTicketEmail(
+      postReq({ email: "otra@direccion.com" }, { "x-user-id": "admin", "x-user-branch-id": "" }),
+      SALE_ID
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.sentTo).toBe("otra@direccion.com");
+  });
+
+  it("400 cuando no hay email de cliente ni override", async () => {
+    const ctl = buildController({ bypass: true });
+    const res = await ctl.sendTicketEmail(
+      postReq({}, { "x-user-id": "admin", "x-user-branch-id": "" }),
+      SALE_ID
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("400 con email de formato inválido (Zod)", async () => {
+    const ctl = buildController({ bypass: true });
+    const res = await ctl.sendTicketEmail(
+      postReq({ email: "not-an-email" }, { "x-user-id": "admin", "x-user-branch-id": "" }),
+      SALE_ID
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("404 cuando la venta no existe", async () => {
+    const repo = makeRepo({ findByIdWithItems: jest.fn().mockResolvedValue(null) });
+    const ctl = buildController({ repo, bypass: true });
+    const res = await ctl.sendTicketEmail(
+      postReq({ email: "otra@direccion.com" }, { "x-user-id": "admin", "x-user-branch-id": "" }),
+      SALE_ID
+    );
+    expect(res.status).toBe(404);
   });
 });

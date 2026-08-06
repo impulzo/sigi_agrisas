@@ -54,8 +54,8 @@ describe("CreatePurchaseUseCase", () => {
 
     expect(result.dto.status).toBe("completed");
     expect(result.dto.paymentStatus).toBe("paid");
-    expect(result.dto.paidAmount).toBe("232.0000");
-    expect(result.dto.total).toBe("232.0000");
+    expect(result.dto.paidAmount).toBe("200.0000");
+    expect(result.dto.total).toBe("200.0000");
     expect(result.dto.items).toHaveLength(1);
     expect(result.dto.items[0].productCodeSnapshot).toBe("PROD001");
   });
@@ -71,7 +71,7 @@ describe("CreatePurchaseUseCase", () => {
 
     expect(result.dto.paymentStatus).toBe("pending");
     expect(result.dto.paidAmount).toBe("0.0000");
-    expect(repo.providers.get(PROVIDER)!.currentBalance).toBe(116);
+    expect(repo.providers.get(PROVIDER)!.currentBalance).toBe(100);
   });
 
   it("throws ProviderNotFoundOrInactiveError for inactive provider", async () => {

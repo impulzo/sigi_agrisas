@@ -81,4 +81,12 @@ describe("PrintableTicket", () => {
     expect(screen.getByText(/folio: tk-42/i)).toBeInTheDocument();
     expect(screen.queryByAltText("Logo")).not.toBeInTheDocument();
   });
+
+  it("shows IVA and IEPS as separate lines, always visible even when IEPS is $0", () => {
+    render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    expect(screen.getByText("IVA")).toBeInTheDocument();
+    expect(screen.getByText("IEPS")).toBeInTheDocument();
+    expect(screen.queryByText("Impuestos")).not.toBeInTheDocument();
+  });
 });

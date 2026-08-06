@@ -204,7 +204,7 @@ describe("StampInvoiceUseCase", () => {
 
       expect(invoice.saleId).toBeNull();
       expect(invoice.status).toBe("stamped");
-      expect(invoice.total).toBeCloseTo(116, 2);
+      expect(invoice.total).toBeCloseTo(100, 2);
     });
 
     it("standalone does NOT modify inventory", async () => {

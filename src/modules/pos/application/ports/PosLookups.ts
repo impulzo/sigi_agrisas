@@ -31,6 +31,7 @@ export interface CustomerLookup {
   isActive: boolean;
   creditLimit: number | null;
   currentBalance: number;
+  email: string | null;
 }
 
 export interface BranchLookup {
@@ -62,4 +63,6 @@ export interface PosLookupService {
   getBranch(id: string): Promise<BranchLookup | null>;
   getFolio(id: string): Promise<FolioLookup | null>;
   getPaymentMethod(id: string): Promise<PaymentMethodLookup | null>;
+  /** Currently configured dosification surcharge percentage (settings-api), default 5 when unconfigured. */
+  getDosificationSurchargePct(): Promise<number>;
 }

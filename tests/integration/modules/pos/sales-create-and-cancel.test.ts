@@ -110,9 +110,9 @@ describe("Sales — crear y cancelar (integration real DB)", () => {
 
     saleId = result.dto.id;
     expect(result.dto.status).toBe("completed");
-    expect(result.dto.subtotal).toBeCloseTo(200, 2);
-    expect(result.dto.taxTotal).toBeCloseTo(32, 2);
-    expect(result.dto.total).toBeCloseTo(232, 2);
+    expect(result.dto.subtotal).toBeCloseTo(172.4138, 2);
+    expect(result.dto.taxTotal).toBeCloseTo(27.5862, 2);
+    expect(result.dto.total).toBeCloseTo(200, 2);
     expect(result.dto.items).toHaveLength(1);
     expect(result.dto.items[0].productCodeSnapshot).toBe(`${P}PROD1`);
     expect(result.dto.folioNumber).toBe(1);

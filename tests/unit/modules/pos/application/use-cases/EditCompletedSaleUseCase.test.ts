@@ -71,6 +71,7 @@ function makeLookups(overrides?: Partial<PosLookupService>): PosLookupService {
       isActive: true,
       basePrice: 100,
     }),
+    getDosificationSurchargePct: jest.fn().mockResolvedValue(7),
     ...overrides,
   };
 }
@@ -99,9 +100,9 @@ describe("EditCompletedSaleUseCase", () => {
     const repo = makeRepo("completed");
     const result = await new EditCompletedSaleUseCase(repo, makeLookups()).execute("sale-1", baseReq);
     expect(result.dto.status).toBe("edited");
-    expect(result.dto.subtotal).toBe(100);
-    expect(result.dto.taxTotal).toBe(16);
-    expect(result.dto.total).toBe(116);
+    expect(result.dto.subtotal).toBe(86.2069);
+    expect(result.dto.taxTotal).toBe(13.7931);
+    expect(result.dto.total).toBe(100);
   });
 
   it("rechaza venta cancelada con CancelledSaleNotEditableError", async () => {

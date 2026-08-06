@@ -14,15 +14,15 @@ describe("SaleTotalsCalculator", () => {
     expect(r.total).toBe(100);
   });
 
-  it("calcula IVA al 16% sobre el subtotal", () => {
+  it("extrae IVA al 16% del precio final (tax-inclusive)", () => {
     const r = SaleTotalsCalculator.computeTotals([
       { quantity: 2, unitPrice: 100, ivaRate: 0.16 },
     ]);
-    expect(r.lines[0].lineSubtotal).toBe(200);
-    expect(r.lines[0].lineIva).toBe(32);
-    expect(r.lines[0].lineTax).toBe(32);
-    expect(r.lines[0].lineTotal).toBe(232);
-    expect(r.total).toBe(232);
+    expect(r.lines[0].lineSubtotal).toBe(172.4138);
+    expect(r.lines[0].lineIva).toBe(27.5862);
+    expect(r.lines[0].lineTax).toBe(27.5862);
+    expect(r.lines[0].lineTotal).toBe(200);
+    expect(r.total).toBe(200);
   });
 
   it("aplica descuento porcentual antes de impuestos", () => {
@@ -33,14 +33,15 @@ describe("SaleTotalsCalculator", () => {
     expect(r.lines[0].lineTotal).toBe(90);
   });
 
-  it("suma IVA + IEPS por línea", () => {
+  it("extrae IVA + IEPS simultáneamente de la misma base (no en cascada)", () => {
     const r = SaleTotalsCalculator.computeTotals([
       { quantity: 1, unitPrice: 100, ivaRate: 0.16, iepsRate: 0.08 },
     ]);
-    expect(r.lines[0].lineIva).toBe(16);
-    expect(r.lines[0].lineIeps).toBe(8);
-    expect(r.lines[0].lineTax).toBe(24);
-    expect(r.lines[0].lineTotal).toBe(124);
+    expect(r.lines[0].lineSubtotal).toBe(80.6452);
+    expect(r.lines[0].lineIva).toBe(12.9032);
+    expect(r.lines[0].lineIeps).toBe(6.4516);
+    expect(r.lines[0].lineTax).toBe(19.3548);
+    expect(r.lines[0].lineTotal).toBe(100);
   });
 
   it("trata null como 0 para tasas e descuento", () => {
@@ -56,9 +57,9 @@ describe("SaleTotalsCalculator", () => {
       { quantity: 1, unitPrice: 100, ivaRate: 0.16 },
       { quantity: 2, unitPrice: 50 },
     ]);
-    expect(r.subtotal).toBe(200);
-    expect(r.taxTotal).toBe(16);
-    expect(r.total).toBe(216);
+    expect(r.subtotal).toBe(186.2069);
+    expect(r.taxTotal).toBe(13.7931);
+    expect(r.total).toBe(200);
   });
 
   it("rechaza quantity <= 0", () => {

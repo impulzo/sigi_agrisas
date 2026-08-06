@@ -5,12 +5,14 @@ import { CreateProductDosificationRequest } from "../dto/CreateProductDosificati
 import { ProductDosificationDto } from "../dto/ProductDosificationDto";
 import { toProductDosificationDto } from "../mappers/toProductDosificationDto";
 import { ProductNotFoundError } from "../../domain/errors/ProductNotFoundError";
+import type { PricingSettingsRepository } from "@/modules/settings/application/ports/PricingSettingsRepository";
 
 export class CreateProductDosificationUseCase {
   constructor(
     private readonly productRepo: ProductRepository,
     private readonly priceRepo: ProductPriceRepository,
-    private readonly dosificationRepo: ProductDosificationRepository
+    private readonly dosificationRepo: ProductDosificationRepository,
+    private readonly pricingSettingsRepo: PricingSettingsRepository
   ) {}
 
   async execute(productId: string, req: CreateProductDosificationRequest): Promise<ProductDosificationDto> {
@@ -24,7 +26,10 @@ export class CreateProductDosificationUseCase {
       isActive: req.isActive ?? true,
     });
 
-    const defaultPrice = await this.priceRepo.findDefaultByProductId(productId);
-    return toProductDosificationDto(created, defaultPrice);
+    const [defaultPrice, pricingSettings] = await Promise.all([
+      this.priceRepo.findDefaultByProductId(productId),
+      this.pricingSettingsRepo.get(),
+    ]);
+    return toProductDosificationDto(created, defaultPrice, pricingSettings.dosificationSurchargePct);
   }
 }

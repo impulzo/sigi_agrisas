@@ -5,9 +5,7 @@
 Define the Point-of-Sale (POS) API: atomic sale emission, cancellation, editing, and listing under `/api/v1/admin/sales`. Includes the `SaleTotalsCalculator` domain service and branch scoping rules for all sale endpoints.
 
 ---
-
 ## Requirements
-
 ### Requirement: Sale aggregate model
 The system SHALL persist a sale as the aggregate `Sale` (header) + `SaleItem` (lines) with the following invariants:
 
@@ -27,7 +25,7 @@ The system SHALL persist a sale as the aggregate `Sale` (header) + `SaleItem` (l
 - `Sale.quoteId` is a nullable reference to a `Quote` (FK `ON DELETE SET NULL`). Indexed via `sales(quote_id)`. When the sale was emitted directly via `POST /api/v1/admin/sales` without a quote, the column is `null`. When the sale was emitted via `POST /api/v1/admin/quotes/:id/convert`, the column points to the originating quote.
 - Each `SaleItem` snapshots `productCodeSnapshot`, `productNameSnapshot`, `priceNameSnapshot`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate` so the ticket survives later changes to the catalog. `productId` (FK `ON DELETE RESTRICT`) and `productPriceId` (FK `ON DELETE SET NULL`) are retained for reporting.
 - Each `SaleItem` persists `lineSubtotal`, `lineTax`, `lineTotal`.
-- **Dosification lines**: a `SaleItem` MAY originate from a `ProductDosification` instead of a `ProductPrice`. In that case `productPriceId` SHALL be `null`, and the line additionally persists `dosificationId` (nullable FK to `product_dosifications`, `ON DELETE SET NULL`) and `numPartsSnapshot` (nullable `INT`, the dosification's `numParts` at the time of sale). `priceNameSnapshot` SHALL hold the dosification's `name` for these lines (same column, same display purpose as for price-based lines). Exactly one of `productPriceId`/`dosificationId` SHALL be non-null per `SaleItem` — never both, never neither. `unitPrice` for a dosification line is `DosificationPriceCalculator.computeUnitPrice(defaultPrice.price, numParts)`. `quantity` for a dosification line represents the number of dosification parts sold and MAY exceed `numParts` (selling more than one full container in a single line is allowed, e.g. 6 parts of a `numParts=4` dosification).
+- **Dosification lines**: a `SaleItem` MAY originate from a `ProductDosification` instead of a `ProductPrice`. In that case `productPriceId` SHALL be `null`, and the line additionally persists `dosificationId` (nullable FK to `product_dosifications`, `ON DELETE SET NULL`) and `numPartsSnapshot` (nullable `INT`, the dosification's `numParts` at the time of sale). `priceNameSnapshot` SHALL hold the dosification's `name` for these lines (same column, same display purpose as for price-based lines). Exactly one of `productPriceId`/`dosificationId` SHALL be non-null per `SaleItem` — never both, never neither. `unitPrice` for a dosification line is `DosificationPriceCalculator.computeUnitPrice(defaultPrice.price, numParts, surchargePct)`, where `surchargePct` is the value currently configured via `settings-api` (`GET /settings/pricing` → `dosificationSurchargePct`, default `5.0`) — NOT a fixed constant. `quantity` for a dosification line represents the number of dosification parts sold and MAY exceed `numParts` (selling more than one full container in a single line is allowed, e.g. 6 parts of a `numParts=4` dosification).
 - **Inventory quantity for dosification lines**: any operation that moves `branch_inventory.quantity` from a `SaleItem` (creation, cancellation, edit) SHALL use `quantity / numPartsSnapshot` as the base-unit amount when `numPartsSnapshot` is non-null, instead of `quantity` directly. For lines without a dosification (`numPartsSnapshot = null`), the amount is `quantity` unchanged (no behavior change).
 
 #### Scenario: Snapshot survives product rename
@@ -209,7 +207,7 @@ The `quoteId` does NOT constrain whether the sale is cash or credit — the `pay
 3. If `quoteId` is non-null: validate per the rules above; failure → HTTP 400.
 4. For each item:
    - If `productPriceId` is present: load the `Product` and `ProductPrice`; verify `productPrice.productId === item.productId` (else `ProductPriceMismatchError` → HTTP 400) and belongs to a product whose `isActive = true` (else HTTP 400).
-   - If `dosificationId` is present instead: load the `Product` and `ProductDosification`; verify `dosification.productId === item.productId` (else HTTP 400) and `dosification.isActive = true` (else HTTP 400); load the product's default `ProductPrice` — if none exists → HTTP 400 `{"error": "Dosification requires a default price"}`; compute `unitPrice = DosificationPriceCalculator.computeUnitPrice(defaultPrice.price, dosification.numParts)`.
+   - If `dosificationId` is present instead: load the `Product` and `ProductDosification`; verify `dosification.productId === item.productId` (else HTTP 400) and `dosification.isActive = true` (else HTTP 400); load the product's default `ProductPrice` — if none exists → HTTP 400 `{"error": "Dosification requires a default price"}`; resolve the currently configured `dosificationSurchargePct` from `settings-api` (default `5.0` when unconfigured); compute `unitPrice = DosificationPriceCalculator.computeUnitPrice(defaultPrice.price, dosification.numParts, surchargePct)`.
    - `quantity > 0` (else HTTP 400) for either case. The system MAY skip enforcement of `minQuantity` in v1 (documented, applies only to price-based lines).
 5. Snapshot `productCodeSnapshot = product.code`, `productNameSnapshot = product.name`; for price-based lines: `priceNameSnapshot = price.name`, `unitPrice = price.price`, `discountPct = price.discountPct`; for dosification lines: `priceNameSnapshot = dosification.name`, `unitPrice` per above, `discountPct = null`, `dosificationId = dosification.id`, `numPartsSnapshot = dosification.numParts`. Both kinds set `ivaRate = product.ivaRate`, `iepsRate = product.iepsRate`.
 6. Compute totals using `SaleTotalsCalculator` (domain service) — unchanged by dosification lines (operates on `quantity * unitPrice`, agnostic to what `quantity` represents).
@@ -314,8 +312,8 @@ Returns HTTP 201 with the `SaleDetailDto` (including items, `quoteId`, `paidAmou
 - **THEN** the system still returns HTTP 201 as normal, AND — per `admin-notifications-api` — an email is sent to the configured admin address and `lastLowStockNotifiedAt` is updated; a failure to send this email does NOT affect the HTTP 201 response
 
 #### Scenario: Dosification sale decrements a fraction of base stock
-- **WHEN** the body has one item with `dosificationId` referencing a dosification with `numParts=4` and `quantity=3`, for a product whose default price is `100` and whose `branch_inventory.quantity = 10`
-- **THEN** the system returns HTTP 201 with `unitPrice = (100/4)*1.07 = 26.75` on that line; `branch_inventory.quantity` becomes `10 - (3/4) = 9.25`
+- **WHEN** the body has one item with `dosificationId` referencing a dosification with `numParts=4` and `quantity=3`, for a product whose default price is `100` and whose `branch_inventory.quantity = 10`, and no `pricing_settings` row exists yet (default 5% surcharge applies)
+- **THEN** the system returns HTTP 201 with `unitPrice = (100/4)*1.05 = 26.25` on that line; `branch_inventory.quantity` becomes `10 - (3/4) = 9.25`
 
 #### Scenario: Dosification without default price rejected
 - **WHEN** the body has an item with `dosificationId` referencing a dosification whose product has no default `ProductPrice`
@@ -332,8 +330,6 @@ Returns HTTP 201 with the `SaleDetailDto` (including items, `quoteId`, `paidAmou
 #### Scenario: Inactive dosification rejected
 - **WHEN** an item's `dosificationId` references a dosification with `isActive=false`
 - **THEN** the system returns HTTP 400
-
----
 
 ### Requirement: Cancel sale
 The system SHALL expose `POST /api/v1/admin/sales/:id/cancel`. Requires `sales:cancel`. Body MAY include `reason: string | null` (max 500 chars). Branch scoping applies (callers without `branches:access_all` can only cancel sales in their assigned branch).
@@ -506,37 +502,41 @@ computeTotals(lines: SaleLineInput[]): SaleTotalsResult
 
 `SaleTotalsResult`: `{ lines: SaleLineTotals[], subtotal, taxTotal, total }`. Each `SaleLineTotals`: `{ lineSubtotal, lineIva, lineIeps, lineTax, lineTotal }`.
 
-Formula per line:
+`unitPrice` represents the FINAL price the customer pays for that unit — taxes are already included in it. The system SHALL extract (not add) the tax from that price using the standard tax-inclusive-price formula:
 
 ```
-lineSubtotal = round(quantity * unitPrice * (1 - discountPct / 100), 4)
-lineIva       = round(lineSubtotal * ivaRate, 4)
-lineIeps      = round(lineSubtotal * iepsRate, 4)
-lineTax       = lineIva + lineIeps
-lineTotal     = lineSubtotal + lineTax
+lineGross    = round(quantity * unitPrice * (1 - discountPct / 100), 4)
+divisor      = 1 + ivaRate + iepsRate
+lineSubtotal = round(lineGross / divisor, 4)
+lineIva      = round(lineSubtotal * ivaRate, 4)
+lineIeps     = round(lineSubtotal * iepsRate, 4)
+lineTax      = lineIva + lineIeps
+lineTotal    = lineGross
 ```
+
+`lineTotal` (what the customer pays) is unaffected by this change — only the internal subtotal/IVA/IEPS breakdown changes. When `ivaRate = iepsRate = 0`, `divisor = 1` and the formula degenerates to the previous behavior (`lineSubtotal = lineGross = lineTotal`).
 
 Header totals are the sum across lines for `lineSubtotal`, `lineTax`, `lineTotal` respectively (mapped to `subtotal`, `taxTotal`, `total`). Rounding uses banker's rounding (half-to-even) at 4 decimal places. The service SHALL throw if `quantity <= 0`, `unitPrice < 0`, `discountPct < 0 || discountPct > 100`, `ivaRate < 0 || ivaRate > 1`, or `iepsRate < 0 || iepsRate > 1`. No I/O dependencies (no Prisma, no fetch).
 
 #### Scenario: Simple line
 - **WHEN** `computeTotals([{ quantity: 2, unitPrice: 100, ivaRate: 0.16 }])` is invoked
-- **THEN** the result has `lineSubtotal = 200`, `lineIva = 32`, `lineTax = 32`, `lineTotal = 232`, `subtotal = 200`, `taxTotal = 32`, `total = 232`
+- **THEN** the result has `lineSubtotal = 172.4138`, `lineIva = 27.5862`, `lineTax = 27.5862`, `lineTotal = 200`, `subtotal = 172.4138`, `taxTotal = 27.5862`, `total = 200`
 
 #### Scenario: With discount
 - **WHEN** `computeTotals([{ quantity: 1, unitPrice: 100, discountPct: 10 }])` is invoked
-- **THEN** `lineSubtotal = 90`, `lineTotal = 90`
+- **THEN** `lineSubtotal = 90`, `lineTotal = 90` (no tax rates, formula degenerates to gross = subtotal)
 
 #### Scenario: With IVA and IEPS
 - **WHEN** `computeTotals([{ quantity: 1, unitPrice: 100, ivaRate: 0.16, iepsRate: 0.08 }])` is invoked
-- **THEN** `lineIva = 16`, `lineIeps = 8`, `lineTax = 24`, `lineTotal = 124`
+- **THEN** `lineSubtotal = 80.6452`, `lineIva = 12.9032`, `lineIeps = 6.4516`, `lineTax = 19.3548`, `lineTotal = 100` — both taxes are extracted simultaneously from the same base (`divisor = 1.24`), not in cascade
 
 #### Scenario: Null rates treated as zero
 - **WHEN** `computeTotals([{ quantity: 1, unitPrice: 100, ivaRate: null, iepsRate: null }])` is invoked
-- **THEN** `lineTax = 0`, `lineTotal = 100`
+- **THEN** `lineTax = 0`, `lineSubtotal = 100`, `lineTotal = 100`
 
 #### Scenario: Multi-line aggregation
 - **WHEN** `computeTotals([{quantity:1,unitPrice:100,ivaRate:0.16}, {quantity:2,unitPrice:50}])` is invoked
-- **THEN** `subtotal = 200`, `taxTotal = 16`, `total = 216`
+- **THEN** `subtotal = 186.2069`, `taxTotal = 13.7931`, `total = 200`
 
 #### Scenario: Domain purity
 - **WHEN** unit tests run against the calculator
@@ -545,8 +545,6 @@ Header totals are the sum across lines for `lineSubtotal`, `lineTax`, `lineTotal
 #### Scenario: Invalid input rejected
 - **WHEN** `computeTotals([{ quantity: 0, unitPrice: 100 }])` is invoked
 - **THEN** the method throws a validation error
-
----
 
 ### Requirement: Branch scoping pattern for sale endpoints
 Every route handler in `pos-api` that operates on a sale or on a branch-specific listing SHALL enforce the following scoping pattern using `x-user-branch-id` (from middleware) and `branches:access_all` (via `AuthorizationService.userCan`):
@@ -646,3 +644,52 @@ The original `createCompleted` SHALL remain unchanged and continues to be used b
 #### Scenario: Conversion allows negative stock
 - **WHEN** `createCompletedFromQuote` is invoked for an item with `quantity = 30` and current inventory is `0`
 - **THEN** the resulting inventory is `-30` (no rejection, same rule as direct POS sales)
+
+### Requirement: Send sale ticket by email
+The system SHALL expose `POST /api/v1/admin/sales/:id/send-ticket-email`. Requires `sales:read` (same permission as viewing the sale; no new permission introduced — sending a copy of an already-visible ticket is not a higher-privilege action). Enforces the same branch scope as `GET /sales/:id` (`enforceBranchScope`, loading the sale first). Optional body: `{ email?: string }` — when omitted, the recipient is `sale.customer.email` (via the sale's linked customer, which is nullable for walk-in/"público general" sales).
+
+Behavior:
+
+1. Load the sale via the same lookup used by `GET /sales/:id` (with items); enforce branch scope; not found → HTTP 404.
+2. Resolve the recipient: `body.email` if present and non-empty (validated as a well-formed email via Zod `.email()`, else HTTP 400), otherwise `sale.customer?.email`. If both are absent/null → HTTP 400 `{"error": "Customer has no email and no override provided"}`.
+3. Compose a single HTML email summarizing the ticket (folio, date, items, subtotal, IVA, IEPS, total, payment method) — no PDF/XML attachment (unlike `billing-api`'s invoice email, there is no generated file to attach; the ticket is a live-rendered summary).
+4. Send the email to the resolved recipient via `MailerPort`. This send is SYNCHRONOUS — a failure (SMTP unreachable, auth failure, etc.) SHALL propagate to the caller as HTTP 502 `{"error": "Failed to send ticket email"}`. Nothing about the sale record is mutated by this endpoint either way.
+
+Returns HTTP 200 `{"sentTo": "<resolved-email>"}` on success.
+
+#### Scenario: Successful send to customer's email
+- **WHEN** an authorized caller POSTs with no body for a sale whose linked `customer.email = "cliente@ejemplo.com"`
+- **THEN** the system returns HTTP 200 `{"sentTo": "cliente@ejemplo.com"}` and a summary email was sent to that address
+
+#### Scenario: Override recipient
+- **WHEN** the body is `{ "email": "otra@direccion.com" }`
+- **THEN** the email is sent to `otra@direccion.com` regardless of `customer.email`
+
+#### Scenario: Walk-in sale with no customer requires an override
+- **WHEN** the sale has `customerId: null` (público general) and the body omits `email`
+- **THEN** the system returns HTTP 400 `{"error": "Customer has no email and no override provided"}` and no send is attempted
+
+#### Scenario: Customer exists but has no email on file
+- **WHEN** the sale's linked `customer.email` is `null` and the body omits `email`
+- **THEN** the system returns HTTP 400 `{"error": "Customer has no email and no override provided"}`
+
+#### Scenario: Malformed override email
+- **WHEN** the body is `{ "email": "not-an-email" }`
+- **THEN** the system returns HTTP 400 with a Zod validation error, no send is attempted
+
+#### Scenario: SMTP failure propagates to caller
+- **WHEN** the SMTP server is unreachable or rejects authentication
+- **THEN** the system returns HTTP 502 `{"error": "Failed to send ticket email"}`
+
+#### Scenario: Forbidden without sales:read
+- **WHEN** a caller without `sales:read` calls the endpoint
+- **THEN** the system returns HTTP 403 `{"error": "Forbidden", "required": "sales:read"}`
+
+#### Scenario: Branch scoping violation
+- **WHEN** a caller without `branches:access_all` requests a sale belonging to a different branch than `x-user-branch-id`
+- **THEN** the system returns HTTP 403 `{"error": "Forbidden", "required": "branches:access_all"}`
+
+#### Scenario: Sale not found
+- **WHEN** `:id` does not reference an existing sale
+- **THEN** the system returns HTTP 404
+

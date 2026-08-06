@@ -3,20 +3,20 @@ import { SaleTotalsCalculator } from "@/modules/pos/domain/services/SaleTotalsCa
 import { totalsVectors } from "../../../../../fixtures/totals-vectors";
 
 describe("QuoteTotalsCalculator", () => {
-  it("calcula una línea simple con IVA 16%", () => {
+  it("extrae IVA al 16% del precio final (tax-inclusive)", () => {
     const r = QuoteTotalsCalculator.computeTotals([
       { quantity: 2, unitPrice: 100, ivaRate: 0.16 },
     ]);
     expect(r.lines[0]).toEqual({
-      lineSubtotal: 200,
-      lineIva: 32,
+      lineSubtotal: 172.4138,
+      lineIva: 27.5862,
       lineIeps: 0,
-      lineTax: 32,
-      lineTotal: 232,
+      lineTax: 27.5862,
+      lineTotal: 200,
     });
-    expect(r.subtotal).toBe(200);
-    expect(r.taxTotal).toBe(32);
-    expect(r.total).toBe(232);
+    expect(r.subtotal).toBe(172.4138);
+    expect(r.taxTotal).toBe(27.5862);
+    expect(r.total).toBe(200);
   });
 
   it("aplica descuento por línea", () => {
@@ -27,14 +27,14 @@ describe("QuoteTotalsCalculator", () => {
     expect(r.lines[0].lineTotal).toBe(90);
   });
 
-  it("combina IVA y IEPS", () => {
+  it("combina IVA y IEPS (extraídos simultáneamente, no en cascada)", () => {
     const r = QuoteTotalsCalculator.computeTotals([
       { quantity: 1, unitPrice: 100, ivaRate: 0.16, iepsRate: 0.08 },
     ]);
-    expect(r.lines[0].lineIva).toBe(16);
-    expect(r.lines[0].lineIeps).toBe(8);
-    expect(r.lines[0].lineTax).toBe(24);
-    expect(r.lines[0].lineTotal).toBe(124);
+    expect(r.lines[0].lineIva).toBe(12.9032);
+    expect(r.lines[0].lineIeps).toBe(6.4516);
+    expect(r.lines[0].lineTax).toBe(19.3548);
+    expect(r.lines[0].lineTotal).toBe(100);
   });
 
   it("trata null e indefinido como 0", () => {
@@ -50,9 +50,9 @@ describe("QuoteTotalsCalculator", () => {
       { quantity: 1, unitPrice: 100, ivaRate: 0.16 },
       { quantity: 2, unitPrice: 50 },
     ]);
-    expect(r.subtotal).toBe(200);
-    expect(r.taxTotal).toBe(16);
-    expect(r.total).toBe(216);
+    expect(r.subtotal).toBe(186.2069);
+    expect(r.taxTotal).toBe(13.7931);
+    expect(r.total).toBe(200);
   });
 
   it("rechaza quantity <= 0", () => {

@@ -5,9 +5,7 @@
 Define the Quotes API: quote lifecycle (draft → authorized → converted | cancelled | expired), atomic emission, conversion to sale (delegating to the POS pipeline), the `QuoteTotalsCalculator` domain service, and branch scoping rules for all quote endpoints under `/api/v1/admin/quotes`. Quotes never touch `branch_inventory` — only conversion does, via the POS sale-creation pipeline.
 
 ---
-
 ## Requirements
-
 ### Requirement: Quote aggregate model
 The system SHALL persist a quote as the aggregate `Quote` (header) + `QuoteItem` (lines) with the following invariants:
 
@@ -446,14 +444,16 @@ computeTotals(lines: QuoteLineInput[]): QuoteTotalsResult
 
 `QuoteTotalsResult`: `{ lines: QuoteLineTotals[], subtotal, taxTotal, total }`. Each `QuoteLineTotals`: `{ lineSubtotal, lineIva, lineIeps, lineTax, lineTotal }`.
 
-The formula and rounding strategy SHALL match `SaleTotalsCalculator` exactly:
+The formula and rounding strategy SHALL match `SaleTotalsCalculator` exactly. `unitPrice` is the final tax-inclusive price; tax is extracted, not added:
 
 ```
-lineSubtotal = round(quantity * unitPrice * (1 - discountPct / 100), 4)
-lineIva       = round(lineSubtotal * ivaRate, 4)
-lineIeps      = round(lineSubtotal * iepsRate, 4)
-lineTax       = lineIva + lineIeps
-lineTotal     = lineSubtotal + lineTax
+lineGross    = round(quantity * unitPrice * (1 - discountPct / 100), 4)
+divisor      = 1 + ivaRate + iepsRate
+lineSubtotal = round(lineGross / divisor, 4)
+lineIva      = round(lineSubtotal * ivaRate, 4)
+lineIeps     = round(lineSubtotal * iepsRate, 4)
+lineTax      = lineIva + lineIeps
+lineTotal    = lineGross
 ```
 
 Header totals = sum across lines. Rounding: banker's rounding (half-to-even) at 4 decimal places. The service SHALL throw if `quantity <= 0`, `unitPrice < 0`, `discountPct < 0 || discountPct > 100`, `ivaRate < 0 || ivaRate > 1`, or `iepsRate < 0 || iepsRate > 1`. No I/O dependencies.
@@ -462,7 +462,7 @@ A unit test SHALL include an **equivalence block** that iterates over the same i
 
 #### Scenario: Same fixture as SaleTotalsCalculator
 - **WHEN** `computeTotals` is invoked with the same input as a `SaleTotalsCalculator` fixture
-- **THEN** the returned `subtotal`, `taxTotal`, `total`, and per-line breakdown are exactly equal
+- **THEN** the returned `subtotal`, `taxTotal`, `total`, and per-line breakdown (including the tax-extraction formula) are exactly equal
 
 #### Scenario: Invalid input rejected
 - **WHEN** `computeTotals([{ quantity: 0, unitPrice: 100 }])` is invoked
@@ -471,8 +471,6 @@ A unit test SHALL include an **equivalence block** that iterates over the same i
 #### Scenario: Domain purity
 - **WHEN** unit tests run against the calculator
 - **THEN** no Prisma, no fetch, no environment access is required
-
----
 
 ### Requirement: Branch scoping pattern for quote endpoints
 Every route handler in `quotes-api` that operates on a quote or on a branch-filtered listing SHALL enforce the branch-scoping pattern via the shared helper `enforceBranchScope(req, resourceBranchId)` from `src/modules/rbac/infrastructure/http/enforceBranchScope.ts`. The pattern matches `pos-api`: callers without `branches:access_all` whose `x-user-branch-id` differs from `resourceBranchId` receive HTTP 403 `{"error": "Forbidden", "required": "branches:access_all"}`.
@@ -545,3 +543,4 @@ The system SHALL NOT modify `branch_inventory.quantity`, `branch_inventory.reser
 #### Scenario: Only conversion touches inventory
 - **WHEN** an `authorized` quote is converted to a sale
 - **THEN** the inventory decrement happens as part of the POS pipeline (the same SQL UPDATE used by `POST /sales`), driven by the resulting `Sale`, and is reversible only by cancelling that `Sale` via `POST /api/v1/admin/sales/:id/cancel`
+

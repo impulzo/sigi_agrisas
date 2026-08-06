@@ -101,7 +101,7 @@ describe("QuoteDetailPage — desglose IVA/IEPS", () => {
     expect(screen.getByText("$16.00")).toBeInTheDocument();
   });
 
-  it("oculta las filas IVA/IEPS cuando ningún ítem tiene impuestos", () => {
+  it("muestra las filas IVA/IEPS aunque ningún ítem tenga impuestos (siempre visibles)", () => {
     setup(
       makeQuote({
         items: [
@@ -126,8 +126,9 @@ describe("QuoteDetailPage — desglose IVA/IEPS", () => {
       }),
     );
     render(<QuoteDetailPage id="quote-1" />);
-    // "IVA"/"IEPS" solo aparecen en el encabezado de la tabla de ítems, no en el panel de totales
-    expect(screen.getAllByText("IVA")).toHaveLength(1);
-    expect(screen.getAllByText("IEPS")).toHaveLength(1);
+    // "IVA"/"IEPS" aparecen en el encabezado de la tabla de ítems Y en el panel de totales (siempre, aunque $0)
+    expect(screen.getAllByText("IVA")).toHaveLength(2);
+    expect(screen.getAllByText("IEPS")).toHaveLength(2);
+    expect(screen.getAllByText("$0.00").length).toBeGreaterThanOrEqual(2);
   });
 });

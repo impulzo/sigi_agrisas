@@ -4,6 +4,7 @@ import { PrismaTaxRateRepository } from "@/modules/tax-rates/infrastructure/repo
 import { PrismaProductRepository } from "@/modules/products/infrastructure/repositories/PrismaProductRepository";
 import { PrismaProductPriceRepository } from "@/modules/products/infrastructure/repositories/PrismaProductPriceRepository";
 import { PrismaProductDosificationRepository } from "@/modules/products/infrastructure/repositories/PrismaProductDosificationRepository";
+import { PrismaPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaPricingSettingsRepository";
 import { ListProductsUseCase } from "@/modules/products/application/use-cases/ListProductsUseCase";
 import { GetProductUseCase } from "@/modules/products/application/use-cases/GetProductUseCase";
 import { CreateProductUseCase } from "@/modules/products/application/use-cases/CreateProductUseCase";
@@ -29,6 +30,7 @@ const taxRateRepo = new PrismaTaxRateRepository(prisma);
 const productRepo = new PrismaProductRepository(prisma);
 const priceRepo = new PrismaProductPriceRepository(prisma);
 const dosificationRepo = new PrismaProductDosificationRepository(prisma);
+const pricingSettingsRepo = new PrismaPricingSettingsRepository(prisma);
 const imageStorage = new SupabaseProductImageStorage();
 
 export const productsController = new ProductsController(
@@ -49,8 +51,8 @@ export const productPricesController = new ProductPricesController(
 );
 
 export const productDosificationsController = new ProductDosificationsController(
-  new ListProductDosificationsUseCase(productRepo, priceRepo, dosificationRepo),
-  new CreateProductDosificationUseCase(productRepo, priceRepo, dosificationRepo),
-  new UpdateProductDosificationUseCase(priceRepo, dosificationRepo),
+  new ListProductDosificationsUseCase(productRepo, priceRepo, dosificationRepo, pricingSettingsRepo),
+  new CreateProductDosificationUseCase(productRepo, priceRepo, dosificationRepo, pricingSettingsRepo),
+  new UpdateProductDosificationUseCase(priceRepo, dosificationRepo, pricingSettingsRepo),
   new SoftDeleteProductDosificationUseCase(dosificationRepo)
 );

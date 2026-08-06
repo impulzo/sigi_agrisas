@@ -2,6 +2,7 @@ import { ListProductDosificationsUseCase } from "@/modules/products/application/
 import { InMemoryProductRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductRepository";
 import { InMemoryProductPriceRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductPriceRepository";
 import { InMemoryProductDosificationRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductDosificationRepository";
+import { InMemoryPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryPricingSettingsRepository";
 import { ProductNotFoundError } from "@/modules/products/domain/errors/ProductNotFoundError";
 
 const DEPT = "11111111-1111-1111-1111-111111111111";
@@ -10,6 +11,7 @@ describe("ListProductDosificationsUseCase", () => {
   let productRepo: InMemoryProductRepository;
   let priceRepo: InMemoryProductPriceRepository;
   let dosificationRepo: InMemoryProductDosificationRepository;
+  let pricingSettingsRepo: InMemoryPricingSettingsRepository;
   let useCase: ListProductDosificationsUseCase;
   let productId: string;
 
@@ -20,17 +22,25 @@ describe("ListProductDosificationsUseCase", () => {
     priceRepo.reset();
     dosificationRepo = new InMemoryProductDosificationRepository();
     dosificationRepo.reset();
-    useCase = new ListProductDosificationsUseCase(productRepo, priceRepo, dosificationRepo);
+    pricingSettingsRepo = new InMemoryPricingSettingsRepository();
+    useCase = new ListProductDosificationsUseCase(productRepo, priceRepo, dosificationRepo, pricingSettingsRepo);
     const created = await productRepo.create({ code: "P1", name: "Producto", unit: "kg", departmentId: DEPT });
     productId = created.product.id;
     await dosificationRepo.create({ productId, name: "Por dosis", numParts: 10, isActive: true });
   });
 
-  it("computes computedUnitPrice when a default price exists (100 / 10 * 1.07)", async () => {
+  it("computes computedUnitPrice with the default 5% surcharge when a default price exists (100 / 10 * 1.05)", async () => {
     await priceRepo.create({ productId, name: "Menudeo", price: 100, minQuantity: 1, isDefault: true });
     const result = await useCase.execute(productId);
     expect(result.items[0].requiresDefaultPrice).toBe(false);
-    expect(result.items[0].computedUnitPrice).toBeCloseTo(10.7, 10);
+    expect(result.items[0].computedUnitPrice).toBeCloseTo(10.5, 10);
+  });
+
+  it("computes computedUnitPrice using a configured custom surcharge (100 / 10 * 1.08)", async () => {
+    await priceRepo.create({ productId, name: "Menudeo", price: 100, minQuantity: 1, isDefault: true });
+    await pricingSettingsRepo.update({ dosificationSurchargePct: 8 });
+    const result = await useCase.execute(productId);
+    expect(result.items[0].computedUnitPrice).toBeCloseTo(10.8, 10);
   });
 
   it("returns null computedUnitPrice and requiresDefaultPrice=true when no default price", async () => {
