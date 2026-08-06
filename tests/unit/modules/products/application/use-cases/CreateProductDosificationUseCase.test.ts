@@ -2,6 +2,7 @@ import { CreateProductDosificationUseCase } from "@/modules/products/application
 import { InMemoryProductRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductRepository";
 import { InMemoryProductPriceRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductPriceRepository";
 import { InMemoryProductDosificationRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductDosificationRepository";
+import { InMemoryPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryPricingSettingsRepository";
 import { ProductNotFoundError } from "@/modules/products/domain/errors/ProductNotFoundError";
 import { DuplicateDosificationNameError } from "@/modules/products/domain/errors/DuplicateDosificationNameError";
 
@@ -21,7 +22,7 @@ describe("CreateProductDosificationUseCase", () => {
     priceRepo.reset();
     dosificationRepo = new InMemoryProductDosificationRepository();
     dosificationRepo.reset();
-    useCase = new CreateProductDosificationUseCase(productRepo, priceRepo, dosificationRepo);
+    useCase = new CreateProductDosificationUseCase(productRepo, priceRepo, dosificationRepo, new InMemoryPricingSettingsRepository());
     const created = await productRepo.create({ code: "P1", name: "Producto", unit: "kg", departmentId: DEPT });
     productId = created.product.id;
   });

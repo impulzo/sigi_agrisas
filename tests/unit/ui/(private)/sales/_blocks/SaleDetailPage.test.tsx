@@ -213,7 +213,7 @@ describe("SaleDetailPage — desglose IVA/IEPS", () => {
     expect(totals.getByText("$16.00")).toBeInTheDocument();
   });
 
-  it("oculta la fila IEPS cuando ningún ítem tiene IEPS", () => {
+  it("muestra la fila IEPS en $0.00 aunque ningún ítem tenga IEPS (siempre visible)", () => {
     const sale = makeSale();
     sale.items = [
       {
@@ -236,8 +236,9 @@ describe("SaleDetailPage — desglose IVA/IEPS", () => {
     ];
     setup({ sale });
     render(<SaleDetailPage id="sale-1" />);
-    expect(screen.getByText("$32.00")).toBeInTheDocument();
-    // "IEPS" solo aparece en el encabezado de la tabla de ítems, no en el panel de totales
-    expect(screen.getAllByText("IEPS")).toHaveLength(1);
+    const totals = within(screen.getByTestId("sale-totals"));
+    expect(totals.getByText("$32.00")).toBeInTheDocument();
+    expect(totals.getByText("IEPS")).toBeInTheDocument();
+    expect(totals.getByText("$0.00")).toBeInTheDocument();
   });
 });

@@ -5,9 +5,7 @@
 Define the Returns API: registration and cancellation of product returns linked to completed sales, with per-line returnable quantity enforcement, inventory restoration, and branch scoping.
 
 ---
-
 ## Requirements
-
 ### Requirement: Return aggregate model
 The system SHALL persist a product return as the aggregate `Return` (header) + `ReturnItem` (lines) with the following invariants:
 
@@ -79,17 +77,15 @@ The service SHALL throw if `soldQuantity <= 0` or if any item's `quantity <= 0`.
 ---
 
 ### Requirement: ReturnTotalsCalculator (domain service)
-The system SHALL provide a pure domain service `ReturnTotalsCalculator` in `src/modules/returns/domain/services/ReturnTotalsCalculator.ts` with the same signature, formula, and rounding as `SaleTotalsCalculator` (half-to-even at 4 decimals). The returned values represent refund amounts. A test of equivalence with `SaleTotalsCalculator` over a shared fixture (`tests/fixtures/totals-vectors.ts`) is required.
+The system SHALL provide a pure domain service `ReturnTotalsCalculator` in `src/modules/returns/domain/services/ReturnTotalsCalculator.ts` with the same signature, formula, and rounding as `SaleTotalsCalculator` (half-to-even at 4 decimals) — including the tax-extraction formula (`lineSubtotal = round(lineGross / (1 + ivaRate + iepsRate), 4)`, `lineIva`/`lineIeps` computed from that extracted base, `lineTotal = lineGross`). The returned values represent refund amounts. A test of equivalence with `SaleTotalsCalculator` over a shared fixture (`tests/fixtures/totals-vectors.ts`) is required.
 
 #### Scenario: Equivalence with SaleTotalsCalculator
 - **WHEN** the same input is passed to both calculators
-- **THEN** they return identical results for every line and the aggregated totals
+- **THEN** they return identical results for every line and the aggregated totals, including the extracted subtotal/IVA/IEPS breakdown
 
 #### Scenario: Pure domain
 - **WHEN** unit tests run against the calculator
 - **THEN** no Prisma, no fetch, no environment access is required
-
----
 
 ### Requirement: List returns
 The system SHALL expose `GET /api/v1/admin/returns` that returns a paginated list of returns. Requires the `returns:read` permission. Query parameters: `page` (default 1), `pageSize` (default 20, max 100), `branchId` (optional UUID), `customerId` (optional UUID), `saleId` (optional UUID), `status` (optional, comma-separated; one or more of `completed`,`cancelled`), `from` (optional ISO date — inclusive lower bound on `returned_at`), `to` (optional ISO date — inclusive upper bound on `returned_at`), `search` (optional, min 2 chars; matches joined `sale.folio_code`, `sale.folio_number::text`, joined `customer.name`/`customer.rfc`).
@@ -541,3 +537,4 @@ The system SHALL enforce `reason` as required on `POST /returns` and `POST /sale
 #### Scenario: Reason exceeds max length
 - **WHEN** the body includes `reason` of 501 characters
 - **THEN** the system returns HTTP 400
+

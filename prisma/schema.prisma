@@ -844,6 +844,15 @@ model TicketSettings {
   @@map("ticket_settings")
 }
 
+model PricingSettings {
+  id                        String   @id
+  dosificationSurchargePct  Decimal  @default(5.0) @map("dosification_surcharge_pct") @db.Decimal(5, 2)
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@map("pricing_settings")
+}
+
 model Purchase {
   id                 String    @id @default(uuid())
   providerId         String    @map("provider_id")

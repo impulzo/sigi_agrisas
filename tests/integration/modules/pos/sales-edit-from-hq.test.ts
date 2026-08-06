@@ -116,7 +116,7 @@ describe("Sales — edición de venta completada (integration real DB)", () => {
     );
     saleId = result.dto.id;
     expect(result.dto.status).toBe("completed");
-    expect(result.dto.total).toBeCloseTo(3 * 200 * 1.16, 0);
+    expect(result.dto.total).toBeCloseTo(3 * 200, 0);
 
     const inv = await prisma.branchInventory.findFirst({ where: { branchId, productId } });
     expect(Number(inv!.quantity)).toBe(7); // 10 - 3
@@ -129,7 +129,7 @@ describe("Sales — edición de venta completada (integration real DB)", () => {
     expect(result.dto.status).toBe("edited");
     expect(result.dto.items).toHaveLength(1);
     expect(result.dto.items[0].quantity).toBe(1);
-    expect(result.dto.total).toBeCloseTo(1 * 200 * 1.16, 0);
+    expect(result.dto.total).toBeCloseTo(1 * 200, 0);
 
     // Stock: 7 (post-venta) + 3 (restaurados) - 1 (nueva cantidad) = 9
     const inv = await prisma.branchInventory.findFirst({ where: { branchId, productId } });

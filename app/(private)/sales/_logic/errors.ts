@@ -17,3 +17,11 @@ export class SaleScopingForbiddenError extends Error {
 export class SaleAlreadyFullyReturnedError extends Error {
   constructor() { super("Esta venta ya fue devuelta en su totalidad"); this.name = "SaleAlreadyFullyReturnedError"; }
 }
+
+export class SaleNoEmailError extends Error {
+  constructor() { super("El cliente no tiene correo registrado. Captura uno para continuar."); this.name = "SaleNoEmailError"; }
+}
+
+export class SaleEmailSendFailedError extends Error {
+  constructor() { super("No se pudo enviar el correo. Intenta de nuevo."); this.name = "SaleEmailSendFailedError"; }
+}

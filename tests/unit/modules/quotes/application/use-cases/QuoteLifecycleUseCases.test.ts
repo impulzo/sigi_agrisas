@@ -89,9 +89,9 @@ describe("CreateQuoteUseCase", () => {
     const uc = new CreateQuoteUseCase(repo, makeLookups());
     const { dto } = await uc.execute(baseCreateReq, USER_ID);
     expect(dto.status).toBe("draft");
-    expect(dto.subtotal).toBe(200); // 2 × 100
-    expect(dto.taxTotal).toBe(32); // 200 × 0.16
-    expect(dto.total).toBe(232);
+    expect(dto.subtotal).toBe(172.4138); // 2 × 100 = 200 gross, IVA 16% extraído
+    expect(dto.taxTotal).toBe(27.5862);
+    expect(dto.total).toBe(200);
     expect(dto.items).toHaveLength(1);
     expect(dto.items[0].productCodeSnapshot).toBe("FERT_001");
     expect(dto.creatorId).toBe(USER_ID);
@@ -242,9 +242,9 @@ describe("UpdateQuoteUseCase", () => {
         { productId: PRODUCT_ID, productPriceId: PRICE_ID, quantity: 3 },
       ],
     });
-    expect(dto.subtotal).toBe(400); // (1+3) × 100
-    expect(dto.taxTotal).toBe(64);
-    expect(dto.total).toBe(464);
+    expect(dto.subtotal).toBe(344.8276); // línea qty1 (86.2069) + línea qty3 (258.6207), IVA 16% extraído por línea
+    expect(dto.taxTotal).toBe(55.1724);
+    expect(dto.total).toBe(400);
   });
 
   it("edita sólo notes sin recalcular totales", async () => {

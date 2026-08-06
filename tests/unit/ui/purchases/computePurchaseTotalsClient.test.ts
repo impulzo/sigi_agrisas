@@ -8,16 +8,16 @@ describe("computePurchaseTotalsClient", () => {
     expect(r.total).toBe(100);
   });
 
-  it("computes IVA correctly", () => {
+  it("extracts IVA from the tax-inclusive final cost", () => {
     const r = computePurchaseTotalsClient([{ quantity: 1, unitCost: 100, discountPct: 0, ivaRate: 0.16, iepsRate: 0 }]);
-    expect(r.lines[0].lineIva).toBe(16);
-    expect(r.total).toBe(116);
+    expect(r.lines[0].lineIva).toBe(13.7931);
+    expect(r.total).toBe(100);
   });
 
-  it("applies discount before tax", () => {
+  it("applies discount before extracting tax", () => {
     const r = computePurchaseTotalsClient([{ quantity: 1, unitCost: 100, discountPct: 10, ivaRate: 0.16, iepsRate: 0 }]);
-    expect(r.lines[0].lineSubtotal).toBe(90);
-    expect(r.lines[0].lineIva).toBe(14.4);
+    expect(r.lines[0].lineSubtotal).toBe(77.5862);
+    expect(r.lines[0].lineIva).toBe(12.4138);
   });
 
   it("aggregates multi-line totals", () => {
@@ -25,9 +25,9 @@ describe("computePurchaseTotalsClient", () => {
       { quantity: 1, unitCost: 100, discountPct: 0, ivaRate: 0.16, iepsRate: 0 },
       { quantity: 2, unitCost: 50, discountPct: 0, ivaRate: 0, iepsRate: 0 },
     ]);
-    expect(r.subtotal).toBe(200);
-    expect(r.taxTotal).toBe(16);
-    expect(r.total).toBe(216);
+    expect(r.subtotal).toBe(186.2069);
+    expect(r.taxTotal).toBe(13.7931);
+    expect(r.total).toBe(200);
   });
 
   describe("equivalence with shared totals vectors (subtotal/taxTotal/total)", () => {

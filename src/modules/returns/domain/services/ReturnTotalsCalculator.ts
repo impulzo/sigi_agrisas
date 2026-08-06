@@ -72,14 +72,18 @@ export class ReturnTotalsCalculator {
       const ivaRate = isTaxable ? rawIvaRate : 0;
       const iepsRate = isTaxable ? rawIepsRate : 0;
 
-      const lineSubtotal = roundHalfToEven(
+      // unitPrice is the final tax-inclusive price the customer pays; tax is
+      // extracted from it (not added on top): lineSubtotal = lineGross / (1 + rates).
+      const lineGross = roundHalfToEven(
         line.quantity * line.unitPrice * (1 - discountPct / 100),
         SCALE
       );
+      const divisor = 1 + ivaRate + iepsRate;
+      const lineSubtotal = roundHalfToEven(lineGross / divisor, SCALE);
       const lineIva = roundHalfToEven(lineSubtotal * ivaRate, SCALE);
       const lineIeps = roundHalfToEven(lineSubtotal * iepsRate, SCALE);
       const lineTax = roundHalfToEven(lineIva + lineIeps, SCALE);
-      const lineTotal = roundHalfToEven(lineSubtotal + lineTax, SCALE);
+      const lineTotal = lineGross;
 
       lineTotals.push({ lineSubtotal, lineIva, lineIeps, lineTax, lineTotal });
       subtotal = roundHalfToEven(subtotal + lineSubtotal, SCALE);

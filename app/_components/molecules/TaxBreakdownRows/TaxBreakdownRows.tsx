@@ -14,12 +14,8 @@ export function TaxBreakdownRows({ ivaTotal, iepsTotal, format, variant }: TaxBr
   if (variant === "compact") {
     return (
       <>
-        {ivaTotal > 0 && (
-          <p className="text-body-sm text-on-surface-variant tabular-nums">IVA {format(ivaTotal)}</p>
-        )}
-        {iepsTotal > 0 && (
-          <p className="text-body-sm text-on-surface-variant tabular-nums">IEPS {format(iepsTotal)}</p>
-        )}
+        <p className="text-body-sm text-on-surface-variant tabular-nums">IVA {format(ivaTotal)}</p>
+        <p className="text-body-sm text-on-surface-variant tabular-nums">IEPS {format(iepsTotal)}</p>
       </>
     );
   }
@@ -29,18 +25,14 @@ export function TaxBreakdownRows({ ivaTotal, iepsTotal, format, variant }: TaxBr
 
   return (
     <>
-      {ivaTotal > 0 && (
-        <div className={rowClass}>
-          <span className={labelClass}>IVA</span>
-          <span className="tabular-nums">{format(ivaTotal)}</span>
-        </div>
-      )}
-      {iepsTotal > 0 && (
-        <div className={rowClass}>
-          <span className={labelClass}>IEPS</span>
-          <span className="tabular-nums">{format(iepsTotal)}</span>
-        </div>
-      )}
+      <div className={rowClass}>
+        <span className={labelClass}>IVA</span>
+        <span className="tabular-nums">{format(ivaTotal)}</span>
+      </div>
+      <div className={rowClass}>
+        <span className={labelClass}>IEPS</span>
+        <span className="tabular-nums">{format(iepsTotal)}</span>
+      </div>
     </>
   );
 }

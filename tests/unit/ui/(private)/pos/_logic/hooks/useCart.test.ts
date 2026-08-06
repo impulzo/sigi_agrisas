@@ -60,9 +60,9 @@ describe("useCart", () => {
     act(() => result.current.addLine(product, price, 2, 0));
     expect(result.current.lines).toHaveLength(1);
     expect(result.current.lines[0].quantity).toBe(2);
-    expect(result.current.lines[0].lineSubtotal).toBe(200);
-    expect(result.current.lines[0].lineIva).toBe(32);
-    expect(result.current.totals.total).toBe(232);
+    expect(result.current.lines[0].lineSubtotal).toBe(172.4138);
+    expect(result.current.lines[0].lineIva).toBe(27.5862);
+    expect(result.current.totals.total).toBe(200);
   });
 
   it("addLine con mismo producto+precio acumula cantidad", () => {
@@ -79,7 +79,7 @@ describe("useCart", () => {
     const lineId = result.current.lines[0].id;
     act(() => result.current.updateQuantity(lineId, 5));
     expect(result.current.lines[0].quantity).toBe(5);
-    expect(result.current.totals.subtotal).toBe(500);
+    expect(result.current.totals.subtotal).toBe(431.0345);
   });
 
   it("updateDiscountPct aplica descuento y recalcula", () => {
@@ -88,7 +88,7 @@ describe("useCart", () => {
     const lineId = result.current.lines[0].id;
     act(() => result.current.updateDiscountPct(lineId, 10));
     expect(result.current.lines[0].discountPct).toBe(10);
-    expect(result.current.lines[0].lineSubtotal).toBe(90);
+    expect(result.current.lines[0].lineSubtotal).toBe(77.5862);
   });
 
   it("removeLine elimina la línea del carrito", () => {

@@ -5,9 +5,7 @@
 Capa de UI del punto de venta (`app/(private)/pos/`) para agregar productos al carrito. Este capability documenta el diálogo de selección de precio/dosificación (`PriceTierPicker`) invocado al hacer click/Enter sobre un producto del catálogo — el resto de la UI del POS (carrito, totales, atajos de teclado) se documenta en otros capabilities (`keyboard-navigation`, etc.) y se irá agregando aquí incrementalmente.
 
 ---
-
 ## Requirements
-
 ### Requirement: Price/dosification selection dialog
 
 Al agregar un producto al carrito, `PriceTierPicker` SHALL listar, en un único diálogo, tanto los precios de catálogo del producto (`GET /api/v1/admin/products/:id/prices`, ya existente) como sus dosificaciones activas (`GET /api/v1/admin/products/:id/dosifications`, ya existente — requiere `products:read`, permiso que el cajero ya posee). Cada dosificación SHALL mostrarse con su `name` y `computedUnitPrice` formateado como moneda, igual que un precio de catálogo. Una dosificación con `requiresDefaultPrice: true` (el producto no tiene precio default) SHALL renderizarse deshabilitada, sin permitir su selección, con un texto indicando la causa ("Requiere precio default"). Al confirmar una dosificación seleccionada, el diálogo SHALL invocar `onConfirm` con `dosificationId` en vez de `productPriceId` (mutuamente excluyentes, igual que en el body de creación de venta). Un producto sin dosificaciones activas SHALL mostrar el diálogo idéntico al comportamiento actual (solo precios), sin regresión visual ni de flujo.
@@ -82,3 +80,15 @@ When the POS completes a credit sale (or a quote conversion to a credit sale) wh
 #### Scenario: Quote conversion to credit sale exceeding limit shows warning toast
 - **WHEN** a quote is converted to a credit sale and the backend responds HTTP 200 with `creditLimitExceeded: true`
 - **THEN** the conversion completes (redirect to the resulting sale as usual) AND the same credit warning toast is shown
+
+### Requirement: Cart totals always show IVA and IEPS lines
+`CartTotals` (used by the POS cart, sale detail, quote detail, return detail, and quote emit panel) SHALL always render a "IVA" line and an "IEPS" line, regardless of whether their computed value is greater than zero. Previously these lines were hidden when the value equaled `0`.
+
+#### Scenario: Cart with no taxable products
+- **WHEN** every line in the cart has `isTaxable=false` (or `ivaRate=iepsRate=0`)
+- **THEN** `CartTotals` still renders "IVA: $0.00" and "IEPS: $0.00"
+
+#### Scenario: Cart with IVA only, no IEPS
+- **WHEN** all cart lines have `ivaRate > 0` and `iepsRate = 0`
+- **THEN** `CartTotals` renders both "IVA: $X.XX" and "IEPS: $0.00" — the IEPS line is not hidden
+

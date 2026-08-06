@@ -12,3 +12,11 @@ export interface UpdateTicketSettingsBody {
   footerText?: string | null;
   paperWidth?: PaperWidthDto;
 }
+
+export interface PricingSettingsDto {
+  dosificationSurchargePct: number;
+}
+
+export interface UpdatePricingSettingsBody {
+  dosificationSurchargePct: number;
+}

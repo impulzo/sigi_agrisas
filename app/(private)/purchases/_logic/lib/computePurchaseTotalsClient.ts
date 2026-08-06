@@ -38,22 +38,33 @@ function bankersRound(value: number, decimals: number): number {
 }
 
 export function computePurchaseTotalsClient(lines: PurchaseTotalsLine[]): PurchaseTotalsResult {
-  const computed: PurchaseComputedLine[] = lines.map((line) => {
-    const lineSubtotal = bankersRound(
+  const computed: PurchaseComputedLine[] = [];
+  let subtotal = 0;
+  let ivaTotal = 0;
+  let iepsTotal = 0;
+  let total = 0;
+
+  for (const line of lines) {
+    // unitCost is the final tax-inclusive cost Agrisas pays; tax is
+    // extracted from it (not added on top): lineSubtotal = lineGross / (1 + rates).
+    const lineGross = bankersRound(
       line.quantity * line.unitCost * (1 - line.discountPct / 100),
       4
     );
+    const divisor = 1 + line.ivaRate + line.iepsRate;
+    const lineSubtotal = bankersRound(lineGross / divisor, 4);
     const lineIva = bankersRound(lineSubtotal * line.ivaRate, 4);
     const lineIeps = bankersRound(lineSubtotal * line.iepsRate, 4);
-    const lineTotal = lineSubtotal + lineIva + lineIeps;
-    return { lineSubtotal, lineIva, lineIeps, lineTotal };
-  });
+    const lineTotal = lineGross;
 
-  const subtotal  = bankersRound(computed.reduce((sum, l) => sum + l.lineSubtotal, 0), 4);
-  const ivaTotal  = bankersRound(computed.reduce((sum, l) => sum + l.lineIva,  0), 4);
-  const iepsTotal = bankersRound(computed.reduce((sum, l) => sum + l.lineIeps, 0), 4);
-  const taxTotal  = bankersRound(ivaTotal + iepsTotal, 4);
-  const total     = bankersRound(subtotal + taxTotal, 4);
+    computed.push({ lineSubtotal, lineIva, lineIeps, lineTotal });
+    subtotal = bankersRound(subtotal + lineSubtotal, 4);
+    ivaTotal = bankersRound(ivaTotal + lineIva, 4);
+    iepsTotal = bankersRound(iepsTotal + lineIeps, 4);
+    total = bankersRound(total + lineTotal, 4);
+  }
+
+  const taxTotal = bankersRound(ivaTotal + iepsTotal, 4);
 
   return { lines: computed, subtotal, ivaTotal, iepsTotal, taxTotal, total };
 }

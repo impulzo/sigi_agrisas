@@ -1,0 +1,230 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useSaleDetail } from "../../../_logic/hooks/useSaleDetail";
+import { getTicketSettings } from "../../../../settings/_logic/services/getTicketSettings";
+import type { TicketSettingsDto } from "../../../../settings/_logic/types/api";
+import { PrintableTicket } from "../../../_blocks/PrintableTicket";
+import { SendTicketEmailModal } from "./SendTicketEmailModal";
+import { EmptyState } from "../../../../../_components/molecules/EmptyState/EmptyState";
+import { Spinner } from "../../../../../_components/atoms/Spinner/Spinner";
+import { Icon } from "../../../../../_components/atoms/Icon/Icon";
+
+const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
+function fmt(n: number) { return MX.format(n); }
+
+function fmtDate(d: Date) {
+  return new Intl.DateTimeFormat("es-MX", { dateStyle: "long", timeStyle: "short" }).format(d);
+}
+
+interface TicketPreviewPageProps {
+  id: string;
+}
+
+export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
+  const { sale, isLoading, error } = useSaleDetail(id);
+  const [ticketSettings, setTicketSettings] = useState<TicketSettingsDto | null>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+
+  useEffect(() => {
+    getTicketSettings()
+      .then(setTicketSettings)
+      .catch(() => setTicketSettings(null));
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (error || !sale) {
+    return (
+      <EmptyState
+        icon="warning"
+        title="No se encontró la venta"
+        description={error?.message ?? "La venta no existe o no tienes acceso."}
+        action={
+          <Link href="/sales" className="text-primary hover:underline text-body-sm">
+            Volver a ventas
+          </Link>
+        }
+      />
+    );
+  }
+
+  const folioLabel = sale.folioPrefix
+    ? `${sale.folioPrefix}-${sale.folioNumber}`
+    : String(sale.folioNumber);
+  const ivaTotal = sale.items.reduce((sum, item) => sum + item.lineIva, 0);
+  const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
+
+  return (
+    <div className="w-full max-w-lg mx-auto space-y-4">
+      <Link
+        href={`/sales/${sale.id}`}
+        className="inline-flex items-center gap-2 text-on-surface-variant hover:text-on-surface text-body-sm"
+      >
+        <Icon name="arrow_back" size={20} />
+        Volver al detalle
+      </Link>
+
+      {/* Ticket card — diseño Stitch "Ticket de Venta - Agrisas" */}
+      <div className="bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant overflow-hidden">
+        <div
+          aria-hidden="true"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 10px 10px, transparent 10px, var(--ticket-edge-bg, #f9f9f7) 10px)",
+            backgroundSize: "20px 20px",
+            backgroundPosition: "-10px -10px",
+            backgroundRepeat: "repeat-x",
+            height: "10px",
+          }}
+        />
+        <div className="p-6 flex flex-col gap-6">
+          {/* Brand header */}
+          <div className="flex flex-col items-center gap-2 text-center border-b border-outline-variant pb-4">
+            {ticketSettings?.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={ticketSettings.logoUrl} alt="Logo" className="h-16 w-auto object-contain mb-2" />
+            ) : (
+              <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-on-primary mb-2">
+                <Icon name="agriculture" size={32} />
+              </div>
+            )}
+            <h1 className="text-headline-sm font-semibold text-primary tracking-tight">Agrisas</h1>
+            {ticketSettings?.headerText ? (
+              <p className="text-body-sm text-on-surface-variant whitespace-pre-wrap">{ticketSettings.headerText}</p>
+            ) : (
+              <p className="text-body-sm text-on-surface-variant">Centro Agrícola Integral</p>
+            )}
+          </div>
+
+          {/* Transaction details */}
+          <div className="grid grid-cols-2 gap-2 text-body-sm text-on-surface-variant border-b border-outline-variant pb-4">
+            <div>
+              <span className="font-bold text-on-surface block">Orden:</span> {folioLabel}
+            </div>
+            <div className="text-right">
+              <span className="font-bold text-on-surface block">Fecha:</span> {fmtDate(sale.createdAt)}
+            </div>
+            <div className="col-span-2">
+              <span className="font-bold text-on-surface">Cajero:</span> {sale.cashierName ?? sale.cashierId.slice(0, 8)}
+            </div>
+          </div>
+
+          {/* Items */}
+          <div className="flex flex-col gap-2 py-2">
+            <div className="flex justify-between items-end border-b border-outline-variant pb-1 mb-1 text-label-sm text-on-surface-variant uppercase tracking-wider">
+              <span className="w-2/3">Artículo</span>
+              <span className="w-1/3 text-right">Total</span>
+            </div>
+            {sale.items.map((item) => (
+              <div key={item.id} className="flex justify-between items-start text-body-sm">
+                <div className="w-2/3 flex flex-col">
+                  <span className="font-medium text-on-surface">{item.productNameSnapshot}</span>
+                  <span className="text-on-surface-variant text-label-sm">
+                    {item.quantity} x {fmt(item.unitPrice)}
+                  </span>
+                </div>
+                <div className="w-1/3 text-right font-medium text-on-surface">{fmt(item.lineTotal)}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Financial summary — IVA e IEPS siempre visibles */}
+          <div className="border-t border-outline-variant pt-4 flex flex-col gap-1 text-body-sm">
+            <div className="flex justify-between text-on-surface-variant">
+              <span>Subtotal</span>
+              <span>{fmt(sale.subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-on-surface-variant">
+              <span>IVA</span>
+              <span>{fmt(ivaTotal)}</span>
+            </div>
+            <div className="flex justify-between text-on-surface-variant">
+              <span>IEPS</span>
+              <span>{fmt(iepsTotal)}</span>
+            </div>
+            <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-outline-variant text-title-md font-bold text-primary">
+              <span>Total</span>
+              <span>{fmt(sale.total)}</span>
+            </div>
+          </div>
+
+          {/* Payment method & footer */}
+          <div className="flex flex-col gap-4 items-center mt-2 text-center border-t border-outline-variant pt-4">
+            <div className="text-body-sm text-on-surface-variant flex items-center justify-center gap-2 bg-surface-container-low px-4 py-2 rounded">
+              <Icon name="credit_card" size={18} />
+              {sale.paymentMethodName ?? "—"}
+            </div>
+            {ticketSettings?.footerText ? (
+              <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded whitespace-pre-wrap">
+                {ticketSettings.footerText}
+              </p>
+            ) : (
+              <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded">
+                ¡Gracias por su compra! <br />
+                <span className="font-medium">Agricultura Sana &amp; Sustentable.</span>
+              </p>
+            )}
+            <div className="mt-1">
+              <div
+                aria-hidden="true"
+                className="h-10 w-40 mx-auto"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(90deg, #000 0 2px, transparent 2px 5px)",
+                  opacity: 0.7,
+                }}
+              />
+              <span className="text-label-sm text-on-surface-variant mt-1 block">{folioLabel}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          aria-hidden="true"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 10px 10px, transparent 10px, var(--ticket-edge-bg, #f9f9f7) 10px)",
+            backgroundSize: "20px 20px",
+            backgroundPosition: "-10px -10px",
+            backgroundRepeat: "repeat-x",
+            height: "10px",
+            transform: "rotate(180deg)",
+          }}
+        />
+      </div>
+
+      {/* Actions */}
+      <div className="flex justify-center gap-3">
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="bg-primary hover:opacity-90 text-on-primary text-label-lg py-2 px-6 rounded-full shadow-sm transition-all flex items-center gap-2"
+        >
+          <Icon name="print" size={18} />
+          Imprimir Ticket
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowEmailModal(true)}
+          className="border border-outline text-primary hover:bg-surface-container-low text-label-lg py-2 px-6 rounded-full transition-all flex items-center gap-2"
+        >
+          <Icon name="mail" size={18} />
+          Enviar por Correo
+        </button>
+      </div>
+
+      {showEmailModal && (
+        <SendTicketEmailModal saleId={sale.id} open={showEmailModal} onClose={() => setShowEmailModal(false)} />
+      )}
+
+      <PrintableTicket sale={sale} ticketSettings={ticketSettings} />
+    </div>
+  );
+}

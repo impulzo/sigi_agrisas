@@ -9,9 +9,19 @@ import {
   FolioLookup,
   PaymentMethodLookup,
 } from "../../application/ports/PosLookups";
+import { PrismaPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaPricingSettingsRepository";
 
 export class PrismaPosLookupService implements PosLookupService {
-  constructor(private readonly prisma: PrismaClient) {}
+  private readonly pricingSettingsRepo: PrismaPricingSettingsRepository;
+
+  constructor(private readonly prisma: PrismaClient) {
+    this.pricingSettingsRepo = new PrismaPricingSettingsRepository(prisma);
+  }
+
+  async getDosificationSurchargePct(): Promise<number> {
+    const settings = await this.pricingSettingsRepo.get();
+    return settings.dosificationSurchargePct;
+  }
 
   async getProduct(id: string): Promise<ProductLookup | null> {
     const row = await this.prisma.product.findUnique({
@@ -68,7 +78,7 @@ export class PrismaPosLookupService implements PosLookupService {
   async getCustomer(id: string): Promise<CustomerLookup | null> {
     const row = await this.prisma.customer.findUnique({
       where: { id },
-      select: { id: true, isActive: true, creditLimit: true, currentBalance: true },
+      select: { id: true, isActive: true, creditLimit: true, currentBalance: true, email: true },
     });
     if (!row) return null;
     return {
@@ -76,6 +86,7 @@ export class PrismaPosLookupService implements PosLookupService {
       isActive: row.isActive,
       creditLimit: row.creditLimit ? Number(row.creditLimit) : null,
       currentBalance: Number(row.currentBalance),
+      email: row.email,
     };
   }
 

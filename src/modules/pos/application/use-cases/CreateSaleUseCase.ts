@@ -122,7 +122,8 @@ export class CreateSaleUseCase {
         if (!dosification.isActive) throw new InactiveResourceError("Dosification");
         if (dosification.basePrice === null) throw new DosificationRequiresDefaultPriceError();
 
-        unitPrice = DosificationPriceCalculator.computeUnitPrice(dosification.basePrice, dosification.numParts);
+        const surchargePct = await this.lookups.getDosificationSurchargePct();
+        unitPrice = DosificationPriceCalculator.computeUnitPrice(dosification.basePrice, dosification.numParts, surchargePct);
         discountPct = null;
         priceNameSnapshot = dosification.name;
         productPriceId = null;

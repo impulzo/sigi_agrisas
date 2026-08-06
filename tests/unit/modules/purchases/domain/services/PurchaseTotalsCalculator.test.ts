@@ -9,31 +9,31 @@ describe("PurchaseTotalsCalculator", () => {
     expect(r.lines[0].lineSubtotal).toBe(100);
   });
 
-  it("computes IVA correctly", () => {
+  it("extracts IVA from the tax-inclusive final cost", () => {
     const r = PurchaseTotalsCalculator.computeTotals([{ quantity: 1, unitCost: 100, ivaRate: 0.16 }]);
-    expect(r.lines[0].lineIva).toBe(16);
+    expect(r.lines[0].lineIva).toBe(13.7931);
     expect(r.lines[0].lineIeps).toBe(0);
-    expect(r.lines[0].lineTax).toBe(16);
-    expect(r.lines[0].lineTotal).toBe(116);
+    expect(r.lines[0].lineTax).toBe(13.7931);
+    expect(r.lines[0].lineTotal).toBe(100);
   });
 
-  it("applies discount before tax", () => {
+  it("applies discount before extracting tax", () => {
     const r = PurchaseTotalsCalculator.computeTotals([
       { quantity: 1, unitCost: 100, discountPct: 10, ivaRate: 0.16 },
     ]);
-    expect(r.lines[0].lineSubtotal).toBe(90);
-    expect(r.lines[0].lineIva).toBe(14.4);
-    expect(r.lines[0].lineTotal).toBe(104.4);
+    expect(r.lines[0].lineSubtotal).toBe(77.5862);
+    expect(r.lines[0].lineIva).toBe(12.4138);
+    expect(r.lines[0].lineTotal).toBe(90);
   });
 
-  it("computes IEPS and IVA on the same subtotal", () => {
+  it("extracts IEPS and IVA simultaneously from the same base (not cascaded)", () => {
     const r = PurchaseTotalsCalculator.computeTotals([
       { quantity: 1, unitCost: 100, ivaRate: 0.16, iepsRate: 0.08 },
     ]);
-    expect(r.lines[0].lineIva).toBe(16);
-    expect(r.lines[0].lineIeps).toBe(8);
-    expect(r.lines[0].lineTax).toBe(24);
-    expect(r.lines[0].lineTotal).toBe(124);
+    expect(r.lines[0].lineIva).toBe(12.9032);
+    expect(r.lines[0].lineIeps).toBe(6.4516);
+    expect(r.lines[0].lineTax).toBe(19.3548);
+    expect(r.lines[0].lineTotal).toBe(100);
   });
 
   it("treats isTaxable=false as zero tax regardless of rates", () => {
@@ -49,9 +49,9 @@ describe("PurchaseTotalsCalculator", () => {
       { quantity: 1, unitCost: 100, ivaRate: 0.16 },
       { quantity: 2, unitCost: 50 },
     ]);
-    expect(r.subtotal).toBe(200);
-    expect(r.taxTotal).toBe(16);
-    expect(r.total).toBe(216);
+    expect(r.subtotal).toBe(186.2069);
+    expect(r.taxTotal).toBe(13.7931);
+    expect(r.total).toBe(200);
   });
 
   it("throws on quantity <= 0", () => {

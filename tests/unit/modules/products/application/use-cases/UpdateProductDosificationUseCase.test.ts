@@ -1,6 +1,7 @@
 import { UpdateProductDosificationUseCase } from "@/modules/products/application/use-cases/UpdateProductDosificationUseCase";
 import { InMemoryProductDosificationRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductDosificationRepository";
 import { InMemoryProductPriceRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductPriceRepository";
+import { InMemoryPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryPricingSettingsRepository";
 import { ProductDosificationNotFoundError } from "@/modules/products/domain/errors/ProductDosificationNotFoundError";
 import { DuplicateDosificationNameError } from "@/modules/products/domain/errors/DuplicateDosificationNameError";
 
@@ -17,7 +18,7 @@ describe("UpdateProductDosificationUseCase", () => {
     dosificationRepo.reset();
     priceRepo = new InMemoryProductPriceRepository();
     priceRepo.reset();
-    useCase = new UpdateProductDosificationUseCase(priceRepo, dosificationRepo);
+    useCase = new UpdateProductDosificationUseCase(priceRepo, dosificationRepo, new InMemoryPricingSettingsRepository());
   });
 
   it("updates numParts", async () => {
@@ -36,7 +37,7 @@ describe("UpdateProductDosificationUseCase", () => {
     await priceRepo.create({ productId: PRODUCT_ID, name: "Menudeo", price: 100, minQuantity: 1, isDefault: true });
     const created = await dosificationRepo.create({ productId: PRODUCT_ID, name: "Por dosis", numParts: 10, isActive: true });
     const result = await useCase.execute(PRODUCT_ID, created.id, { numParts: 10 });
-    expect(result.computedUnitPrice).toBeCloseTo(10.7);
+    expect(result.computedUnitPrice).toBeCloseTo(10.5);
     expect(result.requiresDefaultPrice).toBe(false);
   });
 

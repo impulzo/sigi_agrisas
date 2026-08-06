@@ -10,6 +10,7 @@ import { SoftDeleteProductUseCase } from "@/modules/products/application/use-cas
 import { CreateProductPriceUseCase } from "@/modules/products/application/use-cases/CreateProductPriceUseCase";
 import { CreateProductDosificationUseCase } from "@/modules/products/application/use-cases/CreateProductDosificationUseCase";
 import { ListProductDosificationsUseCase } from "@/modules/products/application/use-cases/ListProductDosificationsUseCase";
+import { PrismaPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaPricingSettingsRepository";
 
 const PCODE = "INVTEST_PROD_1";
 const DCODE = "INVTEST_DEPT_1";
@@ -29,14 +30,15 @@ describe("Products CRUD — integration (real DB)", () => {
   const productRepo = new PrismaProductRepository(prisma);
   const priceRepo = new PrismaProductPriceRepository(prisma);
   const dosificationRepo = new PrismaProductDosificationRepository(prisma);
+  const pricingSettingsRepo = new PrismaPricingSettingsRepository(prisma);
 
   const createProduct = new CreateProductUseCase(productRepo, departmentRepo);
   const updateProduct = new UpdateProductUseCase(productRepo, departmentRepo);
   const listProducts = new ListProductsUseCase(productRepo);
   const softDeleteProduct = new SoftDeleteProductUseCase(productRepo);
   const createPrice = new CreateProductPriceUseCase(productRepo, priceRepo);
-  const createDosification = new CreateProductDosificationUseCase(productRepo, priceRepo, dosificationRepo);
-  const listDosifications = new ListProductDosificationsUseCase(productRepo, priceRepo, dosificationRepo);
+  const createDosification = new CreateProductDosificationUseCase(productRepo, priceRepo, dosificationRepo, pricingSettingsRepo);
+  const listDosifications = new ListProductDosificationsUseCase(productRepo, priceRepo, dosificationRepo, pricingSettingsRepo);
 
   let departmentId: string;
   let productId: string;
@@ -68,7 +70,7 @@ describe("Products CRUD — integration (real DB)", () => {
     const dose = result.items.find((d) => d.name === "Por dosis");
     expect(dose).toBeDefined();
     expect(dose?.requiresDefaultPrice).toBe(false);
-    expect(dose?.computedUnitPrice).toBeCloseTo(10.7, 6);
+    expect(dose?.computedUnitPrice).toBeCloseTo(10.5, 6);
   });
 
   it("updates the product name", async () => {

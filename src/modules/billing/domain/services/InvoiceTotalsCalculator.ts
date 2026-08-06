@@ -68,13 +68,17 @@ export class InvoiceTotalsCalculator {
         throw new Error("iepsRate must be between 0 and 1");
       }
 
-      const lineSubtotal = roundHalfToEven(
+      // unitPrice is the final tax-inclusive price the customer pays; tax is
+      // extracted from it (not added on top): lineSubtotal = lineGross / (1 + rates).
+      const lineGross = roundHalfToEven(
         line.quantity * line.unitPrice * (1 - discountPct / 100),
         SCALE
       );
+      const divisor = 1 + ivaRate + iepsRate;
+      const lineSubtotal = roundHalfToEven(lineGross / divisor, SCALE);
       const lineIva = roundHalfToEven(lineSubtotal * ivaRate, SCALE);
       const lineIeps = roundHalfToEven(lineSubtotal * iepsRate, SCALE);
-      const lineTotal = roundHalfToEven(lineSubtotal + lineIva + lineIeps, SCALE);
+      const lineTotal = lineGross;
       // taxObject: '02' if any tax applies, '01' if no taxes
       const taxObject = ivaRate > 0 || iepsRate > 0 ? "02" : "01";
 

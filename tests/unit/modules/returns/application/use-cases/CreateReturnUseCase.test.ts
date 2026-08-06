@@ -99,9 +99,9 @@ describe("CreateReturnUseCase", () => {
       expect(dto.items).toHaveLength(1);
       expect(dto.items[0].quantity).toBe(3);
       expect(dto.items[0].productCodeSnapshot).toBe("PROD001");
-      expect(dto.refundSubtotal).toBe(300);
-      expect(dto.refundTax).toBe(48);
-      expect(dto.refundTotal).toBe(348);
+      expect(dto.refundSubtotal).toBe(258.6207);
+      expect(dto.refundTax).toBe(41.3793);
+      expect(dto.refundTotal).toBe(300);
     });
 
     it("increments inventory for the returned items", async () => {
