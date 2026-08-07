@@ -3,6 +3,7 @@ import { InMemoryPurchaseRepository } from "@/modules/purchases/infrastructure/r
 import { PurchaseItemsEmptyError } from "@/modules/purchases/domain/errors/PurchaseItemsEmptyError";
 import { ProviderNotFoundOrInactiveError } from "@/modules/purchases/domain/errors/ProviderNotFoundOrInactiveError";
 import { ProductNotFoundOrInactiveError } from "@/modules/purchases/domain/errors/ProductNotFoundOrInactiveError";
+import { SatUuidAlreadyExistsError } from "@/modules/purchases/domain/errors/SatUuidAlreadyExistsError";
 
 const PROVIDER = "provider-1";
 const BRANCH = "branch-1";
@@ -12,7 +13,7 @@ const PRODUCT = "product-1";
 const CREATOR = "00000000-0000-0000-0000-000000000001";
 
 function seedBase(repo: InMemoryPurchaseRepository, overrides: { providerActive?: boolean; productActive?: boolean } = {}) {
-  repo.seedProvider({ id: PROVIDER, name: "Proveedor Uno", rfc: "PRO010101AAA", isActive: overrides.providerActive ?? true, currentBalance: 0 });
+  repo.seedProvider({ id: PROVIDER, code: "PROV_TEST", name: "Proveedor Uno", rfc: "PRO010101AAA", isActive: overrides.providerActive ?? true, currentBalance: 0 });
   repo.seedBranch({ id: BRANCH, name: "Matriz", isActive: true });
   repo.seedPaymentMethod({ id: CASH_PM, code: "EFECTIVO", isCredit: false, isActive: true });
   repo.seedPaymentMethod({ id: CREDIT_PM, code: "CREDITO", isCredit: true, isActive: true });
@@ -104,5 +105,69 @@ describe("CreatePurchaseUseCase", () => {
         items: [{ productId: PRODUCT, quantity: 1, unitCost: 100 }],
       })
     ).rejects.toBeInstanceOf(ProductNotFoundOrInactiveError);
+  });
+
+  it("auto-creates a provider by RFC when newProvider is provided", async () => {
+    const result = await useCase.execute({
+      branchId: BRANCH,
+      paymentMethodId: CASH_PM,
+      creatorId: CREATOR,
+      newProvider: { rfc: "XYZ010101AAA", name: "Proveedor Nuevo", taxRegime: "601" },
+      items: [{ productId: PRODUCT, quantity: 1, unitCost: 100 }],
+    });
+
+    const created = Array.from(repo.providers.values()).find((p) => p.rfc === "XYZ010101AAA");
+    expect(created).toBeDefined();
+    expect(created!.code).toBe("PROV_XYZ010101AAA");
+    expect(result.dto.providerId).toBe(created!.id);
+  });
+
+  it("reuses an existing provider when newProvider RFC already exists", async () => {
+    const result = await useCase.execute({
+      branchId: BRANCH,
+      paymentMethodId: CASH_PM,
+      creatorId: CREATOR,
+      newProvider: { rfc: "PRO010101AAA", name: "Proveedor Uno" },
+      items: [{ productId: PRODUCT, quantity: 1, unitCost: 100 }],
+    });
+
+    expect(result.dto.providerId).toBe(PROVIDER);
+    expect(repo.providers.size).toBe(1);
+  });
+
+  it("persists CFDI metadata and purchasedAt", async () => {
+    const purchasedAt = "2026-08-06T12:00:00Z";
+    const invoiceDate = "2026-08-05T09:30:00Z";
+    const result = await useCase.execute({
+      providerId: PROVIDER,
+      branchId: BRANCH,
+      paymentMethodId: CASH_PM,
+      creatorId: CREATOR,
+      purchasedAt,
+      satUuid: "123e4567-e89b-12d3-a456-426614174000",
+      supplierInvoiceNumber: "A",
+      invoiceDate,
+      xmlFileName: "factura.xml",
+      items: [{ productId: PRODUCT, quantity: 1, unitCost: 100 }],
+    });
+
+    expect(result.dto.satUuid).toBe("123e4567-e89b-12d3-a456-426614174000");
+    expect(result.dto.supplierInvoiceNumber).toBe("A");
+    expect(result.dto.invoiceDate).toBe(new Date(invoiceDate).toISOString());
+    expect(result.dto.xmlFileName).toBe("factura.xml");
+    expect(result.dto.purchasedAt).toBe(new Date(purchasedAt).toISOString());
+  });
+
+  it("throws SatUuidAlreadyExistsError when satUuid is duplicated", async () => {
+    const base = {
+      providerId: PROVIDER,
+      branchId: BRANCH,
+      paymentMethodId: CASH_PM,
+      creatorId: CREATOR,
+      satUuid: "123e4567-e89b-12d3-a456-426614174000",
+      items: [{ productId: PRODUCT, quantity: 1, unitCost: 100 }],
+    };
+    await useCase.execute(base);
+    await expect(useCase.execute(base)).rejects.toBeInstanceOf(SatUuidAlreadyExistsError);
   });
 });

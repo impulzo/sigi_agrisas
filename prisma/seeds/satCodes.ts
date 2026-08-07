@@ -1,18 +1,22 @@
 /**
- * ⚠️ PLACEHOLDER — NO ES EL CATÁLOGO OFICIAL DEL SAT.
+ * Seed del catálogo `c_ClaveProdServ` del SAT — CATÁLOGO REAL, no placeholder.
  *
- * El catálogo real `c_ClaveProdServ` del SAT tiene más de 52,000 códigos y
- * requiere descargarse desde la fuente oficial del SAT (no disponible en
- * este entorno de desarrollo). Este seed siembra un subconjunto pequeño
- * (~60 códigos) de rubros comunes en el giro agro/agroquímico del cliente,
- * compilado a partir de conocimiento general sobre la estructura del
- * catálogo (basado en UNSPSC) — NO es una descarga verificada del listado
- * vigente del SAT.
+ * Fuente: https://github.com/phpcfdi/resources-sat-catalogs
+ *   archivo `database/data/cfdi_40_productos_servicios.sql` (CFDI 4.0).
+ * El proyecto phpcfdi se auto-sincroniza con los catálogos que publica el SAT
+ * y es la referencia estándar del ecosistema CFDI en México. El subconjunto
+ * placeholder previo (~60 códigos) se reemplazó por el catálogo completo
+ * (52,513 códigos) con descripciones verificadas contra la fuente.
  *
- * NO usar este subconjunto como fuente de verdad para timbrado de CFDI en
- * producción sin validar cada código contra el catálogo oficial del SAT
- * (https://www.sat.gob.mx, sección "Catálogos" del Anexo 20). Reemplazar
- * este archivo cuando se disponga del archivo oficial (CSV/XLSX).
+ * Procedencia verificable en `prisma/seeds/lib/satCatalog.ts`:
+ *   - SHA-256 de la fuente SQL descargada.
+ *   - SHA-256 del TSV embebido (`prisma/seeds/data/sat-codes.tsv`).
+ * El seed aborta si el checksum del TSV no coincide (detección de corrupción).
+ *
+ * Estrategia: resync total idempotente. En una sola transacción borra todas
+ * las filas existentes y reinserta el catálogo completo en lotes. `Product.sat
+ * ProductCode` es una columna suelta (sin FK al catálogo), así que las ventas
+ * existentes conservan sus códigos aunque el catálogo se re-siembre.
  */
 import path from "node:path";
 import { existsSync } from "node:fs";
@@ -27,108 +31,43 @@ if (existsSync(ENV_LOCAL)) {
 }
 
 import { PrismaClient } from "@prisma/client";
+import { loadSatCatalog, SAT_CATALOG_SOURCE } from "./lib/satCatalog";
 
 const prisma = new PrismaClient();
 
-interface SatCodeSeed {
-  code: string;
-  description: string;
-}
+const BATCH_SIZE = 5_000;
 
-const PLACEHOLDER_SAT_CODES: readonly SatCodeSeed[] = [
-  // Semillas y material vegetal
-  { code: "10151500", description: "Semillas y granos para siembra" },
-  { code: "10151501", description: "Semillas de granos básicos" },
-  { code: "10151502", description: "Semillas de hortalizas" },
-  { code: "10151503", description: "Semillas de forraje" },
-  { code: "10151700", description: "Plantas o material vegetal" },
-  { code: "10151701", description: "Plántulas y esquejes" },
-  // Fertilizantes
-  { code: "10161500", description: "Fertilizantes" },
-  { code: "10161501", description: "Fertilizantes nitrogenados" },
-  { code: "10161502", description: "Fertilizantes fosfatados" },
-  { code: "10161503", description: "Fertilizantes potásicos" },
-  { code: "10161504", description: "Fertilizantes orgánicos" },
-  { code: "10161505", description: "Fertilizantes foliares" },
-  // Plaguicidas y agroquímicos
-  { code: "10171500", description: "Plaguicidas o pesticidas agrícolas" },
-  { code: "10171501", description: "Herbicidas" },
-  { code: "10171502", description: "Insecticidas" },
-  { code: "10171503", description: "Fungicidas" },
-  { code: "10171504", description: "Acaricidas" },
-  { code: "10171505", description: "Nematicidas" },
-  { code: "10171506", description: "Reguladores de crecimiento vegetal" },
-  // Alimento y suplementos para ganado
-  { code: "10191500", description: "Alimento para animales de granja" },
-  { code: "10191501", description: "Forraje y alimento balanceado" },
-  { code: "10191502", description: "Suplementos alimenticios para ganado" },
-  { code: "10191503", description: "Sales minerales para ganado" },
-  // Sanidad animal / veterinaria agropecuaria
-  { code: "10121500", description: "Productos veterinarios" },
-  { code: "10121501", description: "Vacunas para ganado" },
-  { code: "10121502", description: "Desparasitantes" },
-  { code: "10121503", description: "Antibióticos veterinarios" },
-  // Maquinaria y equipo agrícola
-  { code: "21101500", description: "Maquinaria agrícola" },
-  { code: "21101501", description: "Tractores agrícolas" },
-  { code: "21101502", description: "Implementos de labranza" },
-  { code: "21101503", description: "Sembradoras" },
-  { code: "21101504", description: "Cosechadoras" },
-  { code: "21101505", description: "Aspersoras agrícolas" },
-  // Herramientas agrícolas manuales
-  { code: "27112700", description: "Herramientas agrícolas manuales" },
-  { code: "27112701", description: "Azadones" },
-  { code: "27112702", description: "Machetes" },
-  { code: "27112703", description: "Podadoras manuales" },
-  { code: "27112704", description: "Palas agrícolas" },
-  // Sistemas de riego
-  { code: "40142000", description: "Sistemas y equipo de riego" },
-  { code: "40142001", description: "Tubería de riego por goteo" },
-  { code: "40142002", description: "Aspersores de riego" },
-  { code: "40142003", description: "Bombas de agua para riego" },
-  { code: "40142004", description: "Cintillas de riego" },
-  // Empaque y embalaje agrícola
-  { code: "14111500", description: "Sacos y costales" },
-  { code: "14111501", description: "Costales de rafia" },
-  { code: "14111502", description: "Bolsas de plástico para empaque agrícola" },
-  { code: "14111503", description: "Cajas de cartón para producto agrícola" },
-  // Protección de cultivos (mallas, acolchados)
-  { code: "12141600", description: "Materiales de protección de cultivos" },
-  { code: "12141601", description: "Mallas antigranizo" },
-  { code: "12141602", description: "Acolchado plástico agrícola" },
-  { code: "12141603", description: "Tutores y rafia para cultivo" },
-  // Servicios agropecuarios
-  { code: "70141500", description: "Servicios de asesoría agrícola" },
-  { code: "70141501", description: "Servicios de fumigación" },
-  { code: "70141502", description: "Servicios de análisis de suelo" },
-  // Genérico / por definir
-  { code: "01010101", description: "No existe en el catálogo (uso genérico)" },
-  { code: "84111506", description: "Servicios de facturación (uso administrativo genérico)" },
-];
+async function main(): Promise<{ deleted: number; inserted: number }> {
+  const entries = loadSatCatalog();
+  console.log(
+    `[seed:sat-codes] Catálogo real cargado: ${entries.length} códigos (fuente: ${SAT_CATALOG_SOURCE.url}, obtenido ${SAT_CATALOG_SOURCE.retrievedAt})`
+  );
 
-async function main(): Promise<{ upserted: number; created: number; updated: number }> {
-  let created = 0;
-  let updated = 0;
+  const summary = await prisma.$transaction(
+    async (tx) => {
+      const deleted = await tx.satProductServiceCode.deleteMany();
+      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+        const chunk = entries.slice(i, i + BATCH_SIZE).map((e) => ({
+          code: e.code,
+          description: e.description,
+        }));
+        await tx.satProductServiceCode.createMany({ data: chunk });
+      }
+      return { deleted: deleted.count, inserted: entries.length };
+    },
+    { maxWait: 30_000, timeout: 180_000 }
+  );
 
-  for (const entry of PLACEHOLDER_SAT_CODES) {
-    const existing = await prisma.satProductServiceCode.findUnique({ where: { code: entry.code } });
-    await prisma.satProductServiceCode.upsert({
-      where: { code: entry.code },
-      create: { code: entry.code, description: entry.description },
-      update: { description: entry.description },
-    });
-    if (existing) updated++;
-    else created++;
-  }
-
-  return { upserted: created + updated, created, updated };
+  return summary;
 }
 
 main()
   .then((summary) => {
-    console.log("\n=== Seed sat-codes — resumen (PLACEHOLDER, no oficial) ===");
+    console.log("\n=== Seed sat-codes — resumen (catálogo real) ===");
     console.log(JSON.stringify(summary, null, 2));
-    console.log("\nSeed completado. Recuerda: este es un subconjunto placeholder, no el catálogo oficial del SAT.");
+    console.log(
+      `\nCatálogo c_ClaveProdServ (CFDI 4.0) sembrado desde ${SAT_CATALOG_SOURCE.url}`
+    );
     process.exit(0);
   })
   .catch((err) => {

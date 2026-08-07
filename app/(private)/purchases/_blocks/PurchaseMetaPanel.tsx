@@ -43,6 +43,19 @@ export function PurchaseMetaPanel({ purchase }: PurchaseMetaPanelProps) {
             <p className="text-body-sm text-on-surface whitespace-pre-line">{purchase.notes}</p>
           </div>
         )}
+        {purchase.satUuid && (
+          <div className="col-span-full border-t border-outline-variant pt-3">
+            <p className="text-label-sm text-on-surface-variant mb-1">Factura SAT</p>
+            <p className="text-body-sm text-on-surface">{purchase.xmlFileName ?? "Factura CFDI"}</p>
+            {purchase.supplierInvoiceNumber && (
+              <p className="text-label-sm text-on-surface-variant">Folio fiscal: {purchase.supplierInvoiceNumber}</p>
+            )}
+            <p className="text-label-sm text-on-surface-variant font-mono break-all">UUID: {purchase.satUuid}</p>
+            {purchase.invoiceDate && (
+              <p className="text-label-sm text-on-surface-variant">Fecha factura: {fmtDate(purchase.invoiceDate)}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {purchase.status === "cancelled" && purchase.cancelledAt && (

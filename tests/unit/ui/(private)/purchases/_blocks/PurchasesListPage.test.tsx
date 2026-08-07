@@ -108,3 +108,23 @@ describe("PurchasesListPage — scoping de sucursal", () => {
     expect(screen.getByLabelText(/Filtrar por sucursal/i)).toBeInTheDocument();
   });
 });
+
+describe("PurchasesListPage — CTA Nueva compra", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("con purchases:create → muestra link a /purchases/new", () => {
+    setupCurrentUser(["purchases:read", "purchases:create"]);
+    setupPurchasesList();
+    render(<PurchasesListPage />);
+    const link = screen.getByRole("link", { name: /Nueva compra/i });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "/purchases/new");
+  });
+
+  it("sin purchases:create → no muestra el link", () => {
+    setupCurrentUser(["purchases:read"]);
+    setupPurchasesList();
+    render(<PurchasesListPage />);
+    expect(screen.queryByRole("link", { name: /Nueva compra/i })).not.toBeInTheDocument();
+  });
+});

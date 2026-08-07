@@ -18,10 +18,16 @@ export class CreatePurchaseUseCase {
 
     const data: CreatePurchaseData = {
       providerId: req.providerId,
+      newProvider: req.newProvider ?? undefined,
       branchId: req.branchId,
       paymentMethodId: req.paymentMethodId,
       creatorId: req.creatorId,
       notes: req.notes ?? null,
+      purchasedAt: req.purchasedAt ? new Date(req.purchasedAt) : undefined,
+      satUuid: req.satUuid ?? undefined,
+      supplierInvoiceNumber: req.supplierInvoiceNumber ?? undefined,
+      invoiceDate: req.invoiceDate ? new Date(req.invoiceDate) : undefined,
+      xmlFileName: req.xmlFileName ?? undefined,
       items: req.items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,

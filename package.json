@@ -27,6 +27,7 @@
     "clsx": "^2.1.1",
     "cookie": "^0.6.0",
     "decimal.js": "^10.6.0",
+    "fast-xml-parser": "^5.10.1",
     "jose": "^6.2.3",
     "jsonwebtoken": "^9.0.2",
     "next": "14.2.35",

@@ -459,6 +459,13 @@ The `ProductDto` (list and detail) SHALL include `providerName: string | null` d
 - **WHEN** request includes `?providerId=<uuid>`
 - **THEN** response contains only products whose department belongs to that provider
 
+`GET /api/v1/admin/products` SHALL accept an optional query parameter `satProductCode: string (exact, 8 digits)`. When provided, only products whose `satProductCode` equals the value are returned (exact match, not partial). This is used by the purchases UI to auto-match invoice line items to products by SAT code. Combined with existing filters (`search`, `departmentId`, `providerId`, pagination).
+
+#### Scenario: Filter by satProductCode
+- **WHEN** request includes `?satProductCode=01010101`
+- **THEN** response contains only products with `satProductCode === "01010101"`
+- **AND** an invalid value (not 8 digits) SHALL return HTTP 400
+
 #### Scenario: Combined filter providerId + departmentId
 - **WHEN** request includes both `?providerId=<uuid>&departmentId=<uuid>`
 - **THEN** both filters are applied (AND condition); if the department doesn't belong to that provider, result is empty

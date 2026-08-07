@@ -34,6 +34,34 @@ El sistema SHALL permitir registrar una compra (`Purchase`) contra un proveedor 
 - **WHEN** la compra se confirma exitosamente
 - **THEN** la asignación de folio, el incremento de inventario por línea, la actualización del saldo del proveedor (si aplica) y la inserción de la compra ocurren dentro de una única transacción; si cualquier paso falla, ninguno se aplica
 
+### Requirement: Carga de factura SAT (CFDI) al registrar compras
+
+El sistema SHALL permitir registrar una compra a partir de un XML de factura CFDI: el frontend parsea el XML en el cliente y prellena el formulario; el backend SHALL aceptar los metadatos de la factura en `POST /api/v1/admin/purchases` y, cuando el RFC del emisor no existe, SHALL auto-crear el proveedor dentro de la misma transacción (sin requerir `providers:write`).
+
+El body de `POST /api/v1/admin/purchases` SHALL aceptar exactamente uno de `providerId` o `newProvider` (si ambos o ninguno, HTTP 400). `newProvider` SHALL ser `{ rfc, name, legalName?, taxRegime? }` con `rfc` en formato `^([A-ZÑ&]{3,4}\d{6}[A-Z\d]{3})$` (upper-normalizado) y `taxRegime` de 3 dígitos. Los campos adicionales opcionales: `purchasedAt` (fecha de la compra editable; si se omite, `NOW()`), `satUuid` (UUID de TimbreFiscalDigital), `supplierInvoiceNumber` (serie+folio), `invoiceDate` (fecha de la factura), `xmlFileName`. `purchasedAt`/`invoiceDate` SHALL aceptar datetime ISO con o sin offset (CFDI `Fecha` local, ej. `2026-08-05T09:30:00`) vía `z.coerce.date()`. `createdAt` SHALL ser siempre `NOW()` en el servidor (independiente de `purchasedAt`).
+
+Los metadatos SHALL persistirse en la tabla `purchases`: `sat_uuid` (único, `TEXT`), `supplier_invoice_number`, `invoice_date`, `xml_file_name`. El `sat_uuid` SHALL ser único en toda la tabla (índice único) y su duplicado SHALL devolver HTTP 409 con `{ error, existingPurchaseFolio }` — incluso si la compra original fue cancelada (el UUID no se libera).
+
+#### Scenario: Proveedor auto-creado desde el RFC del emisor
+- **WHEN** el body incluye `newProvider` con un RFC que no existe en `providers`
+- **THEN** el proveedor se crea dentro de la misma transacción de la compra con `code = "PROV_<rfc>"`, `rfc`, `name`, `legalName` y `taxRegime`, y la compra queda referenciándolo
+
+#### Scenario: Proveedor existente reutilizado por RFC
+- **WHEN** el body incluye `newProvider` con un RFC que ya existe en `providers`
+- **THEN** se reutiliza el proveedor existente (no se duplica ni se modifica) y la compra queda referenciándolo
+
+#### Scenario: newProvider sin providerId
+- **WHEN** el body omite `providerId` y `newProvider` o los incluye ambos
+- **THEN** la API responde HTTP 400 y no se crea la compra
+
+#### Scenario: UUID de factura duplicado rechazado
+- **WHEN** se registra una compra con `satUuid` que ya existe en otra compra (activa o cancelada)
+- **THEN** la API responde HTTP 409 y no se crea la compra
+
+#### Scenario: RFC inválido rechazado
+- **WHEN** `newProvider.rfc` no cumple la regex mexicana
+- **THEN** la API responde HTTP 400 y no se crea la compra
+
 ### Requirement: Cancelación de una compra
 
 El sistema SHALL permitir cancelar una compra en estado `completed`, revirtiendo el inventario incrementado y, si era a crédito, el saldo del proveedor en la proporción aún no pagada. La cancelación SHALL ser idempotente y SHALL rechazarse si la compra tiene abonos a proveedor activos.

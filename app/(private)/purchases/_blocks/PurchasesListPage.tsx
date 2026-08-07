@@ -19,6 +19,7 @@ export function PurchasesListPage() {
   const { can } = useCurrentUser();
   const canRead = can("purchases:read");
   const isBypass = can("branches:access_all");
+  const canCreate = can("purchases:create") === true;
 
   const { options: branchOptions } = useBranchesOptions();
   const branches = branchOptions.map((b) => ({ id: b.id, name: b.name }));
@@ -97,6 +98,7 @@ export function PurchasesListPage() {
           onFromChange={(v) => { setFrom(v); setPage(1); }}
           onToChange={(v) => { setTo(v); setPage(1); }}
           onReset={handleReset}
+          canCreate={canCreate}
         />
       }
     >

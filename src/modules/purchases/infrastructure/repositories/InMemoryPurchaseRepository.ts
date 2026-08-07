@@ -15,10 +15,12 @@ import { PurchaseTotalsCalculator } from "../../domain/services/PurchaseTotalsCa
 import { ProviderNotFoundOrInactiveError } from "../../domain/errors/ProviderNotFoundOrInactiveError";
 import { ProductNotFoundOrInactiveError } from "../../domain/errors/ProductNotFoundOrInactiveError";
 import { PurchaseHasActiveProviderPaymentsError } from "../../domain/errors/PurchaseHasActiveProviderPaymentsError";
+import { SatUuidAlreadyExistsError } from "../../domain/errors/SatUuidAlreadyExistsError";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 
 interface ProviderMock {
   id: string;
+  code: string;
   name: string;
   rfc: string;
   isActive: boolean;
@@ -119,8 +121,34 @@ export class InMemoryPurchaseRepository implements PurchaseRepository {
   }
 
   async createCompleted(data: CreatePurchaseData): Promise<PurchaseWithItems> {
-    const provider = this.providers.get(data.providerId);
+    let provider = data.providerId ? this.providers.get(data.providerId) : undefined;
+    const newProvider = data.newProvider;
+    if (newProvider) {
+      const existing = Array.from(this.providers.values()).find((p) => p.rfc === newProvider.rfc);
+      if (existing) {
+        provider = existing;
+      } else {
+        const created: ProviderMock = {
+          id: randomUUID(),
+          code: `PROV_${newProvider.rfc}`,
+          name: newProvider.name,
+          rfc: newProvider.rfc,
+          currentBalance: 0,
+          isActive: true,
+        };
+        this.providers.set(created.id, created);
+        provider = created;
+      }
+    }
     if (!provider || !provider.isActive) throw new ProviderNotFoundOrInactiveError();
+    const providerId = provider.id;
+
+    if (data.satUuid) {
+      const existingPurchase = Array.from(this.purchases.values()).find((p) => p.satUuid === data.satUuid);
+      if (existingPurchase) {
+        throw new SatUuidAlreadyExistsError(`${existingPurchase.folioCode}-${String(existingPurchase.folioNumber).padStart(6, "0")}`);
+      }
+    }
 
     const branch = this.branches.get(data.branchId);
     if (!branch || !branch.isActive) throw new InactiveResourceError("Branch");
@@ -188,7 +216,7 @@ export class InMemoryPurchaseRepository implements PurchaseRepository {
     const purchaseId = randomUUID();
     const purchase = Purchase.create({
       id: purchaseId,
-      providerId: data.providerId,
+      providerId,
       branchId: data.branchId,
       folioId: randomUUID(),
       folioNumber,
@@ -202,6 +230,11 @@ export class InMemoryPurchaseRepository implements PurchaseRepository {
       paidAmount,
       paymentStatus,
       notes: data.notes,
+      purchasedAt: data.purchasedAt,
+      satUuid: data.satUuid ?? null,
+      supplierInvoiceNumber: data.supplierInvoiceNumber ?? null,
+      invoiceDate: data.invoiceDate ?? null,
+      xmlFileName: data.xmlFileName ?? null,
       cancelledAt: null,
       cancelledBy: null,
       cancellationReason: null,

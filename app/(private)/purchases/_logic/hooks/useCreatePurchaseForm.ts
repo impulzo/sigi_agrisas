@@ -4,8 +4,9 @@ import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createPurchase } from "../services";
 import { computePurchaseTotalsClient, PurchaseTotalsResult } from "../lib/computePurchaseTotalsClient";
-import type { ProviderDto, ProductDto } from "../types/api";
+import type { NewProviderInput, ProviderDto, ProductDto } from "../types/api";
 import type { PurchaseDetail } from "../types/domain";
+import type { SatApplyResult } from "../lib/satInvoiceMapping";
 
 export interface PurchaseFormLine {
   id: string;
@@ -21,9 +22,18 @@ export interface PurchaseFormLine {
   lineTotal: number;
 }
 
+export interface SatMetadataState {
+  satUuid: string | null;
+  supplierInvoiceNumber: string | null;
+  invoiceDate: string;
+  purchasedAt: string;
+  xmlFileName: string | null;
+}
+
 interface UseCreatePurchaseFormResult {
   providerId: string;
   provider: ProviderDto | null;
+  newProvider: NewProviderInput | null;
   setProvider: (id: string, provider: ProviderDto | null) => void;
   branchId: string;
   paymentMethodId: string;
@@ -33,11 +43,16 @@ interface UseCreatePurchaseFormResult {
   setNotes: (v: string) => void;
   lines: PurchaseFormLine[];
   addLine: (product: ProductDto) => void;
+  setLinesFromSat: (lines: { product: ProductDto; quantity: number; unitCost: number }[]) => void;
+  applySatResult: (result: SatApplyResult) => void;
+  clearSat: () => void;
   updateQuantity: (id: string, qty: number) => void;
   updateUnitCost: (id: string, cost: number) => void;
   updateDiscount: (id: string, pct: number) => void;
   removeLine: (id: string) => void;
   totals: PurchaseTotalsResult;
+  satMetadata: SatMetadataState;
+  setSatMetadata: (meta: Partial<SatMetadataState>) => void;
   isSubmitting: boolean;
   submitError: Error | null;
   clearSubmitError: () => void;
@@ -49,9 +64,17 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
   const router = useRouter();
   const [providerId, setProviderId] = useState("");
   const [provider, setProviderState] = useState<ProviderDto | null>(null);
+  const [newProvider, setNewProvider] = useState<NewProviderInput | null>(null);
   const [paymentMethodId, setPaymentMethodId] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<PurchaseFormLine[]>([]);
+  const [satMetadata, setSatMetadataState] = useState<SatMetadataState>({
+    satUuid: null,
+    supplierInvoiceNumber: null,
+    invoiceDate: "",
+    purchasedAt: "",
+    xmlFileName: null,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<Error | null>(null);
 
@@ -60,6 +83,11 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
   const setProvider = useCallback((id: string, p: ProviderDto | null) => {
     setProviderId(id);
     setProviderState(p);
+    setNewProvider(null);
+  }, []);
+
+  const setSatMetadata = useCallback((meta: Partial<SatMetadataState>) => {
+    setSatMetadataState((prev) => ({ ...prev, ...meta }));
   }, []);
 
   const addLine = useCallback((product: ProductDto) => {
@@ -81,6 +109,50 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
           lineTotal: 0,
         },
       ];
+    });
+  }, []);
+
+  const setLinesFromSat = useCallback((satLines: { product: ProductDto; quantity: number; unitCost: number }[]) => {
+    setLines(
+      satLines.map((l) => ({
+        id: l.product.id,
+        productId: l.product.id,
+        productCode: l.product.code,
+        productName: l.product.name,
+        ivaRate: l.product.ivaRate ?? 0,
+        iepsRate: l.product.iepsRate ?? 0,
+        quantity: l.quantity,
+        unitCost: l.unitCost,
+        discountPct: 0,
+        lineSubtotal: 0,
+        lineTotal: 0,
+      }))
+    );
+  }, []);
+
+  const applySatResult = useCallback((result: SatApplyResult) => {
+    setProviderId("");
+    setProviderState(null);
+    setNewProvider(result.newProvider);
+    if (result.paymentMethodId) setPaymentMethodId(result.paymentMethodId);
+    setLinesFromSat(result.lines);
+    setSatMetadataState({
+      satUuid: result.metadata.satUuid,
+      supplierInvoiceNumber: result.metadata.supplierInvoiceNumber,
+      invoiceDate: result.metadata.invoiceDate,
+      purchasedAt: result.metadata.purchasedAt,
+      xmlFileName: result.metadata.xmlFileName,
+    });
+  }, [setLinesFromSat]);
+
+  const clearSat = useCallback(() => {
+    setNewProvider(null);
+    setSatMetadataState({
+      satUuid: null,
+      supplierInvoiceNumber: null,
+      invoiceDate: "",
+      purchasedAt: "",
+      xmlFileName: null,
     });
   }, []);
 
@@ -124,7 +196,8 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
     [lines, totals]
   );
 
-  const canSubmit = Boolean(providerId) && Boolean(paymentMethodId) && lines.length > 0 && !isSubmitting;
+  const canSubmit =
+    Boolean(providerId || newProvider) && Boolean(paymentMethodId) && lines.length > 0 && !isSubmitting;
 
   const clearSubmitError = useCallback(() => setSubmitError(null), []);
 
@@ -133,10 +206,15 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
     setSubmitError(null);
     try {
       const result = await createPurchase({
-        providerId,
+        ...(newProvider ? { newProvider } : { providerId }),
         branchId,
         paymentMethodId,
         notes: notes.trim() || null,
+        purchasedAt: satMetadata.purchasedAt || undefined,
+        satUuid: satMetadata.satUuid,
+        supplierInvoiceNumber: satMetadata.supplierInvoiceNumber,
+        invoiceDate: satMetadata.invoiceDate || null,
+        xmlFileName: satMetadata.xmlFileName,
         items: lines.map((l) => ({
           productId: l.productId,
           quantity: l.quantity,
@@ -152,11 +230,12 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
     } finally {
       setIsSubmitting(false);
     }
-  }, [providerId, branchId, paymentMethodId, notes, lines, router]);
+  }, [providerId, newProvider, branchId, paymentMethodId, notes, satMetadata, lines, router]);
 
   return {
     providerId,
     provider,
+    newProvider,
     setProvider,
     branchId,
     paymentMethodId,
@@ -166,11 +245,16 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
     setNotes,
     lines: linesWithTotals,
     addLine,
+    setLinesFromSat,
+    applySatResult,
+    clearSat,
     updateQuantity,
     updateUnitCost,
     updateDiscount,
     removeLine,
     totals,
+    satMetadata,
+    setSatMetadata,
     isSubmitting,
     submitError,
     clearSubmitError,

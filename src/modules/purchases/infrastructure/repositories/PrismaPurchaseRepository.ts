@@ -18,6 +18,7 @@ import { PurchaseTotalsCalculator } from "../../domain/services/PurchaseTotalsCa
 import { ProviderNotFoundOrInactiveError } from "../../domain/errors/ProviderNotFoundOrInactiveError";
 import { ProductNotFoundOrInactiveError } from "../../domain/errors/ProductNotFoundOrInactiveError";
 import { PurchaseHasActiveProviderPaymentsError } from "../../domain/errors/PurchaseHasActiveProviderPaymentsError";
+import { SatUuidAlreadyExistsError } from "../../domain/errors/SatUuidAlreadyExistsError";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
 import { recordInventoryMovement } from "@/shared/infrastructure/inventory/recordInventoryMovement";
@@ -56,6 +57,10 @@ function toDomainPurchase(row: PrismaPurchaseWithJoins): Purchase {
     paymentStatus: row.paymentStatus as PurchasePaymentStatus,
     notes: row.notes,
     purchasedAt: row.purchasedAt,
+    satUuid: row.satUuid,
+    supplierInvoiceNumber: row.supplierInvoiceNumber,
+    invoiceDate: row.invoiceDate,
+    xmlFileName: row.xmlFileName,
     cancelledAt: row.cancelledAt,
     cancelledBy: row.cancelledBy,
     cancellationReason: row.cancellationReason,
@@ -171,7 +176,31 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
     const purchaseId = randomUUID();
 
     const result = await this.prisma.$transaction(async (tx) => {
-      const provider = await tx.provider.findUnique({ where: { id: data.providerId } });
+      if (data.satUuid) {
+        const existing = await tx.purchase.findUnique({ where: { satUuid: data.satUuid } });
+        if (existing) {
+          throw new SatUuidAlreadyExistsError(`${existing.folioCode}-${String(existing.folioNumber).padStart(6, "0")}`);
+        }
+      }
+
+      let providerId = data.providerId;
+      if (data.newProvider) {
+        const created = await tx.provider.upsert({
+          where: { rfc: data.newProvider.rfc },
+          update: {},
+          create: {
+            code: `PROV_${data.newProvider.rfc}`,
+            name: data.newProvider.name,
+            rfc: data.newProvider.rfc,
+            legalName: data.newProvider.legalName ?? null,
+            taxRegime: data.newProvider.taxRegime ?? null,
+          },
+        });
+        providerId = created.id;
+      }
+      if (!providerId) throw new ProviderNotFoundOrInactiveError();
+
+      const provider = await tx.provider.findUnique({ where: { id: providerId } });
       if (!provider || !provider.isActive) throw new ProviderNotFoundOrInactiveError();
 
       const branch = await tx.branch.findUnique({ where: { id: data.branchId } });
@@ -231,7 +260,7 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
       const folio = await resolveCanonicalFolio(tx, CP_FOLIO_CODE);
       const { folioNumber, folioCode } = await allocateFolio(tx, folio.id);
 
-      const purchasedAt = new Date();
+      const purchasedAt = data.purchasedAt ?? new Date();
       for (let i = 0; i < snapshots.length; i++) {
         const item = snapshots[i];
         await recordInventoryMovement(tx, {
@@ -242,7 +271,7 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
           direction: "IN",
           quantity: item.quantity,
           unitCost: item.unitCost,
-          providerId: data.providerId,
+          providerId,
           folioId: folio.id,
           folioCode,
           folioNumber,
@@ -258,14 +287,14 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
       if (isCredit) {
         await tx.$executeRaw`
           UPDATE providers SET current_balance = current_balance + ${totals.total}::numeric, updated_at = NOW()
-          WHERE id = ${data.providerId}
+          WHERE id = ${providerId}
         `;
       }
 
       await tx.purchase.create({
         data: {
           id: purchaseId,
-          providerId: data.providerId,
+          providerId,
           branchId: data.branchId,
           folioId: folio.id,
           folioNumber,
@@ -280,6 +309,10 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
           paymentStatus,
           notes: data.notes,
           purchasedAt,
+          satUuid: data.satUuid ?? null,
+          supplierInvoiceNumber: data.supplierInvoiceNumber ?? null,
+          invoiceDate: data.invoiceDate ?? null,
+          xmlFileName: data.xmlFileName ?? null,
           items: {
             create: snapshots.map((item, i) => ({
               productId: item.productId,

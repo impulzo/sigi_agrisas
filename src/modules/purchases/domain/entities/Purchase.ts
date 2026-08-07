@@ -19,6 +19,10 @@ export interface PurchaseProps {
   paymentStatus?: PurchasePaymentStatus;
   notes: string | null;
   purchasedAt?: Date;
+  satUuid?: string | null;
+  supplierInvoiceNumber?: string | null;
+  invoiceDate?: Date | null;
+  xmlFileName?: string | null;
   cancelledAt: Date | null;
   cancelledBy: string | null;
   cancellationReason: string | null;
@@ -44,6 +48,10 @@ export class Purchase {
   readonly paymentStatus: PurchasePaymentStatus;
   readonly notes: string | null;
   readonly purchasedAt: Date;
+  readonly satUuid: string | null;
+  readonly supplierInvoiceNumber: string | null;
+  readonly invoiceDate: Date | null;
+  readonly xmlFileName: string | null;
   readonly cancelledAt: Date | null;
   readonly cancelledBy: string | null;
   readonly cancellationReason: string | null;
@@ -68,6 +76,10 @@ export class Purchase {
     this.paymentStatus = props.paymentStatus;
     this.notes = props.notes;
     this.purchasedAt = props.purchasedAt;
+    this.satUuid = props.satUuid ?? null;
+    this.supplierInvoiceNumber = props.supplierInvoiceNumber ?? null;
+    this.invoiceDate = props.invoiceDate ?? null;
+    this.xmlFileName = props.xmlFileName ?? null;
     this.cancelledAt = props.cancelledAt;
     this.cancelledBy = props.cancelledBy;
     this.cancellationReason = props.cancellationReason;
@@ -100,6 +112,10 @@ export class Purchase {
       paymentStatus: props.paymentStatus ?? "paid",
       notes: props.notes,
       purchasedAt: props.purchasedAt ?? now,
+      satUuid: props.satUuid ?? null,
+      supplierInvoiceNumber: props.supplierInvoiceNumber ?? null,
+      invoiceDate: props.invoiceDate ?? null,
+      xmlFileName: props.xmlFileName ?? null,
       cancelledAt: props.cancelledAt,
       cancelledBy: props.cancelledBy,
       cancellationReason: props.cancellationReason,

@@ -46,6 +46,7 @@ const listQuerySchema = z.object({
   departmentId: z.string().uuid("departmentId must be a valid UUID").optional(),
   providerId: z.string().uuid("providerId must be a valid UUID").optional(),
   branchId: z.string().uuid("branchId must be a valid UUID").optional(),
+  satProductCode: z.string().regex(SAT_PRODUCT_CODE_REGEX, "satProductCode must be 8 digits").optional(),
 });
 
 const createBodySchema = z.object({
@@ -124,6 +125,7 @@ export class ProductsController {
       departmentId: searchParams.get("departmentId") ?? undefined,
       providerId: searchParams.get("providerId") ?? undefined,
       branchId: searchParams.get("branchId") ?? undefined,
+      satProductCode: searchParams.get("satProductCode") ?? undefined,
     });
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
