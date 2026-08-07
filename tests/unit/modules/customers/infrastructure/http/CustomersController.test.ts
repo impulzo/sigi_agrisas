@@ -161,6 +161,12 @@ describe("CustomersController — POST create", () => {
     expect(res.status).toBe(400);
   });
 
+  it("cfdiUse de 4 caracteres (CP01) es aceptado", async () => {
+    const { controller } = makeController();
+    const res = await controller.create(postReq({ ...VALID_BODY, cfdiUse: "CP01" }));
+    expect(res.status).toBe(201);
+  });
+
   it("taxZipCode con formato incorrecto → 400", async () => {
     const { controller } = makeController();
     const res = await controller.create(postReq({ ...VALID_BODY, taxZipCode: "1234" }));

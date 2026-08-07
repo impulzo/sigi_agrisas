@@ -12,8 +12,12 @@ jest.mock("../../../../app/(private)/pos/_logic/services/createCustomer", () => 
   createCustomer: jest.fn(),
 }));
 
+jest.mock("../../../../app/_hooks/useSatCatalogSearch");
+
 import { createCustomer } from "../../../../app/(private)/pos/_logic/services/createCustomer";
+import { useSatCatalogSearch } from "../../../../app/_hooks/useSatCatalogSearch";
 const mockCreateCustomer = createCustomer as jest.Mock;
+const mockUseSatCatalogSearch = useSatCatalogSearch as jest.MockedFunction<typeof useSatCatalogSearch>;
 
 HTMLDialogElement.prototype.showModal = jest.fn(function (this: HTMLDialogElement) {
   this.setAttribute("open", "");
@@ -38,6 +42,7 @@ function fillRequired(user: ReturnType<typeof userEvent.setup>) {
 describe("CustomerQuickAddModal", () => {
   beforeEach(() => {
     mockCreateCustomer.mockReset();
+    mockUseSatCatalogSearch.mockReturnValue({ options: [], isLoading: false });
   });
 
   it("renders form with title", () => {
@@ -127,5 +132,68 @@ describe("CustomerQuickAddModal", () => {
     render(<CustomerQuickAddModal onCreated={jest.fn()} onClose={jest.fn()} />);
     await user.click(screen.getByText("Crear cliente"));
     expect(mockCreateCustomer).not.toHaveBeenCalled();
+  });
+});
+
+describe("CustomerQuickAddModal — catálogos SAT en datos fiscales", () => {
+  beforeEach(() => {
+    mockCreateCustomer.mockReset();
+    mockUseSatCatalogSearch.mockReturnValue({ options: [], isLoading: false });
+  });
+
+  it("expone comboboxes de régimen fiscal y uso CFDI al expandir datos fiscales", async () => {
+    const user = userEvent.setup();
+    render(<CustomerQuickAddModal onCreated={jest.fn()} onClose={jest.fn()} />);
+    await user.click(screen.getByText(/datos fiscales/i));
+    expect(screen.getByPlaceholderText("601")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("G03")).toBeInTheDocument();
+  });
+
+  it("seleccionar un régimen fiscal guarda el código en el payload", async () => {
+    mockUseSatCatalogSearch.mockReturnValue({
+      options: [
+        {
+          code: "612",
+          description: "Personas Físicas con Actividades Empresariales y Profesionales",
+        },
+      ],
+      isLoading: false,
+    });
+    mockCreateCustomer.mockResolvedValue(stubCustomer);
+    const user = userEvent.setup();
+    render(<CustomerQuickAddModal onCreated={jest.fn()} onClose={jest.fn()} />);
+    await user.click(screen.getByText(/datos fiscales/i));
+    const regimeInput = screen.getByPlaceholderText("601");
+    await user.click(regimeInput);
+    await user.click(screen.getByText(/Personas Físicas/));
+    await fillRequired(user)();
+    await user.click(screen.getByText("Crear cliente"));
+    await waitFor(() => expect(mockCreateCustomer).toHaveBeenCalled());
+    expect(mockCreateCustomer.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ taxRegime: "612" })
+    );
+  });
+
+  it("acepta uso CFDI de 4 caracteres (CP01) vía catálogo", async () => {
+    mockUseSatCatalogSearch.mockReturnValue({
+      options: [
+        { code: "CP01", description: "Pagos" },
+        { code: "G03", description: "Gastos en general." },
+      ],
+      isLoading: false,
+    });
+    mockCreateCustomer.mockResolvedValue(stubCustomer);
+    const user = userEvent.setup();
+    render(<CustomerQuickAddModal onCreated={jest.fn()} onClose={jest.fn()} />);
+    await user.click(screen.getByText(/datos fiscales/i));
+    const cfdiInput = screen.getByPlaceholderText("G03");
+    await user.click(cfdiInput);
+    await user.click(screen.getByText(/Pagos/));
+    await fillRequired(user)();
+    await user.click(screen.getByText("Crear cliente"));
+    await waitFor(() => expect(mockCreateCustomer).toHaveBeenCalled());
+    expect(mockCreateCustomer.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ cfdiUse: "CP01" })
+    );
   });
 });

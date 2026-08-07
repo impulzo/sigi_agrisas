@@ -11,7 +11,7 @@ import { CustomerRfcAlreadyInUseError } from "../../domain/errors/CustomerRfcAlr
 
 const RFC_REGEX = /^([A-ZÑ&]{3,4})\d{6}([A-Z\d]{3})$/;
 const TAX_REGIME_REGEX = /^\d{3}$/;
-const CFDI_USE_REGEX = /^[A-Z]\d{2}$/;
+const CFDI_USE_REGEX = /^[A-Z]{1,2}\d{2}$/;
 const TAX_ZIP_CODE_REGEX = /^\d{5}$/;
 const CODE_REGEX = /^[A-Z0-9_]{1,32}$/;
 
@@ -49,7 +49,7 @@ const createBodySchema = z.object({
     .optional(),
   cfdiUse: z
     .string()
-    .regex(CFDI_USE_REGEX, "cfdiUse must match ^[A-Z]\\d{2}$")
+    .regex(CFDI_USE_REGEX, "cfdiUse must match ^[A-Z]{1,2}\\d{2}$")
     .nullable()
     .optional(),
   taxZipCode: z.string().regex(TAX_ZIP_CODE_REGEX, "taxZipCode must be 5 digits").nullable().optional(),
