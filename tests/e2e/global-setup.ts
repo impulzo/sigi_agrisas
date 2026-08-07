@@ -29,6 +29,78 @@ const E2E_USERS: Array<{ email: string; name: string; role: string | null }> = [
 
 const PASSWORD = "E2eTest1234!";
 
+async function seedE2eSatCatalog() {
+  const branch = await prisma.branch.upsert({
+    where: { code: "E2E-MATRIZ" },
+    update: {},
+    create: { code: "E2E-MATRIZ", name: "E2E Matriz" },
+  });
+
+  await prisma.folio.upsert({
+    where: { code: "E2E-CP" },
+    update: {},
+    create: { code: "E2E-CP", name: "Compra E2E", prefix: "E2E-", scope: "OPERATIONS", currentNumber: 0 },
+  });
+
+  const pm = await prisma.paymentMethod.upsert({
+    where: { code: "TRANSFERENCIA" },
+    update: {},
+    create: { code: "TRANSFERENCIA", name: "Transferencia", isCredit: false },
+  });
+
+  const provider = await prisma.provider.upsert({
+    where: { rfc: "XPO010101AA1" },
+    update: {},
+    create: {
+      code: "PROV_XPO010101AA1",
+      name: "XPO PROVEEDOR SA DE CV",
+      rfc: "XPO010101AA1",
+      legalName: "XPO Proveedor SA de CV",
+      taxRegime: "601",
+    },
+  });
+
+  const department = await prisma.department.upsert({
+    where: { code: "E2E-SAT" },
+    update: {},
+    create: { code: "E2E-SAT", name: "E2E SAT", providerId: provider.id },
+  });
+
+  const product = await prisma.product.upsert({
+    where: { code: "E2E-PROD-SAT" },
+    update: {},
+    create: {
+      code: "E2E-PROD-SAT",
+      name: "E2E Producto SAT",
+      unit: "PZA",
+      departmentId: department.id,
+      satProductCode: "01010101",
+      ivaRate: 0.16,
+      iepsRate: null,
+      isTaxable: true,
+    },
+  });
+
+  console.log("[E2E setup] SAT catalog ready:", {
+    branch: branch.code,
+    folio: "E2E-CP",
+    pm: pm.code,
+    product: product.code,
+    provider: provider.rfc,
+  });
+}
+
+async function cleanupE2ePurchases() {
+  const branch = await prisma.branch.findUnique({ where: { code: "E2E-MATRIZ" } });
+  if (branch) {
+    const deleted = await prisma.purchase.deleteMany({ where: { branchId: branch.id } });
+    console.log("[E2E setup] purchases cleaned:", deleted.count);
+  }
+  await prisma.provider.deleteMany({ where: { rfc: "XYU010101BB2" } });
+  const folio = await prisma.folio.findUnique({ where: { code: "E2E-CP" } });
+  if (folio) await prisma.folio.update({ where: { id: folio.id }, data: { currentNumber: 0 } });
+}
+
 async function globalSetup() {
   const hash = await bcrypt.hash(PASSWORD, 10);
 
@@ -55,6 +127,8 @@ async function globalSetup() {
   }
 
   console.log("[E2E setup] Test users ready:", E2E_USERS.map((u) => u.email).join(", "));
+  await seedE2eSatCatalog();
+  await cleanupE2ePurchases();
   await prisma.$disconnect();
 }
 

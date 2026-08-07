@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Combobox } from "../../../_components/molecules/Combobox/Combobox";
 import { useDebounce } from "../../../_hooks/useDebounce";
 import { useProviderSearch } from "../_logic/hooks/useProviderSearch";
@@ -20,6 +21,7 @@ interface PurchasesToolbarProps {
   onFromChange: (v: string) => void;
   onToChange: (v: string) => void;
   onReset: () => void;
+  canCreate?: boolean;
 }
 
 const STATUS_OPTIONS: { value: PurchaseStatus; label: string }[] = [
@@ -41,6 +43,7 @@ export function PurchasesToolbar({
   onFromChange,
   onToChange,
   onReset,
+  canCreate = false,
 }: PurchasesToolbarProps) {
   const [providerQuery, setProviderQuery] = useState("");
   const debouncedProviderQuery = useDebounce(providerQuery, 300);
@@ -128,6 +131,15 @@ export function PurchasesToolbar({
         >
           Limpiar filtros
         </button>
+      )}
+
+      {canCreate && (
+        <Link
+          href="/purchases/new"
+          className="rounded-full bg-primary text-on-primary px-4 py-2 text-label-lg font-medium hover:bg-primary/90 transition-colors flex-shrink-0"
+        >
+          Nueva compra
+        </Link>
       )}
     </div>
   );

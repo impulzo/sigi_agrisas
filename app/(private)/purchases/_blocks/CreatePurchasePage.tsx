@@ -7,9 +7,12 @@ import { usePaymentMethodsOptions } from "../../../_hooks/usePaymentMethodsOptio
 import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
 import { useProductSearch } from "../_logic/hooks/useProductSearch";
 import { useCreatePurchaseForm } from "../_logic/hooks/useCreatePurchaseForm";
+import { buildSatApplyResult } from "../_logic/lib/satInvoiceMapping";
+import type { ParsedSatInvoice } from "../_logic/lib/satXmlParser";
 import { ProviderPicker } from "./ProviderPicker";
 import { ProviderQuickAddModal } from "./ProviderQuickAddModal";
 import { PurchaseLineRow } from "./PurchaseLineRow";
+import { SatInvoiceUploader } from "./SatInvoiceUploader";
 import { Combobox } from "../../../_components/molecules/Combobox/Combobox";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
@@ -17,10 +20,12 @@ import {
   ProviderNotFoundOrInactiveError,
   ProductNotFoundOrInactiveError,
   PurchaseItemsEmptyError,
+  SatUuidAlreadyExistsError,
 } from "../_logic/errors";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
 function fmt(n: number) { return MX.format(n); }
+function toDateInput(iso: string): string { return iso.slice(0, 10); }
 
 export function CreatePurchasePage() {
   const { can, branchId: userBranchId } = useCurrentUser();
@@ -42,6 +47,31 @@ export function CreatePurchasePage() {
   const debouncedProductQuery = useDebounce(productQuery, 300);
   const { items: productOptions, isLoading: isLoadingProducts } = useProductSearch({ search: debouncedProductQuery });
   const productComboOptions = productOptions.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }));
+
+  const [satApplying, setSatApplying] = useState(false);
+  const [satWarnings, setSatWarnings] = useState<string[]>([]);
+  const [satUnmatched, setSatUnmatched] = useState<ParsedSatInvoice["conceptos"]>([]);
+  const [satApplied, setSatApplied] = useState(false);
+  const [satError, setSatError] = useState<string | null>(null);
+
+  async function handleSatParsed(parsed: ParsedSatInvoice, fileName: string) {
+    setSatApplying(true);
+    setSatError(null);
+    setSatWarnings([]);
+    setSatUnmatched([]);
+    setSatApplied(false);
+    try {
+      const result = await buildSatApplyResult(parsed, paymentMethods, fileName);
+      form.applySatResult(result);
+      setSatWarnings(result.warnings);
+      setSatUnmatched(result.unmatched);
+      if (result.warnings.length === 0 && result.unmatched.length === 0) setSatApplied(true);
+    } catch {
+      setSatError("No se pudo procesar la factura. Revisa tu conexión e inténtalo de nuevo.");
+    } finally {
+      setSatApplying(false);
+    }
+  }
 
   function handleAddProduct(productId: string) {
     const product = productOptions.find((p) => p.id === productId);
@@ -73,12 +103,86 @@ export function CreatePurchasePage() {
         <p className="text-body-md text-on-surface-variant mt-1">Registra una compra a un proveedor</p>
       </div>
 
+      <SatInvoiceUploader onParsed={handleSatParsed} disabled={satApplying || pmLoading} />
+
+      {satApplying && (
+        <div className="flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3">
+          <Spinner size="sm" />
+          <span className="text-body-sm text-on-surface-variant">Buscando productos que coincidan con la factura...</span>
+        </div>
+      )}
+
+      {satError && (
+        <p className="rounded-xl border border-error/30 bg-error-container/40 px-4 py-3 text-body-sm text-on-error-container">{satError}</p>
+      )}
+
+      {form.satMetadata.xmlFileName && (
+        <div className="rounded-xl border border-outline-variant bg-surface-container-low p-4 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="material-symbols-rounded text-primary shrink-0" aria-hidden>verified</span>
+              <span className="text-body-sm font-medium text-on-surface truncate">Factura {form.satMetadata.xmlFileName}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                form.clearSat();
+                setSatWarnings([]);
+                setSatUnmatched([]);
+                setSatApplied(false);
+              }}
+              className="text-label-sm text-primary hover:underline shrink-0"
+            >
+              Quitar
+            </button>
+          </div>
+          {form.satMetadata.satUuid && (
+            <p className="text-label-sm text-on-surface-variant">UUID: {form.satMetadata.satUuid}</p>
+          )}
+          {form.satMetadata.supplierInvoiceNumber && (
+            <p className="text-label-sm text-on-surface-variant">Folio fiscal: {form.satMetadata.supplierInvoiceNumber}</p>
+          )}
+          {satApplied && (
+            <p className="text-label-sm text-tertiary">Factura aplicada: proveedor y productos prellenados. Revisa cantidades y costos.</p>
+          )}
+        </div>
+      )}
+
+      {satWarnings.length > 0 && (
+        <div className="rounded-xl border border-warning/40 bg-warning-container/40 p-4 space-y-1">
+          <p className="text-label-sm font-medium text-on-surface">Avisos de la factura</p>
+          {satWarnings.map((w, i) => (
+            <p key={i} className="text-body-sm text-on-surface-variant">• {w}</p>
+          ))}
+        </div>
+      )}
+
+      {satUnmatched.length > 0 && (
+        <div className="rounded-xl border border-outline-variant bg-surface-container-low p-4 space-y-1">
+          <p className="text-label-sm font-medium text-on-surface">
+            {satUnmatched.length} concepto{satUnmatched.length > 1 ? "s" : ""} sin producto equivalente
+          </p>
+          {satUnmatched.map((c, i) => (
+            <p key={i} className="text-body-sm text-on-surface-variant">
+              • {c.descripcion || c.claveProdServ} ({c.cantidad} × {fmt(c.valorUnitario)})
+            </p>
+          ))}
+          <p className="text-label-sm text-on-surface-variant mt-1">Agrégalos manualmente con el buscador de productos.</p>
+        </div>
+      )}
+
       <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-4 space-y-4">
         <ProviderPicker
           value={form.providerId}
           onChange={form.setProvider}
           onOpenQuickAdd={() => setShowProviderQuickAdd(true)}
         />
+
+        {form.newProvider && (
+          <p className="rounded-lg border border-primary/30 bg-primary-container/30 px-3 py-2 text-body-sm text-on-primary-container">
+            Proveedor de la factura: <span className="font-medium">{form.newProvider.name}</span> (RFC {form.newProvider.rfc}). Se creará al registrar la compra.
+          </p>
+        )}
 
         {isBypass === true && (
           <div>
@@ -114,6 +218,23 @@ export function CreatePurchasePage() {
               Compra a crédito: quedará pendiente de pago; podrás registrar abonos desde el detalle.
             </p>
           )}
+        </div>
+
+        <div>
+          <label className="text-label-sm text-on-surface-variant mb-1 block">Fecha de compra</label>
+          <input
+            type="date"
+            value={form.satMetadata.purchasedAt ? toDateInput(form.satMetadata.purchasedAt) : ""}
+            onChange={(e) => {
+              if (e.target.value) {
+                form.setSatMetadata({ purchasedAt: new Date(`${e.target.value}T00:00:00`).toISOString() });
+              }
+            }}
+            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          />
+          <p className="mt-1 text-label-sm text-on-surface-variant">
+            {form.satMetadata.invoiceDate ? "La fecha de la factura se usó como fecha por defecto; puedes cambiarla." : "Si no la indicas, se usa hoy."}
+          </p>
         </div>
       </div>
 
@@ -188,9 +309,11 @@ export function CreatePurchasePage() {
             {form.submitError instanceof ProviderNotFoundOrInactiveError && "El proveedor seleccionado no existe o está inactivo."}
             {form.submitError instanceof ProductNotFoundOrInactiveError && "Uno de los productos agregados no existe o está inactivo."}
             {form.submitError instanceof PurchaseItemsEmptyError && "Agrega al menos un producto."}
+            {form.submitError instanceof SatUuidAlreadyExistsError && form.submitError.message}
             {!(form.submitError instanceof ProviderNotFoundOrInactiveError) &&
               !(form.submitError instanceof ProductNotFoundOrInactiveError) &&
               !(form.submitError instanceof PurchaseItemsEmptyError) &&
+              !(form.submitError instanceof SatUuidAlreadyExistsError) &&
               "Error al registrar la compra. Inténtalo de nuevo."}
           </p>
         )}

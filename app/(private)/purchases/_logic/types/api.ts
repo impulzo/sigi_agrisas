@@ -51,6 +51,10 @@ export interface PurchaseDto {
   paymentStatus: PurchasePaymentStatus;
   notes: string | null;
   purchasedAt: string;
+  satUuid: string | null;
+  supplierInvoiceNumber: string | null;
+  invoiceDate: string | null;
+  xmlFileName: string | null;
   cancelledAt: string | null;
   cancelledBy: string | null;
   cancellationReason: string | null;
@@ -87,11 +91,24 @@ export interface CreatePurchaseItemRequest {
   discountPct?: number | null;
 }
 
+export interface NewProviderInput {
+  rfc: string;
+  name: string;
+  legalName?: string | null;
+  taxRegime?: string | null;
+}
+
 export interface CreatePurchaseRequest {
-  providerId: string;
+  providerId?: string;
+  newProvider?: NewProviderInput | null;
   branchId: string;
   paymentMethodId: string;
   notes?: string | null;
+  purchasedAt?: string;
+  satUuid?: string | null;
+  supplierInvoiceNumber?: string | null;
+  invoiceDate?: string | null;
+  xmlFileName?: string | null;
   items: CreatePurchaseItemRequest[];
 }
 

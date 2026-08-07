@@ -77,6 +77,7 @@ export class PrismaProductRepository implements ProductRepository {
     departmentId,
     providerId,
     branchId,
+    satProductCode,
   }: FindAllProductsOptions): Promise<{ items: ProductWithDepartment[]; total: number }> {
     const skip = (page - 1) * pageSize;
 
@@ -84,6 +85,7 @@ export class PrismaProductRepository implements ProductRepository {
       ...(includeInactive ? {} : { isActive: true }),
       ...(departmentId ? { departmentId } : {}),
       ...(providerId ? { department: { providerId } } : {}),
+      ...(satProductCode ? { satProductCode } : {}),
       ...(search
         ? {
             OR: [

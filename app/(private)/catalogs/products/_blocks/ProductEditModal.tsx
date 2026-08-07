@@ -5,6 +5,7 @@ import { Switch } from "../../../../_components/atoms/Switch/Switch";
 import { createProductSchema, updateProductSchema } from "../_logic/schemas/product.schema";
 import { useTaxRatesOptions } from "../../../../_hooks/useTaxRatesOptions";
 import { TaxRateSelect } from "./TaxRateSelect";
+import { SatCodeCombobox } from "./SatCodeCombobox";
 import type { Product } from "../_logic/types/domain";
 import type { CreateProductBody, UpdateProductBody } from "../_logic/types/api";
 
@@ -258,11 +259,9 @@ export function ProductEditModal({
 
           <div>
             <label className="block text-label-lg text-on-surface-variant mb-1">Cód. SAT (8 dígitos)</label>
-            <input
-              type="text"
+            <SatCodeCombobox
               value={satProductCode}
-              onChange={(e) => setSatProductCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
-              placeholder="Ej. 01010101"
+              onChange={setSatProductCode}
               className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {validationErrors.satProductCode && (

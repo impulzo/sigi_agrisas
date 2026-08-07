@@ -1,13 +1,19 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 jest.mock("../../../../../../app/_hooks/useTaxRatesOptions", () => ({
   useTaxRatesOptions: () => ({ options: [], isLoading: false }),
 }));
+jest.mock("../../../../../../app/_hooks/useSatCodesSearch", () => ({
+  useSatCodesSearch: jest.fn(() => ({ options: [], isLoading: false })),
+}));
+
+import { useSatCodesSearch } from "../../../../../../app/_hooks/useSatCodesSearch";
 
 import { ProductEditModal } from "../../../../../../app/(private)/catalogs/products/_blocks/ProductEditModal";
 import type { Product } from "../../../../../../app/(private)/catalogs/products/_logic/types/domain";
+import type { CreateProductBody } from "../../../../../../app/(private)/catalogs/products/_logic/types/api";
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = jest.fn(function (this: HTMLDialogElement) {
@@ -84,7 +90,8 @@ describe("ProductEditModal — modo create", () => {
     await user.type(screen.getAllByRole("textbox")[2], "Producto");
     await user.type(screen.getAllByRole("textbox")[1], "kg");
 
-    const satInput = screen.getByPlaceholderText("Ej. 01010101");
+    // Cód. SAT es ahora el SatCodeCombobox (textbox index 3)
+    const satInput = screen.getAllByRole("textbox")[3];
     await user.type(satInput, "123");
 
     const select = screen.getAllByRole("combobox")[0];
@@ -244,5 +251,94 @@ describe("ProductEditModal — create mode deferred upload (task 8.3)", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
     const [, stagedImage] = onSave.mock.calls[0] as [unknown, File | null | undefined];
     expect(stagedImage).toBe(validFile);
+  });
+});
+
+describe("ProductEditModal — combobox Cód. SAT (catálogo real)", () => {
+  const mockSearch = useSatCodesSearch as jest.MockedFunction<typeof useSatCodesSearch>;
+
+  it("muestra sugerencias formateadas como code — description al escribir", async () => {
+    mockSearch.mockReturnValue({
+      options: [{ code: "10171601", description: "Fertilizante nitrogenado" }],
+      isLoading: false,
+    });
+    const user = userEvent.setup();
+    render(<ProductEditModal {...DEFAULT_PROPS} mode="create" entity={null} />);
+
+    const sat = screen.getAllByRole("textbox")[3];
+    await user.type(sat, "fertiliz");
+
+    expect(mockSearch).toHaveBeenCalledWith("fertiliz");
+    expect(
+      within(screen.getByRole("dialog")).getByRole("button", { name: /Fertilizante nitrogenado/ })
+    ).toBeInTheDocument();
+  });
+
+  it("seleccionar una sugerencia completa el campo con el código elegido", async () => {
+    mockSearch.mockReturnValue({
+      options: [{ code: "10171601", description: "Fertilizante nitrogenado" }],
+      isLoading: false,
+    });
+    const user = userEvent.setup();
+    render(<ProductEditModal {...DEFAULT_PROPS} mode="create" entity={null} />);
+
+    const sat = screen.getAllByRole("textbox")[3];
+    await user.type(sat, "10171");
+    await user.click(screen.getByRole("button", { name: /Fertilizante nitrogenado/ }));
+
+    expect(sat).toHaveValue("10171601");
+  });
+
+  it("modo edit pre-filla el código SAT guardado", () => {
+    render(
+      <ProductEditModal
+        {...DEFAULT_PROPS}
+        mode="edit"
+        entity={{ ...BASE_PRODUCT, satProductCode: "01010101" }}
+      />
+    );
+    expect(screen.getAllByRole("textbox")[3]).toHaveValue("01010101");
+  });
+
+  it("captura manual de 8 dígitos válidos sigue permitida", async () => {
+    const onSave = jest.fn();
+    const user = userEvent.setup();
+    render(<ProductEditModal {...DEFAULT_PROPS} onSave={onSave} mode="create" entity={null} />);
+
+    await user.type(screen.getAllByRole("textbox")[0], "VALID_01");
+    await user.type(screen.getAllByRole("textbox")[2], "Producto");
+    await user.type(screen.getAllByRole("textbox")[1], "kg");
+    await user.type(screen.getAllByRole("textbox")[3], "99999999");
+    await user.selectOptions(screen.getAllByRole("combobox")[0], DEPT_UUID_1);
+
+    await user.click(screen.getByRole("button", { name: /crear/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const [data] = onSave.mock.calls[0] as [CreateProductBody];
+    expect(data.satProductCode).toBe("99999999");
+  });
+
+  it("limpiar el campo SAT en edit envía satProductCode null en el diff", async () => {
+    const onSave = jest.fn();
+    const user = userEvent.setup();
+    render(
+      <ProductEditModal
+        {...DEFAULT_PROPS}
+        onSave={onSave}
+        mode="edit"
+        entity={{ ...BASE_PRODUCT, satProductCode: "01010101" }}
+      />
+    );
+
+    const sat = screen.getAllByRole("textbox")[3];
+    expect(sat).toHaveValue("01010101");
+    await user.clear(sat);
+
+    const saveBtn = screen.getByRole("button", { name: /guardar/i });
+    expect(saveBtn).not.toBeDisabled();
+    await user.click(saveBtn);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0]).toEqual({ satProductCode: null });
   });
 });

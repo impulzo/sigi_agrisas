@@ -18,6 +18,7 @@ export interface FindAllProductsOptions {
   departmentId?: string;
   providerId?: string;
   branchId?: string;
+  satProductCode?: string;
 }
 
 export interface CreateProductData {

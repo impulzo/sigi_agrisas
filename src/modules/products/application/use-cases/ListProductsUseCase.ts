@@ -20,6 +20,7 @@ export class ListProductsUseCase {
       search: req.search,
       departmentId: req.departmentId,
       branchId: req.branchId,
+      satProductCode: req.satProductCode,
     });
 
     return {

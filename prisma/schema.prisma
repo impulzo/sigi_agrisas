@@ -870,6 +870,10 @@ model Purchase {
   paymentStatus      String    @default("paid") @map("payment_status") @db.VarChar(10)
   notes              String?   @db.Text
   purchasedAt        DateTime  @default(now()) @map("purchased_at")
+  satUuid            String?   @unique @map("sat_uuid") @db.VarChar(36)
+  supplierInvoiceNumber String? @map("supplier_invoice_number") @db.VarChar(60)
+  invoiceDate        DateTime? @map("invoice_date")
+  xmlFileName        String?   @map("xml_file_name") @db.VarChar(255)
   cancelledAt        DateTime? @map("cancelled_at")
   cancelledBy        String?   @map("cancelled_by") @db.Uuid
   cancellationReason String?   @map("cancellation_reason") @db.Text

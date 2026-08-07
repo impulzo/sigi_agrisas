@@ -18,6 +18,7 @@ import { ProviderPaymentNotFoundError } from "../../domain/errors/ProviderPaymen
 import { ProviderPaymentAlreadyCancelledError } from "../../domain/errors/ProviderPaymentAlreadyCancelledError";
 import { ProviderNotFoundOrInactiveError } from "../../domain/errors/ProviderNotFoundOrInactiveError";
 import { ProductNotFoundOrInactiveError } from "../../domain/errors/ProductNotFoundOrInactiveError";
+import { SatUuidAlreadyExistsError } from "../../domain/errors/SatUuidAlreadyExistsError";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 import {
   enforceBranchScope,
@@ -47,13 +48,34 @@ const purchaseItemSchema = z.object({
   discountPct: z.number().min(0).max(100).nullable().optional(),
 });
 
-const createPurchaseSchema = z.object({
-  providerId: z.string().uuid(),
-  branchId: z.string().uuid(),
-  paymentMethodId: z.string().uuid(),
-  notes: z.string().max(1000).nullable().optional(),
-  items: z.array(purchaseItemSchema).min(1, "Purchase must include at least one item"),
-});
+const newProviderSchema = z
+  .object({
+    rfc: z.string().trim().regex(/^([A-ZÑ&]{3,4}\d{6}[A-Z\d]{3})$/, "RFC inválido").toUpperCase(),
+    name: z.string().trim().min(2).max(255),
+    legalName: z.string().trim().max(255).nullable().optional(),
+    taxRegime: z.string().trim().regex(/^\d{3}$/, "taxRegime debe ser 3 dígitos").nullable().optional(),
+  })
+  .strict();
+
+const createPurchaseSchema = z
+  .object({
+    providerId: z.string().uuid().optional(),
+    newProvider: newProviderSchema.nullable().optional(),
+    branchId: z.string().uuid(),
+    paymentMethodId: z.string().uuid(),
+    notes: z.string().max(1000).nullable().optional(),
+    purchasedAt: z.coerce.date().optional(),
+    satUuid: z.string().uuid().nullable().optional(),
+    supplierInvoiceNumber: z.string().max(60).trim().nullable().optional(),
+    invoiceDate: z.coerce.date().nullable().optional(),
+    xmlFileName: z.string().max(255).trim().nullable().optional(),
+    items: z.array(purchaseItemSchema).min(1, "Purchase must include at least one item"),
+  })
+  .strict()
+  .refine((body) => Boolean(body.providerId) !== Boolean(body.newProvider), {
+    message: "Provide exactly one of providerId or newProvider",
+    path: ["providerId"],
+  });
 
 const cancelPurchaseSchema = z.object({
   reason: z.string().trim().min(3).max(500).nullable().optional(),
@@ -148,10 +170,16 @@ export class PurchasesController {
     try {
       const { dto } = await this.createUseCase.execute({
         providerId: parsed.data.providerId,
+        newProvider: parsed.data.newProvider,
         branchId: parsed.data.branchId,
         paymentMethodId: parsed.data.paymentMethodId,
         notes: parsed.data.notes ?? null,
         creatorId,
+        purchasedAt: parsed.data.purchasedAt,
+        satUuid: parsed.data.satUuid,
+        supplierInvoiceNumber: parsed.data.supplierInvoiceNumber,
+        invoiceDate: parsed.data.invoiceDate,
+        xmlFileName: parsed.data.xmlFileName,
         items: parsed.data.items,
       });
       return NextResponse.json(dto, { status: 201 });
@@ -160,6 +188,7 @@ export class PurchasesController {
       if (err instanceof ProviderNotFoundOrInactiveError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof ProductNotFoundOrInactiveError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof InactiveResourceError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof SatUuidAlreadyExistsError) return NextResponse.json({ error: err.message, existingPurchaseFolio: err.existingPurchaseFolio }, { status: 409 });
       throw err;
     }
   }

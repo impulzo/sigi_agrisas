@@ -15,7 +15,7 @@ const CREATOR = "00000000-0000-0000-0000-000000000001";
 
 function makeRepo(): InMemoryPurchaseRepository {
   const repo = new InMemoryPurchaseRepository();
-  repo.seedProvider({ id: PROVIDER, name: "Proveedor Uno", rfc: "PRO010101AAA", isActive: true, currentBalance: 0 });
+  repo.seedProvider({ id: PROVIDER, code: "PROV_TEST", name: "Proveedor Uno", rfc: "PRO010101AAA", isActive: true, currentBalance: 0 });
   repo.seedBranch({ id: BRANCH, name: "Matriz", isActive: true });
   repo.seedPaymentMethod({ id: CASH_PM, code: "EFECTIVO", isCredit: false, isActive: true });
   repo.seedPaymentMethod({ id: CREDIT_PM, code: "CREDITO", isCredit: true, isActive: true });

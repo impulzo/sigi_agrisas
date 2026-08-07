@@ -7,7 +7,7 @@ export async function login(page: Page, email: string) {
   await page.fill('[name="email"]', email);
   await page.fill('[name="password"]', PASSWORD);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(dashboard|inventory|catalogs)/, { timeout: 10000 });
+  await page.waitForURL(/\/(dashboard|inventory|catalogs|pos)/, { timeout: 10000 });
 }
 
 export async function logout(page: Page) {

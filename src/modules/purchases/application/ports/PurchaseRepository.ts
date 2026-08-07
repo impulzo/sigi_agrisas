@@ -40,13 +40,26 @@ export interface CreatePurchaseItemInput {
   discountPct: number | null;
 }
 
+export interface NewProviderInput {
+  rfc: string;
+  name: string;
+  legalName?: string | null;
+  taxRegime?: string | null;
+}
+
 export interface CreatePurchaseData {
-  providerId: string;
+  providerId?: string;
+  newProvider?: NewProviderInput;
   branchId: string;
   paymentMethodId: string;
   creatorId: string;
   notes: string | null;
   items: CreatePurchaseItemInput[];
+  purchasedAt?: Date;
+  satUuid?: string | null;
+  supplierInvoiceNumber?: string | null;
+  invoiceDate?: Date | null;
+  xmlFileName?: string | null;
 }
 
 export interface PurchaseRepository {

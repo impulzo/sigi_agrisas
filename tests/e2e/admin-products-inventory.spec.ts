@@ -89,6 +89,51 @@ test.describe("Task 10.2 — admin: productos e inventario", () => {
     expect(requests.filter((u) => u.includes("search="))).toHaveLength(0);
   });
 
+  // ── Productos — combobox Cód. SAT (catálogo real) ─────────────────────────
+
+  test("productos: modal crear usa combobox SAT con placeholder de búsqueda", async ({ page }) => {
+    await page.goto("/catalogs/products");
+    await page.click('button:has-text("Nuevo")');
+    const dialog = page.locator('dialog, [role="dialog"]').first();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByPlaceholder("Buscar código o descripción SAT...")).toBeVisible();
+  });
+
+  test("productos: combobox SAT filtra por código con catálogo real", async ({ page }) => {
+    await page.goto("/catalogs/products");
+    await page.click('button:has-text("Nuevo")');
+    const dialog = page.locator('dialog, [role="dialog"]').first();
+    await expect(dialog).toBeVisible();
+
+    const sat = dialog.getByPlaceholder("Buscar código o descripción SAT...");
+    await sat.fill("10171601");
+    // El catálogo real devuelve el código y su descripción de CFDI 4.0
+    await expect(dialog.getByRole("button", { name: /10171601/ }).first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test("productos: combobox SAT filtra por nombre con catálogo real", async ({ page }) => {
+    await page.goto("/catalogs/products");
+    await page.click('button:has-text("Nuevo")');
+    const dialog = page.locator('dialog, [role="dialog"]').first();
+    await expect(dialog).toBeVisible();
+
+    const sat = dialog.getByPlaceholder("Buscar código o descripción SAT...");
+    await sat.fill("fertilizante");
+    await expect(dialog.getByRole("button", { name: /Fertilizante/i }).first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test("productos: seleccionar sugerencia SAT completa el código", async ({ page }) => {
+    await page.goto("/catalogs/products");
+    await page.click('button:has-text("Nuevo")');
+    const dialog = page.locator('dialog, [role="dialog"]').first();
+    await expect(dialog).toBeVisible();
+
+    const sat = dialog.getByPlaceholder("Buscar código o descripción SAT...");
+    await sat.fill("10171601");
+    await dialog.getByRole("button", { name: /10171601/ }).first().click();
+    await expect(sat).toHaveValue("10171601");
+  });
+
   // ── Productos — detalle con tabs ───────────────────────────────────────────
 
   test("productos: detalle tiene 3 tabs y el General está activo por defecto", async ({ page }) => {

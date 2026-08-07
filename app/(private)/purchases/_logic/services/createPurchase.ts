@@ -5,6 +5,7 @@ import {
   ProviderNotFoundOrInactiveError,
   ProductNotFoundOrInactiveError,
   PurchaseItemsEmptyError,
+  SatUuidAlreadyExistsError,
   PurchaseCreateForbiddenError,
   PurchaseScopingForbiddenError,
 } from "../errors";
@@ -24,6 +25,12 @@ export async function createPurchase(body: CreatePurchaseRequest, fetchImpl = au
       if (err.required === "branches:access_all") throw new PurchaseScopingForbiddenError();
       throw new PurchaseCreateForbiddenError();
     }
+    throw new NetworkError();
+  }
+
+  if (res.status === 409) {
+    const errorBody = await res.json().catch(() => ({ error: "" })) as { error: string };
+    if (errorBody.error === "A purchase with this SAT UUID already exists") throw new SatUuidAlreadyExistsError();
     throw new NetworkError();
   }
 

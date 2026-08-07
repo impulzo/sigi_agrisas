@@ -18,6 +18,10 @@ export class ProductNotFoundOrInactiveError extends Error {
   constructor() { super("Un producto de la compra no existe o está inactivo"); this.name = "ProductNotFoundOrInactiveError"; }
 }
 
+export class SatUuidAlreadyExistsError extends Error {
+  constructor() { super("Este UUID de factura SAT ya está registrado en otra compra"); this.name = "SatUuidAlreadyExistsError"; }
+}
+
 export class PurchaseHasActiveProviderPaymentsError extends Error {
   readonly providerPaymentIds: string[];
   constructor(providerPaymentIds: string[] = []) {

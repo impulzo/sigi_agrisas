@@ -28,6 +28,11 @@ La página `/purchases` SHALL mostrar un listado paginado de compras con filtros
 - **WHEN** un usuario sin `purchases:read` intenta acceder a `/purchases`
 - **THEN** la página no muestra el contenido del listado (gate optimista durante `"loading"`, oculto cuando resuelve a `false`)
 
+#### Scenario: CTA de nueva compra en el listado
+- **WHEN** el usuario tiene `purchases:read` y el permiso `purchases:create` en el listado `/purchases`
+- **THEN** el toolbar muestra un botón "Nueva compra" que navega a `/purchases/new`
+- **AND** el botón NO se muestra cuando el usuario carece de `purchases:create`
+
 ---
 
 ### Requirement: Registro de una compra desde la interfaz
@@ -57,6 +62,44 @@ La página `/purchases/new` SHALL permitir capturar una compra completa: selecci
 #### Scenario: Error de proveedor o producto inactivo mostrado inline
 - **WHEN** el backend responde 400 por proveedor o producto inactivo
 - **THEN** el formulario muestra un mensaje inline específico (no un error genérico) sin perder los datos capturados
+
+---
+
+### Requirement: Carga de factura SAT (CFDI) para prellenar la compra
+
+La página `/purchases/new` SHALL incluir un uploader de XML de factura CFDI (`SatInvoiceUploader`). El parseo SHALL ocurrir en el cliente (`fast-xml-parser`, sin subir el XML al servidor). Al cargar un XML válido, el formulario SHALL prellenarse: proveedor (`newProvider` con RFC/nombre/regimen fiscal del `cfdi:Emisor`), líneas auto-mapeadas por `ClaveProdServ` (`ValorUnitario` como costo, cantidades agregadas por producto), forma de pago derivada de `FormaPago` SAT, y metadatos de la factura (`UUID` de `TimbreFiscalDigital`, serie+folio, fecha, nombre del archivo). La fecha de compra (`purchasedAt`) SHALL ser editable y se prefill con la fecha de la factura.
+
+#### Scenario: Carga de XML válido prellena el formulario
+- **WHEN** el usuario selecciona un archivo `.xml` con un CFDI 4.0 válido
+- **THEN** el proveedor (RFC del emisor), las líneas con producto equivalente (`ClaveProdServ` coincidente), la forma de pago y los metadatos CFDI se prellenan, y se muestra el nombre del archivo y UUID cargados
+
+#### Scenario: Conceptos sin producto equivalente avisados
+- **WHEN** hay conceptos cuyo `ClaveProdServ` no coincide con ningún producto activo
+- **THEN** se muestra un aviso listando los conceptos sin mapear (descripción, cantidad, importe) para que el usuario los agregue manualmente
+
+#### Scenario: Diferencias de impuestos avisadas
+- **WHEN** la tasa IVA/IEPS de un producto difiere de la del XML
+- **THEN** se muestra un aviso comparando ambas tasas, sin bloquear el envío (se usa la tasa del producto)
+
+#### Scenario: XML inválido muestra error inline
+- **WHEN** el archivo no es un XML válido, no tiene nodo `cfdi:Comprobante` o no tiene extensión `.xml`
+- **THEN** el uploader muestra un mensaje de error sin modificar el formulario
+
+#### Scenario: Nuevo proveedor desde la factura
+- **WHEN** la factura se carga y el RFC del emisor no existe en el catálogo
+- **THEN** el formulario usa `newProvider` y muestra un aviso "Proveedor de la factura ... Se creará al registrar la compra"; si el usuario elige manualmente otro proveedor, el aviso desaparece
+
+#### Scenario: UUID duplicado rechazado con mensaje específico
+- **WHEN** al enviar, el backend responde 409 porque el `satUuid` ya existe en otra compra
+- **THEN** el formulario muestra el mensaje de error específico del UUID sin perder los datos capturados
+
+#### Scenario: Quitar factura cargada
+- **WHEN** el usuario hace clic en "Quitar" junto a la factura cargada
+- **THEN** los metadatos CFDI y el `newProvider` se limpian; las líneas capturadas permanecen editables
+
+#### Scenario: Detalle de compra muestra datos de la factura
+- **WHEN** una compra tiene `satUuid`
+- **THEN** el panel de metadatos del detalle muestra nombre del archivo, folio fiscal, UUID y fecha de la factura
 
 ---
 

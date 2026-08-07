@@ -28,6 +28,7 @@ export function mapPurchaseDto(dto: PurchaseDto): Purchase {
     total: parseFloat(dto.total),
     paidAmount: parseFloat(dto.paidAmount),
     purchasedAt: new Date(dto.purchasedAt),
+    invoiceDate: dto.invoiceDate ? new Date(dto.invoiceDate) : null,
     cancelledAt: dto.cancelledAt ? new Date(dto.cancelledAt) : null,
     createdAt: new Date(dto.createdAt),
     updatedAt: new Date(dto.updatedAt),

@@ -50,6 +50,10 @@ export interface Purchase {
   paymentStatus: PurchasePaymentStatus;
   notes: string | null;
   purchasedAt: Date;
+  satUuid: string | null;
+  supplierInvoiceNumber: string | null;
+  invoiceDate: Date | null;
+  xmlFileName: string | null;
   cancelledAt: Date | null;
   cancelledBy: string | null;
   cancellationReason: string | null;
