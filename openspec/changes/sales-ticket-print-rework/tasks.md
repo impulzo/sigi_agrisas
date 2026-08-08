@@ -13,11 +13,13 @@
 
 - [x] 3.1 `app/(private)/sales/_blocks/PrintableTicket.tsx` — agregar clase `print-area` al root (manteniendo `hidden print:block`).
 - [x] 3.2 `PrintableTicket.tsx` — agregar marca "Agrisas" (título de marca), línea de método de pago (`sale.paymentMethodName`), y folio al final con elemento decorativo tipo código de barras (`repeating-linear-gradient` monocromo + texto del folio). Mantener monospace, `paperWidth` 58/80mm, logo/header/footer condicionales y Subtotal/IVA/IEPS/Total siempre separados.
+- [x] 3.3 `PrintableTicket.tsx` — logo siempre visible: si `ticketSettings.logoUrl` existe se usa ese; si es `null` (o falla settings), fallback al logo embebido de Agrisas `/logo.png`. Default de `paperWidth` sigue en `80mm`.
 
 ## 4. Tests
 
 - [x] 4.1 `tests/unit/ui/(private)/sales/PrintableTicket.test.tsx` — casos nuevos: muestra método de pago, marca "Agrisas", folio al final con barcode decorativo; mantener casos existentes (IVA/IEPS separados, fallback sin logo, `paperWidth`).
 - [x] 4.2 `tests/unit/ui/(private)/sales/_blocks/SaleDetailPage.test.tsx` — aserción: "Imprimir ticket" ausente y "Ver Ticket" presente.
+- [x] 4.3 `tests/unit/ui/(private)/sales/PrintableTicket.test.tsx` — casos de logo embebido: `logoUrl: null` (y `ticketSettings: null`) muestran `/logo.png`; `logoUrl` presente muestra ese logo.
 
 ## 5. E2E (Playwright)
 
