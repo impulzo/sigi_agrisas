@@ -3,6 +3,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CustomerEditModal } from "../../../../../../app/(private)/catalogs/customers/_blocks/CustomerEditModal";
 import type { Customer } from "../../../../../../app/(private)/catalogs/customers/_logic/types/domain";
+import { useSatCatalogSearch } from "../../../../../../app/_hooks/useSatCatalogSearch";
+
+jest.mock("../../../../../../app/_hooks/useSatCatalogSearch");
+
+const mockUseSatCatalogSearch = useSatCatalogSearch as jest.MockedFunction<typeof useSatCatalogSearch>;
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = jest.fn(function (this: HTMLDialogElement) {
@@ -47,6 +52,7 @@ const defaultProps = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUseSatCatalogSearch.mockReturnValue({ options: [], isLoading: false });
 });
 
 describe("CustomerEditModal — sections rendered", () => {
@@ -142,6 +148,29 @@ describe("CustomerEditModal — create mode", () => {
     );
     expect(screen.getByText("Este RFC ya está en uso por otro cliente.")).toBeInTheDocument();
   });
+
+  it("selecting a tax regime suggestion stores its code in the payload", async () => {
+    mockUseSatCatalogSearch.mockReturnValue({
+      options: [
+        {
+          code: "612",
+          description: "Personas Físicas con Actividades Empresariales y Profesionales",
+        },
+      ],
+      isLoading: false,
+    });
+    const onSave = jest.fn();
+    render(<CustomerEditModal {...defaultProps} mode="create" entity={null} onSave={onSave} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/código/i), "CLI_001");
+    await user.type(screen.getByLabelText(/^nombre/i), "Cliente ACME");
+    await user.type(screen.getByLabelText(/rfc/i), "SAC120101A12");
+    const regimeInput = screen.getByPlaceholderText("601");
+    await user.click(regimeInput);
+    await user.click(screen.getByText(/Personas Físicas/));
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ taxRegime: "612" }));
+  });
 });
 
 describe("CustomerEditModal — edit mode", () => {
@@ -184,5 +213,29 @@ describe("CustomerEditModal — edit mode", () => {
     await user.clear(screen.getByLabelText(/límite de crédito/i));
     await user.click(screen.getByRole("button", { name: /guardar/i }));
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ creditLimit: null }));
+  });
+
+  it("pre-fills taxRegime and cfdiUse from the entity", () => {
+    render(<CustomerEditModal {...defaultProps} mode="edit" entity={BASE_ENTITY} />);
+    expect(screen.getByPlaceholderText("601")).toHaveValue("601");
+    expect(screen.getByPlaceholderText("G03")).toHaveValue("G03");
+  });
+
+  it("selecting a cfdiUse suggestion in edit mode includes it in the diff", async () => {
+    mockUseSatCatalogSearch.mockReturnValue({
+      options: [
+        { code: "CP01", description: "Pagos" },
+        { code: "G03", description: "Gastos en general." },
+      ],
+      isLoading: false,
+    });
+    const onSave = jest.fn();
+    render(<CustomerEditModal {...defaultProps} mode="edit" entity={BASE_ENTITY} onSave={onSave} />);
+    const user = userEvent.setup();
+    const cfdiInput = screen.getByPlaceholderText("G03");
+    await user.click(cfdiInput);
+    await user.click(screen.getByText(/Pagos/));
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ cfdiUse: "CP01" }));
   });
 });

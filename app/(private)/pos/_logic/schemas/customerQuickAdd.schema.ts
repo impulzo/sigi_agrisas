@@ -21,7 +21,7 @@ export const customerQuickAddSchema = z.object({
     .optional(),
   cfdiUse: z
     .string()
-    .regex(/^[A-Z]\d{2}$/, "Uso CFDI inválido (ej. G03)")
+    .regex(/^[A-Z]{1,2}\d{2}$/, "Uso CFDI inválido (ej. G03, CP01)")
     .optional(),
   taxZipCode: z
     .string()

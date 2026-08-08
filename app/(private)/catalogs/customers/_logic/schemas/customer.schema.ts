@@ -3,7 +3,7 @@ import { z } from "zod";
 const codeRegex = /^[A-Z0-9_]{1,32}$/;
 const rfcRegex = /^([A-ZÑ&]{3,4})\d{6}([A-Z\d]{3})$/;
 const taxRegimeRegex = /^\d{3}$/;
-const cfdiUseRegex = /^[A-Z]\d{2}$/;
+const cfdiUseRegex = /^[A-Z]{1,2}\d{2}$/;
 const taxZipCodeRegex = /^\d{5}$/;
 
 const codeSchema = z
@@ -22,7 +22,7 @@ const optionalTaxRegime = z
 
 const optionalCfdiUse = z
   .string()
-  .regex(cfdiUseRegex, "El uso CFDI debe ser 1 letra + 2 dígitos (ej. G03).")
+  .regex(cfdiUseRegex, "El uso CFDI debe ser 1-2 letras + 2 dígitos (ej. G03, CP01).")
   .nullable()
   .optional();
 

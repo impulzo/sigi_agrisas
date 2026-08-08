@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
+import { SatCatalogCombobox } from "../../../_components/molecules/SatCatalogCombobox/SatCatalogCombobox";
 import { customerQuickAddSchema } from "../_logic/schemas/customerQuickAdd.schema";
 import { createCustomer } from "../_logic/services/createCustomer";
 import { CustomerCodeAlreadyInUseError, CustomerRfcAlreadyInUseError } from "../_logic/errors";
@@ -171,14 +172,26 @@ export function CustomerQuickAddModal({ onCreated, onClose }: CustomerQuickAddMo
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-label-sm text-on-surface-variant mb-1 block">Régimen fiscal</label>
-              <input value={form.taxRegime} onChange={(e) => set("taxRegime", e.target.value)} placeholder="601"
-                className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+              <SatCatalogCombobox
+                catalog="regimen-fiscal"
+                id="customer-taxRegime"
+                value={form.taxRegime}
+                onChange={(v) => set("taxRegime", v)}
+                placeholder="601"
+                className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              />
               {errors.taxRegime && <p className="text-label-sm text-error mt-1">{errors.taxRegime}</p>}
             </div>
             <div>
               <label className="text-label-sm text-on-surface-variant mb-1 block">Uso CFDI</label>
-              <input value={form.cfdiUse} onChange={(e) => set("cfdiUse", e.target.value.toUpperCase())} placeholder="G03"
-                className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+              <SatCatalogCombobox
+                catalog="uso-cfdi"
+                id="customer-cfdiUse"
+                value={form.cfdiUse}
+                onChange={(v) => set("cfdiUse", v)}
+                placeholder="G03"
+                className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              />
               {errors.cfdiUse && <p className="text-label-sm text-error mt-1">{errors.cfdiUse}</p>}
             </div>
             <div>

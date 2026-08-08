@@ -281,6 +281,24 @@ model SatProductServiceCode {
   @@map("sat_product_service_codes")
 }
 
+model SatTaxRegime {
+  code        String   @id @db.VarChar(3)
+  description String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("sat_tax_regimes")
+}
+
+model SatCfdiUse {
+  code        String   @id @db.VarChar(4)
+  description String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("sat_cfdi_uses")
+}
+
 model ProductPrice {
   id          String   @id @default(uuid())
   productId   String   @map("product_id")
@@ -384,7 +402,7 @@ model Customer {
   rfc            String   @unique @db.VarChar(13)
   legalName      String?  @map("legal_name") @db.VarChar(200)
   taxRegime      String?  @map("tax_regime") @db.VarChar(3)
-  cfdiUse        String?  @map("cfdi_use") @db.VarChar(3)
+  cfdiUse        String?  @map("cfdi_use") @db.VarChar(4)
   taxZipCode     String?  @map("tax_zip_code") @db.VarChar(5)
   email          String?  @db.VarChar(120)
   phone          String?  @db.VarChar(30)

@@ -1,0 +1,42 @@
+# Change: add-sat-catalogs-customer
+
+## Historia de Usuario
+
+| # | Rol | Tarea | Motivo | Criterios de Aceptación | Criterios de Seguridad |
+|---|---|---|---|---|---|
+| 1 | Backoffice / dev | Como backoffice, quiero que el seed cargue los catálogos SAT completos de régimen fiscal (`c_RegimenFiscal`) y uso CFDI (`c_UsoCFDI`) y que la API los exponga con búsqueda, para no teclear códigos a mano | Evitar errores de captura fiscal y acelerar el alta de clientes | - AC1: `seed:sat-catalogs` idempotente siembra el catálogo CFDI 4.0 (19 régimenes, 24 usos) desde data estática documentada (phpcfdi)<br>- AC2: `GET /api/v1/admin/sat-codes/regimen-fiscal?search=` filtra por código o descripción (case-insensitive); `search` min 2 caracteres; sin `search` devuelve hasta 20 items<br>- AC3: `GET /api/v1/admin/sat-codes/uso-cfdi?search=` idéntico<br>- AC4: response `{ items: [{ code, description }] }` | - CS1: endpoints exigen sesión autenticada (catálogo de referencia read-only, sin permiso adicional, igual que productos)<br>- CS2: búsqueda parametrizada vía Prisma (sin SQL injection)<br>- CS3: seed idempotente con `code` como PK (sin duplicados) |
+| 2 | Operador/Admin (`customers:write`) | Como operador/admin, quiero que al crear y al editar un cliente el modal cargue ambos catálogos SAT, para elegir régimen y uso desde la lista | Reducir errores de facturación y acelerar el alta/edición | - AC1: modal en `mode="create"` muestra comboboxes "Régimen fiscal" y "Uso CFDI" con búsqueda<br>- AC2: modal en `mode="edit"` precarga el código existente del cliente en cada combobox<br>- AC3: ambos catálogos se cargan en ambos modos (no sólo en uno)<br>- AC4: selección guarda el código (ej. `612`, `G03`) y el PATCH diff sólo envía el campo cambiado | - CS1: modal gated por `customers:write` (sin botones/acción para viewer)<br>- CS2: payload validado contra schema backend (regex + selección forzada) |
+| 3 | Operador/Admin | Como operador/admin, quiero filtrar cada catálogo por nombre (descripción) y que al seleccionar se guarde el código SAT, para que el dato fiscal quede correcto | Precisión del dato fiscal registrado | - AC1: escribir ≥2 caracteres filtra por descripción y código (case-insensitive)<br>- AC2: al seleccionar una opción el campo queda con el código (no la descripción)<br>- AC3: selección forzada: teclear texto libre que no coincide con el catálogo no se guarda (se revierte al blur)<br>- AC4: limpiar el campo envío `null` (opcional) | - CS1: backend acepta todo el catálogo: regex `cfdiUse` relajada a `^[A-Z]{1,2}\d{2}$` (cubre `CP01`, `CN01`); `taxRegime` `^\d{3}$` intacta<br>- CS2: zod valida formato antes de persistir |
+| 4 | Operador/Admin | Como operador/admin, quiero que los catálogos SAT de régimen fiscal y uso CFDI también estén disponibles al crear un cliente en el flujo de ventas (POS/Cotizaciones/Facturación, quick-add), no sólo en el catálogo | Cerrar el mismo hueco de captura fiscal en el alta rápida de cliente dentro de una venta | - AC1: `CustomerQuickAddModal` muestra los comboboxes de régimen y uso CFDI en su sección "Datos fiscales (opcionales)"<br>- AC2: misma interacción que el modal de catálogo: búsqueda por nombre, selección guarda el código, texto libre revierte al blur<br>- AC3: el payload del alta rápida envía `taxRegime`/`cfdiUse` seleccionados<br>- AC4: schema del quick-add acepta códigos de 4 caracteres (`CP01`, `CN01`) | - CS1: modal gated por `customers:write` (el `CustomerPicker` sólo muestra "+ Nuevo cliente" si `can("customers:write")`)<br>- CS2: payload validado contra el schema zod del quick-add, alineado con el backend |
+
+## Why
+
+Al capturar un cliente en el catálogo, los campos "Régimen fiscal" y "Uso CFDI" se llenan a mano con un `input` de texto plano. El operador debe memorizar los códigos SAT (ej. `601`, `G03`) o consultar documentación externa, lo que provoca errores de captura que se replican a facturación (`cfdiUse`/`taxRegime` se envían tal cual al CFDI). El repo ya resuelve exactamente este problema para el código de producto/servicio SAT (`c_ClaveProdServ`) vía el módulo `sat-codes` + el `SatCodeCombobox` de productos: un catálogo sembrado por seed, endpoints de búsqueda read-only y un combobox que asiste la captura. Esta iteración extiende ese mismo patrón a los dos catálogos fiscales del cliente, y aprovecha la sesión de revisión con el cliente (que marcó el campo como dolor) para cerrar el hueco antes de seguir con facturación.
+
+## What Changes
+
+- **Nuevas tablas** `sat_tax_regimes` (`code VARCHAR(3)` PK, `description TEXT`) y `sat_cfdi_uses` (`code VARCHAR(3)` PK, `description TEXT`) + modelos Prisma `SatTaxRegime`/`SatCfdiUse` + migración.
+- **Nuevo seed** `prisma/seeds/satCatalogs.ts` con data estática embebida de los catálogos oficiales CFDI 4.0 (procedencia documentada: phpcfdi `cfdi_40_regimenes_fiscales.sql` y `cfdi_40_usos_cfdi.sql`), idempotente vía upsert por `code`. Script `seed:sat-catalogs` en `package.json`.
+- **Nuevos endpoints** de búsqueda read-only (misma forma que `GET /api/v1/admin/sat-codes`): `GET /api/v1/admin/sat-codes/regimen-fiscal?search=` y `GET /api/v1/admin/sat-codes/uso-cfdi?search=`; ambos requieren sesión autenticada sin permiso adicional, filtran por código O descripción (case-insensitive, `search` min 2 caracteres) y devuelven `{ items: [{code, description}] }` con tope de 20.
+- **Módulo `sat-codes`**: nuevos ports, use cases, repos Prisma + InMemory y controllers por catálogo, enganchados al DI container.
+- **UI clientes**: dos `SatCatalogCombobox` (selección forzada del catálogo, filtrado por nombre) reemplazan los inputs de texto de "Régimen fiscal" y "Uso CFDI" en `CustomerEditModal`, funcionando en `mode="create"` y `mode="edit"`. Hook genérico `useSatCatalogSearch` en `app/_hooks/`. `SatCatalogCombobox` vive como molecule compartido en `app/_components/molecules/SatCatalogCombobox/` (reutilizado en ≥2 features), y también se integra en el alta rápida de cliente del flujo de ventas: `CustomerQuickAddModal` (POS, y vía `CustomerPicker` en Cotizaciones/Facturación) sustituye sus inputs de texto fiscales por los mismos comboboxes en la sección "Datos fiscales (opcionales)".
+- **BREAKING (menor)** — validación `cfdiUse`: regex backend (create + update) pasa de `^[A-Z]\d{2}$` a `^[A-Z]{1,2}\d{2}$` para aceptar los códigos de 4 caracteres del catálogo (`CP01`, `CN01`). Schemas zod del frontend se sincronizan: `customer.schema.ts` (modal de catálogo) y `customerQuickAdd.schema.ts` (alta rápida de ventas).
+
+## Capabilities
+
+### New Capabilities
+
+- `sat-catalogs`: catálogos de referencia SAT de régimen fiscal y uso CFDI, sembrados por seed y expuestos vía endpoints de búsqueda read-only para asistir la captura fiscal del cliente.
+
+### Modified Capabilities
+
+- `customers-api`: relaja el regex de `cfdiUse` a `^[A-Z]{1,2}\d{2}$` (create + update) para aceptar el catálogo completo de usos CFDI.
+- `customers-ui`: reemplaza los inputs de texto de `taxRegime`/`cfdiUse` por comboboxes con carga del catálogo SAT, filtrado por nombre y selección forzada, en crear, editar y en el alta rápida de cliente del flujo de ventas (`CustomerQuickAddModal`).
+
+## Impact
+
+- **Backend**: `prisma/schema.prisma`, migración nueva, `src/modules/sat-codes/**` (ports, use cases, repos, controllers, DI), `src/modules/customers/infrastructure/http/CustomersController.ts` (regex), rutas `app/api/v1/admin/sat-codes/regimen-fiscal/route.ts` y `.../uso-cfdi/route.ts`, `package.json` (script seed), `prisma/seeds/satCatalogs.ts`.
+- **Frontend**: `app/_hooks/useSatCatalogSearch.ts`, `app/_components/molecules/SatCatalogCombobox/SatCatalogCombobox.tsx` (promovido de `catalogs/customers/_blocks`), `CustomerEditModal.tsx`, `CustomerQuickAddModal.tsx` (POS), schema zod de clientes (`_logic/schemas/customer.schema.ts`) y del quick-add (`pos/_logic/schemas/customerQuickAdd.schema.ts`).
+- **Datos**: nueva migración aplicada a Supabase (`qzzjpyepggwautckqeex`) y seed de los dos catálogos (19 + 24 filas).
+- **Tests**: unit (use cases, controllers, combobox, modal de catálogo, modal quick-add, schemas) + integración (endpoints) nuevos; ajuste de tests existentes que asuman el regex anterior de `cfdiUse`.
+- **No rompe**: `GET /api/v1/admin/sat-codes` (productos) queda intacto; `taxRegime` sigue `^\d{3}$`; el CRUD de clientes y el POS no cambian su contrato (el `CustomerPicker` y el quick-add ya enviaban `taxRegime`/`cfdiUse`; sólo cambia el widget de captura).

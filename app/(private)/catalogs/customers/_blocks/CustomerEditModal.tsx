@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Icon } from "../../../../_components/atoms/Icon/Icon";
 import { Switch } from "../../../../_components/atoms/Switch/Switch";
+import { SatCatalogCombobox } from "../../../../_components/molecules/SatCatalogCombobox/SatCatalogCombobox";
 import { createCustomerSchema, updateCustomerSchema } from "../_logic/schemas/customer.schema";
 import type { Customer } from "../_logic/types/domain";
 import type { CreateCustomerBody, UpdateCustomerBody } from "../_logic/types/api";
@@ -335,13 +336,12 @@ export function CustomerEditModal({
               <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="customer-taxRegime">
                 Régimen fiscal
               </label>
-              <input
+              <SatCatalogCombobox
+                catalog="regimen-fiscal"
                 id="customer-taxRegime"
-                type="text"
                 value={taxRegime}
-                onChange={(e) => setTaxRegime(e.target.value)}
+                onChange={setTaxRegime}
                 placeholder="601"
-                maxLength={3}
                 className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.taxRegime && (
@@ -353,13 +353,12 @@ export function CustomerEditModal({
               <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="customer-cfdiUse">
                 Uso CFDI
               </label>
-              <input
+              <SatCatalogCombobox
+                catalog="uso-cfdi"
                 id="customer-cfdiUse"
-                type="text"
                 value={cfdiUse}
-                onChange={(e) => setCfdiUse(e.target.value.toUpperCase())}
+                onChange={setCfdiUse}
                 placeholder="G03"
-                maxLength={3}
                 className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.cfdiUse && (
