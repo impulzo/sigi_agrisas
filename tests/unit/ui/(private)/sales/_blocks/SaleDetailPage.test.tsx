@@ -180,6 +180,25 @@ describe("SaleDetailPage — aviso de límite de crédito excedido", () => {
   });
 });
 
+describe("SaleDetailPage — acciones de ticket (Ver Ticket única entrada, sin Imprimir ticket redundante)", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("muestra el enlace 'Ver Ticket' hacia /sales/:id/ticket", () => {
+    setup({ can: jest.fn(() => false) });
+    render(<SaleDetailPage id="sale-1" />);
+    expect(screen.getByRole("link", { name: /Ver Ticket/i })).toHaveAttribute(
+      "href",
+      "/sales/sale-1/ticket",
+    );
+  });
+
+  it("no muestra el botón 'Imprimir ticket' redundante", () => {
+    setup({ can: jest.fn(() => false) });
+    render(<SaleDetailPage id="sale-1" />);
+    expect(screen.queryByRole("button", { name: /Imprimir ticket/i })).not.toBeInTheDocument();
+  });
+});
+
 describe("SaleDetailPage — desglose IVA/IEPS", () => {
   beforeEach(() => jest.clearAllMocks());
 

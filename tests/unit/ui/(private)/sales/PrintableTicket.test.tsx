@@ -89,4 +89,20 @@ describe("PrintableTicket", () => {
     expect(screen.getByText("IEPS")).toBeInTheDocument();
     expect(screen.queryByText("Impuestos")).not.toBeInTheDocument();
   });
+
+  it("renders the Agrisas brand mark and the payment method aligned to the Stitch design", () => {
+    render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    expect(screen.getByText("Agrisas")).toBeInTheDocument();
+    expect(screen.getByText("Pago")).toBeInTheDocument();
+    expect(screen.getByText("Efectivo")).toBeInTheDocument();
+  });
+
+  it("renders the folio at the bottom as a decorative barcode-style element", () => {
+    const { container } = render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    const barcode = container.querySelector("[aria-hidden='true']");
+    expect(barcode).not.toBeNull();
+    expect(screen.getByText("TK-42")).toBeInTheDocument();
+  });
 });
