@@ -20,7 +20,7 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
   const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
 
   return (
-    <div className="printable-ticket hidden print:block">
+    <div className="printable-ticket print-area hidden print:block">
       <style>{`
         @media print {
           .printable-ticket { width: ${paperWidth}; font-family: monospace; font-size: 10px; }
@@ -34,6 +34,7 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
         // eslint-disable-next-line @next/next/no-img-element
         <img src={ticketSettings.logoUrl} alt="Logo" />
       )}
+      <p style={{ textAlign: "center", fontWeight: "bold", fontSize: "12px", margin: "2px 0" }}>Agrisas</p>
       {ticketSettings?.headerText && (
         <p style={{ textAlign: "center", whiteSpace: "pre-wrap" }}>{ticketSettings.headerText}</p>
       )}
@@ -43,6 +44,10 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
       <p>Fecha: {fmtDate(sale.createdAt)}</p>
       <p>Cajero: {sale.cashierName ?? sale.cashierId.slice(0, 8)}</p>
       <p>Sucursal: {sale.branchName ?? "—"}</p>
+      <p style={{ display: "flex", justifyContent: "space-between" }}>
+        <span>Pago</span>
+        <span>{sale.paymentMethodName ?? "—"}</span>
+      </p>
       <hr />
 
       <table>
@@ -80,6 +85,20 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
       {ticketSettings?.footerText && (
         <p style={{ textAlign: "center", whiteSpace: "pre-wrap" }}>{ticketSettings.footerText}</p>
       )}
+
+      <div style={{ textAlign: "center", marginTop: "4px" }}>
+        <div
+          aria-hidden="true"
+          style={{
+            height: "12px",
+            margin: "0 auto",
+            maxWidth: "70%",
+            backgroundImage: "repeating-linear-gradient(90deg, #000 0 2px, transparent 2px 5px)",
+            opacity: 0.7,
+          }}
+        />
+        <p style={{ marginTop: "2px" }}>{folioLabel}</p>
+      </div>
     </div>
   );
 }

@@ -145,13 +145,6 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
           >
             Ver Ticket
           </Link>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="rounded-full border border-outline px-4 py-2 text-body-sm font-medium hover:bg-surface-container transition-colors"
-          >
-            Imprimir ticket
-          </button>
           {canReturn === true && sale.status === "completed" && hasRemainingItems(sale) && (
             <button
               type="button"
