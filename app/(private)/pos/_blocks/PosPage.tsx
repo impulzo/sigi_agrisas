@@ -258,7 +258,7 @@ export function PosPage() {
   // Access guard: user must have at least sales:create OR quotes:create
   if (canCreate === "loading" || canQuote === "loading") {
     return (
-      <div className="flex h-64 items-center justify-center">
+      <div className="pt-2.5 flex h-64 items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -266,16 +266,18 @@ export function PosPage() {
 
   if (canCreate === false && canQuote === false) {
     return (
-      <EmptyState
-        icon="block"
-        title="Sin acceso"
-        description="No tienes permiso para emitir ventas ni cotizaciones."
-      />
+      <div className="pt-2.5">
+        <EmptyState
+          icon="block"
+          title="Sin acceso"
+          description="No tienes permiso para emitir ventas ni cotizaciones."
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col h-[calc(100vh-64px)] pt-2.5">
       {/* Accessible live region for screen readers */}
       <div
         ref={liveRegionRef}

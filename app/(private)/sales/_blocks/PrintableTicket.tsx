@@ -19,6 +19,11 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
   const ivaTotal = sale.items.reduce((sum, item) => sum + item.lineIva, 0);
   const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
 
+  const businessAddress = ticketSettings?.businessAddress ?? null;
+  const businessPhone = ticketSettings?.businessPhone ?? null;
+  const businessTaxRegime = ticketSettings?.businessTaxRegime ?? null;
+  const legendText = ticketSettings?.legendText ?? null;
+
   return (
     <div className="printable-ticket print-area hidden print:block">
       <style>{`
@@ -43,15 +48,46 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
       )}
 
       <hr />
+
+      {/* Información del negocio */}
+      <div style={{ textAlign: "center", whiteSpace: "pre-wrap" }}>
+        {businessAddress && <p>{businessAddress}</p>}
+        {businessPhone && <p>Tel. {businessPhone}</p>}
+        {businessTaxRegime && <p>{businessTaxRegime}</p>}
+      </div>
+
+      <hr />
+
+      {/* Datos del ticket */}
       <p>Folio: {folioLabel}</p>
       <p>Fecha: {fmtDate(sale.createdAt)}</p>
-      <p>Cajero: {sale.cashierName ?? sale.cashierId.slice(0, 8)}</p>
+      <p>Vendedor: {sale.cashierName ?? sale.cashierId.slice(0, 8)}</p>
       <p>Sucursal: {sale.branchName ?? "—"}</p>
       <p style={{ display: "flex", justifyContent: "space-between" }}>
         <span>Pago</span>
         <span>{sale.paymentMethodName ?? "—"}</span>
       </p>
+
       <hr />
+
+      {/* Cliente */}
+      {sale.customerId && (
+        <>
+          <p style={{ fontWeight: "bold" }}>Cliente</p>
+          <p>RFC: {sale.customerRfc ?? "—"}</p>
+          <p>Nombre: {sale.customerName ?? "—"}</p>
+          <p>Dirección: {sale.customerAddress ?? "—"}</p>
+          <hr />
+        </>
+      )}
+
+      {/* Condiciones de crédito */}
+      {sale.customerCreditDays != null && (
+        <p style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Condiciones</span>
+          <span>Crédito a {sale.customerCreditDays} días</span>
+        </p>
+      )}
 
       <table>
         <tbody>
@@ -80,13 +116,17 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
         <span>{fmt(iepsTotal)}</span>
       </p>
       <p style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
-        <span>Total</span>
+        <span>Total a pagar</span>
         <span>{fmt(sale.total)}</span>
       </p>
       <hr />
 
       {ticketSettings?.footerText && (
         <p style={{ textAlign: "center", whiteSpace: "pre-wrap" }}>{ticketSettings.footerText}</p>
+      )}
+
+      {legendText && (
+        <p style={{ textAlign: "center", whiteSpace: "pre-wrap", marginTop: "4px" }}>{legendText}</p>
       )}
 
       <div style={{ textAlign: "center", marginTop: "4px" }}>

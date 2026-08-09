@@ -9,6 +9,7 @@ import { GetAccountStatementLedgerUseCase } from "../../application/use-cases/Ge
 import { GetAnticipoReceiptUseCase } from "../../application/use-cases/GetAnticipoReceiptUseCase";
 import { GetSalesCutReportUseCase } from "../../application/use-cases/GetSalesCutReportUseCase";
 import { GetCashCutReportUseCase } from "../../application/use-cases/GetCashCutReportUseCase";
+import { GetDepartmentPriceListReportUseCase } from "../../application/use-cases/GetDepartmentPriceListReportUseCase";
 import { StatementCustomerNotFoundError } from "../../domain/errors/StatementCustomerNotFoundError";
 import { AnticipoReceiptNotFoundError } from "../../domain/errors/AnticipoReceiptNotFoundError";
 import { InventoryStockReportPdf } from "../pdf/InventoryStockReportPdf";
@@ -20,7 +21,9 @@ import {
 import { AnticipoReceiptPdf } from "../pdf/AnticipoReceiptPdf";
 import { SalesCutReportPdf } from "../pdf/SalesCutReportPdf";
 import { CashCutReportPdf } from "../pdf/CashCutReportPdf";
+import { DepartmentPriceListReportPdf } from "../pdf/DepartmentPriceListReportPdf";
 import { buildCashCutWorkbook } from "../xlsx/buildCashCutWorkbook";
+import { buildDepartmentPriceListWorkbook } from "../xlsx/buildDepartmentPriceListWorkbook";
 import { requirePermission } from "@/modules/rbac/infrastructure/http/requirePermission";
 import { resolveScopedBranchId } from "@/modules/rbac/infrastructure/http/enforceBranchScope";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
@@ -150,6 +153,11 @@ const cashCutQuerySchema = z.object({
   format: cashCutFormatEnum,
 });
 
+const departmentPriceListQuerySchema = z.object({
+  departmentId: z.string().uuid("Invalid departmentId").optional(),
+  format: cashCutFormatEnum,
+});
+
 export class ReportsController {
   constructor(
     private readonly stockUseCase: GetInventoryStockReportUseCase,
@@ -159,6 +167,7 @@ export class ReportsController {
     private readonly anticipoReceiptUseCase: GetAnticipoReceiptUseCase,
     private readonly salesCutUseCase: GetSalesCutReportUseCase,
     private readonly cashCutUseCase: GetCashCutReportUseCase,
+    private readonly departmentPriceListUseCase: GetDepartmentPriceListReportUseCase,
     private readonly authzService: AuthorizationService
   ) {}
 
@@ -547,6 +556,60 @@ export class ReportsController {
       return NextResponse.json(dto);
     } catch (err) {
       console.error("[ReportsController] getCashCutReport error", err);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+  }
+
+  async getDepartmentPriceListReport(req: NextRequest): Promise<NextResponse> {
+    const authError = await requirePermission(req, "reports:inventory_read", this.authzService);
+    if (authError) return authError;
+
+    const params = Object.fromEntries(new URL(req.url).searchParams.entries());
+    const parsed = departmentPriceListQuerySchema.safeParse(params);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
+
+    const { departmentId, format } = parsed.data;
+
+    const userId = req.headers.get("x-user-id")!;
+    const email = req.headers.get("x-user-email") ?? "";
+
+    try {
+      const dto = await this.departmentPriceListUseCase.execute({
+        departmentId: departmentId ?? null,
+        generatedBy: { userId, email },
+      });
+
+      const date = dto.generatedAt.split("T")[0];
+
+      if (format === "pdf") {
+        const buffer = await renderToBuffer(
+          createElement(DepartmentPriceListReportPdf, { data: dto }) as never
+        );
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="inventory-by-department-${date}.pdf"`,
+          },
+        });
+      }
+
+      if (format === "xlsx") {
+        const buffer = buildDepartmentPriceListWorkbook(dto);
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="inventory-by-department-${date}.xlsx"`,
+          },
+        });
+      }
+
+      return NextResponse.json(dto);
+    } catch (err) {
+      console.error("[ReportsController] getDepartmentPriceListReport error", err);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
   }

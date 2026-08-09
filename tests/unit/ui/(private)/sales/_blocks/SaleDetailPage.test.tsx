@@ -261,3 +261,29 @@ describe("SaleDetailPage — desglose IVA/IEPS", () => {
     expect(totals.getByText("$0.00")).toBeInTheDocument();
   });
 });
+
+describe("SaleDetailPage — separación superior de 10px (sales-screens-padding)", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("aplica pt-2.5 al contenedor raíz en el estado normal", () => {
+    setup({ can: jest.fn(() => false) });
+    const { container } = render(<SaleDetailPage id="sale-1" />);
+    const root = container.firstElementChild;
+    expect(root).not.toBeNull();
+    expect(root!.className).toContain("pt-2.5");
+  });
+
+  it("aplica pt-2.5 en el estado de carga", () => {
+    setup({ can: jest.fn(() => false) });
+    mockUseSaleDetail.mockReturnValue({ sale: null, isLoading: true, error: null, refresh: jest.fn() });
+    const { container } = render(<SaleDetailPage id="sale-1" />);
+    expect(container.firstElementChild!.className).toContain("pt-2.5");
+  });
+
+  it("aplica pt-2.5 en el estado de error", () => {
+    setup({ can: jest.fn(() => false) });
+    mockUseSaleDetail.mockReturnValue({ sale: null, isLoading: false, error: new Error("boom"), refresh: jest.fn() });
+    const { container } = render(<SaleDetailPage id="sale-1" />);
+    expect(container.firstElementChild!.className).toContain("pt-2.5");
+  });
+});

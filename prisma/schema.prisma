@@ -851,13 +851,17 @@ model WaybillItem {
 }
 
 model TicketSettings {
-  id         String   @id
-  logoUrl    String?  @map("logo_url")
-  headerText String?  @map("header_text")
-  footerText String?  @map("footer_text")
-  paperWidth String   @default("80mm") @map("paper_width") @db.VarChar(4)
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id                String   @id
+  logoUrl           String?  @map("logo_url")
+  headerText        String?  @map("header_text")
+  footerText        String?  @map("footer_text")
+  paperWidth        String   @default("80mm") @map("paper_width") @db.VarChar(4)
+  businessAddress   String?  @map("business_address") @db.VarChar(300)
+  businessPhone     String?  @map("business_phone") @db.VarChar(30)
+  businessTaxRegime String?  @map("business_tax_regime") @db.VarChar(120)
+  legendText        String?  @map("legend_text") @db.VarChar(500)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("ticket_settings")
 }

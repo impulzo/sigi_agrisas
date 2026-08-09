@@ -79,7 +79,7 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
+      <div className="pt-2.5 flex h-64 items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -87,16 +87,18 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
 
   if (error || !sale) {
     return (
-      <EmptyState
-        icon="warning"
-        title="No se encontró la venta"
-        description={error?.message ?? "La venta no existe o no tienes acceso."}
-        action={
-          <Link href="/sales" className="text-primary hover:underline text-body-sm">
-            Volver a ventas
-          </Link>
-        }
-      />
+      <div className="pt-2.5">
+        <EmptyState
+          icon="warning"
+          title="No se encontró la venta"
+          description={error?.message ?? "La venta no existe o no tienes acceso."}
+          action={
+            <Link href="/sales" className="text-primary hover:underline text-body-sm">
+              Volver a ventas
+            </Link>
+          }
+        />
+      </div>
     );
   }
 
@@ -105,7 +107,7 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
     : String(sale.folioNumber);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 pt-2.5">
       {showCreditLimitBanner && (
         <div className="flex items-center justify-between gap-3 rounded-xl bg-error/10 text-error px-4 py-2 text-body-sm">
           <span>Se ha excedido el límite de crédito establecido para este cliente.</span>

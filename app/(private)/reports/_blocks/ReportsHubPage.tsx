@@ -34,6 +34,14 @@ export function ReportsHubPage() {
           canAccess={can("reports:cash_cut_read")}
           tooltip="Requiere permiso reports:cash_cut_read"
         />
+        <CatalogHubCard
+          icon="inventory_2"
+          title="Inventario por Departamento"
+          description="Productos del catálogo con sus listas de precio, agrupados por producto."
+          href="/reports/inventory-by-department"
+          canAccess={can("reports:inventory_read")}
+          tooltip="Requiere permiso reports:inventory_read"
+        />
       </div>
     </div>
   );

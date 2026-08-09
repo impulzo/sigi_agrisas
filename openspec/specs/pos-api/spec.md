@@ -73,7 +73,7 @@ The system SHALL persist a sale as the aggregate `Sale` (header) + `SaleItem` (l
 ### Requirement: List sales
 The system SHALL expose `GET /api/v1/admin/sales` that returns a paginated list of sales. Requires the `sales:read` permission. Query parameters: `page` (default 1), `pageSize` (default 20, max 100), `branchId` (optional UUID), `customerId` (optional UUID), `status` (optional, comma-separated; one or more of `completed`,`cancelled`,`edited`), `from` (optional ISO date — inclusive lower bound on `created_at`), `to` (optional ISO date — inclusive upper bound on `created_at`), `search` (optional, min 2 chars; matches `folio_code`, `folio_number::text`, or joined `customer.name`/`customer.rfc`).
 
-Each `SaleDto` includes `id`, `folioId`, `folioCode`, `folioNumber`, `branchId`, `branchName` (joined), `customerId`, `customerName` (joined), `customerRfc` (joined), `cashierId`, `cashierName` (joined), `paymentMethodId`, `paymentMethodCode` (joined), `isCredit` (derived from `paymentMethod.isCredit`), `quoteId` (string or `null`), `status`, `paidAmount` (string, 4 decimals), `paymentStatus` (one of `paid`, `partial`, `pending`), `subtotal`, `taxTotal`, `total`, `notes`, `completedAt`, `cancelledAt`, `cancellationReason`, `editedAt`, `createdAt`, `updatedAt`. `items` is NOT included in the list response.
+Each `SaleDto` includes `id`, `folioId`, `folioCode`, `folioNumber`, `branchId`, `branchName` (joined), `customerId`, `customerName` (joined), `customerRfc` (joined), `customerAddress` (joined), `customerCreditDays` (joined), `cashierId`, `cashierName` (joined), `paymentMethodId`, `paymentMethodCode` (joined), `isCredit` (derived from `paymentMethod.isCredit`), `quoteId` (string or `null`), `status`, `paidAmount` (string, 4 decimals), `paymentStatus` (one of `paid`, `partial`, `pending`), `subtotal`, `taxTotal`, `total`, `notes`, `completedAt`, `cancelledAt`, `cancellationReason`, `editedAt`, `createdAt`, `updatedAt`. `items` is NOT included in the list response.
 
 Sorted by `created_at DESC`.
 
@@ -120,15 +120,27 @@ If the caller HAS `branches:access_all`:
 ### Requirement: Get sale detail
 The system SHALL expose `GET /api/v1/admin/sales/:id` that returns a single sale with its items. Requires `sales:read`. Returns HTTP 404 if not found. Branch scoping applies (a caller without `branches:access_all` can only fetch sales whose `branchId === x-user-branch-id`; otherwise HTTP 403).
 
-`SaleDetailDto` extends `SaleDto` with:
+ `SaleDetailDto` extends `SaleDto` with:
 
 - `items: SaleItemDto[]`, each including `id`, `productId`, `productPriceId` (or `null`), `productCodeSnapshot`, `productNameSnapshot`, `priceNameSnapshot`, `quantity`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`, `lineSubtotal`, `lineTax`, `lineTotal`.
 - `quoteId: string | null` (unchanged from `add-quotes-crud`).
 - `returnedQuantityBySaleItem: Record<string, number>` — a map keyed by `sale_item.id` whose value is the SUM of `return_items.quantity` across all returns linked to this sale where `returns.status='completed'`. Keys for `sale_items` with no completed returns are OMITTED (consumers SHALL interpret "absent key" as `0`). Cancelled returns do NOT contribute to this aggregate.
+- `customerAddress: string | null` — the customer's `address` joined from the sale's `customerId` (`null` for walk-in sales).
+- `customerCreditDays: number | null` — the customer's `creditDays` joined from the sale's `customerId` (`null` for walk-in sales).
+
+Each `SaleDto` in the list response (`GET /api/v1/admin/sales`) SHALL also include `customerAddress` and `customerCreditDays` (same joined semantics, `null` for walk-in sales).
 
 #### Scenario: Authorized fetch
 - **WHEN** a caller with `sales:read` and access to the sale's branch fetches a valid `:id`
-- **THEN** the system returns HTTP 200 with the `SaleDetailDto` (including `quoteId` and `returnedQuantityBySaleItem`)
+- **THEN** the system returns HTTP 200 with the `SaleDetailDto` (including `quoteId`, `returnedQuantityBySaleItem`, `customerAddress`, and `customerCreditDays`)
+
+#### Scenario: Sale with customer exposes credit data
+- **WHEN** a sale has `customerId` and the customer has `address` and `creditDays` set
+- **THEN** the returned `SaleDetailDto` includes `customerAddress` and `customerCreditDays` with those values
+
+#### Scenario: Walk-in sale exposes null credit data
+- **WHEN** a sale has `customerId: null`
+- **THEN** the returned `SaleDetailDto` includes `customerAddress: null` and `customerCreditDays: null`
 
 #### Scenario: Out-of-branch fetch
 - **WHEN** a caller without `branches:access_all` fetches a sale whose `branchId !== x-user-branch-id`

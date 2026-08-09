@@ -185,3 +185,30 @@ describe("PosPage — sin permisos", () => {
     expect(screen.getByTestId("empty-state")).toBeInTheDocument();
   });
 });
+
+describe("PosPage — separación superior de 10px (sales-screens-padding)", () => {
+  beforeEach(() => {
+    mockCan.mockImplementation((perm) => {
+      if (perm === "sales:create") return true;
+      return false;
+    });
+  });
+
+  it("aplica pt-2.5 al contenedor raíz en el estado normal", () => {
+    const { container } = render(<PosPage />);
+    expect(container.firstElementChild!.className).toContain("pt-2.5");
+    expect(container.firstElementChild!.className).toContain("h-[calc(100vh-64px)]");
+  });
+
+  it("aplica pt-2.5 en el estado de carga", () => {
+    mockCan.mockReturnValue("loading");
+    const { container } = render(<PosPage />);
+    expect(container.firstElementChild!.className).toContain("pt-2.5");
+  });
+
+  it("aplica pt-2.5 en el estado sin permisos", () => {
+    mockCan.mockReturnValue(false);
+    const { container } = render(<PosPage />);
+    expect(container.firstElementChild!.className).toContain("pt-2.5");
+  });
+});

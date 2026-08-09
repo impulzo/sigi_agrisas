@@ -13,6 +13,9 @@ const sale: SaleDetail = {
   branchName: "Matriz",
   customerId: "c1",
   customerName: "Cliente Uno",
+  customerRfc: "XAXX010101000",
+  customerAddress: "Av. Central 123, Oaxaca",
+  customerCreditDays: 30,
   cashierId: "u1",
   cashierName: "Admin",
   folioId: "f1",
@@ -51,9 +54,20 @@ const sale: SaleDetail = {
   returnedQuantityBySaleItem: {},
 };
 
+const defaultSettings: TicketSettingsDto = {
+  logoUrl: null,
+  headerText: null,
+  footerText: null,
+  paperWidth: "80mm",
+  businessAddress: null,
+  businessPhone: null,
+  businessTaxRegime: null,
+  legendText: null,
+};
+
 describe("PrintableTicket", () => {
   it("falls back to the embedded Agrisas logo when logoUrl is null", () => {
-    const settings: TicketSettingsDto = { logoUrl: null, headerText: "Encabezado", footerText: "Pie", paperWidth: "80mm" };
+    const settings: TicketSettingsDto = { ...defaultSettings, headerText: "Encabezado", footerText: "Pie" };
     render(<PrintableTicket sale={sale} ticketSettings={settings} />);
 
     expect(screen.getByAltText("Logo")).toHaveAttribute("src", "/logo.png");
@@ -61,14 +75,14 @@ describe("PrintableTicket", () => {
   });
 
   it("renders the logo when logoUrl is present", () => {
-    const settings: TicketSettingsDto = { logoUrl: "https://x.test/logo.png", headerText: null, footerText: null, paperWidth: "80mm" };
+    const settings: TicketSettingsDto = { ...defaultSettings, logoUrl: "https://x.test/logo.png" };
     render(<PrintableTicket sale={sale} ticketSettings={settings} />);
 
     expect(screen.getByAltText("Logo")).toBeInTheDocument();
   });
 
   it("renders sale data correctly regardless of paperWidth", () => {
-    const settings: TicketSettingsDto = { logoUrl: null, headerText: null, footerText: null, paperWidth: "58mm" };
+    const settings: TicketSettingsDto = { ...defaultSettings, paperWidth: "58mm" };
     render(<PrintableTicket sale={sale} ticketSettings={settings} />);
 
     expect(screen.getByText(/folio: tk-42/i)).toBeInTheDocument();
@@ -104,5 +118,72 @@ describe("PrintableTicket", () => {
     const barcode = container.querySelector("[aria-hidden='true']");
     expect(barcode).not.toBeNull();
     expect(screen.getByText("TK-42")).toBeInTheDocument();
+  });
+
+  it("labels the seller as Vendedor instead of Cajero", () => {
+    render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    expect(screen.getByText(/vendedor: admin/i)).toBeInTheDocument();
+    expect(screen.queryByText(/cajero:/i)).not.toBeInTheDocument();
+  });
+
+  it("renders customer info: RFC, name and address", () => {
+    render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    expect(screen.getByText("Cliente")).toBeInTheDocument();
+    expect(screen.getByText(/RFC: XAXX010101000/i)).toBeInTheDocument();
+    expect(screen.getByText(/Nombre: Cliente Uno/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dirección: Av. Central 123, Oaxaca/i)).toBeInTheDocument();
+  });
+
+  it("shows credit conditions from customer creditDays", () => {
+    render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    expect(screen.getByText("Condiciones")).toBeInTheDocument();
+    expect(screen.getByText("Crédito a 30 días")).toBeInTheDocument();
+  });
+
+  it("omits customer section and credit conditions when sale has no customer", () => {
+    const saleNoCustomer: SaleDetail = { ...sale, customerId: null, customerName: null, customerRfc: null, customerAddress: null, customerCreditDays: null };
+    render(<PrintableTicket sale={saleNoCustomer} ticketSettings={null} />);
+
+    expect(screen.queryByText("Cliente")).not.toBeInTheDocument();
+    expect(screen.queryByText("Condiciones")).not.toBeInTheDocument();
+  });
+
+  it("shows 'Total a pagar' label", () => {
+    render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    expect(screen.getByText("Total a pagar")).toBeInTheDocument();
+  });
+
+  it("renders business info from ticket settings", () => {
+    const settings: TicketSettingsDto = {
+      ...defaultSettings,
+      businessAddress: "Ocotlan de Morelos, Oaxaca. CP 71520",
+      businessPhone: "951 292 80 86",
+      businessTaxRegime: "612 Personas Físicas con Actividad Empresarial",
+    };
+    render(<PrintableTicket sale={sale} ticketSettings={settings} />);
+
+    expect(screen.getByText("Ocotlan de Morelos, Oaxaca. CP 71520")).toBeInTheDocument();
+    expect(screen.getByText("Tel. 951 292 80 86")).toBeInTheDocument();
+    expect(screen.getByText("612 Personas Físicas con Actividad Empresarial")).toBeInTheDocument();
+  });
+
+  it("renders the legend text when set", () => {
+    const settings: TicketSettingsDto = {
+      ...defaultSettings,
+      legendText: "Favor de revisar su mercancía. No se hacen cambios ni devoluciones. Gracias por su compra.",
+    };
+    render(<PrintableTicket sale={sale} ticketSettings={settings} />);
+
+    expect(screen.getByText(/Favor de revisar su mercancía/)).toBeInTheDocument();
+  });
+
+  it("does not render legend when null", () => {
+    render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    expect(screen.queryByText(/Favor de revisar su mercancía/)).not.toBeInTheDocument();
   });
 });

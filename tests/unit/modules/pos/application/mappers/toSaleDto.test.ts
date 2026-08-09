@@ -57,6 +57,8 @@ describe("toSaleDto", () => {
       branchName: "Matriz",
       customerName: null,
       customerRfc: null,
+      customerAddress: null,
+      customerCreditDays: null,
       cashierName: "Admin",
       paymentMethodCode: "EFECTIVO",
       paymentMethodName: "Efectivo",
@@ -65,6 +67,50 @@ describe("toSaleDto", () => {
 
     expect(dto.paymentMethodCode).toBe("EFECTIVO");
     expect(dto.paymentMethodName).toBe("Efectivo");
+  });
+
+  it("propaga customerAddress y customerCreditDays desde los joined fields", () => {
+    const sale = Sale.create({
+      id: "sale-2",
+      folioId: "folio-1",
+      folioNumber: 2,
+      folioCode: "TK-000002",
+      branchId: "branch-1",
+      customerId: "cust-1",
+      cashierId: "cashier-1",
+      paymentMethodId: "pm-1",
+      quoteId: null,
+      status: "completed",
+      paidAmount: 0,
+      paymentStatus: "pending",
+      subtotal: 100,
+      taxTotal: 16,
+      total: 116,
+      notes: null,
+      completedAt: new Date(),
+      cancelledAt: null,
+      cancellationReason: null,
+      editedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      items: [],
+    });
+
+    const dto = toSaleDto(sale, {
+      branchName: "Matriz",
+      customerName: "Cliente Uno",
+      customerRfc: "XAXX010101000",
+      customerAddress: "Av. Central 123, Oaxaca",
+      customerCreditDays: 30,
+      cashierName: "Admin",
+      paymentMethodCode: "CREDITO",
+      paymentMethodName: "Crédito",
+      paymentMethodIsCredit: true,
+    });
+
+    expect(dto.customerRfc).toBe("XAXX010101000");
+    expect(dto.customerAddress).toBe("Av. Central 123, Oaxaca");
+    expect(dto.customerCreditDays).toBe(30);
   });
 });
 

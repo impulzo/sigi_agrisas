@@ -9,7 +9,7 @@ import { deleteProductImage } from "../_logic/services/deleteProductImage";
 import { ProductDepartmentInvalidError } from "../_logic/errors";
 import { createProductSchema } from "../_logic/schemas/product.schema";
 import { useTaxRatesOptions } from "../../../../_hooks/useTaxRatesOptions";
-import { useDepartmentsOptions } from "../_logic/hooks/useDepartmentsOptions";
+import { useDepartmentsOptions } from "../../../../_hooks/useDepartmentsOptions";
 import { TaxRateSelect } from "./TaxRateSelect";
 import { SatCodeCombobox } from "./SatCodeCombobox";
 import type { Product } from "../_logic/types/domain";

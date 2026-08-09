@@ -17,6 +17,10 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
   const [headerText, setHeaderText] = useState(settings.headerText ?? "");
   const [footerText, setFooterText] = useState(settings.footerText ?? "");
   const [paperWidth, setPaperWidth] = useState<PaperWidthDto>(settings.paperWidth);
+  const [businessAddress, setBusinessAddress] = useState(settings.businessAddress ?? "");
+  const [businessPhone, setBusinessPhone] = useState(settings.businessPhone ?? "");
+  const [businessTaxRegime, setBusinessTaxRegime] = useState(settings.businessTaxRegime ?? "");
+  const [legendText, setLegendText] = useState(settings.legendText ?? "");
 
   const { isSaving, mutationError, clearError, update } = useTicketSettingsMutations(onChange);
 
@@ -24,6 +28,10 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
     setHeaderText(settings.headerText ?? "");
     setFooterText(settings.footerText ?? "");
     setPaperWidth(settings.paperWidth);
+    setBusinessAddress(settings.businessAddress ?? "");
+    setBusinessPhone(settings.businessPhone ?? "");
+    setBusinessTaxRegime(settings.businessTaxRegime ?? "");
+    setLegendText(settings.legendText ?? "");
   }, [settings]);
 
   async function handleSave() {
@@ -31,8 +39,15 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
       headerText: headerText.trim() || null,
       footerText: footerText.trim() || null,
       paperWidth,
+      businessAddress: businessAddress.trim() || null,
+      businessPhone: businessPhone.trim() || null,
+      businessTaxRegime: businessTaxRegime.trim() || null,
+      legendText: legendText.trim() || null,
     });
   }
+
+  const inputCls =
+    "w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60";
 
   return (
     <div className="max-w-xl space-y-6">
@@ -49,34 +64,102 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
         />
       </div>
 
-      <div>
-        <label htmlFor="header-text" className="block text-label-md text-on-surface mb-1">
-          Texto de encabezado
-        </label>
-        <textarea
-          id="header-text"
-          value={headerText}
-          onChange={(e) => setHeaderText(e.target.value.slice(0, 500))}
-          disabled={!canWrite}
-          rows={2}
-          placeholder="Dirección, teléfono, etc."
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
-        />
+      <div className="space-y-4 border-t border-outline-variant pt-4">
+        <p className="text-label-md text-on-surface font-semibold">Información del negocio</p>
+
+        <div>
+          <label htmlFor="business-address" className="block text-label-md text-on-surface mb-1">
+            Dirección
+          </label>
+          <input
+            id="business-address"
+            type="text"
+            value={businessAddress}
+            onChange={(e) => setBusinessAddress(e.target.value.slice(0, 300))}
+            disabled={!canWrite}
+            placeholder="Dirección, ciudad, CP"
+            className={inputCls}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="business-phone" className="block text-label-md text-on-surface mb-1">
+            Teléfono
+          </label>
+          <input
+            id="business-phone"
+            type="text"
+            value={businessPhone}
+            onChange={(e) => setBusinessPhone(e.target.value.slice(0, 30))}
+            disabled={!canWrite}
+            placeholder="Teléfono"
+            className={inputCls}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="business-tax-regime" className="block text-label-md text-on-surface mb-1">
+            Régimen Fiscal
+          </label>
+          <input
+            id="business-tax-regime"
+            type="text"
+            value={businessTaxRegime}
+            onChange={(e) => setBusinessTaxRegime(e.target.value.slice(0, 120))}
+            disabled={!canWrite}
+            placeholder="612 Personas Físicas con Actividad Empresarial"
+            className={inputCls}
+          />
+        </div>
       </div>
 
-      <div>
-        <label htmlFor="footer-text" className="block text-label-md text-on-surface mb-1">
-          Texto de pie
-        </label>
-        <textarea
-          id="footer-text"
-          value={footerText}
-          onChange={(e) => setFooterText(e.target.value.slice(0, 500))}
-          disabled={!canWrite}
-          rows={2}
-          placeholder="Gracias por su compra"
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
-        />
+      <div className="space-y-4 border-t border-outline-variant pt-4">
+        <p className="text-label-md text-on-surface font-semibold">Texto del ticket</p>
+
+        <div>
+          <label htmlFor="header-text" className="block text-label-md text-on-surface mb-1">
+            Texto de encabezado
+          </label>
+          <textarea
+            id="header-text"
+            value={headerText}
+            onChange={(e) => setHeaderText(e.target.value.slice(0, 500))}
+            disabled={!canWrite}
+            rows={2}
+            placeholder="Dirección, teléfono, etc."
+            className={inputCls}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="footer-text" className="block text-label-md text-on-surface mb-1">
+            Texto de pie
+          </label>
+          <textarea
+            id="footer-text"
+            value={footerText}
+            onChange={(e) => setFooterText(e.target.value.slice(0, 500))}
+            disabled={!canWrite}
+            rows={2}
+            placeholder="Gracias por su compra"
+            className={inputCls}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="legend-text" className="block text-label-md text-on-surface mb-1">
+            Leyenda del ticket
+          </label>
+          <textarea
+            id="legend-text"
+            value={legendText}
+            onChange={(e) => setLegendText(e.target.value.slice(0, 500))}
+            disabled={!canWrite}
+            rows={3}
+            placeholder="Favor de revisar su mercancía. No se hacen cambios ni devoluciones. Gracias por su compra."
+            className={inputCls}
+          />
+        </div>
       </div>
 
       <div>

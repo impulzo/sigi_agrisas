@@ -40,7 +40,16 @@ describe("SettingsController", () => {
       const res = await controller.getTicket();
       expect(res.status).toBe(200);
       const body = await res.json();
-      expect(body).toEqual({ logoUrl: null, headerText: null, footerText: null, paperWidth: "80mm" });
+      expect(body).toEqual({
+        logoUrl: null,
+        headerText: null,
+        footerText: null,
+        paperWidth: "80mm",
+        businessAddress: "Ocotlán de Morelos, Oaxaca, C.P. 71520",
+        businessPhone: "951 292 80 86",
+        businessTaxRegime: "612 Personas Físicas con Actividad Empresarial",
+        legendText: "Favor de revisar su mercancia. No se hacen cambios ni devoluciones. Gracias por su compra.",
+      });
     });
   });
 
@@ -61,6 +70,18 @@ describe("SettingsController", () => {
       const { controller } = buildController();
       const res = await controller.updateTicket(req("PATCH", { paperWidth: "40mm" }));
       expect(res.status).toBe(400);
+    });
+
+    it("returns 200 on a valid business-fields update", async () => {
+      const { controller } = buildController();
+      const res = await controller.updateTicket(
+        req("PATCH", { businessAddress: "Ocotlan de Morelos, Oaxaca. CP 71520", businessTaxRegime: "612", legendText: "Leyenda" })
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.businessAddress).toBe("Ocotlan de Morelos, Oaxaca. CP 71520");
+      expect(body.businessTaxRegime).toBe("612");
+      expect(body.legendText).toBe("Leyenda");
     });
   });
 

@@ -33,6 +33,10 @@ jest.mock("@/modules/reports/infrastructure/pdf/CashCutReportPdf", () => ({
   CashCutReportPdf: () => null,
 }));
 
+jest.mock("@/modules/reports/infrastructure/pdf/DepartmentPriceListReportPdf", () => ({
+  DepartmentPriceListReportPdf: () => null,
+}));
+
 jest.mock("@/modules/rbac/infrastructure/di/container", () => ({
   rbacContainer: {
     authorizationService: {
@@ -72,6 +76,9 @@ import {
   InMemoryCashCutRepository,
   InMemCutPayment,
 } from "@/modules/reports/infrastructure/repositories/InMemoryCashCutRepository";
+import { GetDepartmentPriceListReportUseCase } from "@/modules/reports/application/use-cases/GetDepartmentPriceListReportUseCase";
+import { InMemoryDepartmentPriceListRepository } from "@/modules/reports/infrastructure/repositories/InMemoryDepartmentPriceListRepository";
+import { RawPriceListRow } from "@/modules/reports/application/ports/DepartmentPriceListRepository";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 
 const BASE_URL = "http://localhost:3000/api/v1/admin/reports";
@@ -107,6 +114,16 @@ function makePaymentRow(): RawPaymentRow {
   };
 }
 
+function makePriceListRow(): RawPriceListRow {
+  return {
+    departmentId: DEPT_ID, departmentCode: "D1", departmentName: "Dept 1",
+    productId: "prod-1", code: "P001", name: "Prod 1", unit: "PZA",
+    ivaRate: new Decimal("0.1600"), iepsRate: null,
+    priceId: "price-1", priceName: "Menudeo", price: new Decimal("100.0000"),
+    minQuantity: 1, discountPct: new Decimal("0.00"), isDefault: true,
+  };
+}
+
 function emptyAccountUseCases() {
   const repo = new InMemoryAccountStatementRepository([], []);
   return {
@@ -124,13 +141,17 @@ function emptyCashCutUseCase(payments: InMemCutPayment[] = []) {
   return new GetCashCutReportUseCase(new InMemoryCashCutRepository(payments));
 }
 
+function emptyDepartmentPriceListUseCase(rows: RawPriceListRow[] = []) {
+  return new GetDepartmentPriceListReportUseCase(new InMemoryDepartmentPriceListRepository(rows));
+}
+
 function makeStockController(rows: RawStockRow[] = [], authz?: AuthorizationService) {
   const repo = new InMemoryInventoryReportRepository(rows);
   const stockUC = new GetInventoryStockReportUseCase(repo);
   const payRepo = new InMemoryPaymentReportRepository([]);
   const payUC = new GetPaymentHistoryReportUseCase(payRepo);
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), authz ?? makeAuthz());
 }
 
 function makePaymentController(rows: RawPaymentRow[] = [], authz?: AuthorizationService) {
@@ -139,7 +160,7 @@ function makePaymentController(rows: RawPaymentRow[] = [], authz?: Authorization
   const payRepo = new InMemoryPaymentReportRepository(rows);
   const payUC = new GetPaymentHistoryReportUseCase(payRepo);
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), authz ?? makeAuthz());
 }
 
 function makeAccountController(
@@ -162,6 +183,7 @@ function makeAccountController(
     anticipoUC,
     emptySalesCutUseCase(),
     emptyCashCutUseCase(),
+    emptyDepartmentPriceListUseCase(),
     authz ?? makeAuthz()
   );
 }
@@ -170,14 +192,21 @@ function makeSalesCutController(sales: InMemCutSale[] = [], authz?: Authorizatio
   const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
   const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(sales), emptyCashCutUseCase(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(sales), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), authz ?? makeAuthz());
 }
 
 function makeCashCutController(payments: InMemCutPayment[] = [], authz?: AuthorizationService) {
   const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
   const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(payments), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(payments), emptyDepartmentPriceListUseCase(), authz ?? makeAuthz());
+}
+
+function makeDepartmentPriceListController(rows: RawPriceListRow[] = [], authz?: AuthorizationService) {
+  const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
+  const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
+  const acc = emptyAccountUseCases();
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(rows), authz ?? makeAuthz());
 }
 
 function req(url: string, headers: Record<string, string> = {}): NextRequest {
@@ -912,5 +941,85 @@ describe("ReportsController - getCashCutReport", () => {
     );
     const body = await res.json();
     expect(body.rows).toHaveLength(0);
+  });
+});
+
+// ─── Department Price List Report ──────────────────────────────────────────
+
+describe("ReportsController - getDepartmentPriceListReport", () => {
+  const URL = `${BASE_URL}/inventory/by-department`;
+
+  it("401 sin x-user-id", async () => {
+    const ctrl = makeDepartmentPriceListController([], makeAuthz({ userCan: async () => false }));
+    const res = await ctrl.getDepartmentPriceListReport(req(URL));
+    expect(res.status).toBe(401);
+  });
+
+  it("403 sin reports:inventory_read", async () => {
+    const authz = makeAuthz({ userCan: jest.fn().mockResolvedValue(false) });
+    const ctrl = makeDepartmentPriceListController([], authz);
+    const res = await ctrl.getDepartmentPriceListReport(req(URL, authHeaders()));
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.required).toBe("reports:inventory_read");
+  });
+
+  it("400 con departmentId UUID inválido", async () => {
+    const ctrl = makeDepartmentPriceListController();
+    const res = await ctrl.getDepartmentPriceListReport(req(`${URL}?departmentId=bad`, authHeaders()));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid departmentId" });
+  });
+
+  it("400 con ?format=csv", async () => {
+    const ctrl = makeDepartmentPriceListController();
+    const res = await ctrl.getDepartmentPriceListReport(req(`${URL}?format=csv`, authHeaders()));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid format. Allowed: json, pdf, xlsx" });
+  });
+
+  it("200 JSON con forma del DTO", async () => {
+    const ctrl = makeDepartmentPriceListController([makePriceListRow()]);
+    const res = await ctrl.getDepartmentPriceListReport(req(URL, authHeaders()));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty("departments");
+    expect(body).toHaveProperty("totals");
+    expect(body.departments[0].products[0].prices[0].name).toBe("Menudeo");
+  });
+
+  it("200 JSON filtra por departmentId", async () => {
+    const ctrl = makeDepartmentPriceListController([makePriceListRow()]);
+    const res = await ctrl.getDepartmentPriceListReport(
+      req(`${URL}?departmentId=${DEPT_ID}`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.filters.departmentId).toBe(DEPT_ID);
+    expect(body.departments).toHaveLength(1);
+  });
+
+  it("200 PDF con Content-Type y Content-Disposition correctos", async () => {
+    const ctrl = makeDepartmentPriceListController([makePriceListRow()]);
+    const res = await ctrl.getDepartmentPriceListReport(req(`${URL}?format=pdf`, authHeaders()));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("application/pdf");
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    expect(disposition).toMatch(/^attachment; filename="inventory-by-department-\d{4}-\d{2}-\d{2}\.pdf"$/);
+    const buf = Buffer.from(await res.arrayBuffer());
+    expect(buf.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  it("200 xlsx con Content-Type y Content-Disposition correctos", async () => {
+    const ctrl = makeDepartmentPriceListController([makePriceListRow()]);
+    const res = await ctrl.getDepartmentPriceListReport(req(`${URL}?format=xlsx`, authHeaders()));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    expect(disposition).toMatch(/^attachment; filename="inventory-by-department-\d{4}-\d{2}-\d{2}\.xlsx"$/);
+    const buf = Buffer.from(await res.arrayBuffer());
+    expect(buf.length).toBeGreaterThan(0);
   });
 });

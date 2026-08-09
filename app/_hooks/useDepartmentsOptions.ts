@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { authFetch } from "../../../../../_lib/authFetch";
+import { authFetch } from "../_lib/authFetch";
 
 interface DepartmentOption {
   id: string;

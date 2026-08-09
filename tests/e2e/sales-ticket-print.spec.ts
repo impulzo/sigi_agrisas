@@ -71,6 +71,12 @@ test("T2 — Vista de ticket: botón inferior 'Imprimir Ticket' y solo el ticket
   await expect(page.getByRole("link", { name: /volver al detalle/i })).not.toBeVisible();
   await expect(printBtn).not.toBeVisible();
 
+  // Nuevo contenido del ticket (secciones reordenadas)
+  const print = page.locator(".print-area");
+  await expect(print.getByText(/Vendedor:/i)).toBeVisible();
+  await expect(print.getByText(/Sucursal:/i)).toBeVisible();
+  await expect(print.getByText(/Total a pagar/i)).toBeVisible();
+
   // Volver a pantalla: tarjeta Stitch visible, ticket oculto
   await page.emulateMedia({ media: "screen" });
   await expect(page.getByRole("heading", { name: "Agrisas" })).toBeVisible();

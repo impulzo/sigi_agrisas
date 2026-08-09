@@ -6,7 +6,7 @@ import { useCurrentUser } from "../../../../_hooks/useCurrentUser";
 import { useDebounce } from "../../../../_hooks/useDebounce";
 import { useProducts } from "../_logic/hooks/useProducts";
 import { useProductMutations } from "../_logic/hooks/useProductMutations";
-import { useDepartmentsOptions } from "../_logic/hooks/useDepartmentsOptions";
+import { useDepartmentsOptions } from "../../../../_hooks/useDepartmentsOptions";
 import { useProvidersOptions } from "../../../../_hooks/useProvidersOptions";
 import { ProductsTable } from "./ProductsTable";
 import { ProductEditModal } from "./ProductEditModal";

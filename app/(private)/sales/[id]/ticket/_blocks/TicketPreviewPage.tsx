@@ -35,7 +35,7 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
+      <div className="pt-2.5 flex h-64 items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -43,16 +43,18 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
 
   if (error || !sale) {
     return (
-      <EmptyState
-        icon="warning"
-        title="No se encontró la venta"
-        description={error?.message ?? "La venta no existe o no tienes acceso."}
-        action={
-          <Link href="/sales" className="text-primary hover:underline text-body-sm">
-            Volver a ventas
-          </Link>
-        }
-      />
+      <div className="pt-2.5">
+        <EmptyState
+          icon="warning"
+          title="No se encontró la venta"
+          description={error?.message ?? "La venta no existe o no tienes acceso."}
+          action={
+            <Link href="/sales" className="text-primary hover:underline text-body-sm">
+              Volver a ventas
+            </Link>
+          }
+        />
+      </div>
     );
   }
 
@@ -63,7 +65,7 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
   const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
 
   return (
-    <div className="w-full max-w-lg mx-auto space-y-4">
+    <div className="w-full max-w-lg mx-auto space-y-4 pt-2.5">
       <Link
         href={`/sales/${sale.id}`}
         className="inline-flex items-center gap-2 text-on-surface-variant hover:text-on-surface text-body-sm"
@@ -102,20 +104,48 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
             ) : (
               <p className="text-body-sm text-on-surface-variant">Centro Agrícola Integral</p>
             )}
+            {(ticketSettings?.businessAddress || ticketSettings?.businessPhone || ticketSettings?.businessTaxRegime) && (
+              <div className="text-body-sm text-on-surface-variant whitespace-pre-wrap">
+                {ticketSettings.businessAddress && <p>{ticketSettings.businessAddress}</p>}
+                {ticketSettings.businessPhone && <p>Tel. {ticketSettings.businessPhone}</p>}
+                {ticketSettings.businessTaxRegime && <p>{ticketSettings.businessTaxRegime}</p>}
+              </div>
+            )}
           </div>
 
           {/* Transaction details */}
           <div className="grid grid-cols-2 gap-2 text-body-sm text-on-surface-variant border-b border-outline-variant pb-4">
             <div>
-              <span className="font-bold text-on-surface block">Orden:</span> {folioLabel}
+              <span className="font-bold text-on-surface block">Folio:</span> {folioLabel}
             </div>
             <div className="text-right">
               <span className="font-bold text-on-surface block">Fecha:</span> {fmtDate(sale.createdAt)}
             </div>
             <div className="col-span-2">
-              <span className="font-bold text-on-surface">Cajero:</span> {sale.cashierName ?? sale.cashierId.slice(0, 8)}
+              <span className="font-bold text-on-surface">Vendedor:</span> {sale.cashierName ?? sale.cashierId.slice(0, 8)}
+            </div>
+            <div className="col-span-2">
+              <span className="font-bold text-on-surface">Sucursal:</span> {sale.branchName ?? "—"}
             </div>
           </div>
+
+          {/* Cliente */}
+          {sale.customerId && (
+            <div className="flex flex-col gap-1 text-body-sm text-on-surface-variant border-b border-outline-variant pb-4">
+              <span className="font-bold text-on-surface">Cliente</span>
+              <div><span className="font-bold text-on-surface">RFC:</span> {sale.customerRfc ?? "—"}</div>
+              <div><span className="font-bold text-on-surface">Nombre:</span> {sale.customerName ?? "—"}</div>
+              <div><span className="font-bold text-on-surface">Dirección:</span> {sale.customerAddress ?? "—"}</div>
+            </div>
+          )}
+
+          {/* Condiciones de crédito */}
+          {sale.customerCreditDays != null && (
+            <div className="flex justify-between text-body-sm text-on-surface-variant border-b border-outline-variant pb-4">
+              <span className="font-bold text-on-surface">Condiciones</span>
+              <span>Crédito a {sale.customerCreditDays} días</span>
+            </div>
+          )}
 
           {/* Items */}
           <div className="flex flex-col gap-2 py-2">
@@ -151,7 +181,7 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
               <span>{fmt(iepsTotal)}</span>
             </div>
             <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-outline-variant text-title-md font-bold text-primary">
-              <span>Total</span>
+              <span>Total a pagar</span>
               <span>{fmt(sale.total)}</span>
             </div>
           </div>
@@ -171,6 +201,9 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
                 ¡Gracias por su compra! <br />
                 <span className="font-medium">Agricultura Sana &amp; Sustentable.</span>
               </p>
+            )}
+            {ticketSettings?.legendText && (
+              <p className="text-body-sm text-on-surface-variant whitespace-pre-wrap">{ticketSettings.legendText}</p>
             )}
             <div className="mt-1">
               <div

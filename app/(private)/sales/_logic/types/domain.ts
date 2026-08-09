@@ -22,6 +22,9 @@ export interface SaleSummary {
   branchName?: string | null;
   customerId?: string | null;
   customerName?: string | null;
+  customerRfc?: string | null;
+  customerAddress?: string | null;
+  customerCreditDays?: number | null;
   cashierId: string;
   cashierName?: string | null;
   folioId: string;

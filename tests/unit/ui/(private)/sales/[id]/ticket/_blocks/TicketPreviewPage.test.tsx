@@ -99,4 +99,67 @@ describe("TicketPreviewPage", () => {
 
     expect(screen.getByText(/no se encontró la venta/i)).toBeInTheDocument();
   });
+
+  it("etiqueta el vendedor como 'Vendedor' y no como 'Cajero'", () => {
+    mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
+    render(<TicketPreviewPage id="sale-1" />);
+
+    expect(screen.getAllByText(/Vendedor:/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Cajero:/i)).not.toBeInTheDocument();
+  });
+
+  it("usa la etiqueta 'Folio' en lugar de 'Orden'", () => {
+    mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
+    render(<TicketPreviewPage id="sale-1" />);
+
+    expect(screen.getAllByText(/Folio:/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Orden:/i)).not.toBeInTheDocument();
+  });
+
+  it("muestra sección cliente (RFC, nombre, dirección) cuando la venta tiene cliente", () => {
+    mockUseSaleDetail.mockReturnValue({
+      sale: makeSale({
+        customerId: "c1",
+        customerName: "Cliente Test",
+        customerRfc: "XAXX010101000",
+        customerAddress: "Av. Central 123, Oaxaca",
+        customerCreditDays: 30,
+      }),
+      isLoading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+    render(<TicketPreviewPage id="sale-1" />);
+
+    expect(screen.getAllByText(/RFC: XAXX010101000/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Nombre: Cliente Test/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Dirección: Av. Central 123, Oaxaca/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Crédito a 30 días").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("muestra 'Total a pagar' como etiqueta del total de la venta", () => {
+    mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
+    render(<TicketPreviewPage id="sale-1" />);
+
+    expect(screen.getAllByText("Total a pagar").length).toBeGreaterThanOrEqual(1);
+    // No hay etiqueta "Total" standalone junto al importe (el "Total" restante es la columna de la tabla de artículos)
+    const totalLabels = screen.getAllByText("Total", { exact: true }).filter((el) => el.textContent === "Total");
+    expect(totalLabels.some((el) => el.nextElementSibling?.textContent === "$100.00")).toBe(false);
+  });
+});
+
+describe("TicketPreviewPage — separación superior de 10px (sales-screens-padding)", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("aplica pt-2.5 al contenedor raíz en el estado normal", () => {
+    mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
+    const { container } = render(<TicketPreviewPage id="sale-1" />);
+    expect(container.firstElementChild!.className).toContain("pt-2.5");
+  });
+
+  it("aplica pt-2.5 en el estado de carga", () => {
+    mockUseSaleDetail.mockReturnValue({ sale: null, isLoading: true, error: null, refresh: jest.fn() });
+    const { container } = render(<TicketPreviewPage id="sale-1" />);
+    expect(container.firstElementChild!.className).toContain("pt-2.5");
+  });
 });

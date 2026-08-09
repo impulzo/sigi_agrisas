@@ -15,6 +15,10 @@ export class InMemoryTicketSettingsRepository implements TicketSettingsRepositor
       ...(data.headerText !== undefined ? { headerText: data.headerText } : {}),
       ...(data.footerText !== undefined ? { footerText: data.footerText } : {}),
       ...(data.paperWidth !== undefined ? { paperWidth: data.paperWidth } : {}),
+      ...(data.businessAddress !== undefined ? { businessAddress: data.businessAddress } : {}),
+      ...(data.businessPhone !== undefined ? { businessPhone: data.businessPhone } : {}),
+      ...(data.businessTaxRegime !== undefined ? { businessTaxRegime: data.businessTaxRegime } : {}),
+      ...(data.legendText !== undefined ? { legendText: data.legendText } : {}),
     };
     return this.row;
   }

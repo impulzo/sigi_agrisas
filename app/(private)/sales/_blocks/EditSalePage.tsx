@@ -156,7 +156,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
 
   if (saleLoading || hqLoading || canEditCompleted === "loading") {
     return (
-      <div className="flex h-64 items-center justify-center">
+      <div className="pt-2.5 flex h-64 items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -164,22 +164,26 @@ export function EditSalePage({ id }: EditSalePageProps) {
 
   if (!sale) {
     return (
-      <EmptyState icon="warning" title="Venta no encontrada" />
+      <div className="pt-2.5">
+        <EmptyState icon="warning" title="Venta no encontrada" />
+      </div>
     );
   }
 
   if (sale.status === "cancelled") {
     return (
-      <EmptyState
-        icon="block"
-        title="Venta cancelada"
-        description="No se puede editar una venta cancelada."
-        action={
-          <Link href={`/sales/${id}`} className="text-primary hover:underline text-body-sm">
-            Volver al detalle
-          </Link>
-        }
-      />
+      <div className="pt-2.5">
+        <EmptyState
+          icon="block"
+          title="Venta cancelada"
+          description="No se puede editar una venta cancelada."
+          action={
+            <Link href={`/sales/${id}`} className="text-primary hover:underline text-body-sm">
+              Volver al detalle
+            </Link>
+          }
+        />
+      </div>
     );
   }
 
@@ -188,7 +192,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
     : String(sale.folioNumber);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col h-[calc(100vh-64px)] pt-2.5">
       {/* Edit warning band */}
       <div className="bg-tertiary-container text-on-tertiary-container px-4 py-2 text-body-sm flex items-center gap-2">
         <Icon name="edit" size={16} />

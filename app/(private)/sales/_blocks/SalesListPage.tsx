@@ -64,7 +64,7 @@ export function SalesListPage() {
 
   if (canRead === "loading") {
     return (
-      <div className="flex h-64 items-center justify-center">
+      <div className="pt-2.5 flex h-64 items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -72,55 +72,61 @@ export function SalesListPage() {
 
   if (canRead === false) {
     return (
-      <EmptyState
-        icon="block"
-        title="Sin acceso"
-        description="No tienes permiso para ver ventas."
-      />
+      <div className="pt-2.5">
+        <EmptyState
+          icon="block"
+          title="Sin acceso"
+          description="No tienes permiso para ver ventas."
+        />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <EmptyState
-        icon="warning"
-        title="Error al cargar ventas"
-        description={error.message}
-      />
+      <div className="pt-2.5">
+        <EmptyState
+          icon="warning"
+          title="Error al cargar ventas"
+          description={error.message}
+        />
+      </div>
     );
   }
 
   return (
-    <CatalogShell
-      title="Ventas"
-      description="Historial de ventas emitidas"
-      toolbar={
-        <SalesToolbar
-          search={searchInput}
-          onSearchChange={handleSearch}
-          branchId={branchId}
-          onBranchChange={(v) => { setBranchId(v); setPage(1); }}
-          branches={branches}
-          showBranchFilter={isBypass === true}
-          statusFilter={statusFilter}
-          onStatusChange={(v) => { setStatusFilter(v); setPage(1); }}
-          from={from}
-          to={to}
-          onFromChange={(v) => { setFrom(v); setPage(1); }}
-          onToChange={(v) => { setTo(v); setPage(1); }}
-          onReset={handleReset}
+    <div className="pt-2.5">
+      <CatalogShell
+        title="Ventas"
+        description="Historial de ventas emitidas"
+        toolbar={
+          <SalesToolbar
+            search={searchInput}
+            onSearchChange={handleSearch}
+            branchId={branchId}
+            onBranchChange={(v) => { setBranchId(v); setPage(1); }}
+            branches={branches}
+            showBranchFilter={isBypass === true}
+            statusFilter={statusFilter}
+            onStatusChange={(v) => { setStatusFilter(v); setPage(1); }}
+            from={from}
+            to={to}
+            onFromChange={(v) => { setFrom(v); setPage(1); }}
+            onToChange={(v) => { setTo(v); setPage(1); }}
+            onReset={handleReset}
+          />
+        }
+      >
+        <SalesTable items={items} isLoading={isLoading} onEnter={(sale) => router.push(`/sales/${sale.id}`)} />
+        <CatalogPagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          count={items.length}
+          onPageChange={setPage}
+          onPageSizeChange={(ps) => { setPageSize(ps); setPage(1); }}
         />
-      }
-    >
-      <SalesTable items={items} isLoading={isLoading} onEnter={(sale) => router.push(`/sales/${sale.id}`)} />
-      <CatalogPagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        count={items.length}
-        onPageChange={setPage}
-        onPageSizeChange={(ps) => { setPageSize(ps); setPage(1); }}
-      />
-    </CatalogShell>
+      </CatalogShell>
+    </div>
   );
 }

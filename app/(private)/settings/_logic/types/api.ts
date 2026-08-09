@@ -5,12 +5,20 @@ export interface TicketSettingsDto {
   headerText: string | null;
   footerText: string | null;
   paperWidth: PaperWidthDto;
+  businessAddress: string | null;
+  businessPhone: string | null;
+  businessTaxRegime: string | null;
+  legendText: string | null;
 }
 
 export interface UpdateTicketSettingsBody {
   headerText?: string | null;
   footerText?: string | null;
   paperWidth?: PaperWidthDto;
+  businessAddress?: string | null;
+  businessPhone?: string | null;
+  businessTaxRegime?: string | null;
+  legendText?: string | null;
 }
 
 export interface PricingSettingsDto {
