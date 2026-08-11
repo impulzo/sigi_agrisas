@@ -30,9 +30,12 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
         }
       `}</style>
 
-      {ticketSettings?.logoUrl && (
+      {ticketSettings?.logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={ticketSettings.logoUrl} alt="Logo" />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo.png" alt="Logo" />
       )}
       <p style={{ textAlign: "center", fontWeight: "bold", fontSize: "12px", margin: "2px 0" }}>Agrisas</p>
       {ticketSettings?.headerText && (

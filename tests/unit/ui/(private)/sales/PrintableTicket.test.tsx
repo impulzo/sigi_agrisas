@@ -52,11 +52,11 @@ const sale: SaleDetail = {
 };
 
 describe("PrintableTicket", () => {
-  it("omits the logo section when logoUrl is null", () => {
+  it("falls back to the embedded Agrisas logo when logoUrl is null", () => {
     const settings: TicketSettingsDto = { logoUrl: null, headerText: "Encabezado", footerText: "Pie", paperWidth: "80mm" };
     render(<PrintableTicket sale={sale} ticketSettings={settings} />);
 
-    expect(screen.queryByAltText("Logo")).not.toBeInTheDocument();
+    expect(screen.getByAltText("Logo")).toHaveAttribute("src", "/logo.png");
     expect(screen.getByText("Encabezado")).toBeInTheDocument();
   });
 
@@ -75,11 +75,11 @@ describe("PrintableTicket", () => {
     expect(screen.getByText("PACKHARD 1 L")).toBeInTheDocument();
   });
 
-  it("does not crash and falls back to 80mm when ticketSettings is null", () => {
+  it("does not crash and falls back to 80mm and embedded logo when ticketSettings is null", () => {
     render(<PrintableTicket sale={sale} ticketSettings={null} />);
 
     expect(screen.getByText(/folio: tk-42/i)).toBeInTheDocument();
-    expect(screen.queryByAltText("Logo")).not.toBeInTheDocument();
+    expect(screen.getByAltText("Logo")).toHaveAttribute("src", "/logo.png");
   });
 
   it("shows IVA and IEPS as separate lines, always visible even when IEPS is $0", () => {
