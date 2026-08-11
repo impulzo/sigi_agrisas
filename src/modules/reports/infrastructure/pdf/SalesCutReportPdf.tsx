@@ -4,6 +4,7 @@ import {
   SalesCutReportResponseDto,
   SalesCutBreakdownRowDto,
   SalesCutProductBreakdownRowDto,
+  SaleListRowDto,
 } from "../../application/dto/SalesCutReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
 
@@ -65,6 +66,34 @@ function ProductBreakdownBlock({ title, rows }: { title: string; rows: SalesCutP
               <Text style={s.cellNarrow}>{r.subtotal}</Text>
               <Text style={s.cellNarrow}>{r.taxTotal}</Text>
               <Text style={s.cellNarrow}>{r.total}</Text>
+            </View>
+          ))}
+        </>
+      )}
+    </View>
+  );
+}
+
+function SalesListBlock({ rows }: { rows: SaleListRowDto[] }) {
+  return (
+    <View style={s.section}>
+      <Text style={s.departmentTitle}>Detalle de tickets</Text>
+      {rows.length === 0 ? (
+        <Text style={s.emptyMessage}>Sin ventas</Text>
+      ) : (
+        <>
+          <View style={s.tableHeader}>
+            <Text style={s.cell}>Ticket</Text>
+            <Text style={s.cellWide}>Cliente</Text>
+            <Text style={s.cellNarrow}>Importe</Text>
+            <Text style={s.cell}>Forma de pago</Text>
+          </View>
+          {rows.map((r, i) => (
+            <View key={r.saleId} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+              <Text style={s.cell}>{r.folioCode}</Text>
+              <Text style={s.cellWide}>{r.customerName ?? "—"}</Text>
+              <Text style={s.cellNarrow}>{r.total}</Text>
+              <Text style={s.cell}>{r.paymentMethodName}</Text>
             </View>
           ))}
         </>
@@ -137,6 +166,7 @@ export function SalesCutReportPdf({ data }: { data: SalesCutReportResponseDto })
         <BreakdownBlock title="Por sucursal" rows={data.byBranch} />
         <BreakdownBlock title="Por departamento" rows={data.byDepartment} />
         <ProductBreakdownBlock title="Por producto" rows={data.byProduct} />
+        <SalesListBlock rows={data.salesList} />
 
         <View style={s.footer} fixed>
           <Text>{data.generatedBy.email}</Text>

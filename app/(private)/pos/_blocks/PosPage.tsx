@@ -266,16 +266,18 @@ export function PosPage() {
 
   if (canCreate === false && canQuote === false) {
     return (
-      <EmptyState
-        icon="block"
-        title="Sin acceso"
-        description="No tienes permiso para emitir ventas ni cotizaciones."
-      />
+      <div>
+        <EmptyState
+          icon="block"
+          title="Sin acceso"
+          description="No tienes permiso para emitir ventas ni cotizaciones."
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col h-[calc(100vh-74px)]">
       {/* Accessible live region for screen readers */}
       <div
         ref={liveRegionRef}

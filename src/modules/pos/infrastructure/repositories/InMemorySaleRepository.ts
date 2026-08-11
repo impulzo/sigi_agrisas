@@ -23,7 +23,7 @@ function makeItemId(): string {
 }
 
 function emptyJoined() {
-  return { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodName: null, paymentMethodIsCredit: false };
+  return { branchName: null, customerName: null, customerRfc: null, customerAddress: null, customerCreditDays: null, cashierName: null, paymentMethodCode: null, paymentMethodName: null, paymentMethodIsCredit: false };
 }
 
 /**

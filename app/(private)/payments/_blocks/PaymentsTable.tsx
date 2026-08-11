@@ -47,6 +47,8 @@ export function PaymentsTable({ items, isLoading, showBranch, onEnter }: Payment
             <th className="px-4 py-3 text-left font-medium">Método</th>
             {showBranch && <th className="px-4 py-3 text-left font-medium">Sucursal</th>}
             <th className="px-4 py-3 text-right font-medium">Monto</th>
+            <th className="px-4 py-3 text-right font-medium">Monto total</th>
+            <th className="px-4 py-3 text-right font-medium">Saldo pendiente</th>
             <th className="px-4 py-3 text-left font-medium">Fecha</th>
             <th className="px-4 py-3 text-left font-medium">Estado</th>
             <th className="px-4 py-3 text-left font-medium">Acción</th>
@@ -82,9 +84,11 @@ export function PaymentsTable({ items, isLoading, showBranch, onEnter }: Payment
                   <td className="px-4 py-3 text-on-surface-variant">{p.branchName ?? "—"}</td>
                 )}
                 <td className="px-4 py-3 text-right tabular-nums font-medium">{fmt(p.amount)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-on-surface-variant">{fmt(p.saleTotal)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-on-surface-variant">{fmt(p.saleDueAmount)}</td>
                 <td className="px-4 py-3 text-on-surface-variant tabular-nums">{fmtDate(p.createdAt)}</td>
                 <td className="px-4 py-3">
-                  <PaymentStatusBadge status={p.status} />
+                  <PaymentStatusBadge status={p.status} salePaymentStatus={p.salePaymentStatus} />
                 </td>
                 <td className="px-4 py-3">
                   <Link

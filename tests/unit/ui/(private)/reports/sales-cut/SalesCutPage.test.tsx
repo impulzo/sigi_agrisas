@@ -54,13 +54,18 @@ describe("SalesCutPage — desgloses por departamento y producto", () => {
         byBranch: [row("Matriz")],
         byDepartment: [row("FERTILIZANTES")],
         byProduct: [row("Fertilizante (F1)", { quantitySold: "4.0000" })],
+        salesList: [
+          { saleId: "sale-1", folioCode: "TK-000001", customerName: "Cliente Uno", total: "116.0000", paymentMethodName: "Efectivo" },
+        ],
       },
       isLoading: false,
       error: null,
       isExporting: false,
+      isExportingXlsx: false,
       exportError: null,
       refresh: jest.fn(),
       exportPdf: jest.fn(),
+      exportXlsx: jest.fn(),
     });
 
     render(<SalesCutPage />);

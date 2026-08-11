@@ -37,6 +37,10 @@ export interface Payment {
   createdAt: Date;
   updatedAt: Date;
   items?: PaymentItem[];
+  saleTotal: number;
+  salePaidAmount: number;
+  salePaymentStatus: SalePaymentStatus;
+  saleDueAmount: number;
 }
 
 export interface PaymentDetail extends Payment {

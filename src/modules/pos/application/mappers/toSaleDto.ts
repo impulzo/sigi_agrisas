@@ -7,6 +7,8 @@ export interface SaleJoinedFields {
   branchName: string | null;
   customerName: string | null;
   customerRfc: string | null;
+  customerAddress: string | null;
+  customerCreditDays: number | null;
   cashierName: string | null;
   paymentMethodCode: string | null;
   paymentMethodName: string | null;
@@ -45,6 +47,8 @@ export function toSaleDto(s: Sale, joined: SaleJoinedFields): SaleDto {
     customerId: s.customerId,
     customerName: joined.customerName,
     customerRfc: joined.customerRfc,
+    customerAddress: joined.customerAddress,
+    customerCreditDays: joined.customerCreditDays,
     cashierId: s.cashierId,
     cashierName: joined.cashierName,
     paymentMethodId: s.paymentMethodId,

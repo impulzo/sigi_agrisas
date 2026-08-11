@@ -26,6 +26,7 @@ function agg(over: Partial<SalesCutAggregates> = {}): SalesCutAggregates {
     byProduct: [],
     paymentsReceived: { count: 2, total: 300 },
     returnsRefunded: { count: 1, total: 120 },
+    salesList: [],
     ...over,
   };
 }

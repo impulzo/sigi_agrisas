@@ -26,6 +26,7 @@ jest.mock("@/modules/payments/infrastructure/pdf/PaymentHistoryPdf", () => ({
 }));
 
 import { NextRequest } from "next/server";
+import * as XLSX from "xlsx";
 import { PaymentsController } from "@/modules/payments/infrastructure/http/PaymentsController";
 import { InMemoryPaymentRepository } from "@/modules/payments/infrastructure/repositories/InMemoryPaymentRepository";
 import { RegisterPaymentUseCase } from "@/modules/payments/application/use-cases/RegisterPaymentUseCase";
@@ -418,6 +419,20 @@ describe("PaymentsController — list (GET /payments)", () => {
     expect(body.pageSize).toBe(20);
   });
 
+  it("returns sale breakdown fields on each item (Historia #1)", async () => {
+    const repo = makeRepo();
+    const controller = buildController({ bypass: true, repo });
+    await controller.register(postReq("/payments", validRegisterBody));
+
+    const res = await controller.list(getReq("/payments", { "x-user-branch-id": "" }));
+    const body = await res.json();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].saleTotal).toBe("1000.0000");
+    expect(body.items[0].salePaidAmount).toBe("300.0000");
+    expect(body.items[0].saleDueAmount).toBe("700.0000");
+    expect(body.items[0].salePaymentStatus).toBe("partial");
+  });
+
   it("returns 403 when user lacks payments:read", async () => {
     const res = await buildController({ bypass: false }).list(getReq("/payments"));
     expect(res.status).toBe(403);
@@ -465,6 +480,10 @@ describe("PaymentsController — getById (GET /payments/:id)", () => {
     const body = await res.json();
     expect(body.id).toBe(id);
     expect(body.sale).toBeDefined();
+    expect(body.saleTotal).toBe("1000.0000");
+    expect(body.salePaidAmount).toBe("300.0000");
+    expect(body.saleDueAmount).toBe("700.0000");
+    expect(body.salePaymentStatus).toBe("partial");
   });
 
   it("returns 400 when id is not a UUID", async () => {
@@ -537,6 +556,67 @@ describe("PaymentsController — history (GET /payments/history)", () => {
     expect(body.totals).toBeDefined();
     expect(body.totals.completedCount).toBe(1);
     expect(body.totals.totalAmountCompleted).toBe("300.0000");
+  });
+
+  it("returns each item with sale breakdown fields (Historia #1)", async () => {
+    const repo = makeRepo();
+    const controller = buildController({ bypass: true, repo });
+    await controller.register(postReq("/payments", validRegisterBody));
+
+    const res = await controller.history(getReq("/payments/history", { "x-user-branch-id": "", "x-user-email": "admin@test.com" }));
+    const body = await res.json();
+    expect(body.items[0].saleTotal).toBe("1000.0000");
+    expect(body.items[0].salePaidAmount).toBe("300.0000");
+    expect(body.items[0].saleDueAmount).toBe("700.0000");
+    expect(body.items[0].salePaymentStatus).toBe("partial");
+  });
+
+  it("returns 200 with a valid xlsx workbook grouped by ticket (Historia #2)", async () => {
+    const repo = makeRepo();
+    const controller = buildController({ bypass: true, repo });
+    await controller.register(postReq("/payments", validRegisterBody));
+    await controller.register(postReq("/payments", { ...validRegisterBody, amount: 200 }));
+
+    const res = await controller.history(
+      getReq("/payments/history?format=xlsx", { "x-user-branch-id": "", "x-user-email": "admin@test.com" })
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    expect(res.headers.get("Content-Disposition")).toContain(".xlsx");
+
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    expect(workbook.SheetNames).toContain("Historial de abonos");
+    const sheet = workbook.Sheets["Historial de abonos"];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
+    const flat = rows.flat().join(" ");
+    expect(flat).toContain("VNT-000001");
+    expect(flat).toContain("Total registros");
+  });
+
+  it("returns 409 ReportTooLarge when xlsx mode exceeds limit", async () => {
+    const repo = new InMemoryPaymentRepository();
+    const mockRepo = {
+      ...repo,
+      findHistory: jest.fn().mockResolvedValue({
+        items: [],
+        total: 10001,
+        totalAmountCompleted: 0,
+        totalAmountCancelled: 0,
+        completedCount: 10001,
+        cancelledCount: 0,
+      }),
+    } as unknown as InMemoryPaymentRepository;
+
+    const controller = buildController({ bypass: true, repo: mockRepo });
+    const res = await controller.history(
+      getReq("/payments/history?format=xlsx", { "x-user-branch-id": "" })
+    );
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("ReportTooLarge");
   });
 
   it("returns 403 when user lacks payments:report_read", async () => {

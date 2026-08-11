@@ -1,0 +1,78 @@
+import React from "react";
+import { Document, Page, Text, View } from "@react-pdf/renderer";
+import { PurchasesReportResponseDto } from "../../application/dto/PurchasesReportResponseDto";
+import { pdfStyles as s } from "./pdfStyles";
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString("es-MX", { timeZone: "UTC" });
+}
+
+export function PurchasesReportPdf({ data }: { data: PurchasesReportResponseDto }) {
+  return (
+    <Document>
+      <Page size="A4" orientation="landscape" style={s.page}>
+        <View style={s.header} fixed>
+          <Text style={s.headerTitle}>Reporte de Compras</Text>
+          <Text style={s.headerMeta}>
+            Generado: {formatDate(data.generatedAt)} | Por: {data.generatedBy.email}
+          </Text>
+          <Text style={s.headerMeta}>
+            Filtros: sucursal={data.filters.branchId ?? "todas"} | proveedor={data.filters.providerId ?? "todos"} |
+            estado={data.filters.status ?? "todos"}
+            {data.filters.from ? ` | desde=${data.filters.from}` : ""}
+            {data.filters.to ? ` | hasta=${data.filters.to}` : ""}
+          </Text>
+        </View>
+
+        {data.rows.length === 0 ? (
+          <Text style={s.emptyMessage}>Sin compras para los filtros aplicados</Text>
+        ) : (
+          <View style={s.section}>
+            <View style={s.tableHeader}>
+              <Text style={s.cell}>Folio</Text>
+              <Text style={s.cellWide}>Proveedor</Text>
+              <Text style={s.cell}>Sucursal</Text>
+              <Text style={s.cellNarrow}>Subtotal</Text>
+              <Text style={s.cellNarrow}>Impuestos</Text>
+              <Text style={s.cellNarrow}>Total</Text>
+              <Text style={s.cellNarrow}>Pagado</Text>
+              <Text style={s.cell}>Estado pago</Text>
+              <Text style={s.cell}>Estado</Text>
+              <Text style={s.cell}>Fecha</Text>
+            </View>
+            {data.rows.map((r, i) => (
+              <View key={r.id} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+                <Text style={s.cell}>{r.folioCode}</Text>
+                <Text style={s.cellWide}>{r.providerName ?? "—"}</Text>
+                <Text style={s.cell}>{r.branchName ?? "—"}</Text>
+                <Text style={s.cellNarrow}>{r.subtotal}</Text>
+                <Text style={s.cellNarrow}>{r.taxTotal}</Text>
+                <Text style={s.cellNarrow}>{r.total}</Text>
+                <Text style={s.cellNarrow}>{r.paidAmount}</Text>
+                <Text style={[s.cell, r.paymentStatus === "pending" ? s.badge : {}]}>{r.paymentStatus}</Text>
+                <Text style={[s.cell, r.status === "cancelled" ? s.badge : {}]}>{r.status}</Text>
+                <Text style={s.cell}>{formatDate(r.purchasedAt)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <View style={s.totals}>
+          <View style={s.totalsRow}>
+            <Text style={s.totalsLabel}>Compras</Text>
+            <Text style={s.totalsValue}>{data.totals.count}</Text>
+          </View>
+          <View style={s.totalsRow}>
+            <Text style={s.totalsLabel}>Total</Text>
+            <Text style={s.totalsValue}>{data.totals.total}</Text>
+          </View>
+        </View>
+
+        <View style={s.footer} fixed>
+          <Text>{data.generatedBy.email}</Text>
+          <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
+        </View>
+      </Page>
+    </Document>
+  );
+}

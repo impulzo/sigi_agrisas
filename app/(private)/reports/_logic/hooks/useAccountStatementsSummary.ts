@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   getAccountStatementsSummary,
   downloadAccountStatementSummaryPdf,
+  downloadAccountStatementSummaryXlsx,
 } from "../services";
 import type { AccountStatementSummaryDto } from "../types/api";
 import type { AccountStatementsSummaryFilters } from "../types/domain";
@@ -13,8 +14,21 @@ interface Result {
   isLoading: boolean;
   error: Error | null;
   isExporting: boolean;
+  isExportingXlsx: boolean;
   refresh: () => void;
   exportPdf: () => Promise<void>;
+  exportXlsx: () => Promise<void>;
+}
+
+function triggerDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export function useAccountStatementsSummary(
@@ -24,6 +38,7 @@ export function useAccountStatementsSummary(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingXlsx, setIsExportingXlsx] = useState(false);
   const [tick, setTick] = useState(0);
 
   const { branchId, search, from, to, onlyWithBalance, page = 1, pageSize = 20 } = filters;
@@ -58,19 +73,25 @@ export function useAccountStatementsSummary(
       const blob = await downloadAccountStatementSummaryPdf({
         branchId, search, from, to, onlyWithBalance,
       });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
       const today = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `account-statements-${today}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      triggerDownload(blob, `account-statements-${today}.pdf`);
     } finally {
       setIsExporting(false);
     }
   }, [branchId, search, from, to, onlyWithBalance]);
 
-  return { report, isLoading, error, isExporting, refresh, exportPdf };
+  const exportXlsx = useCallback(async () => {
+    setIsExportingXlsx(true);
+    try {
+      const blob = await downloadAccountStatementSummaryXlsx({
+        branchId, search, from, to, onlyWithBalance,
+      });
+      const today = new Date().toISOString().slice(0, 10);
+      triggerDownload(blob, `account-statements-${today}.xlsx`);
+    } finally {
+      setIsExportingXlsx(false);
+    }
+  }, [branchId, search, from, to, onlyWithBalance]);
+
+  return { report, isLoading, error, isExporting, isExportingXlsx, refresh, exportPdf, exportXlsx };
 }

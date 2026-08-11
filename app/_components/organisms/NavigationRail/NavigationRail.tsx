@@ -152,7 +152,7 @@ export function NavigationRail() {
     <aside className="fixed left-0 top-0 h-screen w-[80px] bg-surface-container-low border-r border-outline-variant flex flex-col items-center z-50 shadow-sm">
       {/* Header: logo, fixed */}
       <div className="relative flex-shrink-0 w-12 h-12 my-6">
-        <Image src="/logo.png" alt="Agrisas" fill className="object-contain" priority />
+        <Image src="/logo.png" alt="Agrisas" fill sizes="48px" className="object-contain" priority />
       </div>
 
       {/* Scrollable section: primary + secondary items */}

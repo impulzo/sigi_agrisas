@@ -5,13 +5,19 @@ import Link from "next/link";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { usePaymentsHistory } from "../_logic/hooks/usePaymentsHistory";
 import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
+import { useCashiersOptions } from "../_logic/hooks/useCashiersOptions";
+import { usePaymentMethodsOptions } from "../../../_hooks/usePaymentMethodsOptions";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
 import { PaymentStatusBadge } from "./PaymentStatusBadge";
 import { PaymentsHistoryToolbar } from "./PaymentsHistoryToolbar";
+import { GroupedPaymentsTable } from "./GroupedPaymentsTable";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
+import { SegmentedButton } from "../../../_components/molecules/SegmentedButton/SegmentedButton";
+import { groupPaymentsBySale } from "../_logic/lib/groupPaymentsBySale";
 import type { PaymentStatus } from "../_logic/types/domain";
+import type { PaymentHistoryRowDto } from "../_logic/types/api";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
 function fmt(n: number) { return MX.format(n); }
@@ -25,6 +31,9 @@ export function PaymentsHistoryPage() {
   const isBypass = can("branches:access_all");
   const { options: branchOptions } = useBranchesOptions();
   const branches = branchOptions.map((b) => ({ id: b.id, name: b.name }));
+  const { options: cashiers } = useCashiersOptions();
+  const { options: paymentMethodOptions } = usePaymentMethodsOptions();
+  const paymentMethods = paymentMethodOptions.map((m) => ({ id: m.id, name: m.name }));
 
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
@@ -37,8 +46,9 @@ export function PaymentsHistoryPage() {
   const [to, setTo] = useState("");
   const [branchId, setBranchId] = useState("");
   const [toastError, setToastError] = useState<string | null>(null);
+  const [view, setView] = useState<"flat" | "grouped">("flat");
 
-  const { report, isLoading, error, isExporting, exportPdf } = usePaymentsHistory({
+  const { report, isLoading, error, isExporting, exportPdf, exportXlsx } = usePaymentsHistory({
     page,
     pageSize,
     userId: userId || undefined,
@@ -55,6 +65,17 @@ export function PaymentsHistoryPage() {
     setToastError(null);
     try {
       await exportPdf();
+    } catch (err) {
+      if (err instanceof Error) {
+        setToastError(err.message);
+      }
+    }
+  }
+
+  async function handleExportXlsx() {
+    setToastError(null);
+    try {
+      await exportXlsx();
     } catch (err) {
       if (err instanceof Error) {
         setToastError(err.message);
@@ -104,12 +125,14 @@ export function PaymentsHistoryPage() {
       <PaymentsHistoryToolbar
         userId={userId}
         onUserIdChange={(v) => { setUserId(v); setPage(1); }}
+        cashiers={cashiers}
         customerId={customerId}
         onCustomerIdChange={(v) => { setCustomerId(v); setPage(1); }}
         productId={productId}
         onProductIdChange={(v) => { setProductId(v); setPage(1); }}
         paymentMethodId={paymentMethodId}
         onPaymentMethodIdChange={(v) => { setPaymentMethodId(v); setPage(1); }}
+        paymentMethods={paymentMethods}
         status={status}
         onStatusChange={(v) => { setStatus(v); setPage(1); }}
         from={from}
@@ -121,6 +144,7 @@ export function PaymentsHistoryPage() {
         branches={branches}
         isExporting={isExporting}
         onExportPdf={handleExportPdf}
+        onExportXlsx={handleExportXlsx}
         onReset={handleReset}
       />
 
@@ -134,7 +158,7 @@ export function PaymentsHistoryPage() {
         <div className="flex h-40 items-center justify-center">
           <Spinner size="lg" />
         </div>
-      ) : !report || report.items.length === 0 ? (
+      ) : !report ? (
         <EmptyState
           icon="payments"
           title="Sin resultados"
@@ -142,6 +166,64 @@ export function PaymentsHistoryPage() {
         />
       ) : (
         <>
+          {report.items.length === 0 ? (
+            <EmptyState
+              icon="payments"
+              title="Sin resultados"
+              description="No se encontraron abonos con los filtros seleccionados."
+            />
+          ) : (
+            <>
+          <div className="flex justify-end px-1">
+            <SegmentedButton
+              value={view}
+              options={[
+                { value: "flat", label: "Vista plana" },
+                { value: "grouped", label: "Vista agrupada" },
+              ]}
+              onChange={setView}
+              aria-label="Vista"
+            />
+          </div>
+
+          {view === "grouped" ? (
+            <div className="rounded-2xl border border-outline-variant bg-surface-container-low overflow-hidden">
+              <GroupedPaymentsTable<PaymentHistoryRowDto>
+                groups={groupPaymentsBySale(report.items)}
+                isLoading={isLoading}
+                columnCount={isBypass === true ? 6 : 5}
+                headerRow={
+                  <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
+                    <th className="px-4 py-3 text-left font-medium">Folio recibo</th>
+                    <th className="px-4 py-3 text-left font-medium">Cobrador</th>
+                    <th className="px-4 py-3 text-left font-medium">Método</th>
+                    {isBypass === true && <th className="px-4 py-3 text-left font-medium">Sucursal</th>}
+                    <th className="px-4 py-3 text-right font-medium">Monto</th>
+                    <th className="px-4 py-3 text-left font-medium">Fecha</th>
+                    <th className="px-4 py-3 text-left font-medium">Estado</th>
+                  </tr>
+                }
+                renderPaymentRow={(p) => {
+                  const folioLabel = p.folioCode ?? "—";
+                  return (
+                    <tr key={p.id} className="border-b border-outline-variant/40 hover:bg-surface-container-low/60 transition-colors">
+                      <td className="px-4 py-3 font-mono text-on-surface-variant">{folioLabel}</td>
+                      <td className="px-4 py-3 max-w-[140px] truncate text-on-surface-variant">{p.userName ?? "—"}</td>
+                      <td className="px-4 py-3 text-on-surface-variant">{p.paymentMethodCode ?? "—"}</td>
+                      {isBypass === true && (
+                        <td className="px-4 py-3 text-on-surface-variant">{p.branchName ?? "—"}</td>
+                      )}
+                      <td className="px-4 py-3 text-right tabular-nums font-medium">{fmt(Number(p.amount))}</td>
+                      <td className="px-4 py-3 text-on-surface-variant tabular-nums">{fmtDate(p.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <PaymentStatusBadge status={p.status} salePaymentStatus={p.salePaymentStatus} />
+                      </td>
+                    </tr>
+                  );
+                }}
+              />
+            </div>
+          ) : (
           <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-low">
             <table className="w-full text-body-sm">
               <thead>
@@ -153,15 +235,15 @@ export function PaymentsHistoryPage() {
                   <th className="px-4 py-3 text-left font-medium">Método</th>
                   {isBypass === true && <th className="px-4 py-3 text-left font-medium">Sucursal</th>}
                   <th className="px-4 py-3 text-right font-medium">Monto</th>
+                  <th className="px-4 py-3 text-right font-medium">Monto total</th>
+                  <th className="px-4 py-3 text-right font-medium">Saldo pendiente</th>
                   <th className="px-4 py-3 text-left font-medium">Fecha</th>
                   <th className="px-4 py-3 text-left font-medium">Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {report.items.map((p) => {
-                  const folioLabel = p.folioPrefix
-                    ? `${p.folioPrefix}${p.folioNumber}`
-                    : String(p.folioNumber);
+                  const folioLabel = p.folioCode ?? "—";
                   return (
                     <tr key={p.id} className="border-b border-outline-variant/40 hover:bg-surface-container-low/60 transition-colors">
                       <td className="px-4 py-3 font-mono text-on-surface-variant">{folioLabel}</td>
@@ -174,42 +256,48 @@ export function PaymentsHistoryPage() {
                       </td>
                       <td className="px-4 py-3 max-w-[140px] truncate text-on-surface-variant">{p.customerName ?? "—"}</td>
                       <td className="px-4 py-3 max-w-[140px] truncate text-on-surface-variant">{p.userName ?? "—"}</td>
-                      <td className="px-4 py-3 text-on-surface-variant">{p.paymentMethodName ?? "—"}</td>
+                      <td className="px-4 py-3 text-on-surface-variant">{p.paymentMethodCode ?? "—"}</td>
                       {isBypass === true && (
                         <td className="px-4 py-3 text-on-surface-variant">{p.branchName ?? "—"}</td>
                       )}
                       <td className="px-4 py-3 text-right tabular-nums font-medium">{fmt(Number(p.amount))}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-on-surface-variant">{fmt(Number(p.saleTotal))}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-on-surface-variant">{fmt(Number(p.saleDueAmount))}</td>
                       <td className="px-4 py-3 text-on-surface-variant tabular-nums">{fmtDate(p.createdAt)}</td>
                       <td className="px-4 py-3">
-                        <PaymentStatusBadge status={p.status} />
+                        <PaymentStatusBadge status={p.status} salePaymentStatus={p.salePaymentStatus} />
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-outline-variant bg-surface-container font-medium">
-                  <td colSpan={isBypass === true ? 6 : 5} className="px-4 py-3 text-label-sm text-on-surface-variant">
-                    Totales — {report.completedCount} completados / {report.cancelledCount} cancelados
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    <div className="text-green-700">{fmt(Number(report.totalAmountCompleted))}</div>
-                    <div className="text-on-surface-variant text-label-sm">{fmt(Number(report.totalAmountCancelled))} canc.</div>
-                  </td>
-                  <td colSpan={2} />
-                </tr>
-              </tfoot>
             </table>
           </div>
+          )}
+            </>
+          )}
 
-          <CatalogPagination
-            page={page}
-            pageSize={pageSize}
-            total={report.total}
-            count={report.items.length}
-            onPageChange={setPage}
-            onPageSizeChange={() => {}}
-          />
+          <div className="rounded-2xl border border-outline-variant bg-surface-container px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-label-sm text-on-surface-variant font-medium">
+            <span>
+              Total registros: {report.totals.rowCount} — {report.totals.completedCount} completados / {report.totals.cancelledCount} cancelados
+            </span>
+            <span className="tabular-nums">
+              <span className="text-green-700">{fmt(Number(report.totals.totalAmountCompleted))}</span>
+              {" · "}
+              <span>{fmt(Number(report.totals.totalAmountCancelled))} canc.</span>
+            </span>
+          </div>
+
+          {report.items.length > 0 && (
+            <CatalogPagination
+              page={page}
+              pageSize={pageSize}
+              total={report.total}
+              count={report.items.length}
+              onPageChange={setPage}
+              onPageSizeChange={() => {}}
+            />
+          )}
         </>
       )}
 

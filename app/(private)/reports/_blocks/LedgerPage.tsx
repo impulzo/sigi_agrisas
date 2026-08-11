@@ -10,6 +10,7 @@ import { LedgerControls } from "./LedgerControls";
 import { LedgerHeader } from "./LedgerHeader";
 import { LedgerTable } from "./LedgerTable";
 import { ExportPdfButton } from "./ExportPdfButton";
+import { ExportXlsxButton } from "./ExportXlsxButton";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
@@ -27,7 +28,7 @@ export function LedgerPage({ customerId }: { customerId: string }) {
   const [toastError, setToastError] = useState<string | null>(null);
 
   const applyRange = mode === "range";
-  const { ledger, isLoading, error, isExporting, exportPdf, printAnticipo } =
+  const { ledger, isLoading, error, isExporting, isExportingXlsx, exportPdf, exportXlsx, printAnticipo } =
     useAccountStatementLedger(customerId, {
       from: applyRange && from ? from : undefined,
       to: applyRange && to ? to : undefined,
@@ -39,6 +40,15 @@ export function LedgerPage({ customerId }: { customerId: string }) {
     setToastError(null);
     try {
       await exportPdf();
+    } catch (err) {
+      if (err instanceof Error) setToastError(err.message);
+    }
+  }
+
+  async function handleExportXlsx() {
+    setToastError(null);
+    try {
+      await exportXlsx();
     } catch (err) {
       if (err instanceof Error) setToastError(err.message);
     }
@@ -104,7 +114,10 @@ export function LedgerPage({ customerId }: { customerId: string }) {
               to={to}
               onToChange={setTo}
             />
-            <ExportPdfButton isExporting={isExporting} onClick={handleExportPdf} />
+            <div className="flex gap-2">
+              <ExportPdfButton isExporting={isExporting} onClick={handleExportPdf} />
+              <ExportXlsxButton isExporting={isExportingXlsx} onClick={handleExportXlsx} />
+            </div>
           </div>
 
           <LedgerControls

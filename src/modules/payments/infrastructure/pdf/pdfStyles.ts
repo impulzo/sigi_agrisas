@@ -28,4 +28,14 @@ export const styles = StyleSheet.create({
   footer: { position: "absolute", bottom: 20, left: 30, right: 30, fontSize: 8, color: "#888", textAlign: "center" },
   emptyMsg: { marginTop: 40, textAlign: "center", color: "#888", fontSize: 12 },
   headerCol: { color: "white", fontWeight: "bold", fontSize: 8 },
+  ticketHeader: {
+    flexDirection: "row",
+    backgroundColor: "#eef3fb",
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    marginTop: 8,
+    fontSize: 9,
+    fontWeight: "bold",
+    gap: 12,
+  },
 });

@@ -43,22 +43,22 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
 
   if (error || !sale) {
     return (
-      <EmptyState
-        icon="warning"
-        title="No se encontró la venta"
-        description={error?.message ?? "La venta no existe o no tienes acceso."}
-        action={
-          <Link href="/sales" className="text-primary hover:underline text-body-sm">
-            Volver a ventas
-          </Link>
-        }
-      />
+      <div>
+        <EmptyState
+          icon="warning"
+          title="No se encontró la venta"
+          description={error?.message ?? "La venta no existe o no tienes acceso."}
+          action={
+            <Link href="/sales" className="text-primary hover:underline text-body-sm">
+              Volver a ventas
+            </Link>
+          }
+        />
+      </div>
     );
   }
 
-  const folioLabel = sale.folioPrefix
-    ? `${sale.folioPrefix}-${sale.folioNumber}`
-    : String(sale.folioNumber);
+  const folioLabel = sale.folioCode;
   const ivaTotal = sale.items.reduce((sum, item) => sum + item.lineIva, 0);
   const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
 
@@ -88,34 +88,59 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
         <div className="p-6 flex flex-col gap-6">
           {/* Brand header */}
           <div className="flex flex-col items-center gap-2 text-center border-b border-outline-variant pb-4">
-            {ticketSettings?.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={ticketSettings.logoUrl} alt="Logo" className="h-16 w-auto object-contain mb-2" />
-            ) : (
-              <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-on-primary mb-2">
-                <Icon name="agriculture" size={32} />
-              </div>
-            )}
-            <h1 className="text-headline-sm font-semibold text-primary tracking-tight">Agrisas</h1>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={ticketSettings?.logoUrl ?? "/logo.png"}
+              alt="Logo"
+              className="h-[105px] w-[75px] object-contain mb-[4.8px]"
+            />
             {ticketSettings?.headerText ? (
               <p className="text-body-sm text-on-surface-variant whitespace-pre-wrap">{ticketSettings.headerText}</p>
             ) : (
               <p className="text-body-sm text-on-surface-variant">Centro Agrícola Integral</p>
+            )}
+            {(ticketSettings?.businessAddress || ticketSettings?.businessPhone || ticketSettings?.businessTaxRegime) && (
+              <div className="text-body-sm text-on-surface-variant whitespace-pre-wrap">
+                {ticketSettings.businessAddress && <p>{ticketSettings.businessAddress}</p>}
+                {ticketSettings.businessPhone && <p>Tel. {ticketSettings.businessPhone}</p>}
+                {ticketSettings.businessTaxRegime && <p>{ticketSettings.businessTaxRegime}</p>}
+              </div>
             )}
           </div>
 
           {/* Transaction details */}
           <div className="grid grid-cols-2 gap-2 text-body-sm text-on-surface-variant border-b border-outline-variant pb-4">
             <div>
-              <span className="font-bold text-on-surface block">Orden:</span> {folioLabel}
+              <span className="font-bold text-on-surface block">Folio:</span> {folioLabel}
             </div>
             <div className="text-right">
               <span className="font-bold text-on-surface block">Fecha:</span> {fmtDate(sale.createdAt)}
             </div>
             <div className="col-span-2">
-              <span className="font-bold text-on-surface">Cajero:</span> {sale.cashierName ?? sale.cashierId.slice(0, 8)}
+              <span className="font-bold text-on-surface">Vendedor:</span> {sale.cashierName ?? sale.cashierId.slice(0, 8)}
+            </div>
+            <div className="col-span-2">
+              <span className="font-bold text-on-surface">Sucursal:</span> {sale.branchName ?? "—"}
             </div>
           </div>
+
+          {/* Cliente */}
+          {sale.customerId && (
+            <div className="flex flex-col gap-1 text-body-sm text-on-surface-variant border-b border-outline-variant pb-4">
+              <span className="font-bold text-on-surface">Cliente</span>
+              <div><span className="font-bold text-on-surface">RFC:</span> {sale.customerRfc ?? "—"}</div>
+              <div><span className="font-bold text-on-surface">Nombre:</span> {sale.customerName ?? "—"}</div>
+              <div><span className="font-bold text-on-surface">Dirección:</span> {sale.customerAddress ?? "—"}</div>
+            </div>
+          )}
+
+          {/* Condiciones de crédito */}
+          {sale.customerCreditDays != null && (
+            <div className="flex justify-between text-body-sm text-on-surface-variant border-b border-outline-variant pb-4">
+              <span className="font-bold text-on-surface">Condiciones</span>
+              <span>Crédito a {sale.customerCreditDays} días</span>
+            </div>
+          )}
 
           {/* Items */}
           <div className="flex flex-col gap-2 py-2">
@@ -151,15 +176,14 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
               <span>{fmt(iepsTotal)}</span>
             </div>
             <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-outline-variant text-title-md font-bold text-primary">
-              <span>Total</span>
+              <span>Total a pagar</span>
               <span>{fmt(sale.total)}</span>
             </div>
           </div>
 
           {/* Payment method & footer */}
           <div className="flex flex-col gap-4 items-center mt-2 text-center border-t border-outline-variant pt-4">
-            <div className="text-body-sm text-on-surface-variant flex items-center justify-center gap-2 bg-surface-container-low px-4 py-2 rounded">
-              <Icon name="credit_card" size={18} />
+            <div className="text-body-sm text-on-surface-variant flex items-center justify-center bg-surface-container-low px-4 py-2 rounded">
               {sale.paymentMethodName ?? "—"}
             </div>
             {ticketSettings?.footerText ? (
@@ -171,6 +195,9 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
                 ¡Gracias por su compra! <br />
                 <span className="font-medium">Agricultura Sana &amp; Sustentable.</span>
               </p>
+            )}
+            {ticketSettings?.legendText && (
+              <p className="text-body-sm text-on-surface-variant whitespace-pre-wrap">{ticketSettings.legendText}</p>
             )}
             <div className="mt-1">
               <div

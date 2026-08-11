@@ -4,6 +4,19 @@ export interface PaymentItemDto {
   amount: string;
 }
 
+export interface CustomerSearchResultDto {
+  id: string;
+  code: string;
+  name: string;
+  rfc: string;
+}
+
+export interface ProductSearchResultDto {
+  id: string;
+  code: string;
+  name: string;
+}
+
 export interface PaymentDto {
   id: string;
   saleId: string;
@@ -15,7 +28,7 @@ export interface PaymentDto {
   branchId: string;
   branchName?: string | null;
   paymentMethodId: string;
-  paymentMethodName?: string | null;
+  paymentMethodCode: string;
   folioId: string;
   folioCode?: string | null;
   folioNumber: number;
@@ -26,6 +39,10 @@ export interface PaymentDto {
   createdAt: string;
   updatedAt: string;
   items?: PaymentItemDto[];
+  saleTotal: string;
+  salePaidAmount: string;
+  salePaymentStatus: "paid" | "partial" | "pending";
+  saleDueAmount: string;
 }
 
 export interface PaymentDetailDto extends PaymentDto {
@@ -80,22 +97,26 @@ export interface PaymentHistoryRowDto {
   userName?: string | null;
   branchId: string;
   branchName?: string | null;
-  paymentMethodId: string;
-  paymentMethodName?: string | null;
+  paymentMethodCode: string;
   folioCode?: string | null;
-  folioNumber: number;
-  folioPrefix?: string | null;
   amount: number;
   status: "completed" | "cancelled";
   createdAt: string;
+  saleTotal: string;
+  salePaidAmount: string;
+  salePaymentStatus: "paid" | "partial" | "pending";
+  saleDueAmount: string;
 }
 
 export interface PaymentHistoryReportDto {
   items: PaymentHistoryRowDto[];
-  completedCount: number;
-  cancelledCount: number;
-  totalAmountCompleted: number;
-  totalAmountCancelled: number;
+  totals: {
+    rowCount: number;
+    completedCount: number;
+    cancelledCount: number;
+    totalAmountCompleted: string;
+    totalAmountCancelled: string;
+  };
   total: number;
   page: number;
   pageSize: number;

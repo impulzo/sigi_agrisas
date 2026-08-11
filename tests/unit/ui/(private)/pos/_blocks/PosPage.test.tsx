@@ -185,3 +185,30 @@ describe("PosPage — sin permisos", () => {
     expect(screen.getByTestId("empty-state")).toBeInTheDocument();
   });
 });
+
+describe("PosPage — gutter global de 10px izq/top/der vía layout (sales-screens-padding)", () => {
+  beforeEach(() => {
+    mockCan.mockImplementation((perm) => {
+      if (perm === "sales:create") return true;
+      return false;
+    });
+  });
+
+  it("el contenedor raíz NO duplica el padding top y mantiene altura sin overflow", () => {
+    const { container } = render(<PosPage />);
+    expect(container.firstElementChild!.className).not.toContain("pt-2.5");
+    expect(container.firstElementChild!.className).toContain("h-[calc(100vh-74px)]");
+  });
+
+  it("el contenedor raíz NO duplica el padding en el estado de carga", () => {
+    mockCan.mockReturnValue("loading");
+    const { container } = render(<PosPage />);
+    expect(container.firstElementChild!.className).not.toContain("pt-2.5");
+  });
+
+  it("el contenedor raíz NO duplica el padding en el estado sin permisos", () => {
+    mockCan.mockReturnValue(false);
+    const { container } = render(<PosPage />);
+    expect(container.firstElementChild!.className).not.toContain("pt-2.5");
+  });
+});

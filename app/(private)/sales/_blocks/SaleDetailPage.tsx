@@ -87,16 +87,18 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
 
   if (error || !sale) {
     return (
-      <EmptyState
-        icon="warning"
-        title="No se encontró la venta"
-        description={error?.message ?? "La venta no existe o no tienes acceso."}
-        action={
-          <Link href="/sales" className="text-primary hover:underline text-body-sm">
-            Volver a ventas
-          </Link>
-        }
-      />
+      <div>
+        <EmptyState
+          icon="warning"
+          title="No se encontró la venta"
+          description={error?.message ?? "La venta no existe o no tienes acceso."}
+          action={
+            <Link href="/sales" className="text-primary hover:underline text-body-sm">
+              Volver a ventas
+            </Link>
+          }
+        />
+      </div>
     );
   }
 

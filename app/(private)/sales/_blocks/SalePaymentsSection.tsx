@@ -24,7 +24,7 @@ interface SalePaymentsSectionProps {
 export function SalePaymentsSection({ saleId, sale, onPaymentMutated }: SalePaymentsSectionProps) {
   const { can } = useCurrentUser();
   const canCreate = can("payments:create");
-  const { payments, paidAmount, total, lineBalances, isLoading, refresh } = useSalePayments(saleId);
+  const { payments, paidAmount, total, paymentStatus, lineBalances, isLoading, refresh } = useSalePayments(saleId);
   const [showRegister, setShowRegister] = useState(false);
   const [cancelPaymentId, setCancelPaymentId] = useState<string | null>(null);
   const [expandedPaymentId, setExpandedPaymentId] = useState<string | null>(null);
@@ -127,7 +127,7 @@ export function SalePaymentsSection({ saleId, sale, onPaymentMutated }: SalePaym
                             <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(p.amount)}</td>
                             <td className="px-3 py-2 text-on-surface-variant tabular-nums">{fmtDate(p.createdAt)}</td>
                             <td className="px-3 py-2">
-                              <PaymentStatusBadge status={p.status} />
+                              <PaymentStatusBadge status={p.status} salePaymentStatus={paymentStatus} />
                             </td>
                             <td className="px-3 py-2">
                               {p.status === "completed" && canCancel === true && (

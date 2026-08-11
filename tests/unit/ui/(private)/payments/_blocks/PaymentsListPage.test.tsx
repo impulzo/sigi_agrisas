@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn() })),
@@ -99,5 +99,38 @@ describe("PaymentsListPage", () => {
     setupList([]);
     render(<PaymentsListPage />);
     expect(screen.getByText("Sin abonos")).toBeInTheDocument();
+  });
+
+  it("alterna a vista agrupada al hacer click en el toggle (Historia #2)", () => {
+    setupUser(true);
+    setupList([
+      {
+        id: "pay-1",
+        saleId: "s1",
+        saleFolioCode: "VNT-000001",
+        customerName: "Cliente A",
+        userId: "u1",
+        userName: "Cobrador",
+        branchId: "b1",
+        paymentMethodId: "pm1",
+        paymentMethodName: "Efectivo",
+        folioId: "f1",
+        folioNumber: 1,
+        folioPrefix: "RECIBO-",
+        amount: 300,
+        status: "completed",
+        createdAt: new Date("2026-06-01T10:00:00Z"),
+        updatedAt: new Date("2026-06-01T10:00:00Z"),
+        saleTotal: 1000,
+        salePaidAmount: 300,
+        salePaymentStatus: "partial",
+        saleDueAmount: 700,
+      },
+    ]);
+    render(<PaymentsListPage />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Vista agrupada" }));
+    expect(screen.getByText("VNT-000001")).toBeInTheDocument();
+    expect(screen.getByText("1 abono")).toBeInTheDocument();
   });
 });

@@ -47,7 +47,7 @@ type PrismaSaleWithJoins = {
   createdAt: Date;
   updatedAt: Date;
   branch: { name: string } | null;
-  customer: { name: string; rfc: string } | null;
+  customer: { name: string; rfc: string; address: string | null; creditDays: number } | null;
   cashier: { name: string | null; email: string } | null;
   paymentMethod: { code: string; name: string; isCredit: boolean } | null;
   items: Array<{
@@ -73,7 +73,7 @@ type PrismaSaleWithJoins = {
 
 const includeJoins = {
   branch: { select: { name: true } },
-  customer: { select: { name: true, rfc: true } },
+  customer: { select: { name: true, rfc: true, address: true, creditDays: true } },
   cashier: { select: { name: true, email: true } },
   paymentMethod: { select: { code: true, name: true, isCredit: true } },
   items: true,
@@ -172,6 +172,8 @@ function toSummary(row: PrismaSaleWithJoins): SaleSummary {
     branchName: row.branch?.name ?? null,
     customerName: row.customer?.name ?? null,
     customerRfc: row.customer?.rfc ?? null,
+    customerAddress: row.customer?.address ?? null,
+    customerCreditDays: row.customer?.creditDays ?? null,
     cashierName: row.cashier?.name ?? row.cashier?.email ?? null,
     paymentMethodCode: row.paymentMethod?.code ?? null,
     paymentMethodName: row.paymentMethod?.name ?? null,

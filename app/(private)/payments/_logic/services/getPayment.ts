@@ -5,6 +5,7 @@ import type { PaymentDetail } from "../types/domain";
 function mapPaymentDetailDto(dto: PaymentDetailDto): PaymentDetail {
   return {
     ...dto,
+    paymentMethodName: dto.paymentMethodCode,
     amount: parseFloat(dto.amount as unknown as string),
     createdAt: new Date(dto.createdAt),
     updatedAt: new Date(dto.updatedAt),
@@ -14,6 +15,9 @@ function mapPaymentDetailDto(dto: PaymentDetailDto): PaymentDetail {
       productNameSnapshot: item.productNameSnapshot,
       amount: parseFloat(item.amount),
     })),
+    saleTotal: parseFloat(dto.saleTotal),
+    salePaidAmount: parseFloat(dto.salePaidAmount),
+    saleDueAmount: parseFloat(dto.saleDueAmount),
   };
 }
 

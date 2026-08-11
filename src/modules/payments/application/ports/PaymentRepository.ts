@@ -27,6 +27,9 @@ export interface PaymentDisplayJoins {
   userName: string;
   branchName: string;
   paymentMethodCode: string;
+  saleTotal: number;
+  salePaidAmount: number;
+  salePaymentStatus: SalePaymentStatus;
 }
 
 export interface PaymentListRow {
@@ -111,6 +114,9 @@ export interface PaymentHistoryItem {
   amount: number;
   status: string;
   cancelledAt: Date | null;
+  saleTotal: number;
+  salePaidAmount: number;
+  salePaymentStatus: SalePaymentStatus;
 }
 
 export interface PaymentRepository {

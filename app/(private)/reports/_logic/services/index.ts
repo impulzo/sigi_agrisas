@@ -113,6 +113,43 @@ export async function downloadAccountStatementLedgerPdf(
   return res.blob();
 }
 
+export async function downloadAccountStatementSummaryXlsx(
+  filters: AccountStatementsSummaryFilters,
+  fetchImpl = authFetch
+): Promise<Blob> {
+  const params = summaryParams(filters);
+  params.set("format", "xlsx");
+  let res: Response;
+  try {
+    res = await fetchImpl(`${BASE}?${params.toString()}`);
+  } catch {
+    throw new NetworkError();
+  }
+  if (!res.ok) throw new NetworkError();
+  return res.blob();
+}
+
+export async function downloadAccountStatementLedgerXlsx(
+  customerId: string,
+  filters: AccountStatementLedgerFilters,
+  fetchImpl = authFetch
+): Promise<Blob> {
+  const params = ledgerParams(filters);
+  params.set("format", "xlsx");
+  let res: Response;
+  try {
+    res = await fetchImpl(`${BASE}/${customerId}?${params.toString()}`);
+  } catch {
+    throw new NetworkError();
+  }
+  if (res.status === 409) {
+    const data = (await res.json()) as { error: string };
+    if (data.error === "ReportTooLarge") throw reportTooLarge();
+  }
+  if (!res.ok) throw new NetworkError();
+  return res.blob();
+}
+
 export async function downloadAnticipoReceiptPdf(
   customerId: string,
   paymentId: string,

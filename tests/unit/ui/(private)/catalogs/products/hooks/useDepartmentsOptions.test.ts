@@ -5,7 +5,7 @@ jest.mock("../../../../../../../app/_lib/authFetch", () => ({
 }));
 
 import { authFetch } from "../../../../../../../app/_lib/authFetch";
-import { useDepartmentsOptions } from "../../../../../../../app/(private)/catalogs/products/_logic/hooks/useDepartmentsOptions";
+import { useDepartmentsOptions } from "../../../../../../../app/_hooks/useDepartmentsOptions";
 
 const mockFetch = authFetch as jest.Mock;
 

@@ -1,7 +1,14 @@
 import { cn } from "../../../_lib/cn";
-import type { PaymentStatus } from "../_logic/types/domain";
+import type { PaymentStatus, SalePaymentStatus } from "../_logic/types/domain";
 
-const statusConfig: Record<PaymentStatus, { label: string; dotClass: string; className: string }> = {
+type PaymentBadgeState = "active" | "cancelled" | "completed";
+
+const statusConfig: Record<PaymentBadgeState, { label: string; dotClass: string; className: string }> = {
+  active: {
+    label: "Activo",
+    dotClass: "bg-amber-500",
+    className: "bg-amber-100 text-amber-800",
+  },
   completed: {
     label: "Completado",
     dotClass: "bg-green-600",
@@ -14,13 +21,20 @@ const statusConfig: Record<PaymentStatus, { label: string; dotClass: string; cla
   },
 };
 
+/** "Completado" solo cuando la venta llega a salePaymentStatus="paid"; abono activo con venta parcial/pendiente muestra "Activo". */
+function computeBadgeState(status: PaymentStatus, salePaymentStatus: SalePaymentStatus): PaymentBadgeState {
+  if (status === "cancelled") return "cancelled";
+  return salePaymentStatus === "paid" ? "completed" : "active";
+}
+
 interface PaymentStatusBadgeProps {
   status: PaymentStatus;
+  salePaymentStatus: SalePaymentStatus;
   className?: string;
 }
 
-export function PaymentStatusBadge({ status, className }: PaymentStatusBadgeProps) {
-  const config = statusConfig[status];
+export function PaymentStatusBadge({ status, salePaymentStatus, className }: PaymentStatusBadgeProps) {
+  const config = statusConfig[computeBadgeState(status, salePaymentStatus)];
   return (
     <span
       className={cn(

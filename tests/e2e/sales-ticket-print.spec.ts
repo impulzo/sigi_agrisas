@@ -58,22 +58,33 @@ test("T2 — Vista de ticket: botón inferior 'Imprimir Ticket' y solo el ticket
   await page.waitForLoadState("networkidle");
 
   // Tarjeta Stitch visible en pantalla
-  await expect(page.getByRole("heading", { name: "Agrisas" })).toBeVisible({ timeout: 8000 });
+  await expect(page.locator(".bg-surface-container-lowest")).toBeVisible({ timeout: 8000 });
   const printBtn = page.getByRole("button", { name: /imprimir ticket/i });
   await expect(printBtn).toBeVisible();
 
   // Modo print: solo el área .print-area queda visible
   await page.emulateMedia({ media: "print" });
   await expect(page.locator(".print-area")).toBeVisible();
-  await expect(page.locator(".print-area").getByText("Agrisas", { exact: true })).toBeVisible();
+  await expect(page.locator(".print-area").locator("img[alt='Logo']")).toBeVisible();
   // UI circundante oculta en la impresión
-  await expect(page.getByRole("heading", { name: "Agrisas" })).not.toBeVisible();
+  await expect(page.locator(".bg-surface-container-lowest")).not.toBeVisible();
   await expect(page.getByRole("link", { name: /volver al detalle/i })).not.toBeVisible();
   await expect(printBtn).not.toBeVisible();
 
+  // Nuevo contenido del ticket (secciones reordenadas)
+  const print = page.locator(".print-area");
+  await expect(print.getByText(/Vendedor:/i)).toBeVisible();
+  await expect(print.getByText(/Sucursal:/i)).toBeVisible();
+  await expect(print.getByText(/Total a pagar/i)).toBeVisible();
+
+  // Logo del ticket a 75x105px
+  const printLogo = print.locator("img[alt='Logo']");
+  await expect(printLogo).toHaveCSS("width", "75px");
+  await expect(printLogo).toHaveCSS("height", "105px");
+
   // Volver a pantalla: tarjeta Stitch visible, ticket oculto
   await page.emulateMedia({ media: "screen" });
-  await expect(page.getByRole("heading", { name: "Agrisas" })).toBeVisible();
+  await expect(page.locator(".bg-surface-container-lowest")).toBeVisible();
   await expect(page.locator(".print-area")).not.toBeVisible();
 });
 

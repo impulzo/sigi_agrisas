@@ -34,12 +34,13 @@ export async function getSalesCut(
   return res.json() as Promise<SalesCutReportDto>;
 }
 
-export async function downloadSalesCutPdf(
+async function downloadFormat(
   filters: SalesCutFilters,
-  fetchImpl = authFetch
+  format: "pdf" | "xlsx",
+  fetchImpl: typeof authFetch
 ): Promise<Blob> {
   const params = buildParams(filters);
-  params.set("format", "pdf");
+  params.set("format", format);
   let res: Response;
   try {
     res = await fetchImpl(`${BASE}?${params.toString()}`);
@@ -48,4 +49,12 @@ export async function downloadSalesCutPdf(
   }
   if (!res.ok) throw new NetworkError();
   return res.blob();
+}
+
+export async function downloadSalesCutPdf(filters: SalesCutFilters, fetchImpl = authFetch): Promise<Blob> {
+  return downloadFormat(filters, "pdf", fetchImpl);
+}
+
+export async function downloadSalesCutXlsx(filters: SalesCutFilters, fetchImpl = authFetch): Promise<Blob> {
+  return downloadFormat(filters, "xlsx", fetchImpl);
 }

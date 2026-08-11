@@ -33,6 +33,8 @@ export interface InMemCutSale {
   paymentMethodId: string;
   paymentMethodName: string;
   createdAt: Date;
+  folioCode?: string;
+  customerName?: string | null;
   items?: InMemCutSaleItem[];
 }
 
@@ -180,6 +182,16 @@ export class InMemorySalesCutRepository implements SalesCutRepository {
         count: returns.length,
         total: returns.reduce((a, r) => a + r.refundTotal, 0),
       },
+      salesList: [...active]
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .map((s) => ({
+          saleId: s.id,
+          folioCode: s.folioCode ?? s.id,
+          customerName: s.customerName ?? null,
+          total: s.total,
+          paymentMethodName: s.paymentMethodName,
+          createdAt: s.createdAt,
+        })),
     };
   }
 }

@@ -77,7 +77,7 @@ export function PaymentDetailPage({ id }: PaymentDetailPageProps) {
             <h1 className="text-headline-sm font-semibold text-on-surface font-mono">
               {folioLabel}
             </h1>
-            <PaymentStatusBadge status={payment.status} />
+            <PaymentStatusBadge status={payment.status} salePaymentStatus={payment.salePaymentStatus} />
             <span className="text-title-sm font-semibold tabular-nums text-on-surface">
               {fmt(payment.amount)}
             </span>
@@ -90,6 +90,9 @@ export function PaymentDetailPage({ id }: PaymentDetailPageProps) {
               </Link>
             </p>
           )}
+          <p className="text-body-sm text-on-surface-variant pl-9">
+            Monto total: {fmt(payment.saleTotal)} · Saldo pendiente: {fmt(payment.saleDueAmount)}
+          </p>
         </div>
 
         <PaymentActionsBar payment={payment} onCancelled={refresh} />

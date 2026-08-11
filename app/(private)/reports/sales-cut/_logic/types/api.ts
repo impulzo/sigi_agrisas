@@ -8,6 +8,14 @@ export interface SalesCutBreakdownRowDto {
   quantitySold?: string;
 }
 
+export interface SaleListRowDto {
+  saleId: string;
+  folioCode: string;
+  customerName: string | null;
+  total: string;
+  paymentMethodName: string;
+}
+
 export interface SalesCutReportDto {
   generatedAt: string;
   generatedBy: { userId: string; email: string };
@@ -39,4 +47,5 @@ export interface SalesCutReportDto {
   byBranch: SalesCutBreakdownRowDto[];
   byDepartment: SalesCutBreakdownRowDto[];
   byProduct: SalesCutBreakdownRowDto[];
+  salesList: SaleListRowDto[];
 }

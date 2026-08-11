@@ -10,6 +10,8 @@ export interface CashCutFilters {
 /** Fila cruda de cobranza devuelta por el repositorio (un abono, sin cálculos derivados). */
 export interface CashCutRawRow {
   paymentId: string;
+  saleId: string;
+  customerId: string;
   customerCode: string;
   docto: string;
   factura: string;

@@ -11,6 +11,7 @@ const TO = new Date("2026-06-30T00:00:00.000Z");
 function payment(over: Partial<InMemCutPayment> = {}): InMemCutPayment {
   return {
     paymentId: "cp1",
+    saleId: "sale1",
     status: "completed",
     branchId: "b1",
     customerId: "cust1",

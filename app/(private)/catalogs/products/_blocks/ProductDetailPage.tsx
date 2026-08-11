@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useCurrentUser } from "../../../../_hooks/useCurrentUser";
 import { getProduct } from "../_logic/services/products";
-import { useDepartmentsOptions } from "../_logic/hooks/useDepartmentsOptions";
+import { useDepartmentsOptions } from "../../../../_hooks/useDepartmentsOptions";
 import { ProductGeneralTab } from "./ProductGeneralTab";
 import { ProductPricesTab } from "./ProductPricesTab";
 import { ProductDosificationsTab } from "./ProductDosificationsTab";

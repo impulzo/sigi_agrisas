@@ -28,6 +28,8 @@ export class PrismaCashCutRepository implements CashCutRepository {
 
     return payments.map((p) => ({
       paymentId: p.id,
+      saleId: p.saleId,
+      customerId: p.customerId,
       customerCode: p.customer.code,
       docto: p.folioCode,
       factura: p.sale.folioCode,

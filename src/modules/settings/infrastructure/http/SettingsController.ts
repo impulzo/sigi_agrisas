@@ -13,6 +13,10 @@ const updateTicketSchema = z.object({
   headerText: z.string().max(500).nullable().optional(),
   footerText: z.string().max(500).nullable().optional(),
   paperWidth: z.enum(["58mm", "80mm"]).optional(),
+  businessAddress: z.string().max(300).nullable().optional(),
+  businessPhone: z.string().max(30).nullable().optional(),
+  businessTaxRegime: z.string().max(120).nullable().optional(),
+  legendText: z.string().max(500).nullable().optional(),
 });
 
 const updatePricingSchema = z.object({

@@ -1,11 +1,12 @@
 import { Decimal } from "decimal.js";
 import { SalesCutRepository } from "../ports/SalesCutRepository";
 import { SalesCutAssembler } from "../../domain/services/SalesCutAssembler";
-import { BreakdownRow, ProductBreakdownRow } from "../../domain/value-objects/SalesCutFilters";
+import { BreakdownRow, ProductBreakdownRow, SaleListRow } from "../../domain/value-objects/SalesCutFilters";
 import {
   SalesCutReportResponseDto,
   SalesCutBreakdownRowDto,
   SalesCutProductBreakdownRowDto,
+  SaleListRowDto,
 } from "../dto/SalesCutReportResponseDto";
 
 export interface GetSalesCutReportRequest {
@@ -38,6 +39,16 @@ function rowDto(r: BreakdownRow): SalesCutBreakdownRowDto {
 
 function productRowDto(r: ProductBreakdownRow): SalesCutProductBreakdownRowDto {
   return { ...rowDto(r), quantitySold: money(r.quantitySold) };
+}
+
+function saleListRowDto(r: SaleListRow): SaleListRowDto {
+  return {
+    saleId: r.saleId,
+    folioCode: r.folioCode,
+    customerName: r.customerName,
+    total: money(r.total),
+    paymentMethodName: r.paymentMethodName,
+  };
 }
 
 export class GetSalesCutReportUseCase {
@@ -88,6 +99,7 @@ export class GetSalesCutReportUseCase {
       byBranch: cut.byBranch.map(rowDto),
       byDepartment: cut.byDepartment.map(rowDto),
       byProduct: cut.byProduct.map(productRowDto),
+      salesList: cut.salesList.map(saleListRowDto),
     };
   }
 }

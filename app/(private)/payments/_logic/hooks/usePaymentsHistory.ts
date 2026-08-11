@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getPaymentsHistory, downloadPaymentsHistoryPdf } from "../services";
+import { getPaymentsHistory, downloadPaymentsHistoryPdf, downloadPaymentsHistoryXlsx } from "../services";
 import type { PaymentHistoryReportDto } from "../types/api";
 import type { PaymentHistoryFilters } from "../types/domain";
 
@@ -13,6 +13,7 @@ interface UsePaymentsHistoryResult {
   exportError: Error | null;
   refresh: () => void;
   exportPdf: () => Promise<void>;
+  exportXlsx: () => Promise<void>;
 }
 
 export function usePaymentsHistory(
@@ -70,5 +71,26 @@ export function usePaymentsHistory(
     }
   }, [userId, customerId, productId, paymentMethodId, status, from, to, branchId]);
 
-  return { report, isLoading, error, isExporting, exportError, refresh, exportPdf };
+  const exportXlsx = useCallback(async () => {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const blob = await downloadPaymentsHistoryXlsx({ userId, customerId, productId, paymentMethodId, status, from, to, branchId });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const today = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `payments-history-${today}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err as Error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [userId, customerId, productId, paymentMethodId, status, from, to, branchId]);
+
+  return { report, isLoading, error, isExporting, exportError, refresh, exportPdf, exportXlsx };
 }

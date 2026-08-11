@@ -1,0 +1,24 @@
+export interface ProviderPaymentsReportRowDto {
+  id: string;
+  folioCode: string;
+  purchaseFolioCode: string;
+  providerName: string | null;
+  branchName: string | null;
+  amount: string;
+  status: string;
+  paidAt: string;
+}
+
+export interface ProviderPaymentsReportResponseDto {
+  generatedAt: string;
+  generatedBy: { userId: string; email: string };
+  filters: {
+    branchId: string | null;
+    providerId: string | null;
+    status: string | null;
+    from: string | null;
+    to: string | null;
+  };
+  totals: { count: number; total: string };
+  rows: ProviderPaymentsReportRowDto[];
+}

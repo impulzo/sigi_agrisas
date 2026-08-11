@@ -8,8 +8,9 @@ import { ListPaymentsUseCase } from "../../application/use-cases/ListPaymentsUse
 import { GetPaymentUseCase } from "../../application/use-cases/GetPaymentUseCase";
 import { ListPaymentsBySaleUseCase } from "../../application/use-cases/ListPaymentsBySaleUseCase";
 import { GetPaymentHistoryReportUseCase } from "../../application/use-cases/GetPaymentHistoryReportUseCase";
-import { toPaymentDto, toPaymentDetailDto } from "../../application/mappers/toPaymentDto";
+import { toPaymentDto, toPaymentDetailDto, toPaymentHistoryRowDto } from "../../application/mappers/toPaymentDto";
 import { PaymentHistoryReportDto, PaymentHistoryRowDto } from "../../application/dto/PaymentDto";
+import { buildPaymentsHistoryWorkbook } from "../xlsx/buildPaymentsHistoryWorkbook";
 import { PaymentNotFoundError } from "../../domain/errors/PaymentNotFoundError";
 import { PaymentAlreadyCancelledError } from "../../domain/errors/PaymentAlreadyCancelledError";
 import { PaymentExceedsDueAmountError } from "../../domain/errors/PaymentExceedsDueAmountError";
@@ -62,7 +63,7 @@ const listQuerySchema = z.object({
 });
 
 const historyQuerySchema = z.object({
-  format: z.enum(["json", "pdf"]).default("json"),
+  format: z.enum(["json", "pdf", "xlsx"]).default("json"),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
   branchId: z.string().uuid().optional(),
@@ -264,6 +265,10 @@ export class PaymentsController {
       createdAt: p.createdAt.toISOString(),
       cancelledAt: p.cancelledAt ? p.cancelledAt.toISOString() : null,
       cancellationReason: p.cancellationReason,
+      saleTotal: joins.saleTotal.toFixed(4),
+      salePaidAmount: joins.salePaidAmount.toFixed(4),
+      salePaymentStatus: joins.salePaymentStatus,
+      saleDueAmount: (joins.saleTotal - joins.salePaidAmount).toFixed(4),
     }));
 
     return NextResponse.json({ items, total: result.total, page: result.page, pageSize: result.pageSize });
@@ -289,6 +294,9 @@ export class PaymentsController {
         userName: data.joins?.userName ?? "",
         branchName: data.joins?.branchName ?? "",
         paymentMethodCode: data.joins?.paymentMethodCode ?? "",
+        saleTotal: data.joins?.saleTotal ?? data.sale.total,
+        salePaidAmount: data.joins?.salePaidAmount ?? data.sale.paidAmount,
+        salePaymentStatus: data.joins?.salePaymentStatus ?? data.sale.paymentStatus,
       };
 
       return NextResponse.json(toPaymentDetailDto(data, joined));
@@ -343,6 +351,10 @@ export class PaymentsController {
                 amount: item.amount.toFixed(4),
               }))
             : undefined,
+          saleTotal: joins.saleTotal.toFixed(4),
+          salePaidAmount: joins.salePaidAmount.toFixed(4),
+          salePaymentStatus: joins.salePaymentStatus,
+          saleDueAmount: (joins.saleTotal - joins.salePaidAmount).toFixed(4),
         })),
         saleId: result.saleId,
         saleTotal: result.saleTotal,
@@ -391,7 +403,7 @@ export class PaymentsController {
 
     const userId = req.headers.get("x-user-id") ?? "";
     const userEmail = req.headers.get("x-user-email") ?? "";
-    const forPdf = parsed.data.format === "pdf";
+    const isExport = parsed.data.format === "pdf" || parsed.data.format === "xlsx";
 
     const result = await this.historyUseCase.execute({
       filters: {
@@ -407,32 +419,16 @@ export class PaymentsController {
       },
       page: parsed.data.page,
       pageSize: parsed.data.pageSize,
-      forPdf,
+      forPdf: isExport,
     });
 
-    if (forPdf) {
+    if (isExport) {
       if (result.tooLarge) {
         return NextResponse.json({ error: "ReportTooLarge", limit: 10000 }, { status: 409 });
       }
 
       const generatedAt = new Date().toISOString();
-      const rows: PaymentHistoryRowDto[] = result.items.map((item: PaymentHistoryItem) => ({
-        id: item.id,
-        createdAt: item.createdAt.toISOString(),
-        folioCode: item.folioCode,
-        saleId: item.saleId,
-        saleFolioCode: item.saleFolioCode,
-        customerId: item.customerId,
-        customerName: item.customerName,
-        userId: item.userId,
-        userName: item.userName,
-        branchId: item.branchId,
-        branchName: item.branchName,
-        paymentMethodCode: item.paymentMethodCode,
-        amount: item.amount.toFixed(4),
-        status: item.status,
-        cancelledAt: item.cancelledAt ? item.cancelledAt.toISOString() : null,
-      }));
+      const rows: PaymentHistoryRowDto[] = result.items.map((item: PaymentHistoryItem) => toPaymentHistoryRowDto(item));
 
       const dto: PaymentHistoryReportDto = {
         generatedAt,
@@ -461,8 +457,20 @@ export class PaymentsController {
         total: result.total,
       };
 
-      const pdfBuffer = await renderToBuffer(React.createElement(PaymentHistoryPdf, { data: dto }) as never);
       const dateStr = generatedAt.substring(0, 10);
+
+      if (parsed.data.format === "xlsx") {
+        const workbookBuffer = buildPaymentsHistoryWorkbook(dto);
+        return new NextResponse(workbookBuffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="payments-history-${dateStr}.xlsx"`,
+          },
+        });
+      }
+
+      const pdfBuffer = await renderToBuffer(React.createElement(PaymentHistoryPdf, { data: dto }) as never);
 
       return new NextResponse(pdfBuffer as unknown as BodyInit, {
         status: 200,
@@ -475,23 +483,7 @@ export class PaymentsController {
 
     // JSON response
     const generatedAt = new Date().toISOString();
-    const rows: PaymentHistoryRowDto[] = result.items.map((item: PaymentHistoryItem) => ({
-      id: item.id,
-      createdAt: item.createdAt.toISOString(),
-      folioCode: item.folioCode,
-      saleId: item.saleId,
-      saleFolioCode: item.saleFolioCode,
-      customerId: item.customerId,
-      customerName: item.customerName,
-      userId: item.userId,
-      userName: item.userName,
-      branchId: item.branchId,
-      branchName: item.branchName,
-      paymentMethodCode: item.paymentMethodCode,
-      amount: item.amount.toFixed(4),
-      status: item.status,
-      cancelledAt: item.cancelledAt ? item.cancelledAt.toISOString() : null,
-    }));
+    const rows: PaymentHistoryRowDto[] = result.items.map((item: PaymentHistoryItem) => toPaymentHistoryRowDto(item));
 
     const dto: PaymentHistoryReportDto = {
       generatedAt,
