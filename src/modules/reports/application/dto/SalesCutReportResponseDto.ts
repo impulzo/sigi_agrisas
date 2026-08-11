@@ -11,6 +11,14 @@ export interface SalesCutProductBreakdownRowDto extends SalesCutBreakdownRowDto 
   quantitySold: string;
 }
 
+export interface SaleListRowDto {
+  saleId: string;
+  folioCode: string;
+  customerName: string | null;
+  total: string;
+  paymentMethodName: string;
+}
+
 export interface SalesCutReportResponseDto {
   generatedAt: string;
   generatedBy: { userId: string; email: string };
@@ -45,4 +53,5 @@ export interface SalesCutReportResponseDto {
   byBranch: SalesCutBreakdownRowDto[];
   byDepartment: SalesCutBreakdownRowDto[];
   byProduct: SalesCutProductBreakdownRowDto[];
+  salesList: SaleListRowDto[];
 }

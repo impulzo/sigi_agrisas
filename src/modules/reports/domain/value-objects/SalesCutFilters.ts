@@ -54,6 +54,16 @@ export interface ReturnsAgg {
   total: number;
 }
 
+/** Fila del detalle ticket-por-ticket (una fila por venta activa del periodo/filtros). `createdAt` solo se usa para ordenar, no se expone en el DTO. */
+export interface SaleListRow {
+  saleId: string;
+  folioCode: string;
+  customerName: string | null;
+  total: number;
+  paymentMethodName: string;
+  createdAt: Date;
+}
+
 /** Bolsa de agregados crudos que devuelve el repositorio. */
 export interface SalesCutAggregates {
   active: ActiveTotals;
@@ -67,4 +77,5 @@ export interface SalesCutAggregates {
   byProduct: ProductBreakdownRow[];
   paymentsReceived: PaymentsAgg;
   returnsRefunded: ReturnsAgg;
+  salesList: SaleListRow[];
 }

@@ -23,6 +23,9 @@ export class CancelPaymentUseCase {
       userName: result.joins?.userName ?? "",
       branchName: result.joins?.branchName ?? "",
       paymentMethodCode: result.joins?.paymentMethodCode ?? "",
+      saleTotal: result.joins?.saleTotal ?? result.sale.total,
+      salePaidAmount: result.joins?.salePaidAmount ?? result.sale.paidAmount,
+      salePaymentStatus: result.joins?.salePaymentStatus ?? result.sale.paymentStatus,
     };
 
     return {

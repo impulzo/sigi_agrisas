@@ -38,6 +38,9 @@ const P = "QUOTEEDGE_";
 
 async function cleanup() {
   await prisma.sale.deleteMany({ where: { folio: { code: { startsWith: P } } } });
+  // Defensa adicional: sale_items de otras sales (folio no prefijado) que quedaron
+  // referenciando un producto de este test bloquean product.deleteMany más abajo.
+  await prisma.saleItem.deleteMany({ where: { product: { code: { startsWith: P } } } });
   await prisma.quoteItem.deleteMany({ where: { product: { code: { startsWith: P } } } });
   await prisma.quoteItem.deleteMany({ where: { quote: { folio: { code: { startsWith: P } } } } });
   await prisma.quote.deleteMany({ where: { folio: { code: { startsWith: P } } } });

@@ -60,6 +60,11 @@ describe("RegisterPaymentUseCase", () => {
     expect(result.dto.sale.paidAmount).toBe("300.0000");
     expect(result.dto.sale.paymentStatus).toBe("partial");
     expect(result.branchId).toBe(BRANCH_ID);
+    // Desglose plano (Historia #1): mismo dato que result.dto.sale, expuesto también a nivel de PaymentDto
+    expect(result.dto.saleTotal).toBe("1000.0000");
+    expect(result.dto.salePaidAmount).toBe("300.0000");
+    expect(result.dto.saleDueAmount).toBe("700.0000");
+    expect(result.dto.salePaymentStatus).toBe("partial");
   });
 
   it("marks sale as paid when full amount is registered", async () => {
@@ -78,6 +83,9 @@ describe("RegisterPaymentUseCase", () => {
 
     expect(result.dto.sale.paymentStatus).toBe("paid");
     expect(result.dto.sale.paidAmount).toBe("1000.0000");
+    // Badge (Historia #3): venta liquidada al 100% -> salePaymentStatus="paid", saleDueAmount=0
+    expect(result.dto.salePaymentStatus).toBe("paid");
+    expect(result.dto.saleDueAmount).toBe("0.0000");
   });
 
   it("throws SaleNotPayableError when sale is not credit", async () => {
@@ -212,6 +220,10 @@ describe("CancelPaymentUseCase", () => {
     expect(result.dto.cancellationReason).toBe("Cliente arrepentido");
     expect(result.dto.sale.paidAmount).toBe("0.0000");
     expect(result.dto.sale.paymentStatus).toBe("pending");
+    // Badge (Historia #3): abono cancelado -> "Cancelado" sin importar salePaymentStatus
+    expect(result.dto.status).toBe("cancelled");
+    expect(result.dto.salePaymentStatus).toBe("pending");
+    expect(result.dto.saleDueAmount).toBe("1000.0000");
   });
 
   it("throws PaymentNotFoundError for unknown id", async () => {
@@ -251,6 +263,20 @@ describe("CancelPaymentUseCase", () => {
 });
 
 describe("ListPaymentsUseCase", () => {
+  it("exposes sale breakdown fields (joins) on each row (Historia #1)", async () => {
+    const repo = makeRepo();
+    const registerUC = makeRegisterUseCase(repo);
+    await registerUC.execute({ saleId: SALE_ID, paymentMethodId: PM_ID, folioId: FOLIO_ID, amount: 300, notes: null, userId: USER_ID, callerBranchId: null });
+
+    const useCase = new ListPaymentsUseCase(repo);
+    const result = await useCase.execute({}, { page: 1, pageSize: 20 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].joins.saleTotal).toBe(1000);
+    expect(result.items[0].joins.salePaidAmount).toBe(300);
+    expect(result.items[0].joins.salePaymentStatus).toBe("partial");
+  });
+
   it("returns empty list when no payments exist", async () => {
     const repo = new InMemoryPaymentRepository();
     const useCase = new ListPaymentsUseCase(repo);
@@ -470,5 +496,19 @@ describe("GetPaymentHistoryReportUseCase", () => {
     expect(result.cancelledCount).toBe(1);
     expect(result.totalAmountCompleted).toBe("150.0000");
     expect(result.totalAmountCancelled).toBe("200.0000");
+  });
+
+  it("exposes sale breakdown fields on each history item (Historia #1)", async () => {
+    const repo = makeRepo();
+    const registerUC = makeRegisterUseCase(repo);
+    await registerUC.execute({ saleId: SALE_ID, paymentMethodId: PM_ID, folioId: FOLIO_ID, amount: 1000, notes: null, userId: USER_ID, callerBranchId: null });
+
+    const useCase = new GetPaymentHistoryReportUseCase(repo);
+    const result = await useCase.execute({ filters: {}, page: 1, pageSize: 20, forPdf: false });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].saleTotal).toBe(1000);
+    expect(result.items[0].salePaidAmount).toBe(1000);
+    expect(result.items[0].salePaymentStatus).toBe("paid");
   });
 });

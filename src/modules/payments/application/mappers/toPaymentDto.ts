@@ -1,6 +1,7 @@
 import { CustomerPayment } from "../../domain/entities/CustomerPayment";
-import { PaymentDto, PaymentDetailDto } from "../dto/PaymentDto";
-import { PaymentWithSale } from "../ports/PaymentRepository";
+import { PaymentDto, PaymentDetailDto, PaymentHistoryRowDto } from "../dto/PaymentDto";
+import { PaymentWithSale, PaymentHistoryItem } from "../ports/PaymentRepository";
+import { SalePaymentStatus } from "../../domain/value-objects/SalePaymentStatus";
 
 interface JoinedFields {
   saleFolioCode: string;
@@ -8,6 +9,13 @@ interface JoinedFields {
   userName: string;
   branchName: string;
   paymentMethodCode: string;
+  saleTotal: number;
+  salePaidAmount: number;
+  salePaymentStatus: SalePaymentStatus;
+}
+
+function saleDueAmount(saleTotal: number, salePaidAmount: number): string {
+  return (saleTotal - salePaidAmount).toFixed(4);
 }
 
 export function toPaymentDto(p: CustomerPayment, joined: JoinedFields): PaymentDto {
@@ -39,6 +47,34 @@ export function toPaymentDto(p: CustomerPayment, joined: JoinedFields): PaymentD
           amount: item.amount.toFixed(4),
         }))
       : undefined,
+    saleTotal: joined.saleTotal.toFixed(4),
+    salePaidAmount: joined.salePaidAmount.toFixed(4),
+    salePaymentStatus: joined.salePaymentStatus,
+    saleDueAmount: saleDueAmount(joined.saleTotal, joined.salePaidAmount),
+  };
+}
+
+export function toPaymentHistoryRowDto(item: PaymentHistoryItem): PaymentHistoryRowDto {
+  return {
+    id: item.id,
+    createdAt: item.createdAt.toISOString(),
+    folioCode: item.folioCode,
+    saleId: item.saleId,
+    saleFolioCode: item.saleFolioCode,
+    customerId: item.customerId,
+    customerName: item.customerName,
+    userId: item.userId,
+    userName: item.userName,
+    branchId: item.branchId,
+    branchName: item.branchName,
+    paymentMethodCode: item.paymentMethodCode,
+    amount: item.amount.toFixed(4),
+    status: item.status,
+    cancelledAt: item.cancelledAt ? item.cancelledAt.toISOString() : null,
+    saleTotal: item.saleTotal.toFixed(4),
+    salePaidAmount: item.salePaidAmount.toFixed(4),
+    salePaymentStatus: item.salePaymentStatus,
+    saleDueAmount: saleDueAmount(item.saleTotal, item.salePaidAmount),
   };
 }
 

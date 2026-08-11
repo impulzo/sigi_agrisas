@@ -1,6 +1,7 @@
 "use client";
 
 import { ExportPdfButton } from "./ExportPdfButton";
+import { ExportXlsxButton } from "./ExportXlsxButton";
 
 interface Branch {
   id: string;
@@ -22,6 +23,8 @@ interface Props {
   showBranchFilter: boolean;
   isExporting: boolean;
   onExportPdf: () => void;
+  isExportingXlsx: boolean;
+  onExportXlsx: () => void;
   onReset: () => void;
 }
 
@@ -35,7 +38,7 @@ export function StatementToolbar({
   onlyWithBalance, onOnlyWithBalanceChange,
   branchId, onBranchIdChange,
   branches, showBranchFilter,
-  isExporting, onExportPdf, onReset,
+  isExporting, onExportPdf, isExportingXlsx, onExportXlsx, onReset,
 }: Props) {
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-outline-variant bg-surface-container-low px-4 py-3">
@@ -91,6 +94,7 @@ export function StatementToolbar({
           Limpiar
         </button>
         <ExportPdfButton isExporting={isExporting} onClick={onExportPdf} />
+        <ExportXlsxButton isExporting={isExportingXlsx} onClick={onExportXlsx} />
       </div>
     </div>
   );

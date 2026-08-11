@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getSalesCut, downloadSalesCutPdf } from "../services";
+import { getSalesCut, downloadSalesCutPdf, downloadSalesCutXlsx } from "../services";
 import type { SalesCutReportDto } from "../types/api";
 import type { SalesCutFilters } from "../types/domain";
 
@@ -10,9 +10,22 @@ interface Result {
   isLoading: boolean;
   error: Error | null;
   isExporting: boolean;
+  isExportingXlsx: boolean;
   exportError: Error | null;
   refresh: () => void;
   exportPdf: () => Promise<void>;
+  exportXlsx: () => Promise<void>;
+}
+
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export function useSalesCut(filters: SalesCutFilters): Result {
@@ -20,6 +33,7 @@ export function useSalesCut(filters: SalesCutFilters): Result {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingXlsx, setIsExportingXlsx] = useState(false);
   const [exportError, setExportError] = useState<Error | null>(null);
   const [tick, setTick] = useState(0);
 
@@ -51,15 +65,8 @@ export function useSalesCut(filters: SalesCutFilters): Result {
     setExportError(null);
     try {
       const blob = await downloadSalesCutPdf({ mode, from, to, branchId, cashierId, paymentMethodId });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
       const today = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `sales-cut-${today}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      triggerDownload(blob, `sales-cut-${today}.pdf`);
     } catch (err) {
       setExportError(err as Error);
     } finally {
@@ -67,5 +74,19 @@ export function useSalesCut(filters: SalesCutFilters): Result {
     }
   }, [mode, from, to, branchId, cashierId, paymentMethodId]);
 
-  return { report, isLoading, error, isExporting, exportError, refresh, exportPdf };
+  const exportXlsx = useCallback(async () => {
+    setIsExportingXlsx(true);
+    setExportError(null);
+    try {
+      const blob = await downloadSalesCutXlsx({ mode, from, to, branchId, cashierId, paymentMethodId });
+      const today = new Date().toISOString().slice(0, 10);
+      triggerDownload(blob, `sales-cut-${today}.xlsx`);
+    } catch (err) {
+      setExportError(err as Error);
+    } finally {
+      setIsExportingXlsx(false);
+    }
+  }, [mode, from, to, branchId, cashierId, paymentMethodId]);
+
+  return { report, isLoading, error, isExporting, isExportingXlsx, exportError, refresh, exportPdf, exportXlsx };
 }

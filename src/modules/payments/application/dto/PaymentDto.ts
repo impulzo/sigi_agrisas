@@ -28,6 +28,10 @@ export interface PaymentDto {
   cancelledAt: string | null;
   cancellationReason: string | null;
   items?: PaymentItemDto[];
+  saleTotal: string;
+  salePaidAmount: string;
+  salePaymentStatus: SalePaymentStatus;
+  saleDueAmount: string;
 }
 
 export interface PaymentDetailDto extends PaymentDto {
@@ -57,6 +61,10 @@ export interface PaymentHistoryRowDto {
   amount: string;
   status: string;
   cancelledAt: string | null;
+  saleTotal: string;
+  salePaidAmount: string;
+  salePaymentStatus: SalePaymentStatus;
+  saleDueAmount: string;
 }
 
 export interface PaymentHistoryReportDto {

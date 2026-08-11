@@ -1,7 +1,17 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import { PaymentHistoryReportDto } from "../../application/dto/PaymentDto";
+import { Document, Page, Text, View } from "@react-pdf/renderer";
+import { PaymentHistoryReportDto, PaymentHistoryRowDto } from "../../application/dto/PaymentDto";
 import { styles } from "./pdfStyles";
+
+function groupBySale(items: PaymentHistoryRowDto[]): PaymentHistoryRowDto[][] {
+  const groups = new Map<string, PaymentHistoryRowDto[]>();
+  for (const item of items) {
+    const bucket = groups.get(item.saleId);
+    if (bucket) bucket.push(item);
+    else groups.set(item.saleId, [item]);
+  }
+  return Array.from(groups.values());
+}
 
 interface Props {
   data: PaymentHistoryReportDto;
@@ -53,33 +63,40 @@ export function PaymentHistoryPdf({ data }: Props) {
         {items.length === 0 ? (
           <Text style={styles.emptyMsg}>Sin datos para los filtros aplicados</Text>
         ) : (
-          <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.colDate, styles.headerCol]}>Fecha</Text>
-              <Text style={[styles.colRecibo, styles.headerCol]}>Recibo</Text>
-              <Text style={[styles.colTicket, styles.headerCol]}>Ticket</Text>
-              <Text style={[styles.colCliente, styles.headerCol]}>Cliente</Text>
-              <Text style={[styles.colCobrador, styles.headerCol]}>Cobrador</Text>
-              <Text style={[styles.colMetodo, styles.headerCol]}>Método</Text>
-              <Text style={[styles.colMonto, styles.headerCol]}>Monto</Text>
-              <Text style={[styles.colEstado, styles.headerCol]}>Estado</Text>
-            </View>
-            {items.map((item, idx) => (
-              <View
-                key={item.id}
-                style={[styles.tableRow, ...(idx % 2 === 0 ? [styles.tableRowEven] : [])]}
-              >
-                <Text style={styles.colDate}>{formatDate(item.createdAt)}</Text>
-                <Text style={styles.colRecibo}>{item.folioCode}</Text>
-                <Text style={styles.colTicket}>{item.saleFolioCode}</Text>
-                <Text style={styles.colCliente}>{item.customerName}</Text>
-                <Text style={styles.colCobrador}>{item.userName}</Text>
-                <Text style={styles.colMetodo}>{item.paymentMethodCode}</Text>
-                <Text style={styles.colMonto}>${item.amount}</Text>
-                <Text style={styles.colEstado}>{item.status}</Text>
+          groupBySale(items).map((group) => {
+            const first = group[0];
+            return (
+              <View key={first.saleId} style={styles.table}>
+                <View style={styles.ticketHeader}>
+                  <Text>Ticket: {first.saleFolioCode}</Text>
+                  <Text>Cliente: {first.customerName}</Text>
+                  <Text>Monto total: ${first.saleTotal}</Text>
+                  <Text>Saldo: ${first.saleDueAmount}</Text>
+                </View>
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.colDate, styles.headerCol]}>Fecha</Text>
+                  <Text style={[styles.colRecibo, styles.headerCol]}>Recibo</Text>
+                  <Text style={[styles.colCobrador, styles.headerCol]}>Cobrador</Text>
+                  <Text style={[styles.colMetodo, styles.headerCol]}>Método</Text>
+                  <Text style={[styles.colMonto, styles.headerCol]}>Monto</Text>
+                  <Text style={[styles.colEstado, styles.headerCol]}>Estado</Text>
+                </View>
+                {group.map((item, idx) => (
+                  <View
+                    key={item.id}
+                    style={[styles.tableRow, ...(idx % 2 === 0 ? [styles.tableRowEven] : [])]}
+                  >
+                    <Text style={styles.colDate}>{formatDate(item.createdAt)}</Text>
+                    <Text style={styles.colRecibo}>{item.folioCode}</Text>
+                    <Text style={styles.colCobrador}>{item.userName}</Text>
+                    <Text style={styles.colMetodo}>{item.paymentMethodCode}</Text>
+                    <Text style={styles.colMonto}>${item.amount}</Text>
+                    <Text style={styles.colEstado}>{item.status}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
+            );
+          })
         )}
 
         <View style={styles.totalsSection}>

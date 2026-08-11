@@ -28,6 +28,7 @@ export interface SaleSummaryDto {
   cashierId: string;
   cashierName?: string | null;
   folioId: string;
+  folioCode: string;
   folioNumber: number;
   folioPrefix?: string | null;
   paymentMethodId: string;

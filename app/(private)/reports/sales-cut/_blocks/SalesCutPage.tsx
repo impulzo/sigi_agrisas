@@ -12,6 +12,7 @@ import { CutFilters } from "./CutFilters";
 import { TotalsCards } from "./TotalsCards";
 import { NetCashCard } from "./NetCashCard";
 import { BreakdownTable } from "./BreakdownTable";
+import { SalesListTable } from "./SalesListTable";
 import { EmptyState } from "../../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../../_components/atoms/Icon/Icon";
@@ -33,7 +34,7 @@ export function SalesCutPage() {
   const [paymentMethodId, setPaymentMethodId] = useState("");
   const [toastError, setToastError] = useState<string | null>(null);
 
-  const { report, isLoading, error, isExporting, exportPdf } = useSalesCut({
+  const { report, isLoading, error, isExporting, isExportingXlsx, exportPdf, exportXlsx } = useSalesCut({
     mode,
     from: mode === "range" && from ? from : undefined,
     to: mode === "range" && to ? to : undefined,
@@ -46,6 +47,15 @@ export function SalesCutPage() {
     setToastError(null);
     try {
       await exportPdf();
+    } catch (err) {
+      if (err instanceof Error) setToastError(err.message);
+    }
+  }
+
+  async function handleExportXlsx() {
+    setToastError(null);
+    try {
+      await exportXlsx();
     } catch (err) {
       if (err instanceof Error) setToastError(err.message);
     }
@@ -103,15 +113,26 @@ export function SalesCutPage() {
             paymentMethods={paymentMethods}
           />
         </div>
-        <button
-          type="button"
-          onClick={handleExportPdf}
-          disabled={isExporting}
-          className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-body-sm text-on-primary hover:bg-primary/90 disabled:opacity-50"
-        >
-          <Icon name="receipt_long" size={18} />
-          {isExporting ? "Generando…" : "Exportar PDF"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={isExporting}
+            className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-body-sm text-on-primary hover:bg-primary/90 disabled:opacity-50"
+          >
+            <Icon name="receipt_long" size={18} />
+            {isExporting ? "Generando…" : "Exportar PDF"}
+          </button>
+          <button
+            type="button"
+            onClick={handleExportXlsx}
+            disabled={isExportingXlsx}
+            className="flex items-center gap-2 rounded-full border border-outline-variant px-4 py-2 text-body-sm text-on-surface hover:bg-surface-container disabled:opacity-50"
+          >
+            <Icon name="summarize" size={18} />
+            {isExportingXlsx ? "Generando…" : "Exportar Excel"}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -147,6 +168,7 @@ export function SalesCutPage() {
             rows={report.byProduct}
             quantityHeader="Piezas"
           />
+          <SalesListTable rows={report.salesList} />
         </div>
       )}
 

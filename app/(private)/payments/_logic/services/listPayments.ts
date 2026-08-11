@@ -5,6 +5,7 @@ import type { Payment } from "../types/domain";
 function mapPaymentDto(dto: ListPaymentsResponse["items"][number]): Payment {
   return {
     ...dto,
+    paymentMethodName: dto.paymentMethodCode,
     amount: parseFloat(dto.amount as unknown as string),
     createdAt: new Date(dto.createdAt),
     updatedAt: new Date(dto.updatedAt),
@@ -13,6 +14,9 @@ function mapPaymentDto(dto: ListPaymentsResponse["items"][number]): Payment {
       productNameSnapshot: item.productNameSnapshot,
       amount: parseFloat(item.amount),
     })),
+    saleTotal: parseFloat(dto.saleTotal),
+    salePaidAmount: parseFloat(dto.salePaidAmount),
+    saleDueAmount: parseFloat(dto.saleDueAmount),
   };
 }
 

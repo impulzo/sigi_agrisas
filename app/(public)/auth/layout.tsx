@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         className={`flex lg:w-1/2 flex-col items-center justify-center p-8 lg:p-12 text-agrisas-mint ${styles.leftPanel}`}
       >
         <div className="relative w-32 h-32 lg:w-56 lg:h-56">
-          <Image src="/logo.png" alt="Agrisas" fill className="object-contain rounded-lg" priority />
+          <Image src="/logo.png" alt="Agrisas" fill sizes="(min-width: 1024px) 224px, 128px" className="object-contain rounded-lg" priority />
         </div>
       </div>
 

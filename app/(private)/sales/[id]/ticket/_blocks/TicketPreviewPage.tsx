@@ -35,7 +35,7 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
 
   if (isLoading) {
     return (
-      <div className="pt-2.5 flex h-64 items-center justify-center">
+      <div className="flex h-64 items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -43,7 +43,7 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
 
   if (error || !sale) {
     return (
-      <div className="pt-2.5">
+      <div>
         <EmptyState
           icon="warning"
           title="No se encontró la venta"
@@ -58,14 +58,12 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
     );
   }
 
-  const folioLabel = sale.folioPrefix
-    ? `${sale.folioPrefix}-${sale.folioNumber}`
-    : String(sale.folioNumber);
+  const folioLabel = sale.folioCode;
   const ivaTotal = sale.items.reduce((sum, item) => sum + item.lineIva, 0);
   const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
 
   return (
-    <div className="w-full max-w-lg mx-auto space-y-4 pt-2.5">
+    <div className="w-full max-w-lg mx-auto space-y-4">
       <Link
         href={`/sales/${sale.id}`}
         className="inline-flex items-center gap-2 text-on-surface-variant hover:text-on-surface text-body-sm"
@@ -90,15 +88,12 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
         <div className="p-6 flex flex-col gap-6">
           {/* Brand header */}
           <div className="flex flex-col items-center gap-2 text-center border-b border-outline-variant pb-4">
-            {ticketSettings?.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={ticketSettings.logoUrl} alt="Logo" className="h-16 w-auto object-contain mb-2" />
-            ) : (
-              <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-on-primary mb-2">
-                <Icon name="agriculture" size={32} />
-              </div>
-            )}
-            <h1 className="text-headline-sm font-semibold text-primary tracking-tight">Agrisas</h1>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={ticketSettings?.logoUrl ?? "/logo.png"}
+              alt="Logo"
+              className="h-[105px] w-[75px] object-contain mb-[4.8px]"
+            />
             {ticketSettings?.headerText ? (
               <p className="text-body-sm text-on-surface-variant whitespace-pre-wrap">{ticketSettings.headerText}</p>
             ) : (
@@ -188,8 +183,7 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
 
           {/* Payment method & footer */}
           <div className="flex flex-col gap-4 items-center mt-2 text-center border-t border-outline-variant pt-4">
-            <div className="text-body-sm text-on-surface-variant flex items-center justify-center gap-2 bg-surface-container-low px-4 py-2 rounded">
-              <Icon name="credit_card" size={18} />
+            <div className="text-body-sm text-on-surface-variant flex items-center justify-center bg-surface-container-low px-4 py-2 rounded">
               {sale.paymentMethodName ?? "—"}
             </div>
             {ticketSettings?.footerText ? (

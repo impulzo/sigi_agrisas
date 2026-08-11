@@ -4,6 +4,8 @@ import { CashCutRawRow } from "@/modules/reports/domain/value-objects/CashCutFil
 function row(over: Partial<CashCutRawRow> = {}): CashCutRawRow {
   return {
     paymentId: "p1",
+    saleId: "sale-1",
+    customerId: "cust-1",
     customerCode: "C001",
     docto: "AB-000001",
     factura: "TC-000001",

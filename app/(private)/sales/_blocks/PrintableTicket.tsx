@@ -15,7 +15,7 @@ interface PrintableTicketProps {
 
 export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) {
   const paperWidth = ticketSettings?.paperWidth ?? "80mm";
-  const folioLabel = sale.folioPrefix ? `${sale.folioPrefix}-${sale.folioNumber}` : String(sale.folioNumber);
+  const folioLabel = sale.folioCode;
   const ivaTotal = sale.items.reduce((sum, item) => sum + item.lineIva, 0);
   const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
 
@@ -29,7 +29,7 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
       <style>{`
         @media print {
           .printable-ticket { width: ${paperWidth}; font-family: monospace; font-size: 10px; }
-          .printable-ticket img { max-width: 100%; display: block; margin: 0 auto 4px; }
+          .printable-ticket img { width: 75px; height: 105px; object-fit: contain; display: block; margin: 0 auto 2.4px; }
           .printable-ticket table { width: 100%; border-collapse: collapse; }
           .printable-ticket hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
         }
@@ -42,7 +42,6 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
         // eslint-disable-next-line @next/next/no-img-element
         <img src="/logo.png" alt="Logo" />
       )}
-      <p style={{ textAlign: "center", fontWeight: "bold", fontSize: "12px", margin: "2px 0" }}>Agrisas</p>
       {ticketSettings?.headerText && (
         <p style={{ textAlign: "center", whiteSpace: "pre-wrap" }}>{ticketSettings.headerText}</p>
       )}

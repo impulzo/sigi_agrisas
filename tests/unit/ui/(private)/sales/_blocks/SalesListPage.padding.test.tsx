@@ -54,10 +54,10 @@ jest.mock("../../../../../../app/_components/atoms/Spinner/Spinner", () => ({
 
 import { SalesListPage } from "../../../../../../app/(private)/sales/_blocks/SalesListPage";
 
-describe("SalesListPage — separación superior de 10px (sales-screens-padding)", () => {
-  it("aplica pt-2.5 al contenedor raíz en el estado normal", () => {
+describe("SalesListPage — gutter global de 10px izq/top/der vía layout (sales-screens-padding)", () => {
+  it("el contenedor raíz NO duplica el padding top (el gutter vive en el layout main)", () => {
     const { container } = render(<SalesListPage />);
     expect(screen.getByTestId("catalog-shell")).toBeInTheDocument();
-    expect(container.firstElementChild!.className).toContain("pt-2.5");
+    expect(container.firstElementChild!.className).not.toContain("pt-2.5");
   });
 });

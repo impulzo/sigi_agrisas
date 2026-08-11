@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   getAccountStatementLedger,
   downloadAccountStatementLedgerPdf,
+  downloadAccountStatementLedgerXlsx,
   downloadAnticipoReceiptPdf,
 } from "../services";
 import type { AccountStatementLedgerDto } from "../types/api";
@@ -14,8 +15,10 @@ interface Result {
   isLoading: boolean;
   error: Error | null;
   isExporting: boolean;
+  isExportingXlsx: boolean;
   refresh: () => void;
   exportPdf: () => Promise<void>;
+  exportXlsx: () => Promise<void>;
   printAnticipo: (paymentId: string) => Promise<void>;
 }
 
@@ -38,6 +41,7 @@ export function useAccountStatementLedger(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingXlsx, setIsExportingXlsx] = useState(false);
   const [tick, setTick] = useState(0);
 
   const { branchId, from, to, history, sort } = filters;
@@ -88,6 +92,24 @@ export function useAccountStatementLedger(
     }
   }, [customerId, branchId, from, to, history, sort, ledger]);
 
+  const exportXlsx = useCallback(async () => {
+    setIsExportingXlsx(true);
+    try {
+      const blob = await downloadAccountStatementLedgerXlsx(customerId, {
+        branchId,
+        from,
+        to,
+        history,
+        sort,
+      });
+      const today = new Date().toISOString().slice(0, 10);
+      const scope = ledger?.customer.code ?? customerId;
+      triggerDownload(blob, `account-statement-${scope}-${today}.xlsx`);
+    } finally {
+      setIsExportingXlsx(false);
+    }
+  }, [customerId, branchId, from, to, history, sort, ledger]);
+
   const printAnticipo = useCallback(
     async (paymentId: string) => {
       const blob = await downloadAnticipoReceiptPdf(customerId, paymentId);
@@ -97,5 +119,5 @@ export function useAccountStatementLedger(
     [customerId]
   );
 
-  return { ledger, isLoading, error, isExporting, refresh, exportPdf, printAnticipo };
+  return { ledger, isLoading, error, isExporting, isExportingXlsx, refresh, exportPdf, exportXlsx, printAnticipo };
 }

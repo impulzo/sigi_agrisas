@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 
 jest.mock("next/link", () => {
   const Link = ({ href, children }: { href: string; children: React.ReactNode }) => (
@@ -17,10 +17,19 @@ jest.mock("../../../../../../../../app/(private)/settings/_logic/services/getTic
 }));
 
 import { useSaleDetail } from "../../../../../../../../app/(private)/sales/_logic/hooks/useSaleDetail";
+import { getTicketSettings } from "../../../../../../../../app/(private)/settings/_logic/services/getTicketSettings";
 import { TicketPreviewPage } from "../../../../../../../../app/(private)/sales/[id]/ticket/_blocks/TicketPreviewPage";
 import type { SaleDetail } from "../../../../../../../../app/(private)/sales/_logic/types/domain";
 
 const mockUseSaleDetail = useSaleDetail as jest.MockedFunction<typeof useSaleDetail>;
+
+async function renderPage(id = "sale-1") {
+  let result: ReturnType<typeof render>;
+  await act(async () => {
+    result = render(<TicketPreviewPage id={id} />);
+  });
+  return result!;
+}
 
 function makeSale(overrides: Partial<SaleDetail> = {}): SaleDetail {
   return {
@@ -29,6 +38,7 @@ function makeSale(overrides: Partial<SaleDetail> = {}): SaleDetail {
     cashierId: "user-1",
     cashierName: "Cajero Test",
     folioId: "folio-1",
+    folioCode: "A-42",
     folioNumber: 42,
     folioPrefix: "A",
     paymentMethodId: "pm-1",
@@ -75,9 +85,9 @@ function makeSale(overrides: Partial<SaleDetail> = {}): SaleDetail {
 describe("TicketPreviewPage", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("muestra IVA e IEPS siempre visibles, aunque IEPS sea $0", () => {
+  it("muestra IVA e IEPS siempre visibles, aunque IEPS sea $0", async () => {
     mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
-    render(<TicketPreviewPage id="sale-1" />);
+    await renderPage();
 
     // "IVA"/"IEPS" aparecen tanto en la vista Stitch como en el PrintableTicket
     // (montado oculto, hidden print:block) que también las muestra siempre.
@@ -85,38 +95,96 @@ describe("TicketPreviewPage", () => {
     expect(screen.getAllByText("IEPS").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("muestra los botones Imprimir Ticket y Enviar por Correo", () => {
+  it("muestra los botones Imprimir Ticket y Enviar por Correo", async () => {
     mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
-    render(<TicketPreviewPage id="sale-1" />);
+    await renderPage();
 
     expect(screen.getByRole("button", { name: /imprimir ticket/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /enviar por correo/i })).toBeInTheDocument();
   });
 
-  it("muestra un estado vacío cuando la venta no existe", () => {
+  it("muestra un estado vacío cuando la venta no existe", async () => {
     mockUseSaleDetail.mockReturnValue({ sale: null, isLoading: false, error: new Error("not found"), refresh: jest.fn() });
-    render(<TicketPreviewPage id="sale-1" />);
+    await renderPage();
 
     expect(screen.getByText(/no se encontró la venta/i)).toBeInTheDocument();
   });
 
-  it("etiqueta el vendedor como 'Vendedor' y no como 'Cajero'", () => {
+  it("etiqueta el vendedor como 'Vendedor' y no como 'Cajero'", async () => {
     mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
-    render(<TicketPreviewPage id="sale-1" />);
+    await renderPage();
 
     expect(screen.getAllByText(/Vendedor:/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText(/Cajero:/i)).not.toBeInTheDocument();
   });
 
-  it("usa la etiqueta 'Folio' en lugar de 'Orden'", () => {
+  it("usa la etiqueta 'Folio' en lugar de 'Orden'", async () => {
     mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
-    render(<TicketPreviewPage id="sale-1" />);
+    await renderPage();
 
     expect(screen.getAllByText(/Folio:/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText(/Orden:/i)).not.toBeInTheDocument();
   });
 
-  it("muestra sección cliente (RFC, nombre, dirección) cuando la venta tiene cliente", () => {
+  it("aumenta el tamaño del logo a 75x105px", async () => {
+    jest
+      .mocked(getTicketSettings)
+      .mockResolvedValueOnce({
+        logoUrl: "https://x.test/logo.png",
+        headerText: null,
+        footerText: null,
+        paperWidth: "80mm",
+        businessAddress: null,
+        businessPhone: null,
+        businessTaxRegime: null,
+        legendText: null,
+      });
+    mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
+    const { container } = await renderPage();
+
+    await waitFor(() => {
+      const previewLogo = Array.from(container.querySelectorAll('img[alt="Logo"]')).find((el) =>
+        el.className.includes("w-[75px]")
+      );
+      expect(previewLogo).toBeDefined();
+      expect(previewLogo!.className).toContain("h-[105px]");
+      expect(previewLogo!.className).toContain("object-contain");
+      expect(previewLogo!.className).toContain("mb-[4.8px]");
+    });
+  });
+
+  it("usa el logo embebido /logo.png como fallback cuando no hay logoUrl", async () => {
+    mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
+    const { container } = await renderPage();
+
+    await waitFor(() => {
+      const previewLogo = Array.from(container.querySelectorAll('img[alt="Logo"]')).find((el) =>
+        el.className.includes("w-[75px]")
+      );
+      expect(previewLogo).toBeDefined();
+      expect(previewLogo!.getAttribute("src")).toBe("/logo.png");
+    });
+  });
+
+  it("la tarjeta del ticket no contiene iconos material-symbols-outlined", async () => {
+    mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
+    const { container } = await renderPage();
+
+    await waitFor(() => {
+      const previewLogo = Array.from(container.querySelectorAll('img[alt="Logo"]')).find((el) =>
+        el.className.includes("w-[75px]")
+      );
+      expect(previewLogo).toBeDefined();
+    });
+
+    const ticketCard = container.querySelector("img[alt='Logo']")?.closest(".bg-surface-container-lowest");
+    expect(ticketCard).not.toBeNull();
+    expect(ticketCard!.querySelectorAll(".material-symbols-outlined").length).toBe(0);
+    expect(container.querySelector(".material-symbols-outlined")?.textContent).not.toBe("agriculture");
+    expect(container.querySelector(".material-symbols-outlined")?.textContent).not.toBe("credit_card");
+  });
+
+  it("muestra sección cliente (RFC, nombre, dirección) cuando la venta tiene cliente", async () => {
     mockUseSaleDetail.mockReturnValue({
       sale: makeSale({
         customerId: "c1",
@@ -129,7 +197,7 @@ describe("TicketPreviewPage", () => {
       error: null,
       refresh: jest.fn(),
     });
-    render(<TicketPreviewPage id="sale-1" />);
+    await renderPage();
 
     expect(screen.getAllByText(/RFC: XAXX010101000/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Nombre: Cliente Test/i).length).toBeGreaterThanOrEqual(1);
@@ -137,9 +205,9 @@ describe("TicketPreviewPage", () => {
     expect(screen.getAllByText("Crédito a 30 días").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("muestra 'Total a pagar' como etiqueta del total de la venta", () => {
+  it("muestra 'Total a pagar' como etiqueta del total de la venta", async () => {
     mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
-    render(<TicketPreviewPage id="sale-1" />);
+    await renderPage();
 
     expect(screen.getAllByText("Total a pagar").length).toBeGreaterThanOrEqual(1);
     // No hay etiqueta "Total" standalone junto al importe (el "Total" restante es la columna de la tabla de artículos)
@@ -148,18 +216,18 @@ describe("TicketPreviewPage", () => {
   });
 });
 
-describe("TicketPreviewPage — separación superior de 10px (sales-screens-padding)", () => {
+describe("TicketPreviewPage — gutter global de 10px izq/top/der vía layout (sales-screens-padding)", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("aplica pt-2.5 al contenedor raíz en el estado normal", () => {
+  it("el contenedor raíz NO duplica el padding top en el estado normal", async () => {
     mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
-    const { container } = render(<TicketPreviewPage id="sale-1" />);
-    expect(container.firstElementChild!.className).toContain("pt-2.5");
+    const { container } = await renderPage();
+    expect(container.firstElementChild!.className).not.toContain("pt-2.5");
   });
 
-  it("aplica pt-2.5 en el estado de carga", () => {
+  it("el contenedor raíz NO duplica el padding en el estado de carga", async () => {
     mockUseSaleDetail.mockReturnValue({ sale: null, isLoading: true, error: null, refresh: jest.fn() });
-    const { container } = render(<TicketPreviewPage id="sale-1" />);
-    expect(container.firstElementChild!.className).toContain("pt-2.5");
+    const { container } = await renderPage();
+    expect(container.firstElementChild!.className).not.toContain("pt-2.5");
   });
 });

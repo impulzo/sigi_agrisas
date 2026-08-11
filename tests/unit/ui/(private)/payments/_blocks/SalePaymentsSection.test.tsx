@@ -136,4 +136,59 @@ describe("SalePaymentsSection", () => {
     expect(screen.getByText("Producto A")).toBeInTheDocument();
     expect(screen.getByText("Producto B")).toBeInTheDocument();
   });
+
+  function makePayment(status: "completed" | "cancelled" = "completed") {
+    return {
+      id: "pay-1",
+      saleId: "s1",
+      userId: "u1",
+      userName: "Cobrador",
+      branchId: "b1",
+      paymentMethodId: "pm1",
+      paymentMethodName: "Efectivo",
+      folioId: "f1",
+      folioNumber: 1,
+      folioPrefix: "RECIBO-",
+      amount: 300,
+      status,
+      createdAt: new Date("2026-06-01T10:00:00Z"),
+      updatedAt: new Date("2026-06-01T10:00:00Z"),
+      saleTotal: 1000,
+      salePaidAmount: 300,
+      salePaymentStatus: "partial" as const,
+      saleDueAmount: 700,
+    };
+  }
+
+  it("muestra badge 'Activo' cuando la venta sigue parcial (Historia #3)", () => {
+    setup();
+    mockUseSalePayments.mockReturnValue({
+      payments: [makePayment("completed")],
+      paidAmount: 300,
+      total: 1000,
+      paymentStatus: "partial",
+      lineBalances: [],
+      isLoading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+    render(<SalePaymentsSection saleId="s1" sale={makeSale()} onPaymentMutated={jest.fn()} />);
+    expect(screen.getByText("Activo")).toBeInTheDocument();
+  });
+
+  it("muestra badge 'Completado' solo cuando la venta llega a 100% (Historia #3)", () => {
+    setup();
+    mockUseSalePayments.mockReturnValue({
+      payments: [makePayment("completed")],
+      paidAmount: 1000,
+      total: 1000,
+      paymentStatus: "paid",
+      lineBalances: [],
+      isLoading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+    render(<SalePaymentsSection saleId="s1" sale={makeSale()} onPaymentMutated={jest.fn()} />);
+    expect(screen.getByText("Completado")).toBeInTheDocument();
+  });
 });

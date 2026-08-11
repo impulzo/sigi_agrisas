@@ -10,6 +10,10 @@ import { GetAnticipoReceiptUseCase } from "../../application/use-cases/GetAntici
 import { GetSalesCutReportUseCase } from "../../application/use-cases/GetSalesCutReportUseCase";
 import { GetCashCutReportUseCase } from "../../application/use-cases/GetCashCutReportUseCase";
 import { GetDepartmentPriceListReportUseCase } from "../../application/use-cases/GetDepartmentPriceListReportUseCase";
+import { GetPurchasesReportUseCase } from "../../application/use-cases/GetPurchasesReportUseCase";
+import { GetProviderPaymentsReportUseCase } from "../../application/use-cases/GetProviderPaymentsReportUseCase";
+import { GetSalesByProductReportUseCase } from "../../application/use-cases/GetSalesByProductReportUseCase";
+import { GetCollectionsReportUseCase } from "../../application/use-cases/GetCollectionsReportUseCase";
 import { StatementCustomerNotFoundError } from "../../domain/errors/StatementCustomerNotFoundError";
 import { AnticipoReceiptNotFoundError } from "../../domain/errors/AnticipoReceiptNotFoundError";
 import { InventoryStockReportPdf } from "../pdf/InventoryStockReportPdf";
@@ -22,8 +26,19 @@ import { AnticipoReceiptPdf } from "../pdf/AnticipoReceiptPdf";
 import { SalesCutReportPdf } from "../pdf/SalesCutReportPdf";
 import { CashCutReportPdf } from "../pdf/CashCutReportPdf";
 import { DepartmentPriceListReportPdf } from "../pdf/DepartmentPriceListReportPdf";
+import { PurchasesReportPdf } from "../pdf/PurchasesReportPdf";
+import { ProviderPaymentsReportPdf } from "../pdf/ProviderPaymentsReportPdf";
+import { SalesByProductReportPdf } from "../pdf/SalesByProductReportPdf";
+import { CollectionsReportPdf } from "../pdf/CollectionsReportPdf";
 import { buildCashCutWorkbook } from "../xlsx/buildCashCutWorkbook";
 import { buildDepartmentPriceListWorkbook } from "../xlsx/buildDepartmentPriceListWorkbook";
+import { buildSalesCutWorkbook } from "../xlsx/buildSalesCutWorkbook";
+import { buildAccountStatementsSummaryWorkbook } from "../xlsx/buildAccountStatementsSummaryWorkbook";
+import { buildAccountStatementLedgerWorkbook } from "../xlsx/buildAccountStatementLedgerWorkbook";
+import { buildPurchasesReportWorkbook } from "../xlsx/buildPurchasesReportWorkbook";
+import { buildProviderPaymentsReportWorkbook } from "../xlsx/buildProviderPaymentsReportWorkbook";
+import { buildSalesByProductReportWorkbook } from "../xlsx/buildSalesByProductReportWorkbook";
+import { buildCollectionsReportWorkbook } from "../xlsx/buildCollectionsReportWorkbook";
 import { requirePermission } from "@/modules/rbac/infrastructure/http/requirePermission";
 import { resolveScopedBranchId } from "@/modules/rbac/infrastructure/http/enforceBranchScope";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
@@ -74,6 +89,10 @@ const dateOnly = z
 
 const uuidParamSchema = z.string().uuid("Invalid customerId");
 
+const cashCutFormatEnum = z.enum(["json", "pdf", "xlsx"], {
+  errorMap: () => ({ message: "Invalid format. Allowed: json, pdf, xlsx" }),
+}).default("json");
+
 const summaryQuerySchema = z.object({
   branchId: z.string().uuid("Invalid branchId").optional(),
   search: z
@@ -94,7 +113,7 @@ const summaryQuerySchema = z.object({
     }),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
-  format: formatEnum,
+  format: cashCutFormatEnum,
 });
 
 const ledgerQuerySchema = z.object({
@@ -115,7 +134,7 @@ const ledgerQuerySchema = z.object({
       errorMap: () => ({ message: "Invalid sort. Allowed: date, invoice, serie" }),
     })
     .default("date"),
-  format: formatEnum,
+  format: cashCutFormatEnum,
 });
 
 const receiptQuerySchema = z.object({
@@ -131,12 +150,8 @@ const salesCutQuerySchema = z.object({
   branchId: z.string().uuid("Invalid branchId").optional(),
   cashierId: z.string().uuid("Invalid cashierId").optional(),
   paymentMethodId: z.string().uuid("Invalid paymentMethodId").optional(),
-  format: formatEnum,
+  format: cashCutFormatEnum,
 });
-
-const cashCutFormatEnum = z.enum(["json", "pdf", "xlsx"], {
-  errorMap: () => ({ message: "Invalid format. Allowed: json, pdf, xlsx" }),
-}).default("json");
 
 const requiredDate = (label: string) =>
   z
@@ -158,6 +173,49 @@ const departmentPriceListQuerySchema = z.object({
   format: cashCutFormatEnum,
 });
 
+const purchaseStatusEnum = z.enum(["completed", "cancelled"]).optional();
+
+const purchasesQuerySchema = z.object({
+  branchId: z.string().uuid("Invalid branchId").optional(),
+  providerId: z.string().uuid("Invalid providerId").optional(),
+  status: purchaseStatusEnum,
+  from: dateOnly,
+  to: dateOnly,
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
+  format: cashCutFormatEnum,
+});
+
+const providerPaymentsQuerySchema = z.object({
+  branchId: z.string().uuid("Invalid branchId").optional(),
+  providerId: z.string().uuid("Invalid providerId").optional(),
+  status: purchaseStatusEnum,
+  from: dateOnly,
+  to: dateOnly,
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
+  format: cashCutFormatEnum,
+});
+
+const salesByProductQuerySchema = z.object({
+  branchId: z.string().uuid("Invalid branchId").optional(),
+  departmentId: z.string().uuid("Invalid departmentId").optional(),
+  customerId: z.string().uuid("Invalid customerId").optional(),
+  from: dateOnly,
+  to: dateOnly,
+  format: cashCutFormatEnum,
+});
+
+const customerCollectionsQuerySchema = z.object({
+  branchId: z.string().uuid("Invalid branchId").optional(),
+  customerId: z.string().uuid("Invalid customerId").optional(),
+  from: requiredDate("from"),
+  to: requiredDate("to"),
+  format: cashCutFormatEnum,
+});
+
+const EXPORT_ROW_LIMIT = 10_000;
+
 export class ReportsController {
   constructor(
     private readonly stockUseCase: GetInventoryStockReportUseCase,
@@ -168,6 +226,10 @@ export class ReportsController {
     private readonly salesCutUseCase: GetSalesCutReportUseCase,
     private readonly cashCutUseCase: GetCashCutReportUseCase,
     private readonly departmentPriceListUseCase: GetDepartmentPriceListReportUseCase,
+    private readonly purchasesUseCase: GetPurchasesReportUseCase,
+    private readonly providerPaymentsUseCase: GetProviderPaymentsReportUseCase,
+    private readonly salesByProductUseCase: GetSalesByProductReportUseCase,
+    private readonly collectionsUseCase: GetCollectionsReportUseCase,
     private readonly authzService: AuthorizationService
   ) {}
 
@@ -310,6 +372,18 @@ export class ReportsController {
         });
       }
 
+      if (format === "xlsx") {
+        const buffer = buildAccountStatementsSummaryWorkbook(dto);
+        const date = dto.generatedAt.split("T")[0];
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="account-statements-${date}.xlsx"`,
+          },
+        });
+      }
+
       return NextResponse.json(dto);
     } catch (err) {
       console.error("[ReportsController] getAccountStatementsSummary error", err);
@@ -351,17 +425,29 @@ export class ReportsController {
         generatedBy: { userId, email },
       });
 
-      if (format === "pdf") {
+      if (format === "pdf" || format === "xlsx") {
         if (dto.movements.length > LEDGER_PDF_MAX_ROWS) {
           return NextResponse.json(
             { error: "ReportTooLarge", limit: LEDGER_PDF_MAX_ROWS },
             { status: 409 }
           );
         }
+        const date = dto.generatedAt.split("T")[0];
+
+        if (format === "xlsx") {
+          const buffer = buildAccountStatementLedgerWorkbook(dto);
+          return new NextResponse(buffer as unknown as BodyInit, {
+            status: 200,
+            headers: {
+              "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "Content-Disposition": `attachment; filename="account-statement-${dto.customer.code}-${date}.xlsx"`,
+            },
+          });
+        }
+
         const buffer = await renderToBuffer(
           createElement(AccountStatementLedgerPdf, { data: dto }) as never
         );
-        const date = dto.generatedAt.split("T")[0];
         return new NextResponse(buffer as unknown as BodyInit, {
           status: 200,
           headers: {
@@ -493,6 +579,17 @@ export class ReportsController {
         });
       }
 
+      if (format === "xlsx") {
+        const buffer = buildSalesCutWorkbook(dto);
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="sales-cut-${dto.filters.from}_${dto.filters.to}.xlsx"`,
+          },
+        });
+      }
+
       return NextResponse.json(dto);
     } catch (err) {
       console.error("[ReportsController] getSalesCutReport error", err);
@@ -610,6 +707,263 @@ export class ReportsController {
       return NextResponse.json(dto);
     } catch (err) {
       console.error("[ReportsController] getDepartmentPriceListReport error", err);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+  }
+
+  async getPurchasesReport(req: NextRequest): Promise<NextResponse> {
+    const authError = await requirePermission(req, "reports:purchases_read", this.authzService);
+    if (authError) return authError;
+
+    const params = Object.fromEntries(new URL(req.url).searchParams.entries());
+    const parsed = purchasesQuerySchema.safeParse(params);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
+
+    const { branchId, providerId, status, from, to, page, pageSize, format } = parsed.data;
+
+    const scopeResult = await resolveScopedBranchId(req, branchId, this.authzService);
+    if (scopeResult instanceof NextResponse) return scopeResult;
+
+    const userId = req.headers.get("x-user-id")!;
+    const email = req.headers.get("x-user-email") ?? "";
+    const forExport = format === "pdf" || format === "xlsx";
+
+    try {
+      const { dto, tooLarge } = await this.purchasesUseCase.execute({
+        branchId: scopeResult.branchId ?? null,
+        providerId: providerId ?? null,
+        status: status ?? null,
+        from: from ?? null,
+        to: to ?? null,
+        page,
+        pageSize,
+        forExport,
+        generatedBy: { userId, email },
+      });
+
+      if (forExport && tooLarge) {
+        return NextResponse.json({ error: "ReportTooLarge", limit: EXPORT_ROW_LIMIT }, { status: 409 });
+      }
+
+      const date = dto.generatedAt.split("T")[0];
+
+      if (format === "pdf") {
+        const buffer = await renderToBuffer(createElement(PurchasesReportPdf, { data: dto }) as never);
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="purchases-${date}.pdf"`,
+          },
+        });
+      }
+
+      if (format === "xlsx") {
+        const buffer = buildPurchasesReportWorkbook(dto);
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="purchases-${date}.xlsx"`,
+          },
+        });
+      }
+
+      return NextResponse.json(dto);
+    } catch (err) {
+      console.error("[ReportsController] getPurchasesReport error", err);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+  }
+
+  async getProviderPaymentsReport(req: NextRequest): Promise<NextResponse> {
+    const authError = await requirePermission(req, "reports:purchases_read", this.authzService);
+    if (authError) return authError;
+
+    const params = Object.fromEntries(new URL(req.url).searchParams.entries());
+    const parsed = providerPaymentsQuerySchema.safeParse(params);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
+
+    const { branchId, providerId, status, from, to, page, pageSize, format } = parsed.data;
+
+    const scopeResult = await resolveScopedBranchId(req, branchId, this.authzService);
+    if (scopeResult instanceof NextResponse) return scopeResult;
+
+    const userId = req.headers.get("x-user-id")!;
+    const email = req.headers.get("x-user-email") ?? "";
+    const forExport = format === "pdf" || format === "xlsx";
+
+    try {
+      const { dto, tooLarge } = await this.providerPaymentsUseCase.execute({
+        branchId: scopeResult.branchId ?? null,
+        providerId: providerId ?? null,
+        status: status ?? null,
+        from: from ?? null,
+        to: to ?? null,
+        page,
+        pageSize,
+        forExport,
+        generatedBy: { userId, email },
+      });
+
+      if (forExport && tooLarge) {
+        return NextResponse.json({ error: "ReportTooLarge", limit: EXPORT_ROW_LIMIT }, { status: 409 });
+      }
+
+      const date = dto.generatedAt.split("T")[0];
+
+      if (format === "pdf") {
+        const buffer = await renderToBuffer(createElement(ProviderPaymentsReportPdf, { data: dto }) as never);
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="provider-payments-${date}.pdf"`,
+          },
+        });
+      }
+
+      if (format === "xlsx") {
+        const buffer = buildProviderPaymentsReportWorkbook(dto);
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="provider-payments-${date}.xlsx"`,
+          },
+        });
+      }
+
+      return NextResponse.json(dto);
+    } catch (err) {
+      console.error("[ReportsController] getProviderPaymentsReport error", err);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+  }
+
+  async getSalesByProductReport(req: NextRequest): Promise<NextResponse> {
+    const authError = await requirePermission(req, "reports:sales_by_product_read", this.authzService);
+    if (authError) return authError;
+
+    const params = Object.fromEntries(new URL(req.url).searchParams.entries());
+    const parsed = salesByProductQuerySchema.safeParse(params);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
+
+    const { branchId, departmentId, customerId, format } = parsed.data;
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    const from = parsed.data.from ?? new Date(`${todayStr}T00:00:00.000Z`);
+    const to = parsed.data.to ?? new Date(`${todayStr}T00:00:00.000Z`);
+    if (from > to) {
+      return NextResponse.json({ error: "from must be <= to" }, { status: 400 });
+    }
+
+    const scopeResult = await resolveScopedBranchId(req, branchId, this.authzService);
+    if (scopeResult instanceof NextResponse) return scopeResult;
+
+    const userId = req.headers.get("x-user-id")!;
+    const email = req.headers.get("x-user-email") ?? "";
+
+    try {
+      const dto = await this.salesByProductUseCase.execute({
+        branchId: scopeResult.branchId ?? null,
+        departmentId: departmentId ?? null,
+        customerId: customerId ?? null,
+        from,
+        to,
+        generatedBy: { userId, email },
+      });
+
+      if (format === "pdf") {
+        const buffer = await renderToBuffer(createElement(SalesByProductReportPdf, { data: dto }) as never);
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="sales-by-product-${dto.filters.from}_${dto.filters.to}.pdf"`,
+          },
+        });
+      }
+
+      if (format === "xlsx") {
+        const buffer = buildSalesByProductReportWorkbook(dto);
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="sales-by-product-${dto.filters.from}_${dto.filters.to}.xlsx"`,
+          },
+        });
+      }
+
+      return NextResponse.json(dto);
+    } catch (err) {
+      console.error("[ReportsController] getSalesByProductReport error", err);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+  }
+
+  async getCustomerCollectionsReport(req: NextRequest): Promise<NextResponse> {
+    const authError = await requirePermission(req, "reports:customer_collections_read", this.authzService);
+    if (authError) return authError;
+
+    const params = Object.fromEntries(new URL(req.url).searchParams.entries());
+    const parsed = customerCollectionsQuerySchema.safeParse(params);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
+
+    const { branchId, customerId, from, to, format } = parsed.data;
+    if (from > to) {
+      return NextResponse.json({ error: "from must be <= to" }, { status: 400 });
+    }
+
+    const scopeResult = await resolveScopedBranchId(req, branchId, this.authzService);
+    if (scopeResult instanceof NextResponse) return scopeResult;
+
+    const userId = req.headers.get("x-user-id")!;
+    const email = req.headers.get("x-user-email") ?? "";
+
+    try {
+      const dto = await this.collectionsUseCase.execute({
+        branchId: scopeResult.branchId ?? null,
+        customerId: customerId ?? null,
+        from,
+        to,
+        generatedBy: { userId, email },
+      });
+
+      if (format === "pdf") {
+        const buffer = await renderToBuffer(createElement(CollectionsReportPdf, { data: dto }) as never);
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="customer-collections-${dto.filters.from}_${dto.filters.to}.pdf"`,
+          },
+        });
+      }
+
+      if (format === "xlsx") {
+        const buffer = buildCollectionsReportWorkbook(dto);
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="customer-collections-${dto.filters.from}_${dto.filters.to}.xlsx"`,
+          },
+        });
+      }
+
+      return NextResponse.json(dto);
+    } catch (err) {
+      console.error("[ReportsController] getCustomerCollectionsReport error", err);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
   }

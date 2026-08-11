@@ -65,6 +65,7 @@ export class PrismaSalesCutRepository implements SalesCutRepository {
       productRows,
       paymentsAgg,
       returnsAgg,
+      salesListRows,
     ] = await Promise.all([
       this.prisma.sale.aggregate({
         where: activeWhere,
@@ -181,6 +182,18 @@ export class PrismaSalesCutRepository implements SalesCutRepository {
         _sum: { refundTotal: true },
         _count: { _all: true },
       }),
+      this.prisma.sale.findMany({
+        where: activeWhere,
+        select: {
+          id: true,
+          folioCode: true,
+          total: true,
+          createdAt: true,
+          customer: { select: { name: true } },
+          paymentMethod: { select: { name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
     ]);
 
     // Resolver nombres de los desgloses.
@@ -279,6 +292,14 @@ export class PrismaSalesCutRepository implements SalesCutRepository {
         count: returnsAgg._count._all,
         total: Number(returnsAgg._sum.refundTotal ?? 0),
       },
+      salesList: salesListRows.map((r) => ({
+        saleId: r.id,
+        folioCode: r.folioCode,
+        customerName: r.customer?.name ?? null,
+        total: Number(r.total),
+        paymentMethodName: r.paymentMethod.name,
+        createdAt: r.createdAt,
+      })),
     };
   }
 }

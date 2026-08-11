@@ -238,6 +238,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
             : "",
           branchName: paymentRow!.branch?.name ?? "",
           paymentMethodCode: pmRow.code,
+          saleTotal,
+          salePaidAmount: newPaidAmount,
+          salePaymentStatus: newPaymentStatus,
         },
       };
     });
@@ -311,6 +314,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
             : "",
           branchName: paymentRow!.branch?.name ?? "",
           paymentMethodCode: paymentRow!.paymentMethod?.code ?? "",
+          saleTotal,
+          salePaidAmount: newPaidAmount,
+          salePaymentStatus: newPaymentStatus,
         },
       };
     });
@@ -342,6 +348,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
         userName: row.user ? (row.user.name || row.user.email) : "",
         branchName: row.branch?.name ?? "",
         paymentMethodCode: row.paymentMethod?.code ?? "",
+        saleTotal: Number(sale.total),
+        salePaidAmount: Number(sale.paidAmount),
+        salePaymentStatus: sale.paymentStatus as SalePaymentStatus,
       },
     };
   }
@@ -388,6 +397,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
         userName: row.user ? (row.user.name || row.user.email) : "",
         branchName: row.branch?.name ?? "",
         paymentMethodCode: row.paymentMethod?.code ?? "",
+        saleTotal: Number(row.sale?.total ?? 0),
+        salePaidAmount: Number(row.sale?.paidAmount ?? 0),
+        salePaymentStatus: (row.sale?.paymentStatus as SalePaymentStatus) ?? "pending",
       },
     }));
 
@@ -423,6 +435,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
         userName: row.user ? (row.user.name || row.user.email) : "",
         branchName: row.branch?.name ?? "",
         paymentMethodCode: row.paymentMethod?.code ?? "",
+        saleTotal,
+        salePaidAmount: salePaidAmount,
+        salePaymentStatus: saleRow.paymentStatus as SalePaymentStatus,
       },
     }));
 
@@ -546,6 +561,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
       amount: string;
       status: string;
       cancelled_at: Date | null;
+      sale_total: string;
+      sale_paid_amount: string;
+      sale_payment_status: string;
     };
 
     const itemRows = await this.prisma.$queryRawUnsafe<ItemRow[]>(
@@ -564,7 +582,10 @@ export class PrismaPaymentRepository implements PaymentRepository {
         pm.code AS payment_method_code,
         cp.amount::text,
         cp.status,
-        cp.cancelled_at
+        cp.cancelled_at,
+        s.total::text AS sale_total,
+        s.paid_amount::text AS sale_paid_amount,
+        s.payment_status AS sale_payment_status
        FROM customer_payments cp
        JOIN sales s ON s.id = cp.sale_id
        JOIN customers c ON c.id = cp.customer_id
@@ -594,6 +615,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
       amount: parseFloat(row.amount),
       status: row.status,
       cancelledAt: row.cancelled_at,
+      saleTotal: parseFloat(row.sale_total),
+      salePaidAmount: parseFloat(row.sale_paid_amount),
+      salePaymentStatus: row.sale_payment_status as SalePaymentStatus,
     }));
 
     return { items, total, totalAmountCompleted, totalAmountCancelled, completedCount, cancelledCount };

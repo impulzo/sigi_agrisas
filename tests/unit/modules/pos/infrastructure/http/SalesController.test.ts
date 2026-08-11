@@ -64,7 +64,7 @@ function makeSummary(status: SaleStatus, branchId = VALID_UUID): SaleSummary {
   });
   return {
     sale,
-    joined: { branchName: null, customerName: null, customerRfc: null, cashierName: null, paymentMethodCode: null, paymentMethodName: null, paymentMethodIsCredit: false },
+    joined: { branchName: null, customerName: null, customerRfc: null, customerAddress: null, customerCreditDays: null, cashierName: null, paymentMethodCode: null, paymentMethodName: null, paymentMethodIsCredit: false },
   };
 }
 

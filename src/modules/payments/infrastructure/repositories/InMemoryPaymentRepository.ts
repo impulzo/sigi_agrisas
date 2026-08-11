@@ -202,6 +202,9 @@ export class InMemoryPaymentRepository implements PaymentRepository {
         userName: "",
         branchName: "",
         paymentMethodCode: "",
+        saleTotal: sale.total,
+        salePaidAmount: sale.paidAmount,
+        salePaymentStatus: sale.paymentStatus,
       },
     };
   }
@@ -259,6 +262,9 @@ export class InMemoryPaymentRepository implements PaymentRepository {
         userName: "",
         branchName: "",
         paymentMethodCode: "",
+        saleTotal: sale.total,
+        salePaidAmount: sale.paidAmount,
+        salePaymentStatus: sale.paymentStatus,
       },
     };
   }
@@ -286,6 +292,9 @@ export class InMemoryPaymentRepository implements PaymentRepository {
         userName: "",
         branchName: "",
         paymentMethodCode: "",
+        saleTotal: sale.total,
+        salePaidAmount: sale.paidAmount,
+        salePaymentStatus: sale.paymentStatus,
       },
     };
   }
@@ -322,6 +331,9 @@ export class InMemoryPaymentRepository implements PaymentRepository {
           userName: "",
           branchName: "",
           paymentMethodCode: "",
+          saleTotal: sale?.total ?? 0,
+          salePaidAmount: sale?.paidAmount ?? 0,
+          salePaymentStatus: sale?.paymentStatus ?? "pending",
         },
       };
     });
@@ -345,6 +357,9 @@ export class InMemoryPaymentRepository implements PaymentRepository {
         userName: "",
         branchName: "",
         paymentMethodCode: "",
+        saleTotal: sale.total,
+        salePaidAmount: sale.paidAmount,
+        salePaymentStatus: sale.paymentStatus,
       },
     }));
 
@@ -433,6 +448,9 @@ export class InMemoryPaymentRepository implements PaymentRepository {
         amount: p.amount,
         status: p.status,
         cancelledAt: p.cancelledAt,
+        saleTotal: sale?.total ?? 0,
+        salePaidAmount: sale?.paidAmount ?? 0,
+        salePaymentStatus: sale?.paymentStatus ?? "pending",
       };
     });
 

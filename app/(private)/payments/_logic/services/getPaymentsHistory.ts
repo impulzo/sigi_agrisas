@@ -74,3 +74,39 @@ export async function downloadPaymentsHistoryPdf(
 
   return res.blob();
 }
+
+export async function downloadPaymentsHistoryXlsx(
+  filters: PaymentHistoryFilters,
+  fetchImpl = authFetch,
+): Promise<Blob> {
+  const params = new URLSearchParams({ format: "xlsx" });
+  const { userId, customerId, productId, paymentMethodId, status, from, to, branchId } = filters;
+  if (userId) params.set("userId", userId);
+  if (customerId) params.set("customerId", customerId);
+  if (productId) params.set("productId", productId);
+  if (paymentMethodId) params.set("paymentMethodId", paymentMethodId);
+  if (status) params.set("status", status);
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  if (branchId) params.set("branchId", branchId);
+
+  let res: Response;
+  try {
+    res = await fetchImpl(`/api/v1/admin/payments/history?${params.toString()}`);
+  } catch {
+    throw new NetworkError();
+  }
+
+  if (res.status === 409) {
+    const data = await res.json() as { error: string };
+    if (data.error === "ReportTooLarge") {
+      const e = new Error("El conjunto de datos supera 10,000 registros. Aplica más filtros.");
+      e.name = "ReportTooLargeError";
+      throw e;
+    }
+  }
+
+  if (!res.ok) throw new NetworkError();
+
+  return res.blob();
+}

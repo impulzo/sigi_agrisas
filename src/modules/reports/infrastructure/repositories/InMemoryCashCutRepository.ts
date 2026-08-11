@@ -3,6 +3,7 @@ import { CashCutFilters, CashCutRawRow } from "../../domain/value-objects/CashCu
 
 export interface InMemCutPayment {
   paymentId: string;
+  saleId: string;
   status: string; // completed | cancelled
   branchId: string;
   customerId: string;
@@ -45,6 +46,8 @@ export class InMemoryCashCutRepository implements CashCutRepository {
 
     return matches.map((p) => ({
       paymentId: p.paymentId,
+      saleId: p.saleId,
+      customerId: p.customerId,
       customerCode: p.customerCode,
       docto: p.docto,
       factura: p.factura,

@@ -21,7 +21,7 @@ export default function PrivateLayout({ children }: { children: ReactNode }) {
       <MaterialSymbolsLoader />
       <NavigationRail />
       <TopAppBar userName={userName} userEmail={userEmail} />
-      <main className="pl-[80px] pt-16 h-full overflow-y-auto">
+      <main className="pl-[90px] pt-[74px] pr-2.5 h-full overflow-y-auto">
         <SessionLifecycleProvider>{children}</SessionLifecycleProvider>
       </main>
     </div>

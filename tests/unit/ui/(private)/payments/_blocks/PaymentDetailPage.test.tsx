@@ -28,7 +28,10 @@ const mockUsePaymentDetail = usePaymentDetail as jest.MockedFunction<typeof useP
 
 const VALID_ID = "550e8400-e29b-41d4-a716-446655440000";
 
-function makePayment(status: "completed" | "cancelled" = "completed"): PaymentDetail {
+function makePayment(
+  status: "completed" | "cancelled" = "completed",
+  salePaymentStatus: "paid" | "partial" | "pending" = "partial",
+): PaymentDetail {
   return {
     id: VALID_ID,
     saleId: "s1",
@@ -52,6 +55,10 @@ function makePayment(status: "completed" | "cancelled" = "completed"): PaymentDe
     updatedAt: new Date("2026-06-01T10:00:00Z"),
     cancelledAt: status === "cancelled" ? new Date("2026-06-02T10:00:00Z") : null,
     cancellationReason: status === "cancelled" ? "Error de captura" : null,
+    saleTotal: 1000,
+    salePaidAmount: 300,
+    salePaymentStatus,
+    saleDueAmount: 700,
   };
 }
 
@@ -98,6 +105,31 @@ describe("PaymentDetailPage", () => {
     setup(() => false);
     render(<PaymentDetailPage id={VALID_ID} />);
     expect(screen.getByRole("link", { name: /A-42/i })).toHaveAttribute("href", "/sales/s1");
+  });
+
+  it("muestra badge 'Activo' cuando el abono está activo y la venta sigue parcial (Historia #3)", () => {
+    setup(() => false, makePayment("completed", "partial"));
+    render(<PaymentDetailPage id={VALID_ID} />);
+    expect(screen.getByText("Activo")).toBeInTheDocument();
+  });
+
+  it("muestra badge 'Completado' solo cuando la venta llega a 100% (Historia #3)", () => {
+    setup(() => false, makePayment("completed", "paid"));
+    render(<PaymentDetailPage id={VALID_ID} />);
+    expect(screen.getByText("Completado")).toBeInTheDocument();
+  });
+
+  it("muestra badge 'Cancelado' sin importar el estado de la venta", () => {
+    setup(() => false, makePayment("cancelled", "partial"));
+    render(<PaymentDetailPage id={VALID_ID} />);
+    expect(screen.getByText("Cancelado")).toBeInTheDocument();
+  });
+
+  it("muestra el desglose Monto total / Saldo pendiente (Historia #1)", () => {
+    setup(() => false, makePayment("completed", "partial"));
+    render(<PaymentDetailPage id={VALID_ID} />);
+    expect(screen.getByText(/Monto total: \$1,000\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Saldo pendiente: \$700\.00/)).toBeInTheDocument();
   });
 
   it("muestra ID inválido para UUID malformado", () => {

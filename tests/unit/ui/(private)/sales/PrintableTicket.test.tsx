@@ -19,6 +19,7 @@ const sale: SaleDetail = {
   cashierId: "u1",
   cashierName: "Admin",
   folioId: "f1",
+  folioCode: "TK-42",
   folioNumber: 42,
   folioPrefix: "TK",
   paymentMethodId: "pm1",
@@ -81,6 +82,22 @@ describe("PrintableTicket", () => {
     expect(screen.getByAltText("Logo")).toBeInTheDocument();
   });
 
+  it("sizes the logo to 75x105px in the print layout", () => {
+    const { container } = render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    const printStyle = container.querySelector("style")?.textContent ?? "";
+    expect(printStyle).toContain(".printable-ticket img");
+    expect(printStyle).toContain("width: 75px; height: 105px;");
+    expect(printStyle).toContain("object-fit: contain");
+  });
+
+  it("reduces the logo bottom margin 40% to 2.4px", () => {
+    const { container } = render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    const printStyle = container.querySelector("style")?.textContent ?? "";
+    expect(printStyle).toContain("margin: 0 auto 2.4px;");
+  });
+
   it("renders sale data correctly regardless of paperWidth", () => {
     const settings: TicketSettingsDto = { ...defaultSettings, paperWidth: "58mm" };
     render(<PrintableTicket sale={sale} ticketSettings={settings} />);
@@ -104,10 +121,9 @@ describe("PrintableTicket", () => {
     expect(screen.queryByText("Impuestos")).not.toBeInTheDocument();
   });
 
-  it("renders the Agrisas brand mark and the payment method aligned to the Stitch design", () => {
+  it("renders the payment method aligned to the Stitch design", () => {
     render(<PrintableTicket sale={sale} ticketSettings={null} />);
 
-    expect(screen.getByText("Agrisas")).toBeInTheDocument();
     expect(screen.getByText("Pago")).toBeInTheDocument();
     expect(screen.getByText("Efectivo")).toBeInTheDocument();
   });

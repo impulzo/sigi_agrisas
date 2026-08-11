@@ -107,10 +107,10 @@ jest.mock("../../../../../../app/_components/atoms/Spinner/Spinner", () => ({
 
 import { EditSalePage } from "../../../../../../app/(private)/sales/_blocks/EditSalePage";
 
-describe("EditSalePage — separación superior de 10px (sales-screens-padding)", () => {
-  it("aplica pt-2.5 al contenedor raíz en el estado normal", () => {
+describe("EditSalePage — gutter global de 10px izq/top/der vía layout (sales-screens-padding)", () => {
+  it("el contenedor raíz NO duplica el padding top y mantiene altura sin overflow", () => {
     const { container } = render(<EditSalePage id="sale-1" />);
-    expect(container.firstElementChild!.className).toContain("pt-2.5");
-    expect(container.firstElementChild!.className).toContain("h-[calc(100vh-64px)]");
+    expect(container.firstElementChild!.className).not.toContain("pt-2.5");
+    expect(container.firstElementChild!.className).toContain("h-[calc(100vh-74px)]");
   });
 });

@@ -23,6 +23,12 @@ describe("PrivateLayout — layout structure", () => {
     expect(layoutSrc).toMatch(/overflow-y-auto/);
   });
 
+  it("main aplica gutter global de 10px izq/top/der (sales-screens-padding)", () => {
+    expect(layoutSrc).toMatch(/pl-\[90px\]/);
+    expect(layoutSrc).toMatch(/pt-\[74px\]/);
+    expect(layoutSrc).toMatch(/pr-2\.5/);
+  });
+
   it("is a Server Component (no use client directive)", () => {
     expect(layoutSrc).not.toMatch(/"use client"/);
   });

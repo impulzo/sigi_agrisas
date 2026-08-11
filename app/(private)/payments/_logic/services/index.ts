@@ -3,4 +3,4 @@ export { getPayment } from "./getPayment";
 export { registerPayment } from "./registerPayment";
 export { cancelPayment } from "./cancelPayment";
 export { listSalePayments } from "./listSalePayments";
-export { getPaymentsHistory, downloadPaymentsHistoryPdf } from "./getPaymentsHistory";
+export { getPaymentsHistory, downloadPaymentsHistoryPdf, downloadPaymentsHistoryXlsx } from "./getPaymentsHistory";

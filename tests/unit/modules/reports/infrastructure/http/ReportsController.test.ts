@@ -37,6 +37,22 @@ jest.mock("@/modules/reports/infrastructure/pdf/DepartmentPriceListReportPdf", (
   DepartmentPriceListReportPdf: () => null,
 }));
 
+jest.mock("@/modules/reports/infrastructure/pdf/PurchasesReportPdf", () => ({
+  PurchasesReportPdf: () => null,
+}));
+
+jest.mock("@/modules/reports/infrastructure/pdf/ProviderPaymentsReportPdf", () => ({
+  ProviderPaymentsReportPdf: () => null,
+}));
+
+jest.mock("@/modules/reports/infrastructure/pdf/SalesByProductReportPdf", () => ({
+  SalesByProductReportPdf: () => null,
+}));
+
+jest.mock("@/modules/reports/infrastructure/pdf/CollectionsReportPdf", () => ({
+  CollectionsReportPdf: () => null,
+}));
+
 jest.mock("@/modules/rbac/infrastructure/di/container", () => ({
   rbacContainer: {
     authorizationService: {
@@ -79,6 +95,14 @@ import {
 import { GetDepartmentPriceListReportUseCase } from "@/modules/reports/application/use-cases/GetDepartmentPriceListReportUseCase";
 import { InMemoryDepartmentPriceListRepository } from "@/modules/reports/infrastructure/repositories/InMemoryDepartmentPriceListRepository";
 import { RawPriceListRow } from "@/modules/reports/application/ports/DepartmentPriceListRepository";
+import { GetPurchasesReportUseCase } from "@/modules/reports/application/use-cases/GetPurchasesReportUseCase";
+import { InMemoryPurchaseRepository } from "@/modules/purchases/infrastructure/repositories/InMemoryPurchaseRepository";
+import { GetProviderPaymentsReportUseCase } from "@/modules/reports/application/use-cases/GetProviderPaymentsReportUseCase";
+import { InMemoryProviderPaymentReportRepository, InMemProviderPayment } from "@/modules/reports/infrastructure/repositories/InMemoryProviderPaymentReportRepository";
+import { GetSalesByProductReportUseCase } from "@/modules/reports/application/use-cases/GetSalesByProductReportUseCase";
+import { InMemorySalesByProductRepository } from "@/modules/reports/infrastructure/repositories/InMemorySalesByProductRepository";
+import { SalesByProductAggregates } from "@/modules/reports/domain/value-objects/SalesByProductFilters";
+import { GetCollectionsReportUseCase } from "@/modules/reports/application/use-cases/GetCollectionsReportUseCase";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 
 const BASE_URL = "http://localhost:3000/api/v1/admin/reports";
@@ -145,13 +169,39 @@ function emptyDepartmentPriceListUseCase(rows: RawPriceListRow[] = []) {
   return new GetDepartmentPriceListReportUseCase(new InMemoryDepartmentPriceListRepository(rows));
 }
 
+function emptyPurchasesUseCase() {
+  return new GetPurchasesReportUseCase(new InMemoryPurchaseRepository());
+}
+
+function emptyProviderPaymentsUseCase(rows: InMemProviderPayment[] = []) {
+  return new GetProviderPaymentsReportUseCase(new InMemoryProviderPaymentReportRepository(rows));
+}
+
+function emptySalesByProductUseCase() {
+  return new GetSalesByProductReportUseCase(
+    new InMemorySalesByProductRepository(() => ({
+      totals: { ticketCount: 0, subtotal: 0, taxTotal: 0, total: 0 },
+      byCustomer: [],
+      byDepartment: [],
+      byProduct: [],
+    }))
+  );
+}
+
+function emptyCollectionsUseCase() {
+  return new GetCollectionsReportUseCase(new InMemoryCashCutRepository([]));
+}
+
+const NEW_REPORT_USE_CASES = () =>
+  [emptyPurchasesUseCase(), emptyProviderPaymentsUseCase(), emptySalesByProductUseCase(), emptyCollectionsUseCase()] as const;
+
 function makeStockController(rows: RawStockRow[] = [], authz?: AuthorizationService) {
   const repo = new InMemoryInventoryReportRepository(rows);
   const stockUC = new GetInventoryStockReportUseCase(repo);
   const payRepo = new InMemoryPaymentReportRepository([]);
   const payUC = new GetPaymentHistoryReportUseCase(payRepo);
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz());
 }
 
 function makePaymentController(rows: RawPaymentRow[] = [], authz?: AuthorizationService) {
@@ -160,7 +210,7 @@ function makePaymentController(rows: RawPaymentRow[] = [], authz?: Authorization
   const payRepo = new InMemoryPaymentReportRepository(rows);
   const payUC = new GetPaymentHistoryReportUseCase(payRepo);
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz());
 }
 
 function makeAccountController(
@@ -184,6 +234,7 @@ function makeAccountController(
     emptySalesCutUseCase(),
     emptyCashCutUseCase(),
     emptyDepartmentPriceListUseCase(),
+    ...NEW_REPORT_USE_CASES(),
     authz ?? makeAuthz()
   );
 }
@@ -192,21 +243,81 @@ function makeSalesCutController(sales: InMemCutSale[] = [], authz?: Authorizatio
   const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
   const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(sales), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(sales), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz());
 }
 
 function makeCashCutController(payments: InMemCutPayment[] = [], authz?: AuthorizationService) {
   const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
   const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(payments), emptyDepartmentPriceListUseCase(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(payments), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz());
 }
 
 function makeDepartmentPriceListController(rows: RawPriceListRow[] = [], authz?: AuthorizationService) {
   const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
   const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(rows), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(rows), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz());
+}
+
+function makePurchasesController(repo?: InMemoryPurchaseRepository, authz?: AuthorizationService) {
+  const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
+  const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
+  const acc = emptyAccountUseCases();
+  const purchasesUC = new GetPurchasesReportUseCase(repo ?? new InMemoryPurchaseRepository());
+  return new ReportsController(
+    stockUC, payUC, acc.summary, acc.ledger, acc.anticipo,
+    emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(),
+    purchasesUC, emptyProviderPaymentsUseCase(), emptySalesByProductUseCase(), emptyCollectionsUseCase(),
+    authz ?? makeAuthz()
+  );
+}
+
+function makeProviderPaymentsController(rows: InMemProviderPayment[] = [], authz?: AuthorizationService) {
+  const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
+  const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
+  const acc = emptyAccountUseCases();
+  const providerPaymentsUC = new GetProviderPaymentsReportUseCase(new InMemoryProviderPaymentReportRepository(rows));
+  return new ReportsController(
+    stockUC, payUC, acc.summary, acc.ledger, acc.anticipo,
+    emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(),
+    emptyPurchasesUseCase(), providerPaymentsUC, emptySalesByProductUseCase(), emptyCollectionsUseCase(),
+    authz ?? makeAuthz()
+  );
+}
+
+function makeSalesByProductController(agg?: SalesByProductAggregates, authz?: AuthorizationService) {
+  const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
+  const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
+  const acc = emptyAccountUseCases();
+  const emptyAgg: SalesByProductAggregates = {
+    totals: { ticketCount: 0, subtotal: 0, taxTotal: 0, total: 0 },
+    byCustomer: [],
+    byDepartment: [],
+    byProduct: [],
+  };
+  const salesByProductUC = new GetSalesByProductReportUseCase(
+    new InMemorySalesByProductRepository(() => agg ?? emptyAgg)
+  );
+  return new ReportsController(
+    stockUC, payUC, acc.summary, acc.ledger, acc.anticipo,
+    emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(),
+    emptyPurchasesUseCase(), emptyProviderPaymentsUseCase(), salesByProductUC, emptyCollectionsUseCase(),
+    authz ?? makeAuthz()
+  );
+}
+
+function makeCollectionsController(payments: InMemCutPayment[] = [], authz?: AuthorizationService) {
+  const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
+  const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
+  const acc = emptyAccountUseCases();
+  const collectionsUC = new GetCollectionsReportUseCase(new InMemoryCashCutRepository(payments));
+  return new ReportsController(
+    stockUC, payUC, acc.summary, acc.ledger, acc.anticipo,
+    emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(),
+    emptyPurchasesUseCase(), emptyProviderPaymentsUseCase(), emptySalesByProductUseCase(), collectionsUC,
+    authz ?? makeAuthz()
+  );
 }
 
 function req(url: string, headers: Record<string, string> = {}): NextRequest {
@@ -797,6 +908,7 @@ describe("ReportsController - getSalesCutReport", () => {
 function cutPayment(over: Partial<InMemCutPayment> = {}): InMemCutPayment {
   return {
     paymentId: "cp-1",
+    saleId: "88888888-8888-8888-8888-888888888888",
     status: "completed",
     branchId: BRANCH_ID,
     customerId: "66666666-6666-6666-6666-666666666666",
@@ -1021,5 +1133,215 @@ describe("ReportsController - getDepartmentPriceListReport", () => {
     expect(disposition).toMatch(/^attachment; filename="inventory-by-department-\d{4}-\d{2}-\d{2}\.xlsx"$/);
     const buf = Buffer.from(await res.arrayBuffer());
     expect(buf.length).toBeGreaterThan(0);
+  });
+});
+
+describe("ReportsController - getPurchasesReport", () => {
+  const URL = `${BASE_URL}/purchases`;
+
+  it("401 sin x-user-id", async () => {
+    const ctrl = makePurchasesController();
+    const res = await ctrl.getPurchasesReport(req(URL));
+    expect(res.status).toBe(401);
+  });
+
+  it("403 sin reports:purchases_read", async () => {
+    const ctrl = makePurchasesController(undefined, makeAuthz({ userCan: async () => false }));
+    const res = await ctrl.getPurchasesReport(req(URL, authHeaders()));
+    expect(res.status).toBe(403);
+    expect((await res.json()).required).toBe("reports:purchases_read");
+  });
+
+  it("400 con ?format=csv", async () => {
+    const ctrl = makePurchasesController();
+    const res = await ctrl.getPurchasesReport(req(`${URL}?format=csv`, authHeaders()));
+    expect(res.status).toBe(400);
+  });
+
+  it("400 con providerId UUID inválido", async () => {
+    const ctrl = makePurchasesController();
+    const res = await ctrl.getPurchasesReport(req(`${URL}?providerId=bad`, authHeaders()));
+    expect(res.status).toBe(400);
+  });
+
+  it("200 JSON sin compras → array vacío", async () => {
+    const ctrl = makePurchasesController();
+    const res = await ctrl.getPurchasesReport(req(URL, authHeaders()));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.rows).toEqual([]);
+    expect(body.totals.count).toBe(0);
+  });
+
+  it("403 branch scope cross-branch sin bypass", async () => {
+    const authz = makeAuthz({ userCan: async (_id, key) => key === "reports:purchases_read" });
+    const ctrl = makePurchasesController(undefined, authz);
+    const res = await ctrl.getPurchasesReport(req(`${URL}?branchId=${OTHER_BRANCH}`, authHeaders()));
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("ReportsController - getProviderPaymentsReport", () => {
+  const URL = `${BASE_URL}/purchases/provider-payments`;
+
+  function payment(over: Partial<InMemProviderPayment> = {}): InMemProviderPayment {
+    return {
+      id: "pp-1",
+      folioCode: "CP-000001",
+      purchaseFolioCode: "COM-000001",
+      providerName: "Proveedor Uno",
+      branchName: "Matriz",
+      amount: 500,
+      status: "completed",
+      paidAt: new Date("2026-06-10T00:00:00.000Z"),
+      branchId: BRANCH_ID,
+      providerId: "prov1",
+      ...over,
+    };
+  }
+
+  it("401 sin x-user-id", async () => {
+    const ctrl = makeProviderPaymentsController();
+    const res = await ctrl.getProviderPaymentsReport(req(URL));
+    expect(res.status).toBe(401);
+  });
+
+  it("403 sin reports:purchases_read", async () => {
+    const ctrl = makeProviderPaymentsController([], makeAuthz({ userCan: async () => false }));
+    const res = await ctrl.getProviderPaymentsReport(req(URL, authHeaders()));
+    expect(res.status).toBe(403);
+  });
+
+  it("400 con ?format=csv", async () => {
+    const ctrl = makeProviderPaymentsController();
+    const res = await ctrl.getProviderPaymentsReport(req(`${URL}?format=csv`, authHeaders()));
+    expect(res.status).toBe(400);
+  });
+
+  it("200 JSON con pagos a proveedores", async () => {
+    const ctrl = makeProviderPaymentsController([payment()]);
+    const res = await ctrl.getProviderPaymentsReport(req(URL, authHeaders()));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.rows).toHaveLength(1);
+    expect(body.rows[0].purchaseFolioCode).toBe("COM-000001");
+    expect(body.totals.total).toBe("500.0000");
+  });
+});
+
+describe("ReportsController - getSalesByProductReport", () => {
+  const URL = `${BASE_URL}/sales-by-product`;
+
+  it("401 sin x-user-id", async () => {
+    const ctrl = makeSalesByProductController();
+    const res = await ctrl.getSalesByProductReport(req(URL));
+    expect(res.status).toBe(401);
+  });
+
+  it("403 sin reports:sales_by_product_read", async () => {
+    const ctrl = makeSalesByProductController(undefined, makeAuthz({ userCan: async () => false }));
+    const res = await ctrl.getSalesByProductReport(req(URL, authHeaders()));
+    expect(res.status).toBe(403);
+  });
+
+  it("400 con ?format=csv", async () => {
+    const ctrl = makeSalesByProductController();
+    const res = await ctrl.getSalesByProductReport(req(`${URL}?format=csv`, authHeaders()));
+    expect(res.status).toBe(400);
+  });
+
+  it("400 con departmentId UUID inválido", async () => {
+    const ctrl = makeSalesByProductController();
+    const res = await ctrl.getSalesByProductReport(req(`${URL}?departmentId=bad`, authHeaders()));
+    expect(res.status).toBe(400);
+  });
+
+  it("200 JSON con totals y desgloses, incluye currentStock por producto", async () => {
+    const ctrl = makeSalesByProductController({
+      totals: { ticketCount: 1, subtotal: 100, taxTotal: 16, total: 116 },
+      byCustomer: [],
+      byDepartment: [],
+      byProduct: [
+        { key: "p1", label: "Fertilizante (F1)", ticketCount: 1, quantitySold: 4, currentStock: 20, subtotal: 100, taxTotal: 16, total: 116 },
+      ],
+    });
+    const res = await ctrl.getSalesByProductReport(req(URL, authHeaders()));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.totals.total).toBe("116.0000");
+    expect(body.byProduct[0].currentStock).toBe(20);
+  });
+});
+
+describe("ReportsController - getCustomerCollectionsReport", () => {
+  const URL = `${BASE_URL}/customer-collections`;
+
+  function cutPayment(over: Partial<InMemCutPayment> = {}): InMemCutPayment {
+    return {
+      paymentId: "cp-1",
+      saleId: "sale-1",
+      status: "completed",
+      branchId: BRANCH_ID,
+      customerId: "66666666-6666-6666-6666-666666666666",
+      customerCode: "C001",
+      customerName: "Cliente Uno",
+      docto: "AB-000001",
+      factura: "TC-000001",
+      facturaDate: new Date("2026-06-01T00:00:00.000Z"),
+      amount: 116,
+      paymentMethodId: "77777777-7777-7777-7777-777777777777",
+      paymentMethodCode: "EFECTIVO",
+      paymentMethodName: "Efectivo",
+      reference: "efectivo",
+      collectedAt: new Date("2026-06-04T10:00:00.000Z"),
+      saleTaxTotal: 16,
+      saleSubtotal: 100,
+      saleTotal: 116,
+      ...over,
+    };
+  }
+
+  it("401 sin x-user-id", async () => {
+    const ctrl = makeCollectionsController();
+    const res = await ctrl.getCustomerCollectionsReport(req(`${URL}?from=2026-06-01&to=2026-06-30`));
+    expect(res.status).toBe(401);
+  });
+
+  it("403 sin reports:customer_collections_read (aunque tenga reports:cash_cut_read)", async () => {
+    const authz = makeAuthz({ userCan: async (_id, key) => key === "reports:cash_cut_read" });
+    const ctrl = makeCollectionsController([], authz);
+    const res = await ctrl.getCustomerCollectionsReport(
+      req(`${URL}?from=2026-06-01&to=2026-06-30`, authHeaders())
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("400 sin from/to", async () => {
+    const ctrl = makeCollectionsController();
+    const res = await ctrl.getCustomerCollectionsReport(req(URL, authHeaders()));
+    expect(res.status).toBe(400);
+  });
+
+  it("400 con ?format=csv", async () => {
+    const ctrl = makeCollectionsController();
+    const res = await ctrl.getCustomerCollectionsReport(
+      req(`${URL}?from=2026-06-01&to=2026-06-30&format=csv`, authHeaders())
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("200 JSON agrupa por cliente y por ticket", async () => {
+    const ctrl = makeCollectionsController([
+      cutPayment({ paymentId: "p1", saleId: "s1", amount: 50 }),
+      cutPayment({ paymentId: "p2", saleId: "s1", amount: 66 }),
+    ]);
+    const res = await ctrl.getCustomerCollectionsReport(
+      req(`${URL}?from=2026-06-01&to=2026-06-30`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.rows).toHaveLength(2);
+    expect(body.byTicket).toHaveLength(1);
+    expect(body.byTicket[0].total).toBe("116.0000");
   });
 });

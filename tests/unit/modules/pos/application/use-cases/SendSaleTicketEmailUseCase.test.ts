@@ -63,6 +63,8 @@ function makeSummary(overrides: { customerId?: string | null } = {}): SaleSummar
       branchName: "Matriz",
       customerName: "Cliente",
       customerRfc: "ACM010101AAA",
+      customerAddress: null,
+      customerCreditDays: null,
       cashierName: "Cajero",
       paymentMethodCode: "EFECTIVO",
       paymentMethodName: "Efectivo",

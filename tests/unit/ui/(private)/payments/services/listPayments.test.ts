@@ -22,7 +22,7 @@ const PAYMENT_DTO = {
   branchId: "b1",
   branchName: "Central",
   paymentMethodId: "pm1",
-  paymentMethodName: "Efectivo",
+  paymentMethodCode: "EFECTIVO",
   folioId: "f1",
   folioCode: "RECIBO",
   folioNumber: 1,
@@ -32,6 +32,10 @@ const PAYMENT_DTO = {
   notes: null,
   createdAt: "2026-06-01T10:00:00Z",
   updatedAt: "2026-06-01T10:00:00Z",
+  saleTotal: "1000.0000",
+  salePaidAmount: "300.0000",
+  salePaymentStatus: "partial" as const,
+  saleDueAmount: "700.0000",
 };
 
 describe("listPayments", () => {
@@ -41,6 +45,11 @@ describe("listPayments", () => {
     expect(result.items).toHaveLength(1);
     expect(result.items[0].amount).toBe(100);
     expect(result.items[0].createdAt).toBeInstanceOf(Date);
+    expect(result.items[0].saleTotal).toBe(1000);
+    expect(result.items[0].salePaidAmount).toBe(300);
+    expect(result.items[0].saleDueAmount).toBe(700);
+    expect(result.items[0].salePaymentStatus).toBe("partial");
+    expect(result.items[0].paymentMethodName).toBe("EFECTIVO");
   });
 
   it("passes filters as query params", async () => {

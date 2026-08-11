@@ -156,7 +156,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
 
   if (saleLoading || hqLoading || canEditCompleted === "loading") {
     return (
-      <div className="pt-2.5 flex h-64 items-center justify-center">
+      <div className="flex h-64 items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -164,7 +164,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
 
   if (!sale) {
     return (
-      <div className="pt-2.5">
+      <div>
         <EmptyState icon="warning" title="Venta no encontrada" />
       </div>
     );
@@ -172,7 +172,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
 
   if (sale.status === "cancelled") {
     return (
-      <div className="pt-2.5">
+      <div>
         <EmptyState
           icon="block"
           title="Venta cancelada"
@@ -192,7 +192,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
     : String(sale.folioNumber);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] pt-2.5">
+    <div className="flex flex-col h-[calc(100vh-74px)]">
       {/* Edit warning band */}
       <div className="bg-tertiary-container text-on-tertiary-container px-4 py-2 text-body-sm flex items-center gap-2">
         <Icon name="edit" size={16} />

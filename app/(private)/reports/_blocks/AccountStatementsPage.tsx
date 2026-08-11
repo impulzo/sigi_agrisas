@@ -31,7 +31,7 @@ export function AccountStatementsPage() {
   const debouncedSearch = useDebounce(searchRaw, 300);
   const search = debouncedSearch.trim().length >= 2 ? debouncedSearch.trim() : undefined;
 
-  const { report, isLoading, error, isExporting, exportPdf } = useAccountStatementsSummary({
+  const { report, isLoading, error, isExporting, isExportingXlsx, exportPdf, exportXlsx } = useAccountStatementsSummary({
     page,
     pageSize,
     search,
@@ -45,6 +45,15 @@ export function AccountStatementsPage() {
     setToastError(null);
     try {
       await exportPdf();
+    } catch (err) {
+      if (err instanceof Error) setToastError(err.message);
+    }
+  }
+
+  async function handleExportXlsx() {
+    setToastError(null);
+    try {
+      await exportXlsx();
     } catch (err) {
       if (err instanceof Error) setToastError(err.message);
     }
@@ -98,6 +107,8 @@ export function AccountStatementsPage() {
         showBranchFilter={isBypass === true}
         isExporting={isExporting}
         onExportPdf={handleExportPdf}
+        isExportingXlsx={isExportingXlsx}
+        onExportXlsx={handleExportXlsx}
         onReset={handleReset}
       />
 

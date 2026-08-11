@@ -186,7 +186,7 @@ describe("PosPage — sin permisos", () => {
   });
 });
 
-describe("PosPage — separación superior de 10px (sales-screens-padding)", () => {
+describe("PosPage — gutter global de 10px izq/top/der vía layout (sales-screens-padding)", () => {
   beforeEach(() => {
     mockCan.mockImplementation((perm) => {
       if (perm === "sales:create") return true;
@@ -194,21 +194,21 @@ describe("PosPage — separación superior de 10px (sales-screens-padding)", () 
     });
   });
 
-  it("aplica pt-2.5 al contenedor raíz en el estado normal", () => {
+  it("el contenedor raíz NO duplica el padding top y mantiene altura sin overflow", () => {
     const { container } = render(<PosPage />);
-    expect(container.firstElementChild!.className).toContain("pt-2.5");
-    expect(container.firstElementChild!.className).toContain("h-[calc(100vh-64px)]");
+    expect(container.firstElementChild!.className).not.toContain("pt-2.5");
+    expect(container.firstElementChild!.className).toContain("h-[calc(100vh-74px)]");
   });
 
-  it("aplica pt-2.5 en el estado de carga", () => {
+  it("el contenedor raíz NO duplica el padding en el estado de carga", () => {
     mockCan.mockReturnValue("loading");
     const { container } = render(<PosPage />);
-    expect(container.firstElementChild!.className).toContain("pt-2.5");
+    expect(container.firstElementChild!.className).not.toContain("pt-2.5");
   });
 
-  it("aplica pt-2.5 en el estado sin permisos", () => {
+  it("el contenedor raíz NO duplica el padding en el estado sin permisos", () => {
     mockCan.mockReturnValue(false);
     const { container } = render(<PosPage />);
-    expect(container.firstElementChild!.className).toContain("pt-2.5");
+    expect(container.firstElementChild!.className).not.toContain("pt-2.5");
   });
 });

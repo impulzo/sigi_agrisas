@@ -64,7 +64,7 @@ export function SalesListPage() {
 
   if (canRead === "loading") {
     return (
-      <div className="pt-2.5 flex h-64 items-center justify-center">
+      <div className="flex h-64 items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -72,7 +72,7 @@ export function SalesListPage() {
 
   if (canRead === false) {
     return (
-      <div className="pt-2.5">
+      <div>
         <EmptyState
           icon="block"
           title="Sin acceso"
@@ -84,7 +84,7 @@ export function SalesListPage() {
 
   if (error) {
     return (
-      <div className="pt-2.5">
+      <div>
         <EmptyState
           icon="warning"
           title="Error al cargar ventas"
@@ -95,7 +95,7 @@ export function SalesListPage() {
   }
 
   return (
-    <div className="pt-2.5">
+    <div>
       <CatalogShell
         title="Ventas"
         description="Historial de ventas emitidas"
