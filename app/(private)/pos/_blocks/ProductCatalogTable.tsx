@@ -144,7 +144,7 @@ export function ProductCatalogTable({
               type="button"
               disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
-              className="p-1 rounded disabled:opacity-40 hover:bg-surface-container transition-colors"
+              className="p-1 rounded-sm disabled:opacity-40 hover:bg-surface-container transition-colors"
             >
               <Icon name="chevron_left" size={18} />
             </button>
@@ -153,7 +153,7 @@ export function ProductCatalogTable({
               type="button"
               disabled={page >= totalPages}
               onClick={() => onPageChange(page + 1)}
-              className="p-1 rounded disabled:opacity-40 hover:bg-surface-container transition-colors"
+              className="p-1 rounded-sm disabled:opacity-40 hover:bg-surface-container transition-colors"
             >
               <Icon name="chevron_right" size={18} />
             </button>

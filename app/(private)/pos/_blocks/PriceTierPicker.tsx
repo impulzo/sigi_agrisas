@@ -90,7 +90,7 @@ export function PriceTierPicker({
     <dialog
       ref={dialogRef}
       onKeyDown={handleKeyDown}
-      className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl backdrop:bg-black/40 open:flex open:flex-col"
+      className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl backdrop:bg-black/40 open:flex open:flex-col"
     >
       <div className="flex items-start justify-between mb-4">
         <div>
@@ -121,7 +121,7 @@ export function PriceTierPicker({
                     key={price.id}
                     type="button"
                     onClick={() => setSelection({ kind: "price", id: price.id })}
-                    className={`w-full flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors ${
+                    className={`w-full flex items-center justify-between rounded border px-4 py-3 text-left transition-colors ${
                       selection?.kind === "price" && selection.id === price.id
                         ? "border-primary bg-primary-container text-on-primary-container"
                         : "border-outline-variant bg-surface-container-low hover:bg-surface-container"
@@ -155,7 +155,7 @@ export function PriceTierPicker({
                       type="button"
                       disabled={disabled}
                       onClick={() => setSelection({ kind: "dosification", id: dosification.id })}
-                      className={`w-full flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors ${
+                      className={`w-full flex items-center justify-between rounded border px-4 py-3 text-left transition-colors ${
                         disabled
                           ? "border-outline-variant bg-surface-container-low opacity-50 cursor-not-allowed"
                           : isSelected
@@ -204,7 +204,7 @@ export function PriceTierPicker({
                   const v = parseFloat(raw);
                   if (!isNaN(v) && v > 0) setQuantity(v);
                 }}
-                className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded border border-outline px-3 py-2 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div className={`flex-1 ${selectedDosification ? "invisible" : ""}`}>
@@ -219,7 +219,7 @@ export function PriceTierPicker({
                   const v = parseFloat(e.target.value);
                   if (!isNaN(v)) setDiscountPct(Math.max(0, Math.min(100, v)));
                 }}
-                className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded border border-outline px-3 py-2 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>

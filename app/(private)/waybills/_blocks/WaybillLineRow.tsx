@@ -32,7 +32,7 @@ function NumField({
       step={step}
       placeholder={placeholder}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="w-full rounded border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary tabular-nums"
+      className="w-full rounded-sm border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary tabular-nums"
     />
   );
 }
@@ -50,7 +50,7 @@ export function WaybillLineRow({ type, line, onUpdate, onRemove }: WaybillLineRo
             onChange={(e) => onUpdate({ description: e.target.value })}
             placeholder="Descripción *"
             disabled={isSimple}
-            className="w-full rounded border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary disabled:bg-surface-container-low disabled:text-on-surface-variant"
+            className="w-full rounded-sm border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary disabled:bg-surface-container-low disabled:text-on-surface-variant"
           />
           {line.error && <p className="text-label-sm text-error">{line.error}</p>}
         </div>
@@ -62,7 +62,7 @@ export function WaybillLineRow({ type, line, onUpdate, onRemove }: WaybillLineRo
             value={line.satBienesTranspCode}
             onChange={(e) => onUpdate({ satBienesTranspCode: e.target.value })}
             placeholder="Clave SAT"
-            className="w-full rounded border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary font-mono"
+            className="w-full rounded-sm border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary font-mono"
           />
         </td>
       )}
@@ -73,7 +73,7 @@ export function WaybillLineRow({ type, line, onUpdate, onRemove }: WaybillLineRo
             value={line.satUnitCode}
             onChange={(e) => onUpdate({ satUnitCode: e.target.value })}
             placeholder="Unidad"
-            className="w-full rounded border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary font-mono"
+            className="w-full rounded-sm border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary font-mono"
           />
         </td>
       )}
@@ -101,7 +101,7 @@ export function WaybillLineRow({ type, line, onUpdate, onRemove }: WaybillLineRo
               value={line.hazardousMaterialCode}
               onChange={(e) => onUpdate({ hazardousMaterialCode: e.target.value })}
               placeholder="Clave material"
-              className="w-full mt-1 rounded border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary font-mono"
+              className="w-full mt-1 rounded-sm border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary font-mono"
             />
           )}
         </td>

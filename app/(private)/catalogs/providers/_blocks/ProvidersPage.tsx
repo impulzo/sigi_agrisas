@@ -7,7 +7,7 @@ import { useProviders } from "../_logic/hooks/useProviders";
 import { useProviderMutations } from "../_logic/hooks/useProviderMutations";
 import { ProvidersTable } from "./ProvidersTable";
 import { ProviderEditModal } from "./ProviderEditModal";
-import { CatalogShell } from "../../_blocks/CatalogShell";
+import { PageShell } from "../../../../_components/organisms/PageShell";
 import { CatalogToolbar } from "../../_blocks/CatalogToolbar";
 import { CatalogPagination } from "../../_blocks/CatalogPagination";
 import { CatalogEmpty } from "../../_blocks/CatalogEmpty";
@@ -180,7 +180,7 @@ export function ProvidersPage() {
 
   return (
     <>
-      <CatalogShell
+      <PageShell
         title="Proveedores"
         description="Gestiona los proveedores y sus datos fiscales"
         toolbar={
@@ -231,10 +231,10 @@ export function ProvidersPage() {
             setPage(1);
           }}
         />
-      </CatalogShell>
+      </PageShell>
 
       {filtered && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl bg-surface-container-high text-label-lg text-on-surface-variant shadow-md z-40">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-md bg-surface-container-high text-label-lg text-on-surface-variant shadow-md z-40">
           Mínimo 2 caracteres para buscar.
         </div>
       )}
@@ -264,7 +264,7 @@ export function ProvidersPage() {
       />
 
       {toast && (
-        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-xl bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
+        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-md bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
           {toast}
         </div>
       )}

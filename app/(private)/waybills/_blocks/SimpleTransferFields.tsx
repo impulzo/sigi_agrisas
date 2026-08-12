@@ -24,7 +24,7 @@ export function SimpleTransferFields({
           type="datetime-local"
           value={transferDate}
           onChange={(e) => onTransferDateChange(e.target.value)}
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </div>
       <div>
@@ -37,7 +37,7 @@ export function SimpleTransferFields({
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           placeholder="Motivo del traspaso"
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </div>
     </div>

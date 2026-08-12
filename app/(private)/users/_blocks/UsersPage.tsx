@@ -11,6 +11,7 @@ import { UsersPagination } from "./UsersPagination";
 import { UserEditModal } from "./UserEditModal";
 import { UsersEmpty } from "./UsersEmpty";
 import { UsersError } from "./UsersError";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog/ConfirmDialog";
@@ -183,55 +184,46 @@ export function UsersPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-headline-lg font-semibold text-on-surface">Administración de Usuarios</h1>
-          <p className="text-body-md text-on-surface-variant mt-1">
-            Gestiona los usuarios registrados en el sistema
-          </p>
-        </div>
-      </div>
-
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
-        <div className="px-4 py-4 border-b border-outline-variant">
-          <UsersToolbar
-            search={search}
-            onSearchChange={setSearch}
-            activeRoles={activeRoles}
-            availableRoles={availableRoles}
-            onToggleRole={handleToggleRole}
-            onClearFilters={handleClearFilters}
-            canCreate={canWrite !== false}
-            onCreateClick={handleOpenCreate}
-          />
-        </div>
-
-        {error ? (
-          <UsersError onRetry={refresh} />
-        ) : filteredUsers.length === 0 && !isLoading ? (
-          <UsersEmpty filtered={hasActiveFilters} onClearFilters={handleClearFilters} />
-        ) : (
-          <UsersTable
-            users={filteredUsers}
-            currentUserId={currentUserId ?? ""}
-            canWrite={canWrite === true}
-            isLoading={isLoading}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onEnter={canWrite === true ? handleEdit : undefined}
-          />
-        )}
-
-        <UsersPagination
-          page={page}
-          pageSize={pageSize}
-          total={total}
-          count={filteredUsers.length}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
+    <PageShell
+      title="Administración de Usuarios"
+      description="Gestiona los usuarios registrados en el sistema"
+      toolbar={
+        <UsersToolbar
+          search={search}
+          onSearchChange={setSearch}
+          activeRoles={activeRoles}
+          availableRoles={availableRoles}
+          onToggleRole={handleToggleRole}
+          onClearFilters={handleClearFilters}
+          canCreate={canWrite !== false}
+          onCreateClick={handleOpenCreate}
         />
-      </div>
+      }
+    >
+      {error ? (
+        <UsersError onRetry={refresh} />
+      ) : filteredUsers.length === 0 && !isLoading ? (
+        <UsersEmpty filtered={hasActiveFilters} onClearFilters={handleClearFilters} />
+      ) : (
+        <UsersTable
+          users={filteredUsers}
+          currentUserId={currentUserId ?? ""}
+          canWrite={canWrite === true}
+          isLoading={isLoading}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onEnter={canWrite === true ? handleEdit : undefined}
+        />
+      )}
+
+      <UsersPagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        count={filteredUsers.length}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
 
       <UserEditModal
         open={editingUser !== null || isCreating}
@@ -260,10 +252,10 @@ export function UsersPage() {
       />
 
       {deleteError && (
-        <p className="text-body-md text-error bg-error-container px-4 py-2 rounded-lg mt-2">
+        <p className="text-body-md text-error bg-error-container px-4 py-2 rounded mt-2">
           {deleteError}
         </p>
       )}
-    </div>
+    </PageShell>
   );
 }

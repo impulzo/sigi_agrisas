@@ -79,7 +79,7 @@ export function InvoiceDetailPage({ id }: InvoiceDetailPageProps) {
   if (!invoice) return null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="flex flex-col gap-lg px-gutter py-lg mx-auto w-full max-w-4xl">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -108,7 +108,7 @@ export function InvoiceDetailPage({ id }: InvoiceDetailPageProps) {
 
       {/* Mutation error banner */}
       {mutationError && (
-        <div className="rounded-xl bg-error-container/30 border border-error/30 px-4 py-3 flex items-start justify-between gap-2">
+        <div className="rounded-md bg-error-container/30 border border-error/30 px-4 py-3 flex items-start justify-between gap-2">
           <p className="text-body-sm text-error">{mutationError.message}</p>
           <button type="button" onClick={clearError} className="text-error text-label-sm hover:underline flex-shrink-0">Cerrar</button>
         </div>
@@ -116,7 +116,7 @@ export function InvoiceDetailPage({ id }: InvoiceDetailPageProps) {
 
       {/* Items */}
       {invoice.items && invoice.items.length > 0 && (
-        <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+        <div className="bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden">
           <div className="px-4 py-3 border-b border-outline-variant">
             <h2 className="text-title-sm font-semibold text-on-surface">Conceptos</h2>
           </div>

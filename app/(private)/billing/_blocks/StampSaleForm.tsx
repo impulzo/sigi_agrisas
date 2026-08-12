@@ -38,7 +38,7 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
     if (!error) return null;
     if (error instanceof SaleAlreadyInvoicedError) {
       return (
-        <div className="rounded-lg bg-warning-container/30 border border-warning/30 px-4 py-3 text-body-sm">
+        <div className="rounded bg-warning-container/30 border border-warning/30 px-4 py-3 text-body-sm">
           Esta venta ya tiene una factura vigente.{" "}
           <Link href={`/billing/${error.invoiceId}`} className="text-primary underline">
             Ver factura existente
@@ -49,7 +49,7 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
     }
     if (error instanceof ReceiverFiscalDataIncompleteError) {
       return (
-        <div className="rounded-lg bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
+        <div className="rounded bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
           Datos fiscales del receptor incompletos: <strong>{error.missingFields.join(", ")}</strong>
           <button type="button" onClick={clearError} className="ml-3 hover:opacity-70">×</button>
         </div>
@@ -57,14 +57,14 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
     }
     if (error instanceof FacturamaStampError) {
       return (
-        <div className="rounded-lg bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
+        <div className="rounded bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
           Error Facturama: {error.detail}
           <button type="button" onClick={clearError} className="ml-3 hover:opacity-70">×</button>
         </div>
       );
     }
     return (
-      <div className="rounded-lg bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
+      <div className="rounded bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
         {error.message}
         <button type="button" onClick={clearError} className="ml-3 hover:opacity-70">×</button>
       </div>
@@ -94,7 +94,7 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
             id="stamp-payment-form"
             value={form.paymentForm}
             onChange={(e) => setField("paymentForm", e.target.value)}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           >
             {PAYMENT_FORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
@@ -105,7 +105,7 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
             id="stamp-payment-method"
             value={form.paymentMethod}
             onChange={(e) => setField("paymentMethod", e.target.value)}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           >
             {PAYMENT_METHODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
@@ -116,7 +116,7 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
             id="stamp-cfdi-use"
             value={form.cfdiUse}
             onChange={(e) => setField("cfdiUse", e.target.value)}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           >
             {CFDI_USES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>

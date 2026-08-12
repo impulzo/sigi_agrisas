@@ -67,6 +67,11 @@ function makeLookups(overrides: Partial<PosLookupService> = {}): PosLookupServic
       if (overrides.getDosificationForSale) return overrides.getDosificationForSale(id);
       return null;
     },
+    async getDosificationSurchargePct() {
+      if (overrides.getDosificationSurchargePct) return overrides.getDosificationSurchargePct();
+      // 8% (not the 5% default) to distinguish "surcharge applied" from "surcharge default" in assertions.
+      return 8;
+    },
   };
 }
 
@@ -181,6 +186,21 @@ describe("CreateQuoteUseCase", () => {
     expect(err).toBeInstanceOf(FolioScopeMismatchError);
     expect(err.actual).toBe("INVENTORY");
   });
+
+  it("aplica el recargo configurado cuando quantity es fraccionaria", async () => {
+    const uc = new CreateQuoteUseCase(repo, makeLookups());
+    const { dto } = await uc.execute(
+      { ...baseCreateReq, items: [{ productId: PRODUCT_ID, productPriceId: PRICE_ID, quantity: 0.5 }] },
+      USER_ID
+    );
+    expect(dto.items[0].unitPrice).toBeCloseTo(108, 10); // 100 * 1.08 (mock surcharge)
+  });
+
+  it("no aplica recargo cuando quantity es entera", async () => {
+    const uc = new CreateQuoteUseCase(repo, makeLookups());
+    const { dto } = await uc.execute(baseCreateReq, USER_ID); // quantity: 2
+    expect(dto.items[0].unitPrice).toBe(100);
+  });
 });
 
 describe("ListQuotesUseCase / GetQuoteUseCase", () => {
@@ -264,6 +284,14 @@ describe("UpdateQuoteUseCase", () => {
     await new AuthorizeQuoteUseCase(repo).execute(id, {}, USER_ID);
     const uc = new UpdateQuoteUseCase(repo, makeLookups());
     await expect(uc.execute(id, { notes: "x" })).rejects.toThrow(QuoteNotEditableError);
+  });
+
+  it("recalcula con recargo al cambiar una línea de cantidad entera a fraccionaria", async () => {
+    const uc = new UpdateQuoteUseCase(repo, makeLookups());
+    const { dto } = await uc.execute(id, {
+      items: [{ productId: PRODUCT_ID, productPriceId: PRICE_ID, quantity: 2.5 }],
+    });
+    expect(dto.items[0].unitPrice).toBeCloseTo(108, 10); // 100 * 1.08 (mock surcharge)
   });
 });
 
@@ -451,6 +479,29 @@ describe("ConvertQuoteToSaleUseCase", () => {
       USER_ID
     );
     expect(dto.items[0].unitPrice).toBe(100);
+  });
+
+  it("preserva el recargo por cantidad fraccionaria al convertir (no se re-resuelve el %)", async () => {
+    const create = new CreateQuoteUseCase(qRepo, makeLookups());
+    const { dto: draft } = await create.execute(
+      { ...baseCreateReq, items: [{ productId: PRODUCT_ID, productPriceId: PRICE_ID, quantity: 0.5 }] },
+      USER_ID
+    );
+    await new AuthorizeQuoteUseCase(qRepo).execute(draft.id, {}, USER_ID);
+    expect(draft.items[0].unitPrice).toBeCloseTo(108, 10); // 100 * 1.08 baked in at creation
+
+    // Convert with a DIFFERENT configured surcharge — must not re-resolve or re-apply it.
+    const uc = new ConvertQuoteToSaleUseCase(
+      qRepo,
+      sRepo,
+      makeLookups({ async getDosificationSurchargePct() { return 20; } })
+    );
+    const { dto } = await uc.execute(
+      draft.id,
+      { paymentMethodId: PAYMENT_ID, folioId: FISCAL_FOLIO_ID },
+      USER_ID
+    );
+    expect(dto.items[0].unitPrice).toBeCloseTo(108, 10);
   });
 
   it("rechaza folio fiscal con scope OPERATIONS al convertir (espera POS)", async () => {

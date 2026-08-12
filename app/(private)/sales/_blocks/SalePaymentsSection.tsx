@@ -40,7 +40,7 @@ export function SalePaymentsSection({ saleId, sale, onPaymentMutated }: SalePaym
   };
 
   return (
-    <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+    <div className="bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden">
       <div className="px-4 py-3 border-b border-outline-variant flex items-center justify-between gap-4">
         <h2 className="text-title-sm font-semibold text-on-surface">
           Abonos {!isLoading && payments.length > 0 ? `(${payments.length})` : ""}

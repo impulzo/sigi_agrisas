@@ -6,6 +6,7 @@ const HEADER = [
   "Código",
   "Producto",
   "Unidad",
+  "Stock",
   "Lista",
   "Precio",
   "Cant. Mín",
@@ -25,6 +26,7 @@ export function buildDepartmentPriceListWorkbook(data: DepartmentPriceListRespon
           product.code,
           product.name,
           product.unit,
+          product.stockQuantity,
           "—",
           null,
           null,
@@ -39,6 +41,7 @@ export function buildDepartmentPriceListWorkbook(data: DepartmentPriceListRespon
           product.code,
           product.name,
           product.unit,
+          product.stockQuantity,
           price.name,
           price.price,
           price.minQuantity,
@@ -51,6 +54,7 @@ export function buildDepartmentPriceListWorkbook(data: DepartmentPriceListRespon
       `Subtotal ${dept.departmentName}`,
       dept.subtotal.productCount,
       dept.subtotal.priceCount,
+      dept.subtotal.totalStock,
     ]);
   }
 
@@ -59,6 +63,7 @@ export function buildDepartmentPriceListWorkbook(data: DepartmentPriceListRespon
   rows.push(["Departamentos", data.totals.departmentCount]);
   rows.push(["Productos", data.totals.productCount]);
   rows.push(["Listas de precio", data.totals.priceCount]);
+  rows.push(["Stock total", data.totals.totalStock]);
 
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
   const workbook = XLSX.utils.book_new();

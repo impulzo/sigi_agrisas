@@ -179,11 +179,11 @@ export function TaxRateEditModal({
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-2xl bg-surface-container p-0 shadow-lg w-full max-w-lg backdrop:bg-black/40"
+      className="rounded-lg bg-surface-container p-0 shadow-lg w-full max-w-lg backdrop:bg-black/40"
     >
       <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
         <h2 className="text-title-md font-semibold text-on-surface">{title}</h2>
-        <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high">
+        <button type="button" onClick={onClose} className="p-1.5 rounded text-on-surface-variant hover:bg-surface-container-high">
           <Icon name="close" size={20} />
         </button>
       </div>
@@ -198,7 +198,7 @@ export function TaxRateEditModal({
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             disabled={mode !== "create"}
             placeholder="EJ. IVA_16"
-            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-surface-container"
+            className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-surface-container"
           />
           {(validationErrors.code || codeError) && (
             <p className="text-label-sm text-error mt-1">{validationErrors.code ?? codeError}</p>
@@ -213,7 +213,7 @@ export function TaxRateEditModal({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Nombre de la tasa"
-            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
           />
           {validationErrors.name && <p className="text-label-sm text-error mt-1">{validationErrors.name}</p>}
         </div>
@@ -228,7 +228,7 @@ export function TaxRateEditModal({
               onChange={(e) => setSatTaxCode(e.target.value.replace(/\D/g, "").slice(0, 3))}
               placeholder="002"
               maxLength={3}
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {validationErrors.satTaxCode && <p className="text-label-sm text-error mt-1">{validationErrors.satTaxCode}</p>}
           </div>
@@ -239,7 +239,7 @@ export function TaxRateEditModal({
               id="tr-factor-type"
               value={factorType}
               onChange={(e) => setFactorType(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {FACTOR_TYPES.map((ft) => (
                 <option key={ft} value={ft}>{ft}</option>
@@ -259,7 +259,7 @@ export function TaxRateEditModal({
               onChange={(e) => setDisplayValueStr(e.target.value)}
               placeholder="16"
               step="0.01"
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {validationErrors.displayValue && <p className="text-label-sm text-error mt-1">{validationErrors.displayValue}</p>}
           </div>
@@ -275,7 +275,7 @@ export function TaxRateEditModal({
                 placeholder="16"
                 step="0.000001"
                 min="0"
-                className="w-full px-3 py-2 pr-8 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 pr-8 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-body-md">%</span>
             </div>
@@ -291,7 +291,7 @@ export function TaxRateEditModal({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Descripción opcional"
             rows={3}
-            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
           {validationErrors.description && <p className="text-label-sm text-error mt-1">{validationErrors.description}</p>}
         </div>
@@ -307,7 +307,7 @@ export function TaxRateEditModal({
                 value={transferredAccount}
                 onChange={(e) => setTransferredAccount(e.target.value)}
                 maxLength={20}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
@@ -318,7 +318,7 @@ export function TaxRateEditModal({
                 value={pendingTransferredAccount}
                 onChange={(e) => setPendingTransferredAccount(e.target.value)}
                 maxLength={20}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
@@ -329,7 +329,7 @@ export function TaxRateEditModal({
                 value={creditedAccount}
                 onChange={(e) => setCreditedAccount(e.target.value)}
                 maxLength={20}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
@@ -340,7 +340,7 @@ export function TaxRateEditModal({
                 value={pendingCreditedAccount}
                 onChange={(e) => setPendingCreditedAccount(e.target.value)}
                 maxLength={20}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -352,7 +352,7 @@ export function TaxRateEditModal({
         </div>
 
         {mutationError && (
-          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded-lg">{mutationError}</p>
+          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded">{mutationError}</p>
         )}
       </div>
 
@@ -361,7 +361,7 @@ export function TaxRateEditModal({
           type="button"
           onClick={onClose}
           disabled={isSaving}
-          className="px-5 py-2.5 rounded-xl border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
+          className="px-5 py-2.5 rounded-md border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
         >
           Cancelar
         </button>
@@ -369,7 +369,7 @@ export function TaxRateEditModal({
           type="button"
           onClick={handleSave}
           disabled={!isDirty || isDiffEmpty || isSaving || Object.keys(validationErrors).length > 0}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isSaving ? (
             <><Icon name="progress_activity" size={16} className="animate-spin" />Guardando...</>

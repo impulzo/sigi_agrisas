@@ -23,7 +23,7 @@ export function RailFlyout({ open, anchorTop, items, activeHref, onItemClick, on
     <div
       role="menu"
       style={{ top: clampedTop, left: 80, maxHeight: "calc(100vh - 32px)" }}
-      className="fixed z-50 bg-surface-container-low border border-outline-variant rounded-r-xl shadow-lg py-2 min-w-[240px] overflow-y-auto scrollbar-thin"
+      className="fixed z-50 bg-surface-container-low border border-outline-variant rounded-r-md shadow-lg py-2 min-w-[240px] overflow-y-auto scrollbar-thin"
       onMouseLeave={onClose}
     >
       {items.map((item) => {

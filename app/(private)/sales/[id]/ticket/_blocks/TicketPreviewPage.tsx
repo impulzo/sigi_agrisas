@@ -73,7 +73,7 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
       </Link>
 
       {/* Ticket card — diseño Stitch "Ticket de Venta - Agrisas" */}
-      <div className="bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-md shadow-lg border border-outline-variant overflow-hidden">
         <div
           aria-hidden="true"
           style={{
@@ -183,15 +183,15 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
 
           {/* Payment method & footer */}
           <div className="flex flex-col gap-4 items-center mt-2 text-center border-t border-outline-variant pt-4">
-            <div className="text-body-sm text-on-surface-variant flex items-center justify-center bg-surface-container-low px-4 py-2 rounded">
+            <div className="text-body-sm text-on-surface-variant flex items-center justify-center bg-surface-container-low px-4 py-2 rounded-sm">
               {sale.paymentMethodName ?? "—"}
             </div>
             {ticketSettings?.footerText ? (
-              <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded whitespace-pre-wrap">
+              <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded-sm whitespace-pre-wrap">
                 {ticketSettings.footerText}
               </p>
             ) : (
-              <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded">
+              <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded-sm">
                 ¡Gracias por su compra! <br />
                 <span className="font-medium">Agricultura Sana &amp; Sustentable.</span>
               </p>

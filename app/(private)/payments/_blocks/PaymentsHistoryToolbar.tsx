@@ -85,7 +85,7 @@ export function PaymentsHistoryToolbar({
         <select
           value={userId}
           onChange={(e) => onUserIdChange(e.target.value)}
-          className="rounded-xl border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary w-44"
+          className="rounded-md border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary w-44"
         >
           <option value="">Todos</option>
           {cashiers.map((c) => (
@@ -127,7 +127,7 @@ export function PaymentsHistoryToolbar({
         <select
           value={paymentMethodId}
           onChange={(e) => onPaymentMethodIdChange(e.target.value)}
-          className="rounded-xl border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary w-44"
+          className="rounded-md border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary w-44"
         >
           <option value="">Todos</option>
           {paymentMethods.map((m) => (
@@ -141,7 +141,7 @@ export function PaymentsHistoryToolbar({
         <select
           value={status}
           onChange={(e) => onStatusChange(e.target.value as PaymentStatus | "")}
-          className="rounded-xl border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary"
+          className="rounded-md border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary"
         >
           <option value="">Todos</option>
           <option value="completed">Completado</option>
@@ -156,7 +156,7 @@ export function PaymentsHistoryToolbar({
             type="date"
             value={from}
             onChange={(e) => onFromChange(e.target.value)}
-            className="rounded-xl border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary"
+            className="rounded-md border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary"
           />
         </div>
         <span className="text-on-surface-variant text-body-sm mb-2">—</span>
@@ -166,7 +166,7 @@ export function PaymentsHistoryToolbar({
             type="date"
             value={to}
             onChange={(e) => onToChange(e.target.value)}
-            className="rounded-xl border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary"
+            className="rounded-md border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary"
           />
         </div>
       </div>
@@ -177,7 +177,7 @@ export function PaymentsHistoryToolbar({
           <select
             value={branchId}
             onChange={(e) => onBranchIdChange(e.target.value)}
-            className="rounded-xl border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary"
+            className="rounded-md border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary"
           >
             <option value="">Todas</option>
             {branches.map((b) => (
@@ -191,7 +191,7 @@ export function PaymentsHistoryToolbar({
         <button
           type="button"
           onClick={onReset}
-          className="rounded-xl border border-outline px-4 py-2 text-body-sm text-on-surface hover:bg-surface-container-low transition-colors"
+          className="rounded-md border border-outline px-4 py-2 text-body-sm text-on-surface hover:bg-surface-container-low transition-colors"
         >
           Limpiar
         </button>
@@ -199,7 +199,7 @@ export function PaymentsHistoryToolbar({
           type="button"
           onClick={onExportPdf}
           disabled={isExporting}
-          className="rounded-xl bg-secondary text-on-secondary px-4 py-2 text-body-sm font-medium hover:bg-secondary/90 transition-colors disabled:opacity-60 flex items-center gap-2"
+          className="rounded-md bg-secondary text-on-secondary px-4 py-2 text-body-sm font-medium hover:bg-secondary/90 transition-colors disabled:opacity-60 flex items-center gap-2"
         >
           {isExporting && <Spinner size="sm" />}
           Exportar PDF
@@ -208,7 +208,7 @@ export function PaymentsHistoryToolbar({
           type="button"
           onClick={onExportXlsx}
           disabled={isExporting}
-          className="rounded-xl bg-secondary text-on-secondary px-4 py-2 text-body-sm font-medium hover:bg-secondary/90 transition-colors disabled:opacity-60 flex items-center gap-2"
+          className="rounded-md bg-secondary text-on-secondary px-4 py-2 text-body-sm font-medium hover:bg-secondary/90 transition-colors disabled:opacity-60 flex items-center gap-2"
         >
           {isExporting && <Spinner size="sm" />}
           Exportar Excel

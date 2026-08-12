@@ -1,0 +1,289 @@
+/**
+ * Guardarraíl del sistema de diseño (ver designer.md y
+ * openspec/specs/design-system/spec.md). Escanea app/ en busca de las
+ * regresiones que originaron la estandarización: clases tipográficas fuera
+ * de escala, hex crudo, gris genérico de Tailwind y radios fuera de escala.
+ *
+ * La escala tipográfica se lee de tailwind.config.ts en vez de duplicarse
+ * aquí, para que añadir un token no requiera tocar este test.
+ */
+import * as fs from "fs";
+import * as path from "path";
+import tailwindConfig from "../../../../tailwind.config";
+
+const APP_ROOT = path.resolve(__dirname, "../../../../app");
+
+function walk(dir: string, out: string[] = []): string[] {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walk(full, out);
+    else if (entry.name.endsWith(".tsx")) out.push(full);
+  }
+  return out;
+}
+
+function rel(file: string): string {
+  return path.relative(path.resolve(__dirname, "../../../.."), file).split(path.sep).join("/");
+}
+
+const ALL_TSX_FILES = walk(APP_ROOT);
+const PRIVATE_AND_COMPONENTS_FILES = ALL_TSX_FILES.filter((f) => {
+  const r = rel(f);
+  return r.startsWith("app/(private)/") || r.startsWith("app/_components/");
+});
+
+// --- Regla: escala tipográfica cerrada ---------------------------------
+
+const fontSizeConfig = (tailwindConfig as { theme: { extend: { fontSize: Record<string, unknown> } } })
+  .theme.extend.fontSize;
+const VALID_TYPOGRAPHY_TOKENS = new Set(Object.keys(fontSizeConfig));
+
+const TYPOGRAPHY_CLASS_RE = /\btext-((?:display|headline|title|body|label)-[a-z0-9-]+)\b/g;
+
+describe("design-system tokens — escala tipográfica", () => {
+  it("toda clase text-<categoria>-<variante> pertenece a la escala de tailwind.config.ts", () => {
+    const offenders: string[] = [];
+    for (const file of ALL_TSX_FILES) {
+      const content = fs.readFileSync(file, "utf8");
+      let match: RegExpExecArray | null;
+      TYPOGRAPHY_CLASS_RE.lastIndex = 0;
+      while ((match = TYPOGRAPHY_CLASS_RE.exec(content))) {
+        const token = match[1];
+        if (!VALID_TYPOGRAPHY_TOKENS.has(token)) {
+          offenders.push(`${rel(file)}: text-${token}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("no hay tamaños de fuente arbitrarios (text-[Npx])", () => {
+    const ARBITRARY_SIZE_RE = /\btext-\[\d+px\]/;
+    const offenders = ALL_TSX_FILES
+      .filter((f) => ARBITRARY_SIZE_RE.test(fs.readFileSync(f, "utf8")))
+      .map(rel);
+    expect(offenders).toEqual([]);
+  });
+});
+
+// --- Regla: color exclusivamente por token semántico --------------------
+// Ámbito: app/(private) y app/_components. app/(public)/auth/* está exento
+// (paleta legacy agrisas-*), según frontend-scaffold.
+
+const HEX_EXEMPT_FILES = new Set([
+  // Impresión térmica: negro literal y fallback CSS var, fuera del tema M3
+  // (sales-ticket-preview-ui / ticket-print-ui ya documentan esta excepción).
+  "app/(private)/sales/_blocks/PrintableTicket.tsx",
+  "app/(private)/sales/[id]/ticket/_blocks/TicketPreviewPage.tsx",
+]);
+
+describe("design-system tokens — color por token semántico", () => {
+  it("sin hex crudo en app/(private) o app/_components", () => {
+    const HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
+    const offenders = PRIVATE_AND_COMPONENTS_FILES
+      .filter((f) => !HEX_EXEMPT_FILES.has(rel(f)))
+      .filter((f) => HEX_RE.test(fs.readFileSync(f, "utf8")))
+      .map(rel);
+    expect(offenders).toEqual([]);
+  });
+
+  it("sin valores arbitrarios de color (bg-[#...], text-[#...], border-[#...])", () => {
+    const ARBITRARY_COLOR_RE = /\b(?:bg|text|border)-\[#[0-9a-fA-F]{3,8}\]/;
+    const offenders = PRIVATE_AND_COMPONENTS_FILES
+      .filter((f) => ARBITRARY_COLOR_RE.test(fs.readFileSync(f, "utf8")))
+      .map(rel);
+    expect(offenders).toEqual([]);
+  });
+
+  it("sin paleta gris genérica de Tailwind (bg-gray-*, border-gray-*, text-gray-*)", () => {
+    const GRAY_RE = /\b(?:bg|border|text)-gray-\d+\b/;
+    const offenders = PRIVATE_AND_COMPONENTS_FILES
+      .filter((f) => GRAY_RE.test(fs.readFileSync(f, "utf8")))
+      .map(rel);
+    expect(offenders).toEqual([]);
+  });
+});
+
+// --- Regla: radios dentro de la escala Stitch ---------------------------
+
+describe("design-system tokens — radios", () => {
+  it("sin rounded-2xl ni rounded-3xl (fuera de la escala Stitch)", () => {
+    const OUT_OF_SCALE_RADIUS_RE = /\brounded-(?:2xl|3xl)\b/;
+    const offenders = ALL_TSX_FILES
+      .filter((f) => OUT_OF_SCALE_RADIUS_RE.test(fs.readFileSync(f, "utf8")))
+      .map(rel);
+    expect(offenders).toEqual([]);
+  });
+});
+
+// --- Regla: sin <button>/<table>/<select> crudos en _blocks/ nuevos -----
+//
+// Allowlist = deuda declarada (ver designer.md § Pendientes): formularios
+// internos de modales y tablas de reportes aún no migrados a Button/DataTable/
+// Select. La lista SHALL poder encoger pero no crecer sin justificación en el
+// change correspondiente (openspec/specs/design-system/spec.md).
+
+const RAW_ELEMENT_ALLOWLIST = new Set([
+  "app/(private)/billing/_blocks/BillingToolbar.tsx",
+  "app/(private)/billing/_blocks/CancelInvoiceModal.tsx",
+  "app/(private)/billing/_blocks/CsdManagerPage.tsx",
+  "app/(private)/billing/_blocks/InvoiceActionsBar.tsx",
+  "app/(private)/billing/_blocks/InvoiceDetailPage.tsx",
+  "app/(private)/billing/_blocks/InvoiceItemsTable.tsx",
+  "app/(private)/billing/_blocks/InvoicesTable.tsx",
+  "app/(private)/billing/_blocks/PartialInvoiceForm.tsx",
+  "app/(private)/billing/_blocks/PartialInvoiceLineRow.tsx",
+  "app/(private)/billing/_blocks/SaleInvoicesSection.tsx",
+  "app/(private)/billing/_blocks/SalePickerField.tsx",
+  "app/(private)/billing/_blocks/SendInvoiceEmailModal.tsx",
+  "app/(private)/billing/_blocks/StampSaleForm.tsx",
+  "app/(private)/catalogs/_blocks/CatalogEmpty.tsx",
+  "app/(private)/catalogs/_blocks/CatalogError.tsx",
+  "app/(private)/catalogs/_blocks/CatalogPagination.tsx",
+  "app/(private)/catalogs/_blocks/CatalogToolbar.tsx",
+  "app/(private)/catalogs/branches/_blocks/BranchEditModal.tsx",
+  "app/(private)/catalogs/branches/_blocks/BranchesTable.tsx",
+  "app/(private)/catalogs/customers/_blocks/CustomerEditModal.tsx",
+  "app/(private)/catalogs/customers/_blocks/CustomersTable.tsx",
+  "app/(private)/catalogs/departments/_blocks/DepartmentEditModal.tsx",
+  "app/(private)/catalogs/departments/_blocks/DepartmentsTable.tsx",
+  "app/(private)/catalogs/folios/_blocks/FolioAuditModal.tsx",
+  "app/(private)/catalogs/folios/_blocks/FolioEditModal.tsx",
+  "app/(private)/catalogs/folios/_blocks/FoliosTable.tsx",
+  "app/(private)/catalogs/payment-methods/_blocks/PaymentMethodEditModal.tsx",
+  "app/(private)/catalogs/payment-methods/_blocks/PaymentMethodsTable.tsx",
+  "app/(private)/catalogs/products/_blocks/ProductDetailPage.tsx",
+  "app/(private)/catalogs/products/_blocks/ProductDosificationsTab.tsx",
+  "app/(private)/catalogs/products/_blocks/ProductEditModal.tsx",
+  "app/(private)/catalogs/products/_blocks/ProductGeneralTab.tsx",
+  "app/(private)/catalogs/products/_blocks/ProductPricesTab.tsx",
+  "app/(private)/catalogs/products/_blocks/ProductsPage.tsx",
+  "app/(private)/catalogs/products/_blocks/ProductsTable.tsx",
+  "app/(private)/catalogs/products/_blocks/SatCodeCombobox.tsx",
+  "app/(private)/catalogs/products/_blocks/TaxRateSelect.tsx",
+  "app/(private)/catalogs/providers/_blocks/ProviderEditModal.tsx",
+  "app/(private)/catalogs/providers/_blocks/ProvidersTable.tsx",
+  "app/(private)/catalogs/tax-rates/_blocks/TaxRateEditModal.tsx",
+  "app/(private)/catalogs/tax-rates/_blocks/TaxRatesTable.tsx",
+  "app/(private)/dashboard/_blocks/ActivityFeed.tsx",
+  "app/(private)/dashboard/_blocks/LowStockAlerts.tsx",
+  "app/(private)/inventory/_blocks/InventoryAssignModal.tsx",
+  "app/(private)/inventory/_blocks/InventoryEditModal.tsx",
+  "app/(private)/inventory/_blocks/InventoryTable.tsx",
+  "app/(private)/inventory/_blocks/StockAdjustModal.tsx",
+  "app/(private)/inventory/kardex/_blocks/ExportButtons.tsx",
+  "app/(private)/inventory/kardex/_blocks/KardexFilters.tsx",
+  "app/(private)/inventory/kardex/_blocks/KardexTable.tsx",
+  "app/(private)/inventory/kardex/_blocks/RebuildArticleButton.tsx",
+  "app/(private)/payments/_blocks/CancelPaymentModal.tsx",
+  "app/(private)/payments/_blocks/GroupedPaymentsTable.tsx",
+  "app/(private)/payments/_blocks/PaymentActionsBar.tsx",
+  "app/(private)/payments/_blocks/PaymentsHistoryPage.tsx",
+  "app/(private)/payments/_blocks/PaymentsHistoryToolbar.tsx",
+  "app/(private)/payments/_blocks/PaymentsListPage.tsx",
+  "app/(private)/payments/_blocks/PaymentsTable.tsx",
+  "app/(private)/payments/_blocks/PaymentsToolbar.tsx",
+  "app/(private)/payments/_blocks/RegisterPaymentModal.tsx",
+  "app/(private)/pos/_blocks/CartLine.tsx",
+  "app/(private)/pos/_blocks/CartPanel.tsx",
+  "app/(private)/pos/_blocks/CustomerPicker.tsx",
+  "app/(private)/pos/_blocks/CustomerQuickAddModal.tsx",
+  "app/(private)/pos/_blocks/PosHeader.tsx",
+  "app/(private)/pos/_blocks/PosShortcutsOverlay.tsx",
+  "app/(private)/pos/_blocks/PriceTierPicker.tsx",
+  "app/(private)/pos/_blocks/ProductCatalogTable.tsx",
+  "app/(private)/pos/_blocks/SaleConfirmedModal.tsx",
+  "app/(private)/purchases/_blocks/CancelProviderPaymentModal.tsx",
+  "app/(private)/purchases/_blocks/CancelPurchaseModal.tsx",
+  "app/(private)/purchases/_blocks/CreatePurchasePage.tsx",
+  "app/(private)/purchases/_blocks/ProviderPaymentsSection.tsx",
+  "app/(private)/purchases/_blocks/ProviderPicker.tsx",
+  "app/(private)/purchases/_blocks/ProviderQuickAddModal.tsx",
+  "app/(private)/purchases/_blocks/PurchaseActionsBar.tsx",
+  "app/(private)/purchases/_blocks/PurchaseItemsTable.tsx",
+  "app/(private)/purchases/_blocks/PurchaseLineRow.tsx",
+  "app/(private)/purchases/_blocks/PurchasesTable.tsx",
+  "app/(private)/purchases/_blocks/PurchasesToolbar.tsx",
+  "app/(private)/purchases/_blocks/RegisterProviderPaymentModal.tsx",
+  "app/(private)/purchases/_blocks/SatInvoiceUploader.tsx",
+  "app/(private)/quotes/_blocks/AuthorizeQuoteModal.tsx",
+  "app/(private)/quotes/_blocks/CancelQuoteModal.tsx",
+  "app/(private)/quotes/_blocks/ConvertQuoteModal.tsx",
+  "app/(private)/quotes/_blocks/QuoteActionsBar.tsx",
+  "app/(private)/quotes/_blocks/QuoteEmitPanel.tsx",
+  "app/(private)/quotes/_blocks/QuoteItemsTable.tsx",
+  "app/(private)/quotes/_blocks/QuotesTable.tsx",
+  "app/(private)/quotes/_blocks/QuotesToolbar.tsx",
+  "app/(private)/reports/_blocks/ExportPdfButton.tsx",
+  "app/(private)/reports/_blocks/ExportXlsxButton.tsx",
+  "app/(private)/reports/_blocks/LedgerTable.tsx",
+  "app/(private)/reports/_blocks/StatementToolbar.tsx",
+  "app/(private)/reports/_blocks/SummaryTable.tsx",
+  "app/(private)/reports/cash-cut/_blocks/CashCutFilters.tsx",
+  "app/(private)/reports/cash-cut/_blocks/PaymentMethodBreakdownTable.tsx",
+  "app/(private)/reports/customer-collections/_blocks/ByCustomerTable.tsx",
+  "app/(private)/reports/customer-collections/_blocks/ByTicketTable.tsx",
+  "app/(private)/reports/customer-collections/_blocks/CollectionsFilters.tsx",
+  "app/(private)/reports/purchases/_blocks/PurchasesFilters.tsx",
+  "app/(private)/reports/sales-by-product/_blocks/BreakdownTable.tsx",
+  "app/(private)/reports/sales-by-product/_blocks/ProductBreakdownTable.tsx",
+  "app/(private)/reports/sales-by-product/_blocks/SalesByProductFilters.tsx",
+  "app/(private)/reports/sales-cut/_blocks/BreakdownTable.tsx",
+  "app/(private)/reports/sales-cut/_blocks/CutFilters.tsx",
+  "app/(private)/reports/sales-cut/_blocks/SalesListTable.tsx",
+  "app/(private)/returns/_blocks/CancelReturnModal.tsx",
+  "app/(private)/returns/_blocks/ReturnActionsBar.tsx",
+  "app/(private)/returns/_blocks/ReturnItemsTable.tsx",
+  "app/(private)/returns/_blocks/ReturnsTable.tsx",
+  "app/(private)/returns/_blocks/ReturnsToolbar.tsx",
+  "app/(private)/roles/_blocks/RolePermissionsEditor.tsx",
+  "app/(private)/roles/_blocks/RolesList.tsx",
+  "app/(private)/sales/[id]/returns/new/_blocks/CreateReturnFooter.tsx",
+  "app/(private)/sales/[id]/ticket/_blocks/SendTicketEmailModal.tsx",
+  "app/(private)/sales/[id]/ticket/_blocks/TicketPreviewPage.tsx",
+  "app/(private)/sales/_blocks/CancelSaleModal.tsx",
+  "app/(private)/sales/_blocks/FullReturnModal.tsx",
+  "app/(private)/sales/_blocks/PrintableTicket.tsx",
+  "app/(private)/sales/_blocks/SaleDetailPage.tsx",
+  "app/(private)/sales/_blocks/SaleItemsTable.tsx",
+  "app/(private)/sales/_blocks/SalePaymentsSection.tsx",
+  "app/(private)/sales/_blocks/SaleReturnsSection.tsx",
+  "app/(private)/sales/_blocks/SalesTable.tsx",
+  "app/(private)/sales/_blocks/SalesToolbar.tsx",
+  "app/(private)/settings/_blocks/PricingSettingsForm.tsx",
+  "app/(private)/settings/_blocks/TicketSettingsForm.tsx",
+  "app/(private)/users/_blocks/UserEditModal.tsx",
+  "app/(private)/users/_blocks/UsersEmpty.tsx",
+  "app/(private)/users/_blocks/UsersError.tsx",
+  "app/(private)/users/_blocks/UsersPagination.tsx",
+  "app/(private)/users/_blocks/UsersTable.tsx",
+  "app/(private)/users/_blocks/UsersToolbar.tsx",
+  "app/(private)/waybills/_blocks/BranchPairSelector.tsx",
+  "app/(private)/waybills/_blocks/CancelWaybillModal.tsx",
+  "app/(private)/waybills/_blocks/NewWaybillPage.tsx",
+  "app/(private)/waybills/_blocks/WaybillActionsBar.tsx",
+  "app/(private)/waybills/_blocks/WaybillDetailPage.tsx",
+  "app/(private)/waybills/_blocks/WaybillItemsForm.tsx",
+  "app/(private)/waybills/_blocks/WaybillItemsTable.tsx",
+  "app/(private)/waybills/_blocks/WaybillLineRow.tsx",
+  "app/(private)/waybills/_blocks/WaybillsTable.tsx",
+  "app/(private)/waybills/_blocks/WaybillsToolbar.tsx",
+]);
+
+describe("design-system tokens — sin elementos crudos nuevos en _blocks/", () => {
+  it("todo <button>/<table>/<select> crudo en _blocks/ está en la allowlist de deuda declarada", () => {
+    const RAW_ELEMENT_RE = /<(?:button|table|select)[\s/>]/;
+    const blockFiles = ALL_TSX_FILES.filter((f) => rel(f).includes("/_blocks/"));
+    const offenders = blockFiles
+      .filter((f) => RAW_ELEMENT_RE.test(fs.readFileSync(f, "utf8")))
+      .map(rel)
+      .filter((r) => !RAW_ELEMENT_ALLOWLIST.has(r));
+    expect(offenders).toEqual([]);
+  });
+
+  it("la allowlist no contiene archivos que ya no existen (mantenerla al día)", () => {
+    const repoRoot = path.resolve(__dirname, "../../../..");
+    const missing = [...RAW_ELEMENT_ALLOWLIST].filter((r) => !fs.existsSync(path.join(repoRoot, r)));
+    expect(missing).toEqual([]);
+  });
+});

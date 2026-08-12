@@ -64,7 +64,7 @@ export function RolePermissionsEditor({
               return (
                 <li
                   key={perm.id}
-                  className="flex items-center justify-between px-4 py-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors"
+                  className="flex items-center justify-between px-4 py-3 rounded-md bg-surface-container hover:bg-surface-container-high transition-colors"
                 >
                   <span className="text-body-md text-on-surface">
                     {perm.description ?? perm.key}

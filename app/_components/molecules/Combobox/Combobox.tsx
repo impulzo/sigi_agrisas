@@ -79,30 +79,30 @@ export function Combobox<T extends ComboboxOption>({
         placeholder={placeholder}
         disabled={disabled}
         autoComplete="off"
-        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded border border-outline bg-surface-container-lowest px-3 py-2 text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:bg-surface-container disabled:opacity-60"
       />
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-auto rounded border border-outline-variant bg-surface-container-lowest shadow-elevation-2">
           {isLoading && (
             <div className="flex items-center justify-center py-3">
               <Spinner size="sm" />
             </div>
           )}
           {!isLoading && options.length === 0 && (
-            <div className="px-3 py-2 text-sm text-gray-500">Sin resultados</div>
+            <div className="px-3 py-2 text-body-md text-on-surface-variant">Sin resultados</div>
           )}
           {!isLoading && options.map((option) => (
             <button
               key={option.value}
               type="button"
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+              className="w-full px-3 py-2 text-left text-body-md text-on-surface hover:bg-surface-container-high focus:bg-surface-container-high focus:outline-none"
               onMouseDown={(e) => { e.preventDefault(); handleSelect(option); }}
             >
               {renderOption ? renderOption(option) : option.label}
             </button>
           ))}
           {footerSlot && (
-            <div className="border-t border-gray-200">
+            <div className="border-t border-outline-variant">
               {footerSlot}
             </div>
           )}

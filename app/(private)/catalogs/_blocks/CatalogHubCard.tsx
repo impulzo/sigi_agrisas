@@ -19,12 +19,12 @@ export function CatalogHubCard({ icon, title, description, href, canAccess, tool
     <div
       title={disabled && tooltip ? tooltip : undefined}
       className={cn(
-        "rounded-2xl border border-outline-variant bg-surface-container p-6 flex flex-col gap-4 transition-shadow",
+        "rounded-lg border border-outline-variant bg-surface-container p-6 flex flex-col gap-4 transition-shadow",
         disabled ? "opacity-50 cursor-not-allowed" : "hover:shadow-md"
       )}
     >
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-primary-container text-on-primary-container">
+        <div className="p-2 rounded-md bg-primary-container text-on-primary-container">
           <Icon name={icon} size={28} />
         </div>
         <div>
@@ -33,13 +33,13 @@ export function CatalogHubCard({ icon, title, description, href, canAccess, tool
         </div>
       </div>
       {disabled ? (
-        <span className="self-start px-4 py-2 rounded-xl bg-surface-container-high text-on-surface-variant text-label-lg opacity-60 cursor-not-allowed">
+        <span className="self-start px-4 py-2 rounded-md bg-surface-container-high text-on-surface-variant text-label-lg opacity-60 cursor-not-allowed">
           Sin acceso
         </span>
       ) : (
         <Link
           href={href}
-          className="self-start px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity"
+          className="self-start px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity"
         >
           Abrir
         </Link>

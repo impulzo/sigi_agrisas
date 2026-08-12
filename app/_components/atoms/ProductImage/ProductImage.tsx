@@ -19,7 +19,7 @@ export function ProductImage({ src, alt, size }: ProductImageProps) {
       <div
         aria-label={alt}
         style={{ width: dim, height: dim }}
-        className="flex items-center justify-center rounded bg-surface-container text-on-surface-variant flex-shrink-0"
+        className="flex items-center justify-center rounded-sm bg-surface-container text-on-surface-variant flex-shrink-0"
       >
         <span className={`material-symbols-outlined ${iconSize}`} aria-hidden="true">
           image_not_supported
@@ -36,7 +36,7 @@ export function ProductImage({ src, alt, size }: ProductImageProps) {
       height={size}
       loading="lazy"
       onError={() => setFailed(true)}
-      className="rounded object-cover flex-shrink-0"
+      className="rounded-sm object-cover flex-shrink-0"
       style={{ width: dim, height: dim }}
     />
   );

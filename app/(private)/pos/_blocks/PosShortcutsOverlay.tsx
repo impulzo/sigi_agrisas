@@ -51,7 +51,7 @@ export function PosShortcutsOverlay({ canToggleMode, onClose }: PosShortcutsOver
   return (
     <dialog
       ref={dialogRef}
-      className="w-full max-w-lg rounded-2xl bg-surface p-6 shadow-xl backdrop:bg-black/40 max-h-[80vh] overflow-y-auto"
+      className="w-full max-w-lg rounded-lg bg-surface p-6 shadow-xl backdrop:bg-black/40 max-h-[80vh] overflow-y-auto"
     >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-title-md font-semibold text-on-surface">Atajos de teclado</h2>
@@ -68,7 +68,7 @@ export function PosShortcutsOverlay({ canToggleMode, onClose }: PosShortcutsOver
                 <span className="flex items-center gap-1 flex-wrap">
                   {s.keys.map((k, i) => (
                     <span key={i} className="flex items-center gap-1">
-                      <kbd className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container-high text-label-sm font-mono border border-outline-variant">
+                      <kbd className="inline-flex items-center px-2 py-0.5 rounded-sm bg-surface-container-high text-label-sm font-mono border border-outline-variant">
                         {k}
                       </kbd>
                       {i < s.keys.length - 1 && <span className="text-on-surface-variant">+</span>}
@@ -83,7 +83,7 @@ export function PosShortcutsOverlay({ canToggleMode, onClose }: PosShortcutsOver
       </table>
 
       <p className="mt-4 text-label-sm text-on-surface-variant">
-        Presiona <kbd className="px-1 py-0.5 rounded bg-surface-container-high text-label-sm font-mono border border-outline-variant">Esc</kbd> para cerrar.
+        Presiona <kbd className="px-1 py-0.5 rounded-sm bg-surface-container-high text-label-sm font-mono border border-outline-variant">Esc</kbd> para cerrar.
       </p>
     </dialog>
   );

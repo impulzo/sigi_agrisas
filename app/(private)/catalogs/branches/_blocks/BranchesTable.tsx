@@ -92,7 +92,7 @@ export function BranchesTable({
                           type="button"
                           onClick={() => onEdit(item)}
                           title="Editar"
-                          className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors"
+                          className="p-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors"
                         >
                           <Icon name="edit" size={18} />
                         </button>
@@ -100,7 +100,7 @@ export function BranchesTable({
                           type="button"
                           onClick={() => onSoftDelete(item.id)}
                           title="Desactivar"
-                          className="p-2 rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error transition-colors"
+                          className="p-2 rounded text-on-surface-variant hover:bg-error-container hover:text-error transition-colors"
                         >
                           <Icon name="delete" size={18} />
                         </button>
@@ -110,7 +110,7 @@ export function BranchesTable({
                         type="button"
                         onClick={() => onReactivate(item.id)}
                         title="Reactivar"
-                        className="p-2 rounded-lg text-on-surface-variant hover:bg-tertiary-container hover:text-on-tertiary-container transition-colors"
+                        className="p-2 rounded text-on-surface-variant hover:bg-tertiary-container hover:text-on-tertiary-container transition-colors"
                       >
                         <Icon name="restore" size={18} />
                       </button>

@@ -70,7 +70,7 @@ export function CancelInvoiceModal({ invoiceId, open, onClose, onSuccess }: Canc
     <dialog
       ref={dialogRef}
       aria-labelledby="cancel-invoice-modal-title"
-      className="rounded-xl bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
+      className="rounded-md bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
     >
       <h2 id="cancel-invoice-modal-title" className="text-title-md font-semibold text-on-surface mb-2">
         Cancelar CFDI
@@ -80,7 +80,7 @@ export function CancelInvoiceModal({ invoiceId, open, onClose, onSuccess }: Canc
       </p>
 
       {localError && (
-        <div className="mb-4 rounded-lg bg-error-container/30 px-3 py-2 text-body-sm text-error">
+        <div className="mb-4 rounded bg-error-container/30 px-3 py-2 text-body-sm text-error">
           {localError}
         </div>
       )}
@@ -93,7 +93,7 @@ export function CancelInvoiceModal({ invoiceId, open, onClose, onSuccess }: Canc
           id="cancel-motive"
           value={motive}
           onChange={(e) => setMotive(e.target.value as CancellationMotive | "")}
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         >
           <option value="">Seleccionar motivo…</option>
           {MOTIVES.map((m) => (
@@ -113,7 +113,7 @@ export function CancelInvoiceModal({ invoiceId, open, onClose, onSuccess }: Canc
             value={uuidReplacement}
             onChange={(e) => setUuidReplacement(e.target.value.slice(0, 40))}
             placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono"
           />
         </div>
       )}
@@ -123,7 +123,7 @@ export function CancelInvoiceModal({ invoiceId, open, onClose, onSuccess }: Canc
           type="button"
           onClick={onClose}
           disabled={isSaving}
-          className="px-4 py-2 rounded-lg text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
+          className="px-4 py-2 rounded text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
         >
           Volver
         </button>
@@ -131,7 +131,7 @@ export function CancelInvoiceModal({ invoiceId, open, onClose, onSuccess }: Canc
           type="button"
           onClick={handleSubmit}
           disabled={isSaving || !motive}
-          className="px-4 py-2 rounded-lg text-label-lg bg-error-container text-on-error-container hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 rounded text-label-lg bg-error-container text-on-error-container hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSaving ? "Cancelando…" : "Cancelar CFDI"}
         </button>

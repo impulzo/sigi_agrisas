@@ -73,13 +73,13 @@ export function WaybillItemsForm({ type, lines, addLine, updateLine, removeLine 
       </div>
 
       {showCatalog && (
-        <div className="border border-outline-variant rounded-xl overflow-hidden mb-4">
+        <div className="border border-outline-variant rounded-md overflow-hidden mb-4">
           <ProductCatalogPanel onAddProduct={handleAddProduct} />
         </div>
       )}
 
       {lines.length > 0 ? (
-        <div className="overflow-x-auto border border-outline-variant rounded-xl">
+        <div className="overflow-x-auto border border-outline-variant rounded-md">
           <table className="w-full text-body-sm">
             <thead>
               <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
@@ -106,7 +106,7 @@ export function WaybillItemsForm({ type, lines, addLine, updateLine, removeLine 
           </table>
         </div>
       ) : (
-        <p className="text-body-sm text-on-surface-variant py-4 text-center border border-outline-variant border-dashed rounded-xl">
+        <p className="text-body-sm text-on-surface-variant py-4 text-center border border-outline-variant border-dashed rounded-md">
           {isSimple ? "Sin mercancías. Agrega del catálogo." : "Sin mercancías. Agrega del catálogo o como línea libre."}
         </p>
       )}

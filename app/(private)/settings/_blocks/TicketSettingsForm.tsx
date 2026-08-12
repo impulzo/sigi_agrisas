@@ -47,7 +47,7 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
   }
 
   const inputCls =
-    "w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60";
+    "w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60";
 
   return (
     <div className="max-w-xl space-y-6">
@@ -182,7 +182,7 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
       </div>
 
       {mutationError && (
-        <div className="rounded-lg bg-error-container/30 px-3 py-2 text-body-sm text-error flex items-center justify-between gap-2">
+        <div className="rounded bg-error-container/30 px-3 py-2 text-body-sm text-error flex items-center justify-between gap-2">
           {mutationError.message}
           <button type="button" onClick={clearError} className="text-error hover:underline flex-shrink-0">Cerrar</button>
         </div>
@@ -193,7 +193,7 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
           type="button"
           onClick={handleSave}
           disabled={isSaving}
-          className="px-4 py-2 rounded-lg text-label-lg bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-4 py-2 rounded text-label-lg bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isSaving ? "Guardando…" : "Guardar cambios"}
         </button>

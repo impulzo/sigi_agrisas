@@ -1,5 +1,6 @@
 "use client";
 
+import { Card as BaseCard } from "../../../../_components/molecules/Card/Card";
 import type { SalesCutReportDto } from "../_logic/types/api";
 
 const MX = new Intl.NumberFormat("es-MX", {
@@ -13,11 +14,11 @@ function money(v: string): string {
 
 function Card({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="flex flex-col rounded-2xl border border-outline-variant bg-surface-container-low px-4 py-3">
+    <BaseCard className="flex flex-col">
       <span className="text-label-sm text-on-surface-variant">{label}</span>
       <span className="text-title-md font-semibold text-on-surface tabular-nums">{value}</span>
       {sub && <span className="text-label-sm text-on-surface-variant">{sub}</span>}
-    </div>
+    </BaseCard>
   );
 }
 

@@ -168,7 +168,7 @@ export function ProductEditModal({
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-2xl shadow-xl bg-surface p-0 w-full max-w-lg backdrop:bg-black/40"
+      className="rounded-lg shadow-xl bg-surface p-0 w-full max-w-lg backdrop:bg-black/40"
     >
       <form onSubmit={handleSubmit} noValidate>
         <div className="px-6 pt-6 pb-4 border-b border-outline-variant">
@@ -179,10 +179,10 @@ export function ProductEditModal({
 
         <div className="px-6 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
           {mutationError && (
-            <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-xl">{mutationError}</p>
+            <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-md">{mutationError}</p>
           )}
           {imageUploadWarning && (
-            <p className="text-label-sm text-on-surface bg-surface-container-high px-3 py-2 rounded-xl">{imageUploadWarning}</p>
+            <p className="text-label-sm text-on-surface bg-surface-container-high px-3 py-2 rounded-md">{imageUploadWarning}</p>
           )}
 
           <div className="grid grid-cols-2 gap-4">
@@ -194,7 +194,7 @@ export function ProductEditModal({
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 disabled={mode === "edit"}
                 maxLength={32}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
               {(codeError || validationErrors.code) && (
                 <p className="text-label-sm text-error mt-1">{codeError ?? validationErrors.code}</p>
@@ -208,7 +208,7 @@ export function ProductEditModal({
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
                 maxLength={30}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.unit && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.unit}</p>
@@ -223,7 +223,7 @@ export function ProductEditModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={120}
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {validationErrors.name && (
               <p className="text-label-sm text-error mt-1">{validationErrors.name}</p>
@@ -235,7 +235,7 @@ export function ProductEditModal({
             <select
               value={departmentId}
               onChange={(e) => setDepartmentId(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">Selecciona un departamento</option>
               {deptOptions.map((d) => (
@@ -253,7 +253,7 @@ export function ProductEditModal({
               value={taxRateId}
               onChange={setTaxRateId}
               options={taxRateOptions}
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -262,7 +262,7 @@ export function ProductEditModal({
             <SatCodeCombobox
               value={satProductCode}
               onChange={setSatProductCode}
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {validationErrors.satProductCode && (
               <p className="text-label-sm text-error mt-1">{validationErrors.satProductCode}</p>
@@ -280,7 +280,7 @@ export function ProductEditModal({
                   min={0}
                   max={100}
                   placeholder="Ej. 16"
-                  className="w-full pl-3 pr-8 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full pl-3 pr-8 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-label-sm text-on-surface-variant">%</span>
               </div>
@@ -299,7 +299,7 @@ export function ProductEditModal({
                   min={0}
                   max={100}
                   placeholder="Ej. 8"
-                  className="w-full pl-3 pr-8 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full pl-3 pr-8 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-label-sm text-on-surface-variant">%</span>
               </div>
@@ -328,9 +328,9 @@ export function ProductEditModal({
               </label>
               <div className="flex items-center gap-3">
                 {imgPreview ? (
-                  <img src={imgPreview} alt="preview" className="w-16 h-16 object-cover rounded-xl border border-outline-variant" />
+                  <img src={imgPreview} alt="preview" className="w-16 h-16 object-cover rounded-md border border-outline-variant" />
                 ) : (
-                  <div className="w-16 h-16 flex items-center justify-center rounded-xl border border-dashed border-outline-variant bg-surface-container text-on-surface-variant">
+                  <div className="w-16 h-16 flex items-center justify-center rounded-md border border-dashed border-outline-variant bg-surface-container text-on-surface-variant">
                     <span className="material-symbols-outlined text-xl" aria-hidden="true">image</span>
                   </div>
                 )}
@@ -368,7 +368,7 @@ export function ProductEditModal({
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-4 py-2 rounded-xl text-label-lg text-on-surface-variant hover:bg-surface-container transition-colors"
+            className="px-4 py-2 rounded-md text-label-lg text-on-surface-variant hover:bg-surface-container transition-colors"
           >
             Cancelar
           </button>
@@ -376,7 +376,7 @@ export function ProductEditModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity"
+              className="px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity"
             >
               Cerrar
             </button>
@@ -384,7 +384,7 @@ export function ProductEditModal({
             <button
               type="submit"
               disabled={isSaving || isDiffEmpty}
-              className="px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {isSaving ? "Guardando…" : mode === "create" ? "Crear" : "Guardar"}
             </button>

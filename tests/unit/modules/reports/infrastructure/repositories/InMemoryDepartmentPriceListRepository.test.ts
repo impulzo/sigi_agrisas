@@ -11,6 +11,7 @@ function makeRow(productId: string, departmentId: string): RawPriceListRow {
     code: "P1",
     name: "Producto",
     unit: "PZA",
+    stockQuantity: new Decimal("5.0000"),
     ivaRate: null,
     iepsRate: null,
     priceId: "price-1",

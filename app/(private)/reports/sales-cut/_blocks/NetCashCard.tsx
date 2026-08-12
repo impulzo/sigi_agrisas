@@ -26,7 +26,7 @@ function Line({ label, value, strong }: { label: string; value: string; strong?:
 
 export function NetCashCard({ cash }: { cash: SalesCutReportDto["cash"] }) {
   return (
-    <div className="space-y-2 rounded-2xl border border-outline-variant bg-surface-container px-5 py-4 max-w-md">
+    <div className="space-y-2 rounded-lg border border-outline-variant bg-surface-container px-5 py-4 max-w-md">
       <h3 className="text-title-sm font-medium text-on-surface">Neto de caja</h3>
       <Line label="Ventas" value={money(cash.grossSales)} />
       <Line label="+ Abonos cobrados" value={money(cash.paymentsReceived)} />

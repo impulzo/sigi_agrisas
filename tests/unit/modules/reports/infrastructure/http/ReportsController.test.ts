@@ -142,6 +142,7 @@ function makePriceListRow(): RawPriceListRow {
   return {
     departmentId: DEPT_ID, departmentCode: "D1", departmentName: "Dept 1",
     productId: "prod-1", code: "P001", name: "Prod 1", unit: "PZA",
+    stockQuantity: new Decimal("10.0000"),
     ivaRate: new Decimal("0.1600"), iepsRate: null,
     priceId: "price-1", priceName: "Menudeo", price: new Decimal("100.0000"),
     minQuantity: 1, discountPct: new Decimal("0.00"), isDefault: true,
@@ -1133,6 +1134,47 @@ describe("ReportsController - getDepartmentPriceListReport", () => {
     expect(disposition).toMatch(/^attachment; filename="inventory-by-department-\d{4}-\d{2}-\d{2}\.xlsx"$/);
     const buf = Buffer.from(await res.arrayBuffer());
     expect(buf.length).toBeGreaterThan(0);
+  });
+
+  it("200 incluye stockQuantity por producto y totalStock", async () => {
+    const ctrl = makeDepartmentPriceListController([makePriceListRow()]);
+    const res = await ctrl.getDepartmentPriceListReport(req(URL, authHeaders()));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.departments[0].products[0].stockQuantity).toBe("10.0000");
+    expect(body.departments[0].subtotal.totalStock).toBe("10.0000");
+    expect(body.totals.totalStock).toBe("10.0000");
+  });
+
+  it("400 con branchId UUID inválido", async () => {
+    const ctrl = makeDepartmentPriceListController();
+    const res = await ctrl.getDepartmentPriceListReport(req(`${URL}?branchId=bad`, authHeaders()));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid branchId" });
+  });
+
+  it("403 branch scope cross-branch sin bypass", async () => {
+    const authz = makeAuthz({
+      userCan: jest.fn().mockImplementation(async (_id, key) => {
+        if (key === "reports:inventory_read") return true;
+        return false;
+      }),
+    });
+    const ctrl = makeDepartmentPriceListController([], authz);
+    const res = await ctrl.getDepartmentPriceListReport(
+      req(`${URL}?branchId=${OTHER_BRANCH}`, authHeaders(BRANCH_ID))
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("200 JSON propaga branchId en filters", async () => {
+    const ctrl = makeDepartmentPriceListController([makePriceListRow()]);
+    const res = await ctrl.getDepartmentPriceListReport(
+      req(`${URL}?branchId=${BRANCH_ID}`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.filters.branchId).toBe(BRANCH_ID);
   });
 });
 

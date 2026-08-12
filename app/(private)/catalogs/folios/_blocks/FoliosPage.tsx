@@ -7,7 +7,7 @@ import { useFolioMutations } from "../_logic/hooks/useFolioMutations";
 import { FoliosTable } from "./FoliosTable";
 import { FolioEditModal } from "./FolioEditModal";
 import { FolioAuditModal } from "./FolioAuditModal";
-import { CatalogShell } from "../../_blocks/CatalogShell";
+import { PageShell } from "../../../../_components/organisms/PageShell";
 import { CatalogToolbar } from "../../_blocks/CatalogToolbar";
 import { CatalogPagination } from "../../_blocks/CatalogPagination";
 import { CatalogEmpty } from "../../_blocks/CatalogEmpty";
@@ -172,7 +172,7 @@ export function FoliosPage() {
 
   return (
     <>
-      <CatalogShell
+      <PageShell
         title="Folios"
         description="Gestiona los folios de documentos del sistema"
         toolbar={
@@ -216,7 +216,7 @@ export function FoliosPage() {
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
         />
-      </CatalogShell>
+      </PageShell>
 
       <FolioEditModal
         open={modalState !== null}
@@ -248,7 +248,7 @@ export function FoliosPage() {
       />
 
       {toast && (
-        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-xl bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
+        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-md bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
           {toast}
         </div>
       )}

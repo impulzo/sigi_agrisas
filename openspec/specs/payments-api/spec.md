@@ -185,7 +185,7 @@ Branch scoping: idéntico al patrón de `sales` (`resolveScopedBranchId`).
 
 Response: `{ items: PaymentDto[], total, page, pageSize }`. Ordenado por `created_at DESC`.
 
-`PaymentDto`: `id`, `saleId`, `saleFolioCode` (join), `customerId`, `customerName` (join), `userId`, `userName` (join), `branchId`, `branchName` (join), `paymentMethodId`, `paymentMethodCode` (join), `folioId`, `folioCode`, `folioNumber`, `amount` (string), `status`, `notes`, `createdAt`, `cancelledAt`, `cancellationReason`.
+`PaymentDto`: `id`, `saleId`, `saleFolioCode` (join), `customerId`, `customerName` (join), `userId`, `userName` (join), `branchId`, `branchName` (join), `paymentMethodId`, `paymentMethodCode` (join), `folioId`, `folioCode`, `folioNumber`, `amount` (string), `status`, `notes`, `createdAt`, `cancelledAt`, `cancellationReason`, `saleTotal` (string, monto total de la venta asociada), `salePaidAmount` (string, abonado hasta el momento en la venta), `salePaymentStatus` (`"paid" | "partial" | "pending"`, estado de cobro de la venta), `saleDueAmount` (string, `saleTotal - salePaidAmount`).
 
 #### Scenario: Listado básico
 
@@ -212,16 +212,28 @@ Response: `{ items: PaymentDto[], total, page, pageSize }`. Ordenado por `create
 - **WHEN** se filtra `?status=completed,cancelled`
 - **THEN** se incluyen ambos estados
 
+#### Scenario: Cada abono incluye el desglose de su venta
+
+- **WHEN** se lista un abono cuya venta tiene `total=1000` y `paidAmount=300`
+- **THEN** el item incluye `saleTotal="1000.0000"`, `salePaidAmount="300.0000"`, `saleDueAmount="700.0000"`, `salePaymentStatus="partial"`
+
+#### Scenario: Venta liquidada al 100% refleja saldo cero
+
+- **WHEN** se lista un abono cuya venta tiene `total=1000` y `paidAmount=1000`
+- **THEN** el item incluye `saleDueAmount="0.0000"` y `salePaymentStatus="paid"`
+
 ---
 
 ### Requirement: Get payment detail
 
 El sistema SHALL exponer `GET /api/v1/admin/payments/:id`. Requires `payments:read`. Devuelve HTTP 404 si no existe. Branch scoping aplica.
 
+`PaymentDetailDto` hereda todos los campos de `PaymentDto` (incluyendo `saleTotal`, `salePaidAmount`, `salePaymentStatus`, `saleDueAmount`) y añade el bloque `sale: { id, folioCode, folioNumber, total, paidAmount, paymentStatus }` con el snapshot completo de la venta.
+
 #### Scenario: Detalle de abono existente
 
 - **WHEN** un caller autorizado invoca `GET /payments/:id` con UUID válido
-- **THEN** responde HTTP 200 con `PaymentDetailDto` (mismo `PaymentDto` + sale snapshot básico)
+- **THEN** responde HTTP 200 con `PaymentDetailDto` (`PaymentDto` + desglose de venta + bloque `sale`)
 
 #### Scenario: No encontrado
 
@@ -234,7 +246,7 @@ El sistema SHALL exponer `GET /api/v1/admin/payments/:id`. Requires `payments:re
 
 El sistema SHALL exponer `GET /api/v1/admin/sales/:id/payments` que lista TODOS los abonos de una venta (incluye `cancelled`). Requires `payments:read`. Branch scoping vía el `sale.branchId`.
 
-Response: `{ items: PaymentDto[], saleId, saleTotal, salePaidAmount, salePaymentStatus, saleDueAmount, lineBalances: Array<{ saleItemId, lineTotal, paidAmount, dueAmount }> }`. `saleDueAmount = saleTotal - salePaidAmount`. `lineBalances` incluye TODAS las líneas de la venta (tengan o no abonos por línea); `paidAmount` de cada línea es la suma de `CustomerPaymentItem.amount` de abonos `completed` para esa línea (`0` si nunca se abonó por línea); `dueAmount = lineTotal - paidAmount`. Sin paginación (una venta no tendrá miles de abonos).
+Response: `{ items: PaymentDto[], saleId, saleTotal, salePaidAmount, salePaymentStatus, saleDueAmount, lineBalances: Array<{ saleItemId, lineTotal, paidAmount, dueAmount }> }`. `saleDueAmount = saleTotal - salePaidAmount`. Cada elemento de `items[]` (`PaymentDto`) también incluye `saleTotal`, `salePaidAmount`, `salePaymentStatus`, `saleDueAmount` a nivel de fila (mismos valores que los campos de nivel superior de la respuesta, por consistencia con el resto de endpoints que devuelven `PaymentDto`). `lineBalances` incluye TODAS las líneas de la venta (tengan o no abonos por línea); `paidAmount` de cada línea es la suma de `CustomerPaymentItem.amount` de abonos `completed` para esa línea (`0` si nunca se abonó por línea); `dueAmount = lineTotal - paidAmount`. Sin paginación (una venta no tendrá miles de abonos).
 
 #### Scenario: Listar abonos de venta
 
@@ -253,11 +265,11 @@ Response: `{ items: PaymentDto[], saleId, saleTotal, salePaidAmount, salePayment
 
 ### Requirement: Payment history report endpoint
 
-El sistema SHALL exponer `GET /api/v1/admin/payments/history` que devuelve el historial con filtros y formatos `json` o `pdf`. Requires `payments:report_read`.
+El sistema SHALL exponer `GET /api/v1/admin/payments/history` que devuelve el historial con filtros y formatos `json`, `pdf` o `xlsx`. Requires `payments:report_read`.
 
 Query params (todos opcionales excepto `format`):
 
-- `format?: "json" | "pdf"` (default `"json"`).
+- `format?: "json" | "pdf" | "xlsx"` (default `"json"`).
 - `userId?: string` UUID — filtra abonos cuyo cobrador es ese usuario.
 - `saleId?: string` UUID — filtra a una venta específica (cubre el "historial por ticket").
 - `customerId?: string` UUID.
@@ -269,9 +281,11 @@ Query params (todos opcionales excepto `format`):
 - `branchId?: string` UUID (con branch scoping).
 - `page?`, `pageSize?` (solo para `format=json`; `pageSize` default `50`, max `200`).
 
-Para `format=pdf`: sin paginación, límite duro 10,000 filas. Si excede → HTTP 409 `{"error":"ReportTooLarge","limit":10000}`.
+Para `format=pdf` o `format=xlsx`: sin paginación, límite duro 10,000 filas compartido entre ambos formatos. Si excede → HTTP 409 `{"error":"ReportTooLarge","limit":10000}`.
 
-Para `format=pdf`: el PDF SHALL generarse con `@react-pdf/renderer` y devolverse con `Content-Type: application/pdf` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.pdf"` (la fecha es la del `generatedAt` UTC).
+Para `format=pdf`: el PDF SHALL generarse con `@react-pdf/renderer`, devuelto con `Content-Type: application/pdf` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.pdf"` (fecha del `generatedAt` UTC). El contenido SHALL agrupar visualmente las filas por ticket (`saleId`): un bloque de encabezado por ticket (folio de venta, cliente, Monto total, Saldo) seguido de las filas de sus abonos, antes de la sección de totales globales.
+
+Para `format=xlsx`: el archivo SHALL generarse como workbook `.xlsx`, devuelto con `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.xlsx"`. El contenido SHALL agrupar las filas por ticket con la misma estructura que el PDF (encabezado de ticket + filas de abonos + fila en blanco de separación), y una sección de totales globales al final de la hoja.
 
 `PaymentHistoryReportDto` (JSON):
 
@@ -295,7 +309,11 @@ Para `format=pdf`: el PDF SHALL generarse con `@react-pdf/renderer` y devolverse
       "branchName": "Matriz",
       "paymentMethodCode": "EFECTIVO",
       "amount": "300.0000",
-      "status": "completed"
+      "status": "completed",
+      "saleTotal": "1000.0000",
+      "salePaidAmount": "1000.0000",
+      "salePaymentStatus": "paid",
+      "saleDueAmount": "0.0000"
     }
   ],
   "totals": {
@@ -314,7 +332,7 @@ Para `format=pdf`: el PDF SHALL generarse con `@react-pdf/renderer` y devolverse
 #### Scenario: Historial JSON con filtros
 
 - **WHEN** un caller con `payments:report_read` invoca `?userId=<U>&from=2026-06-01&to=2026-06-30`
-- **THEN** HTTP 200 con `items[]` filtrados y `totals` agregados
+- **THEN** HTTP 200 con `items[]` filtrados (cada uno con `saleTotal`/`salePaidAmount`/`salePaymentStatus`/`saleDueAmount`) y `totals` agregados
 
 #### Scenario: Historial por ticket
 
@@ -326,10 +344,20 @@ Para `format=pdf`: el PDF SHALL generarse con `@react-pdf/renderer` y devolverse
 - **WHEN** un caller invoca `?productId=<P>`
 - **THEN** la respuesta incluye solo abonos cuya venta tiene al menos un `sale_item.product_id === P`; un abono cuya venta tiene 3 productos distintos aparece UNA sola vez
 
-#### Scenario: PDF de historial
+#### Scenario: PDF de historial agrupado por ticket
 
 - **WHEN** un caller invoca `?format=pdf&userId=<U>`
-- **THEN** HTTP 200 con `Content-Type: application/pdf` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.pdf"`; el cuerpo es un PDF válido (comienza con bytes `%PDF-`)
+- **THEN** HTTP 200 con `Content-Type: application/pdf` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.pdf"`; el cuerpo es un PDF válido (comienza con bytes `%PDF-`) cuyo contenido agrupa las filas por ticket
+
+#### Scenario: Excel de historial agrupado por ticket
+
+- **WHEN** un caller con `payments:report_read` invoca `?format=xlsx&from=2026-06-01&to=2026-06-30`
+- **THEN** HTTP 200 con `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.xlsx"`; el archivo es un workbook `.xlsx` válido cuyo contenido agrupa las filas por ticket, con subtotal de Monto total/Saldo por ticket y totales globales al final
+
+#### Scenario: Excel demasiado grande
+
+- **WHEN** el set filtrado excede 10,000 filas y se pide `format=xlsx`
+- **THEN** HTTP 409 `{"error":"ReportTooLarge","limit":10000}` (mismo comportamiento que `format=pdf`)
 
 #### Scenario: PDF demasiado grande
 

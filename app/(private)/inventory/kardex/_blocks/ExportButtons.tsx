@@ -14,7 +14,7 @@ export function ExportButtons({ disabled, isExporting, onExportXlsx, onExportPdf
         type="button"
         onClick={onExportXlsx}
         disabled={disabled || isExporting}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-outline text-on-surface text-label-lg font-medium hover:bg-surface-container transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md border border-outline text-on-surface text-label-lg font-medium hover:bg-surface-container transition-colors disabled:opacity-50"
       >
         <Icon name="summarize" size={18} />
         Exportar Excel
@@ -23,7 +23,7 @@ export function ExportButtons({ disabled, isExporting, onExportXlsx, onExportPdf
         type="button"
         onClick={onExportPdf}
         disabled={disabled || isExporting}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-outline text-on-surface text-label-lg font-medium hover:bg-surface-container transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md border border-outline text-on-surface text-label-lg font-medium hover:bg-surface-container transition-colors disabled:opacity-50"
       >
         <Icon name="print" size={18} />
         Imprimir

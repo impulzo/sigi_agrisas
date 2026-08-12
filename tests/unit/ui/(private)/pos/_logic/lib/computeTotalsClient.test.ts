@@ -83,4 +83,37 @@ describe("computeTotalsClient", () => {
     expect(result.total).toBe(0);
     expect(result.lines).toHaveLength(0);
   });
+
+  describe("recargo por cantidad fraccionaria (surchargePct)", () => {
+    it("aplica el recargo a una línea normal con quantity fraccionaria", () => {
+      const result = computeTotalsClient(
+        [{ quantity: 0.5, unitPrice: 100, discountPct: 0, ivaRate: 0, iepsRate: 0 }],
+        5
+      );
+      expect(result.lines[0].lineTotal).toBe(52.5); // 0.5 * (100 * 1.05)
+    });
+
+    it("no aplica recargo cuando quantity es entera", () => {
+      const result = computeTotalsClient(
+        [{ quantity: 2, unitPrice: 100, discountPct: 0, ivaRate: 0, iepsRate: 0 }],
+        5
+      );
+      expect(result.lines[0].lineTotal).toBe(200);
+    });
+
+    it("no aplica recargo a una línea de dosificación aunque quantity sea fraccionaria", () => {
+      const result = computeTotalsClient(
+        [{ quantity: 1.5, unitPrice: 26.25, discountPct: 0, ivaRate: 0, iepsRate: 0, isDosificationLine: true }],
+        5
+      );
+      expect(result.lines[0].lineTotal).toBe(39.375); // 1.5 * 26.25, sin recargo adicional
+    });
+
+    it("surchargePct=0 (default) no cambia el resultado de una línea fraccionaria", () => {
+      const result = computeTotalsClient([
+        { quantity: 0.5, unitPrice: 100, discountPct: 0, ivaRate: 0, iepsRate: 0 },
+      ]);
+      expect(result.lines[0].lineTotal).toBe(50);
+    });
+  });
 });

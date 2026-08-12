@@ -35,7 +35,7 @@ export function SatInvoiceUploader({ onParsed, disabled }: SatInvoiceUploaderPro
   }
 
   return (
-    <div className="rounded-xl border border-dashed border-outline bg-surface-container-low p-4">
+    <div className="rounded-md border border-dashed border-outline bg-surface-container-low p-4">
       <input
         ref={inputRef}
         type="file"
@@ -51,12 +51,12 @@ export function SatInvoiceUploader({ onParsed, disabled }: SatInvoiceUploaderPro
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={disabled || isReading}
-        className="flex w-full flex-col items-center gap-1 rounded-lg py-3 text-center transition-colors hover:bg-surface-container-high disabled:opacity-50"
+        className="flex w-full flex-col items-center gap-1 rounded py-3 text-center transition-colors hover:bg-surface-container-high disabled:opacity-50"
       >
         {isReading ? (
           <Spinner size="sm" />
         ) : (
-          <span className="material-symbols-rounded text-on-surface-variant" aria-hidden>upload_file</span>
+          <span className="material-symbols-outlined text-on-surface-variant" aria-hidden>upload_file</span>
         )}
         <span className="text-body-sm font-medium text-on-surface">
           {isReading ? "Leyendo factura..." : "Cargar XML de factura (CFDI)"}

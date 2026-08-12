@@ -17,7 +17,7 @@ interface Props {
 }
 
 const inputCls =
-  "rounded-xl border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40";
+  "rounded-md border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40";
 
 export function CashCutFilters({
   branchId, onBranchIdChange, branches, showBranchFilter,

@@ -59,7 +59,7 @@ export function CancelProviderPaymentModal({ providerPaymentId, open, onClose, o
       <dialog
         ref={dialogRef}
         aria-labelledby="cancel-provider-payment-title"
-        className="rounded-xl bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
+        className="rounded-md bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
       >
         <h2 id="cancel-provider-payment-title" className="text-title-md font-semibold text-on-surface mb-2">
           Cancelar abono
@@ -73,7 +73,7 @@ export function CancelProviderPaymentModal({ providerPaymentId, open, onClose, o
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-4 py-2 rounded-lg text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
+            className="px-4 py-2 rounded text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
           >
             Volver
           </button>
@@ -81,7 +81,7 @@ export function CancelProviderPaymentModal({ providerPaymentId, open, onClose, o
             type="button"
             onClick={handleConfirm}
             disabled={isSaving}
-            className="px-4 py-2 rounded-lg text-label-lg bg-error-container text-on-error-container hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded text-label-lg bg-error-container text-on-error-container hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? "Cancelando..." : "Cancelar abono"}
           </button>

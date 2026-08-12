@@ -108,7 +108,7 @@ export function CartPanel({
             <select
               value={selectedFolioId}
               onChange={(e) => onFolioChange(e.target.value)}
-              className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             >
               <option value="">— Selecciona folio —</option>
               {folios.map((f) => (
@@ -129,7 +129,7 @@ export function CartPanel({
               <select
                 value={selectedPaymentMethodId}
                 onChange={(e) => onPaymentMethodChange(e.target.value)}
-                className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               >
                 <option value="">— Selecciona método de pago —</option>
                 {paymentMethods.map((pm) => (
@@ -151,7 +151,7 @@ export function CartPanel({
               min={tomorrow()}
               max={maxDate()}
               onChange={(e) => onExpiresAtChange?.(e.target.value)}
-              className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
         )}
@@ -164,7 +164,7 @@ export function CartPanel({
             maxLength={1000}
             rows={2}
             placeholder={isQuoteMode ? "Notas opcionales de la cotización..." : "Notas opcionales de la venta..."}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           />
         </div>
 

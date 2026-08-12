@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useWaybillsList } from "../_logic/hooks/useWaybillsList";
-import { CatalogShell } from "../../catalogs/_blocks/CatalogShell";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
 import { WaybillsToolbar } from "./WaybillsToolbar";
 import { WaybillsTable } from "./WaybillsTable";
@@ -73,7 +73,7 @@ export function WaybillsListPage() {
   }
 
   return (
-    <CatalogShell
+    <PageShell
       title="Traspasos"
       description="Traspasos de mercancía entre sucursales, simples o con Carta Porte"
       toolbar={
@@ -139,6 +139,6 @@ export function WaybillsListPage() {
           />
         </>
       )}
-    </CatalogShell>
+    </PageShell>
   );
 }

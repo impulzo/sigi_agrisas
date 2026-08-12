@@ -65,7 +65,7 @@ export function CancelReturnModal({ returnId, open, onClose, onSuccess }: Cancel
       <dialog
         ref={dialogRef}
         aria-labelledby="cancel-return-modal-title"
-        className="rounded-xl bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
+        className="rounded-md bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
       >
         <h2 id="cancel-return-modal-title" className="text-title-md font-semibold text-on-surface mb-2">
           Cancelar devolución
@@ -73,7 +73,7 @@ export function CancelReturnModal({ returnId, open, onClose, onSuccess }: Cancel
         <p className="text-body-md text-on-surface-variant mb-3">
           Al cancelar esta devolución, el inventario afectado será revertido.
         </p>
-        <div className="bg-tertiary-container/30 rounded-lg p-3 mb-4 text-body-sm text-on-surface-variant">
+        <div className="bg-tertiary-container/30 rounded p-3 mb-4 text-body-sm text-on-surface-variant">
           ⚠️ El stock de algunos productos podría quedar negativo si se han realizado movimientos posteriores.
         </div>
 
@@ -87,7 +87,7 @@ export function CancelReturnModal({ returnId, open, onClose, onSuccess }: Cancel
             onChange={(e) => setReason(e.target.value.slice(0, 500))}
             rows={3}
             maxLength={500}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
             placeholder="Describe el motivo de cancelación..."
           />
           <p className="text-right text-label-sm text-on-surface-variant mt-1">{reason.length}/500</p>
@@ -98,7 +98,7 @@ export function CancelReturnModal({ returnId, open, onClose, onSuccess }: Cancel
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-4 py-2 rounded-lg text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
+            className="px-4 py-2 rounded text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
           >
             Volver
           </button>
@@ -106,7 +106,7 @@ export function CancelReturnModal({ returnId, open, onClose, onSuccess }: Cancel
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="px-4 py-2 rounded-lg text-label-lg bg-error-container text-on-error-container hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded text-label-lg bg-error-container text-on-error-container hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? "Cancelando..." : "Cancelar devolución"}
           </button>

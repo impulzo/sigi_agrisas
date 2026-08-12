@@ -105,10 +105,10 @@ function PriceModal({
     }
   };
 
-  const fieldClass = "w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md focus:outline-none focus:ring-2 focus:ring-primary";
+  const fieldClass = "w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md focus:outline-none focus:ring-2 focus:ring-primary";
 
   return (
-    <dialog ref={dialogRef} className="rounded-2xl shadow-xl bg-surface p-0 w-full max-w-md backdrop:bg-black/40">
+    <dialog ref={dialogRef} className="rounded-lg shadow-xl bg-surface p-0 w-full max-w-md backdrop:bg-black/40">
       <form onSubmit={handleSubmit} noValidate>
         <div className="px-6 pt-6 pb-4 border-b border-outline-variant">
           <h2 className="text-title-md font-semibold text-on-surface">{mode === "create" ? "Nuevo precio" : "Editar precio"}</h2>
@@ -135,14 +135,14 @@ function PriceModal({
             <input type="number" value={discountPct} onChange={(e) => setDiscountPct(e.target.value)} min={0} max={100} placeholder="—" className={fieldClass} />
           </div>
           <label className="flex items-center gap-3 cursor-pointer select-none">
-            <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} className="w-4 h-4 rounded" />
+            <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} className="w-4 h-4 rounded-sm" />
             <span className="text-label-lg text-on-surface-variant">Precio default</span>
           </label>
           {defaultError && <p className="text-label-sm text-error">{defaultError}</p>}
         </div>
         <div className="px-6 pb-6 pt-2 flex justify-end gap-3 border-t border-outline-variant">
-          <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 rounded-xl text-label-lg text-on-surface-variant hover:bg-surface-container transition-colors">Cancelar</button>
-          <button type="submit" disabled={isSaving || isDiffEmpty} className="px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 disabled:opacity-50">{isSaving ? "Guardando…" : mode === "create" ? "Crear" : "Guardar"}</button>
+          <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 rounded-md text-label-lg text-on-surface-variant hover:bg-surface-container transition-colors">Cancelar</button>
+          <button type="submit" disabled={isSaving || isDiffEmpty} className="px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 disabled:opacity-50">{isSaving ? "Guardando…" : mode === "create" ? "Crear" : "Guardar"}</button>
         </div>
       </form>
     </dialog>
@@ -174,19 +174,19 @@ export function ProductPricesTab({ productId, canWrite }: ProductPricesTabProps)
     }
   };
 
-  if (isLoading) return <div className="space-y-2 p-4">{Array.from({length:3}).map((_,i) => <Skeleton key={i} className="h-10 w-full rounded-xl" />)}</div>;
+  if (isLoading) return <div className="space-y-2 p-4">{Array.from({length:3}).map((_,i) => <Skeleton key={i} className="h-10 w-full rounded-md" />)}</div>;
   if (error) return <p className="p-4 text-error text-label-lg">{error}</p>;
 
   return (
     <div className="space-y-4">
       {!canWrite && <p className="text-label-sm text-on-surface-variant px-1">Solo lectura — requiere products:write</p>}
-      {saveError && <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-xl">{saveError}</p>}
+      {saveError && <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-md">{saveError}</p>}
 
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+      <div className="bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden">
         <div className="px-4 py-3 border-b border-outline-variant flex items-center justify-between">
           <span className="text-label-lg font-medium text-on-surface">Precios</span>
           {canWrite && (
-            <button type="button" onClick={() => { setNameError(null); setDefaultError(null); setModal({mode:"create", entity:null}); }} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-on-primary text-label-sm font-medium hover:opacity-90">
+            <button type="button" onClick={() => { setNameError(null); setDefaultError(null); setModal({mode:"create", entity:null}); }} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-primary text-on-primary text-label-sm font-medium hover:opacity-90">
               <Icon name="add" size={14} />Nuevo precio
             </button>
           )}
@@ -220,8 +220,8 @@ export function ProductPricesTab({ productId, canWrite }: ProductPricesTabProps)
                   {canWrite && (
                     <td className="px-4 py-2">
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => { setNameError(null); setDefaultError(null); setModal({mode:"edit", entity:p}); }} className="p-1 rounded-lg hover:bg-surface-container text-on-surface-variant" title="Editar"><Icon name="edit" size={14}/></button>
-                        <button type="button" onClick={() => setConfirmDeleteId(p.id)} className="p-1 rounded-lg hover:bg-error/10 text-error" title="Eliminar"><Icon name="delete" size={14}/></button>
+                        <button type="button" onClick={() => { setNameError(null); setDefaultError(null); setModal({mode:"edit", entity:p}); }} className="p-1 rounded hover:bg-surface-container text-on-surface-variant" title="Editar"><Icon name="edit" size={14}/></button>
+                        <button type="button" onClick={() => setConfirmDeleteId(p.id)} className="p-1 rounded hover:bg-error/10 text-error" title="Eliminar"><Icon name="delete" size={14}/></button>
                       </div>
                     </td>
                   )}

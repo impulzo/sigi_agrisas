@@ -114,7 +114,7 @@ export function CustomerQuickAddModal({ onCreated, onClose }: CustomerQuickAddMo
   return (
     <dialog
       ref={dialogRef}
-      className="w-full max-w-lg rounded-2xl bg-surface p-6 shadow-xl max-h-[90vh] overflow-y-auto backdrop:bg-black/40"
+      className="w-full max-w-lg rounded-lg bg-surface p-6 shadow-xl max-h-[90vh] overflow-y-auto backdrop:bg-black/40"
     >
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-title-md font-semibold text-on-surface">Nuevo cliente</h2>
@@ -132,7 +132,7 @@ export function CustomerQuickAddModal({ onCreated, onClose }: CustomerQuickAddMo
               value={form.code}
               onChange={(e) => set("code", e.target.value.toUpperCase())}
               placeholder="CLI001"
-              className={`w-full rounded-lg border px-3 py-2 text-body-sm font-mono focus:outline-none focus:ring-1 ${errors.code ? "border-error focus:ring-error" : "border-outline focus:border-primary focus:ring-primary"}`}
+              className={`w-full rounded border px-3 py-2 text-body-sm font-mono focus:outline-none focus:ring-1 ${errors.code ? "border-error focus:ring-error" : "border-outline focus:border-primary focus:ring-primary"}`}
             />
             {errors.code && <p className="text-label-sm text-error mt-1">{errors.code}</p>}
           </div>
@@ -142,7 +142,7 @@ export function CustomerQuickAddModal({ onCreated, onClose }: CustomerQuickAddMo
               value={form.rfc}
               onChange={(e) => set("rfc", e.target.value.toUpperCase())}
               placeholder="XAXX010101000"
-              className={`w-full rounded-lg border px-3 py-2 text-body-sm font-mono focus:outline-none focus:ring-1 ${errors.rfc ? "border-error focus:ring-error" : "border-outline focus:border-primary focus:ring-primary"}`}
+              className={`w-full rounded border px-3 py-2 text-body-sm font-mono focus:outline-none focus:ring-1 ${errors.rfc ? "border-error focus:ring-error" : "border-outline focus:border-primary focus:ring-primary"}`}
             />
             {errors.rfc && <p className="text-label-sm text-error mt-1">{errors.rfc}</p>}
           </div>
@@ -154,7 +154,7 @@ export function CustomerQuickAddModal({ onCreated, onClose }: CustomerQuickAddMo
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
             placeholder="Nombre del cliente"
-            className={`w-full rounded-lg border px-3 py-2 text-body-sm focus:outline-none focus:ring-1 ${errors.name ? "border-error focus:ring-error" : "border-outline focus:border-primary focus:ring-primary"}`}
+            className={`w-full rounded border px-3 py-2 text-body-sm focus:outline-none focus:ring-1 ${errors.name ? "border-error focus:ring-error" : "border-outline focus:border-primary focus:ring-primary"}`}
           />
           {errors.name && <p className="text-label-sm text-error mt-1">{errors.name}</p>}
         </div>
@@ -178,7 +178,7 @@ export function CustomerQuickAddModal({ onCreated, onClose }: CustomerQuickAddMo
                 value={form.taxRegime}
                 onChange={(v) => set("taxRegime", v)}
                 placeholder="601"
-                className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full rounded border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
               {errors.taxRegime && <p className="text-label-sm text-error mt-1">{errors.taxRegime}</p>}
             </div>
@@ -190,20 +190,20 @@ export function CustomerQuickAddModal({ onCreated, onClose }: CustomerQuickAddMo
                 value={form.cfdiUse}
                 onChange={(v) => set("cfdiUse", v)}
                 placeholder="G03"
-                className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full rounded border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
               {errors.cfdiUse && <p className="text-label-sm text-error mt-1">{errors.cfdiUse}</p>}
             </div>
             <div>
               <label className="text-label-sm text-on-surface-variant mb-1 block">Código postal</label>
               <input value={form.taxZipCode} onChange={(e) => set("taxZipCode", e.target.value)} placeholder="01000"
-                className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                className="w-full rounded border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
               {errors.taxZipCode && <p className="text-label-sm text-error mt-1">{errors.taxZipCode}</p>}
             </div>
             <div>
               <label className="text-label-sm text-on-surface-variant mb-1 block">Email</label>
               <input value={form.email} onChange={(e) => set("email", e.target.value)} type="email" placeholder="correo@ejemplo.com"
-                className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                className="w-full rounded border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
               {errors.email && <p className="text-label-sm text-error mt-1">{errors.email}</p>}
             </div>
           </div>

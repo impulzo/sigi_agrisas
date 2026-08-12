@@ -24,9 +24,9 @@ jest.mock("../../../../../app/(private)/billing/_logic/hooks/useCsdManager");
 jest.mock("../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions", () => ({
   useBranchesOptions: () => ({ options: [] }),
 }));
-jest.mock("../../../../../app/(private)/catalogs/_blocks/CatalogShell", () => ({
-  CatalogShell: ({ title, children, toolbar }: { title: string; children: React.ReactNode; toolbar: React.ReactNode }) => (
-    <div><h1>{title}</h1>{toolbar}{children}</div>
+jest.mock("../../../../../app/_components/organisms/PageShell", () => ({
+  PageShell: ({ title, children, toolbar, actions }: { title: string; children: React.ReactNode; toolbar: React.ReactNode; actions?: React.ReactNode }) => (
+    <div><h1>{title}</h1>{actions}{toolbar}{children}</div>
   ),
 }));
 jest.mock("../../../../../app/(private)/catalogs/_blocks/CatalogPagination", () => ({

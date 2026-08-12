@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:e2e": "playwright test",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "seed:inventory": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/inventory.ts",
     "seed:folios": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/folios.ts",

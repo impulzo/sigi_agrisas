@@ -17,7 +17,10 @@ export class GetDepartmentPriceListReportUseCase {
   async execute(
     req: DepartmentPriceListFilters & { generatedBy: { userId: string; email: string } }
   ): Promise<DepartmentPriceListResponseDto> {
-    const rows = await this.repo.findRows({ departmentId: req.departmentId ?? null });
+    const rows = await this.repo.findRows({
+      departmentId: req.departmentId ?? null,
+      branchId: req.branchId ?? null,
+    });
 
     const deptMap = new Map<string, DepartmentPriceListDepartmentDto>();
 
@@ -29,7 +32,7 @@ export class GetDepartmentPriceListReportUseCase {
           departmentCode: row.departmentCode,
           departmentName: row.departmentName,
           products: [],
-          subtotal: { productCount: 0, priceCount: 0 },
+          subtotal: { productCount: 0, priceCount: 0, totalStock: "0.0000" },
         };
         deptMap.set(row.departmentId, dept);
       }
@@ -41,6 +44,7 @@ export class GetDepartmentPriceListReportUseCase {
           code: row.code,
           name: row.name,
           unit: row.unit,
+          stockQuantity: row.stockQuantity.toFixed(4),
           ivaRate: row.ivaRate ? row.ivaRate.toFixed(4) : null,
           iepsRate: row.iepsRate ? row.iepsRate.toFixed(4) : null,
           prices: [],
@@ -55,14 +59,21 @@ export class GetDepartmentPriceListReportUseCase {
 
     let totalProductCount = 0;
     let totalPriceCount = 0;
+    let totalStock = new Decimal(0);
 
     for (const dept of deptMap.values()) {
+      const deptStock = dept.products.reduce(
+        (acc, p) => acc.plus(new Decimal(p.stockQuantity)),
+        new Decimal(0)
+      );
       dept.subtotal = {
         productCount: dept.products.length,
         priceCount: dept.products.reduce((acc, p) => acc + p.prices.length, 0),
+        totalStock: deptStock.toFixed(4),
       };
       totalProductCount += dept.subtotal.productCount;
       totalPriceCount += dept.subtotal.priceCount;
+      totalStock = totalStock.plus(deptStock);
     }
 
     const departments = Array.from(deptMap.values());
@@ -70,12 +81,13 @@ export class GetDepartmentPriceListReportUseCase {
     return {
       generatedAt: new Date().toISOString(),
       generatedBy: req.generatedBy,
-      filters: { departmentId: req.departmentId ?? null },
+      filters: { departmentId: req.departmentId ?? null, branchId: req.branchId ?? null },
       departments,
       totals: {
         departmentCount: departments.length,
         productCount: totalProductCount,
         priceCount: totalPriceCount,
+        totalStock: totalStock.toFixed(4),
       },
     };
   }

@@ -98,12 +98,12 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
     }
   };
 
-  const fieldClass = "w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50";
+  const fieldClass = "w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50";
 
   return (
     <form onSubmit={handleSubmit} noValidate className="max-w-xl space-y-4">
       {saveError && (
-        <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-xl">{saveError}</p>
+        <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-md">{saveError}</p>
       )}
 
       <div className="grid grid-cols-2 gap-4">
@@ -194,7 +194,7 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
         <button
           type="submit"
           disabled={isSaving || isDiffEmpty}
-          className="px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isSaving ? "Guardando…" : "Guardar cambios"}
         </button>

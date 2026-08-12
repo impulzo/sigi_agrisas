@@ -48,10 +48,10 @@ export function PaymentsToolbar({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Buscar por folio de venta o cliente... (mín. 2)"
-          className="w-full rounded-xl border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary"
+          className="w-full rounded-md border border-outline bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:border-primary"
         />
         {search.length > 0 && search.length < 2 && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-secondary-container text-on-secondary-container px-2 py-0.5 text-label-xs">
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-secondary-container text-on-secondary-container px-2 py-0.5 text-label-sm">
             Búsqueda en servidor · 2+ caracteres
           </span>
         )}
@@ -60,7 +60,7 @@ export function PaymentsToolbar({
       <select
         value={status}
         onChange={(e) => onStatusChange(e.target.value as PaymentStatus | "")}
-        className="rounded-xl border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary"
+        className="rounded-md border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary"
         aria-label="Estado"
       >
         <option value="">Todos</option>
@@ -72,7 +72,7 @@ export function PaymentsToolbar({
         <select
           value={branchId}
           onChange={(e) => onBranchChange(e.target.value)}
-          className="rounded-xl border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary"
+          className="rounded-md border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary"
           aria-label="Sucursal"
         >
           <option value="">Todas las sucursales</option>
@@ -87,7 +87,7 @@ export function PaymentsToolbar({
           type="date"
           value={from}
           onChange={(e) => onFromChange(e.target.value)}
-          className="rounded-xl border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary"
+          className="rounded-md border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary"
           aria-label="Desde"
         />
         <span className="text-on-surface-variant text-body-sm">—</span>
@@ -95,7 +95,7 @@ export function PaymentsToolbar({
           type="date"
           value={to}
           onChange={(e) => onToChange(e.target.value)}
-          className="rounded-xl border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary"
+          className="rounded-md border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary"
           aria-label="Hasta"
         />
       </div>

@@ -20,7 +20,7 @@ export function SessionReasonBanner({ reason }: Props) {
   const router = useRouter();
 
   return (
-    <div role="alert" className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 mb-4 text-sm ${STYLE[reason]}`}>
+    <div role="alert" className={`flex items-center justify-between gap-3 rounded-md px-4 py-3 mb-4 text-sm ${STYLE[reason]}`}>
       <span className="material-symbols-outlined text-base" aria-hidden="true">
         {reason === "inactivity" ? "info" : "warning"}
       </span>

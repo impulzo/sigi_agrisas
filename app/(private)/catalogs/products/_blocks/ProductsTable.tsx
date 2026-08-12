@@ -83,7 +83,7 @@ export function ProductsTable({
                 <div className="flex items-center gap-2">
                   <Link
                     href={`/catalogs/products/${item.id}`}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-label-sm text-primary hover:bg-primary/10 transition-colors"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-label-sm text-primary hover:bg-primary/10 transition-colors"
                   >
                     <Icon name="open_in_new" size={14} />
                     Gestionar
@@ -93,7 +93,7 @@ export function ProductsTable({
                       <button
                         type="button"
                         onClick={() => onEdit(item)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-label-sm text-on-surface-variant hover:bg-surface-container transition-colors"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-label-sm text-on-surface-variant hover:bg-surface-container transition-colors"
                         title="Editar"
                       >
                         <Icon name="edit" size={14} />
@@ -102,7 +102,7 @@ export function ProductsTable({
                         <button
                           type="button"
                           onClick={() => onDelete(item)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-label-sm text-error hover:bg-error/10 transition-colors"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-label-sm text-error hover:bg-error/10 transition-colors"
                           title="Desactivar"
                         >
                           <Icon name="block" size={14} />
@@ -111,7 +111,7 @@ export function ProductsTable({
                         <button
                           type="button"
                           onClick={() => onReactivate(item)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-label-sm text-primary hover:bg-primary/10 transition-colors"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-label-sm text-primary hover:bg-primary/10 transition-colors"
                           title="Reactivar"
                         >
                           <Icon name="check_circle" size={14} />

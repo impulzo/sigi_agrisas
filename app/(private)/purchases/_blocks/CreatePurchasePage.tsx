@@ -106,21 +106,21 @@ export function CreatePurchasePage() {
       <SatInvoiceUploader onParsed={handleSatParsed} disabled={satApplying || pmLoading} />
 
       {satApplying && (
-        <div className="flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3">
+        <div className="flex items-center gap-2 rounded-md border border-outline-variant bg-surface-container-low px-4 py-3">
           <Spinner size="sm" />
           <span className="text-body-sm text-on-surface-variant">Buscando productos que coincidan con la factura...</span>
         </div>
       )}
 
       {satError && (
-        <p className="rounded-xl border border-error/30 bg-error-container/40 px-4 py-3 text-body-sm text-on-error-container">{satError}</p>
+        <p className="rounded-md border border-error/30 bg-error-container/40 px-4 py-3 text-body-sm text-on-error-container">{satError}</p>
       )}
 
       {form.satMetadata.xmlFileName && (
-        <div className="rounded-xl border border-outline-variant bg-surface-container-low p-4 space-y-2">
+        <div className="rounded-md border border-outline-variant bg-surface-container-low p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="material-symbols-rounded text-primary shrink-0" aria-hidden>verified</span>
+              <span className="material-symbols-outlined text-primary shrink-0" aria-hidden>verified</span>
               <span className="text-body-sm font-medium text-on-surface truncate">Factura {form.satMetadata.xmlFileName}</span>
             </div>
             <button
@@ -149,7 +149,7 @@ export function CreatePurchasePage() {
       )}
 
       {satWarnings.length > 0 && (
-        <div className="rounded-xl border border-warning/40 bg-warning-container/40 p-4 space-y-1">
+        <div className="rounded-md border border-warning/40 bg-warning-container/40 p-4 space-y-1">
           <p className="text-label-sm font-medium text-on-surface">Avisos de la factura</p>
           {satWarnings.map((w, i) => (
             <p key={i} className="text-body-sm text-on-surface-variant">• {w}</p>
@@ -158,7 +158,7 @@ export function CreatePurchasePage() {
       )}
 
       {satUnmatched.length > 0 && (
-        <div className="rounded-xl border border-outline-variant bg-surface-container-low p-4 space-y-1">
+        <div className="rounded-md border border-outline-variant bg-surface-container-low p-4 space-y-1">
           <p className="text-label-sm font-medium text-on-surface">
             {satUnmatched.length} concepto{satUnmatched.length > 1 ? "s" : ""} sin producto equivalente
           </p>
@@ -171,7 +171,7 @@ export function CreatePurchasePage() {
         </div>
       )}
 
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-4 space-y-4">
+      <div className="bg-surface-container-low rounded-lg border border-outline-variant p-4 space-y-4">
         <ProviderPicker
           value={form.providerId}
           onChange={form.setProvider}
@@ -179,7 +179,7 @@ export function CreatePurchasePage() {
         />
 
         {form.newProvider && (
-          <p className="rounded-lg border border-primary/30 bg-primary-container/30 px-3 py-2 text-body-sm text-on-primary-container">
+          <p className="rounded border border-primary/30 bg-primary-container/30 px-3 py-2 text-body-sm text-on-primary-container">
             Proveedor de la factura: <span className="font-medium">{form.newProvider.name}</span> (RFC {form.newProvider.rfc}). Se creará al registrar la compra.
           </p>
         )}
@@ -190,7 +190,7 @@ export function CreatePurchasePage() {
             <select
               value={selectedBranchId}
               onChange={(e) => setSelectedBranchId(e.target.value)}
-              className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             >
               <option value="">Selecciona una sucursal</option>
               {branches.map((b) => (
@@ -206,7 +206,7 @@ export function CreatePurchasePage() {
             value={form.paymentMethodId}
             onChange={(e) => form.setPaymentMethodId(e.target.value)}
             disabled={pmLoading}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           >
             <option value="">Selecciona una forma de pago</option>
             {paymentMethods.map((pm) => (
@@ -230,7 +230,7 @@ export function CreatePurchasePage() {
                 form.setSatMetadata({ purchasedAt: new Date(`${e.target.value}T00:00:00`).toISOString() });
               }
             }}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           />
           <p className="mt-1 text-label-sm text-on-surface-variant">
             {form.satMetadata.invoiceDate ? "La fecha de la factura se usó como fecha por defecto; puedes cambiarla." : "Si no la indicas, se usa hoy."}
@@ -238,7 +238,7 @@ export function CreatePurchasePage() {
         </div>
       </div>
 
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-4 space-y-3">
+      <div className="bg-surface-container-low rounded-lg border border-outline-variant p-4 space-y-3">
         <label className="text-label-sm text-on-surface-variant mb-1 block">Agregar producto</label>
         <Combobox
           value=""
@@ -269,7 +269,7 @@ export function CreatePurchasePage() {
         )}
       </div>
 
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-4 space-y-4">
+      <div className="bg-surface-container-low rounded-lg border border-outline-variant p-4 space-y-4">
         <div>
           <label className="text-label-sm text-on-surface-variant mb-1 block">Notas (opcional)</label>
           <textarea
@@ -277,7 +277,7 @@ export function CreatePurchasePage() {
             onChange={(e) => form.setNotes(e.target.value.slice(0, 1000))}
             rows={2}
             maxLength={1000}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           />
         </div>
 

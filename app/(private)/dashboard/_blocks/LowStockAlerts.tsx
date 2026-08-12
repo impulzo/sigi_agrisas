@@ -44,13 +44,13 @@ export function LowStockAlerts({ alerts }: LowStockAlertsProps) {
               <div
                 key={alert.id}
                 className={cn(
-                  "flex items-center gap-md p-md rounded-lg",
+                  "flex items-center gap-md p-md rounded",
                   styles.row,
                 )}
               >
                 <div
                   className={cn(
-                    "h-10 w-10 rounded-lg flex items-center justify-center",
+                    "h-10 w-10 rounded flex items-center justify-center",
                     styles.icon,
                   )}
                 >

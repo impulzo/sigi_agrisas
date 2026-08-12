@@ -22,7 +22,7 @@ function RailLink({ item, active }: { item: RailItem; active: boolean }) {
       href={item.href}
       title={item.label}
       className={cn(
-        "flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-colors duration-150 ease-in-out",
+        "flex flex-col items-center justify-center w-14 h-14 rounded-md transition-colors duration-150 ease-in-out",
         active
           ? "bg-primary-container text-on-primary-container scale-90"
           : "text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface",
@@ -92,7 +92,7 @@ function RailParentItem({ item, active, pathname, can }: RailParentItemProps) {
         title={item.label}
         onClick={() => router.push(item.href)}
         className={cn(
-          "flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-colors duration-150 ease-in-out",
+          "flex flex-col items-center justify-center w-14 h-14 rounded-md transition-colors duration-150 ease-in-out",
           active
             ? "bg-primary-container text-on-primary-container scale-90"
             : "text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface",
@@ -191,7 +191,7 @@ export function NavigationRail() {
           disabled={isLoggingOut}
           title="Cerrar sesión"
           aria-label="Cerrar sesión"
-          className="flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-colors duration-150 ease-in-out text-on-surface-variant hover:bg-error-container hover:text-error disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex flex-col items-center justify-center w-14 h-14 rounded-md transition-colors duration-150 ease-in-out text-on-surface-variant hover:bg-error-container hover:text-error disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Icon name="logout" />
           <span className="text-label-sm">Salir</span>

@@ -83,17 +83,17 @@ export function SatCatalogCombobox({
       {isOpen && !disabled && (
         <>
           {isLoading && (
-            <div className="absolute z-10 mt-1 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface-variant shadow-lg">
+            <div className="absolute z-10 mt-1 w-full rounded border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface-variant shadow-lg">
               Buscando...
             </div>
           )}
           {!isLoading && effectiveQuery.trim().length >= 2 && options.length === 0 && (
-            <div className="absolute z-10 mt-1 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface-variant shadow-lg">
+            <div className="absolute z-10 mt-1 w-full rounded border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface-variant shadow-lg">
               Sin resultados
             </div>
           )}
           {!isLoading && options.length > 0 && (
-            <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-outline-variant bg-surface shadow-lg">
+            <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded border border-outline-variant bg-surface shadow-lg">
               {options.map((opt) => (
                 <li key={opt.code}>
                   <button

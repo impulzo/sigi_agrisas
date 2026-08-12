@@ -61,7 +61,7 @@ export function WaybillsToolbar({
         <select
           value={branchId}
           onChange={(e) => onBranchChange(e.target.value)}
-          className="rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className="rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           aria-label="Filtrar por sucursal"
         >
           <option value="">Todas las sucursales</option>
@@ -112,7 +112,7 @@ export function WaybillsToolbar({
           type="date"
           value={from}
           onChange={(e) => onFromChange(e.target.value)}
-          className="rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className="rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           aria-label="Desde"
         />
         <span className="text-on-surface-variant text-body-sm">—</span>
@@ -120,7 +120,7 @@ export function WaybillsToolbar({
           type="date"
           value={to}
           onChange={(e) => onToChange(e.target.value)}
-          className="rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className="rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           aria-label="Hasta"
         />
       </div>

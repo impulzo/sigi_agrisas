@@ -66,7 +66,7 @@ export function PaymentDetailPage({ id }: PaymentDetailPageProps) {
     : String(payment.folioNumber);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="flex flex-col gap-lg px-gutter py-lg mx-auto w-full max-w-4xl">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>

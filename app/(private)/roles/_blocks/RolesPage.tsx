@@ -10,7 +10,8 @@ import { RoleDetailHeader } from "./RoleDetailHeader";
 import { RolePermissionsEditor } from "./RolePermissionsEditor";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
-import { Icon } from "../../../_components/atoms/Icon/Icon";
+import { PageShell } from "../../../_components/organisms/PageShell";
+import { Button } from "../../../_components/atoms/Button/Button";
 import { grantPermissionToRole } from "../_logic/services/grantPermissionToRole";
 import { revokePermissionFromRole } from "../_logic/services/revokePermissionFromRole";
 
@@ -131,42 +132,23 @@ export function RolesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-headline-lg font-semibold text-on-surface">Roles y Permisos</h1>
-          <p className="text-body-md text-on-surface-variant mt-1">
-            Gestiona el acceso de los usuarios a los diferentes módulos
-          </p>
-        </div>
-        {canWrite === true && (
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity"
-          >
-            <Icon name="add" size={18} />
-            Crear Nuevo Rol
-          </button>
-        )}
-      </div>
-
+    <PageShell
+      title="Roles y Permisos"
+      description="Gestiona el acceso de los usuarios a los diferentes módulos"
+      actions={canWrite === true && <Button icon="add">Crear Nuevo Rol</Button>}
+    >
       <div className="flex gap-6 min-h-[70vh]">
         {/* Master pane */}
-        <aside className="w-[280px] flex-shrink-0 bg-surface-container-low rounded-2xl border border-outline-variant overflow-y-auto">
+        <aside className="w-[280px] flex-shrink-0 bg-surface-container-low rounded-lg border border-outline-variant overflow-y-auto">
           <div className="px-4 py-4 border-b border-outline-variant">
             <h2 className="text-title-md font-semibold text-on-surface">Roles</h2>
           </div>
           {rolesError ? (
             <div className="p-4 flex flex-col gap-2">
               <p className="text-body-md text-error">No se pudo cargar la lista de roles</p>
-              <button
-                type="button"
-                onClick={refreshRoles}
-                className="text-label-lg text-primary underline underline-offset-2"
-              >
+              <Button variant="text" size="sm" onClick={refreshRoles} className="self-start">
                 Reintentar
-              </button>
+              </Button>
             </div>
           ) : (
             <RolesList
@@ -179,14 +161,14 @@ export function RolesPage() {
         </aside>
 
         {/* Detail pane */}
-        <section className="flex-1 flex flex-col bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+        <section className="flex-1 flex flex-col bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden">
           <RoleDetailHeader role={selectedRole} />
 
           {selectedRole && (
             <>
               <div className="flex-1 overflow-y-auto px-6 pb-6">
                 {mutationError && (
-                  <p className="text-body-md text-error bg-error-container px-4 py-2 rounded-lg mt-4">
+                  <p className="text-body-md text-error bg-error-container px-4 py-2 rounded mt-4">
                     {mutationError}
                   </p>
                 )}
@@ -201,34 +183,25 @@ export function RolesPage() {
 
               {/* Footer actions */}
               <div className="border-t border-outline-variant px-6 py-4 flex items-center justify-end gap-3 bg-surface-container-lowest">
-                <button
-                  type="button"
+                <Button
+                  variant="outlined"
                   onClick={handleDiscard}
                   disabled={!isDirty || isSaving}
-                  className="px-5 py-2.5 rounded-xl border border-outline text-label-lg text-on-surface font-medium transition-colors hover:bg-surface-container-high disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Descartar
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
                   onClick={handleSave}
                   disabled={!isDirty || isSaving}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-label-lg font-medium transition-colors hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  loading={isSaving}
                 >
-                  {isSaving ? (
-                    <>
-                      <Icon name="progress_activity" size={16} className="animate-spin" />
-                      Guardando...
-                    </>
-                  ) : (
-                    "Guardar Cambios"
-                  )}
-                </button>
+                  {isSaving ? "Guardando..." : "Guardar Cambios"}
+                </Button>
               </div>
             </>
           )}
         </section>
       </div>
-    </div>
+    </PageShell>
   );
 }

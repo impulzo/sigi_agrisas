@@ -170,6 +170,7 @@ const cashCutQuerySchema = z.object({
 
 const departmentPriceListQuerySchema = z.object({
   departmentId: z.string().uuid("Invalid departmentId").optional(),
+  branchId: z.string().uuid("Invalid branchId").optional(),
   format: cashCutFormatEnum,
 });
 
@@ -667,7 +668,10 @@ export class ReportsController {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const { departmentId, format } = parsed.data;
+    const { departmentId, branchId, format } = parsed.data;
+
+    const scopeResult = await resolveScopedBranchId(req, branchId, this.authzService);
+    if (scopeResult instanceof NextResponse) return scopeResult;
 
     const userId = req.headers.get("x-user-id")!;
     const email = req.headers.get("x-user-email") ?? "";
@@ -675,6 +679,7 @@ export class ReportsController {
     try {
       const dto = await this.departmentPriceListUseCase.execute({
         departmentId: departmentId ?? null,
+        branchId: scopeResult.branchId ?? null,
         generatedBy: { userId, email },
       });
 

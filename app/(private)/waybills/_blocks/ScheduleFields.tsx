@@ -28,7 +28,7 @@ export function ScheduleFields({
           type="datetime-local"
           value={departureAt}
           onChange={(e) => onDepartureAtChange(e.target.value)}
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </div>
       <div>
@@ -40,7 +40,7 @@ export function ScheduleFields({
           type="datetime-local"
           value={arrivalAt}
           onChange={(e) => onArrivalAtChange(e.target.value)}
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </div>
       <div>
@@ -54,7 +54,7 @@ export function ScheduleFields({
           step="0.01"
           value={distanceKm}
           onChange={(e) => onDistanceKmChange(Number(e.target.value))}
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary tabular-nums"
+          className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary tabular-nums"
         />
       </div>
     </div>

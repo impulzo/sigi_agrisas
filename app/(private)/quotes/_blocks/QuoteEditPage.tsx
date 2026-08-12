@@ -187,7 +187,7 @@ export function QuoteEditPage({ id }: QuoteEditPageProps) {
   const cotFolios = folios;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-74px)]">
+    <div className="flex flex-col h-[calc(100vh-64px)]">
       <div className="px-4 py-3 border-b border-outline-variant">
         <h1 className="text-title-lg font-semibold text-on-surface">Editar cotización</h1>
       </div>
@@ -251,7 +251,7 @@ export function QuoteEditPage({ id }: QuoteEditPageProps) {
       )}
 
       {toast && (
-        <div className="fixed bottom-4 right-4 z-50 bg-error-container text-on-error-container rounded-xl px-4 py-3 text-body-sm shadow-lg max-w-sm">
+        <div className="fixed bottom-4 right-4 z-50 bg-error-container text-on-error-container rounded-md px-4 py-3 text-body-sm shadow-lg max-w-sm">
           {toast}
         </div>
       )}

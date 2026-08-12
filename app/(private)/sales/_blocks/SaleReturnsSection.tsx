@@ -44,7 +44,7 @@ export function SaleReturnsSection({
   if (!isLoading && returns.length === 0 && !showCta) return null;
 
   return (
-    <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+    <div className="bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden">
       <div className="px-4 py-3 border-b border-outline-variant flex items-center justify-between gap-4">
         <h2 className="text-title-sm font-semibold text-on-surface">
           Devoluciones {!isLoading && returns.length > 0 ? `(${returns.length})` : ""}
@@ -76,7 +76,7 @@ export function SaleReturnsSection({
             {returns.map((ret) => (
               <div
                 key={ret.id}
-                className="flex items-center justify-between gap-4 p-3 bg-surface rounded-xl border border-outline-variant/40 hover:bg-surface-container-low transition-colors cursor-pointer"
+                className="flex items-center justify-between gap-4 p-3 bg-surface rounded-md border border-outline-variant/40 hover:bg-surface-container-low transition-colors cursor-pointer"
                 onClick={() => router.push(`/returns/${ret.id}`)}
               >
                 <div className="flex items-center gap-3 min-w-0">

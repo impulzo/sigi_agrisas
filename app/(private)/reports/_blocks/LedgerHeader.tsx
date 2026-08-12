@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "../../../_components/molecules/Card/Card";
 import type { AccountStatementLedgerDto } from "../_logic/types/api";
 
 const MX = new Intl.NumberFormat("es-MX", {
@@ -13,12 +14,12 @@ function money(v: string | null): string {
 
 function Stat({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className="flex flex-col rounded-2xl border border-outline-variant bg-surface-container-low px-4 py-3">
+    <Card className="flex flex-col">
       <span className="text-label-sm text-on-surface-variant">{label}</span>
       <span className={`tabular-nums ${strong ? "text-title-md font-semibold text-on-surface" : "text-title-sm text-on-surface-variant"}`}>
         {value}
       </span>
-    </div>
+    </Card>
   );
 }
 

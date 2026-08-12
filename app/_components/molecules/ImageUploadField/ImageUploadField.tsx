@@ -74,7 +74,7 @@ export function ImageUploadField({
   return (
     <div className="flex flex-col gap-2">
       <div
-        className="relative border-2 border-dashed border-outline-variant rounded-xl flex items-center justify-center bg-surface-container cursor-pointer hover:bg-surface-container-high transition-colors"
+        className="relative border-2 border-dashed border-outline-variant rounded-md flex items-center justify-center bg-surface-container cursor-pointer hover:bg-surface-container-high transition-colors"
         style={{ width: 128, height: 128 }}
         onClick={() => canWrite && inputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
@@ -89,7 +89,7 @@ export function ImageUploadField({
           <img
             src={preview}
             alt="Vista previa"
-            className="w-full h-full object-cover rounded-xl"
+            className="w-full h-full object-cover rounded-md"
           />
         ) : (
           <div className="flex flex-col items-center gap-1 text-on-surface-variant text-center px-2">
@@ -98,7 +98,7 @@ export function ImageUploadField({
           </div>
         )}
         {isUploading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-surface/70 rounded-xl">
+          <div className="absolute inset-0 flex items-center justify-center bg-surface/70 rounded-md">
             <span className="material-symbols-outlined animate-spin">progress_activity</span>
           </div>
         )}

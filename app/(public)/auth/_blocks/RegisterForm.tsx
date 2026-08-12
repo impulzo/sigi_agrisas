@@ -26,6 +26,7 @@ export function RegisterForm() {
           error={errors.name}
           onChange={handleChange}
           onBlur={handleBlur}
+          className="focus:ring-agrisas-medium focus:border-agrisas-medium"
         />
 
         <FormField
@@ -38,6 +39,7 @@ export function RegisterForm() {
           error={errors.email}
           onChange={handleChange}
           onBlur={handleBlur}
+          className="focus:ring-agrisas-medium focus:border-agrisas-medium"
         />
 
         <FormField
@@ -50,6 +52,7 @@ export function RegisterForm() {
           error={errors.password}
           onChange={handleChange}
           onBlur={handleBlur}
+          className="focus:ring-agrisas-medium focus:border-agrisas-medium"
         />
 
         {formError && (
@@ -58,7 +61,11 @@ export function RegisterForm() {
           </p>
         )}
 
-        <Button type="submit" loading={isSubmitting} className="w-full mt-2">
+        <Button
+          type="submit"
+          loading={isSubmitting}
+          className="w-full mt-2 rounded bg-agrisas-dark text-agrisas-mint hover:bg-agrisas-medium"
+        >
           Crear cuenta
         </Button>
       </form>

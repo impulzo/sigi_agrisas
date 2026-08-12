@@ -184,7 +184,7 @@ export function UserEditModal({
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-2xl bg-surface-container p-0 shadow-lg w-full max-w-lg backdrop:bg-black/40"
+      className="rounded-lg bg-surface-container p-0 shadow-lg w-full max-w-lg backdrop:bg-black/40"
     >
       <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
         <h2 className="text-title-md font-semibold text-on-surface">
@@ -193,7 +193,7 @@ export function UserEditModal({
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
+          className="p-1.5 rounded text-on-surface-variant hover:bg-surface-container-high"
         >
           <Icon name="close" size={20} />
         </button>
@@ -215,7 +215,7 @@ export function UserEditModal({
               value={avatarUrlInput}
               onChange={(e) => { setAvatarUrlInput(e.target.value); setAvatarReset(false); }}
               placeholder="https://example.com/photo.jpg"
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {validationErrors.avatarUrl && (
               <p className="text-label-sm text-error mt-1">{validationErrors.avatarUrl}</p>
@@ -242,7 +242,7 @@ export function UserEditModal({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
           />
           {validationErrors.name && (
             <p className="text-label-sm text-error mt-1">{validationErrors.name}</p>
@@ -259,7 +259,7 @@ export function UserEditModal({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
           />
           {validationErrors.email && (
             <p className="text-label-sm text-error mt-1">{validationErrors.email}</p>
@@ -277,7 +277,7 @@ export function UserEditModal({
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {(validationErrors.password || (password.length > 0 && password.length < 8)) && (
               <p className="text-label-sm text-error mt-1">
@@ -296,7 +296,7 @@ export function UserEditModal({
             id="branch-select"
             value={branchId ?? ""}
             onChange={(e) => setBranchId(e.target.value === "" ? null : e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">Sin sucursal</option>
             {branchOptions.map((b) => (
@@ -317,7 +317,7 @@ export function UserEditModal({
               {catalog.map((role) => (
                 <label
                   key={role.id}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface-container-low cursor-pointer"
+                  className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-container-low cursor-pointer"
                 >
                   <input
                     type="checkbox"
@@ -333,7 +333,7 @@ export function UserEditModal({
         </div>
 
         {mutationError && (
-          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded-lg">
+          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded">
             {mutationError}
           </p>
         )}
@@ -344,7 +344,7 @@ export function UserEditModal({
           type="button"
           onClick={onClose}
           disabled={isBusy}
-          className="px-5 py-2.5 rounded-xl border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
+          className="px-5 py-2.5 rounded-md border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
         >
           Cancelar
         </button>
@@ -352,7 +352,7 @@ export function UserEditModal({
           type="button"
           onClick={handleSave}
           disabled={isSubmitDisabled}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isBusy ? (
             <>

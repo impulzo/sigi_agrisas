@@ -28,4 +28,10 @@ export const totalsVectors: ReadonlyArray<ReadonlyArray<TotalsVectorLine>> = [
     { quantity: 1.5, unitPrice: 99.99, ivaRate: 0, iepsRate: 0.08 },
     { quantity: 100, unitPrice: 1.01, discountPct: 0, ivaRate: 0.16, iepsRate: 0 },
   ],
+  // Fractional-quantity surcharge (fractional-quantity-surcharge change): the surcharge is
+  // resolved and baked into `unitPrice` by the use case BEFORE it reaches the calculator (see
+  // design.md § Decisión 1) — the calculator itself stays agnostic. This vector's `unitPrice`
+  // (100 * 1.05) represents that already-resolved value, confirming the three calculators stay
+  // equivalent regardless of how `unitPrice` was derived.
+  [{ quantity: 0.5, unitPrice: 105, ivaRate: 0.16 }],
 ];

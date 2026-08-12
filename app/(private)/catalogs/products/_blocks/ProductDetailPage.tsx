@@ -47,9 +47,9 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
   if (isLoading) {
     return (
       <div className="space-y-4 p-6">
-        <Skeleton className="h-8 w-64 rounded-xl" />
-        <Skeleton className="h-4 w-32 rounded-xl" />
-        <Skeleton className="h-64 w-full rounded-2xl" />
+        <Skeleton className="h-8 w-64 rounded-md" />
+        <Skeleton className="h-4 w-32 rounded-md" />
+        <Skeleton className="h-64 w-full rounded-lg" />
       </div>
     );
   }
@@ -61,7 +61,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
         <h2 className="text-title-md text-on-surface">Producto no encontrado</h2>
         <Link
           href="/catalogs/products"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity"
         >
           <Icon name="arrow_back" size={16} />
           Volver al catálogo
@@ -81,7 +81,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
       <div className="flex items-start gap-3">
         <Link
           href="/catalogs/products"
-          className="mt-1 p-1 rounded-lg hover:bg-surface-container transition-colors"
+          className="mt-1 p-1 rounded hover:bg-surface-container transition-colors"
           title="Volver"
         >
           <Icon name="arrow_back" size={20} />

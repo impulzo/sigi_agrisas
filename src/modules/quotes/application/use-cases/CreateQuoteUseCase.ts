@@ -11,6 +11,7 @@ import { EmptyQuoteError } from "../../domain/errors/EmptyQuoteError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
+import { isFractionalQuantity } from "@/modules/products/domain/services/isFractionalQuantity";
 
 export interface CreateQuoteResult {
   dto: QuoteDetailDto;
@@ -71,9 +72,15 @@ export class CreateQuoteUseCase {
       if (!price) throw new InactiveResourceError("Product price not found");
       if (price.productId !== item.productId) throw new ProductPriceMismatchError();
 
+      let unitPrice = price.price;
+      if (isFractionalQuantity(item.quantity)) {
+        const surchargePct = await this.lookups.getDosificationSurchargePct();
+        unitPrice = price.price * (1 + surchargePct / 100);
+      }
+
       calcLines.push({
         quantity: item.quantity,
-        unitPrice: price.price,
+        unitPrice,
         discountPct: price.discountPct,
         ivaRate: product.ivaRate,
         iepsRate: product.iepsRate,
@@ -87,7 +94,7 @@ export class CreateQuoteUseCase {
         productNameSnapshot: product.name,
         priceNameSnapshot: price.name,
         quantity: item.quantity,
-        unitPrice: price.price,
+        unitPrice,
         discountPct: price.discountPct,
         ivaRate: product.isTaxable ? product.ivaRate : 0,
         iepsRate: product.isTaxable ? product.iepsRate : 0,

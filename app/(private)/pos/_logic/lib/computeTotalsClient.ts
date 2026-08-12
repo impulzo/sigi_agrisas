@@ -5,6 +5,14 @@ export interface TotalsLine {
   ivaRate: number;
   iepsRate: number;
   isTaxable?: boolean;
+  /** Dosification lines already carry their own surcharge baked into `unitPrice` — never re-surcharged. */
+  isDosificationLine?: boolean;
+}
+
+/** Mirrors `src/modules/products/domain/services/isFractionalQuantity.ts` — duplicated here
+ * because `app/` (frontend) may not import runtime code from `src/` (backend-only). */
+function isFractionalQuantity(quantity: number): boolean {
+  return Math.round(quantity * 10000) % 10000 !== 0;
 }
 
 export interface ComputedLine {
@@ -39,7 +47,7 @@ function bankersRound(value: number, decimals: number): number {
   return rounded / factor;
 }
 
-export function computeTotalsClient(lines: TotalsLine[]): TotalsResult {
+export function computeTotalsClient(lines: TotalsLine[], surchargePct = 0): TotalsResult {
   const computed: ComputedLine[] = [];
   let subtotal = 0;
   let ivaTotal = 0;
@@ -52,10 +60,17 @@ export function computeTotalsClient(lines: TotalsLine[]): TotalsResult {
     const effectiveIvaRate = isTaxable ? line.ivaRate : 0;
     const effectiveIepsRate = isTaxable ? line.iepsRate : 0;
 
+    // Fractional-quantity surcharge preview (mirrors CreateSaleUseCase/CreateQuoteUseCase):
+    // only applies to normal-price lines, never to dosification lines (already recharged server-side).
+    const effectiveUnitPrice =
+      !line.isDosificationLine && isFractionalQuantity(line.quantity)
+        ? line.unitPrice * (1 + surchargePct / 100)
+        : line.unitPrice;
+
     // unitPrice is the final tax-inclusive price the customer pays; tax is
     // extracted from it (not added on top): lineSubtotal = lineGross / (1 + rates).
     const lineGross = bankersRound(
-      line.quantity * line.unitPrice * (1 - line.discountPct / 100),
+      line.quantity * effectiveUnitPrice * (1 - line.discountPct / 100),
       4
     );
     const divisor = 1 + effectiveIvaRate + effectiveIepsRate;

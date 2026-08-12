@@ -90,7 +90,7 @@ export function PartialInvoiceForm() {
       ? `Error Facturama: ${error.detail}`
       : error.message;
     return (
-      <div className="rounded-lg bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error flex items-start justify-between gap-2">
+      <div className="rounded bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error flex items-start justify-between gap-2">
         <span>{msg}</span>
         <button type="button" onClick={clearError} className="flex-shrink-0 hover:opacity-70">×</button>
       </div>
@@ -100,7 +100,7 @@ export function PartialInvoiceForm() {
   return (
     <div className="space-y-6">
       {/* Nota importante */}
-      <div className="rounded-xl bg-tertiary-container/30 border border-tertiary/30 px-4 py-3 flex items-start gap-2">
+      <div className="rounded-md bg-tertiary-container/30 border border-tertiary/30 px-4 py-3 flex items-start gap-2">
         <span className="text-tertiary text-lg flex-shrink-0">ℹ</span>
         <p className="text-body-sm text-on-surface-variant">
           <strong>La factura parcial no afecta inventario.</strong> Esta modalidad genera un CFDI fiscal independiente sin vincular a ninguna venta del sistema.
@@ -118,7 +118,7 @@ export function PartialInvoiceForm() {
           onOpenQuickAdd={() => setShowQuickAdd(true)}
         />
         {fiscalMissingFields.length > 0 && customer && (
-          <div className="mt-2 rounded-lg bg-warning-container/30 border border-warning/30 px-3 py-2 text-label-sm text-on-surface-variant">
+          <div className="mt-2 rounded bg-warning-container/30 border border-warning/30 px-3 py-2 text-label-sm text-on-surface-variant">
             Datos fiscales faltantes:{" "}
             <strong>{fiscalMissingFields.join(", ")}</strong>. Edita el cliente en el catálogo.
           </div>
@@ -156,13 +156,13 @@ export function PartialInvoiceForm() {
         </div>
 
         {showCatalog && (
-          <div className="border border-outline-variant rounded-xl overflow-hidden mb-4">
+          <div className="border border-outline-variant rounded-md overflow-hidden mb-4">
             <ProductCatalogPanel onAddProduct={handleAddProduct} />
           </div>
         )}
 
         {lines.length > 0 ? (
-          <div className="overflow-x-auto border border-outline-variant rounded-xl">
+          <div className="overflow-x-auto border border-outline-variant rounded-md">
             <table className="w-full text-body-sm">
               <thead>
                 <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
@@ -190,7 +190,7 @@ export function PartialInvoiceForm() {
             </table>
           </div>
         ) : (
-          <p className="text-body-sm text-on-surface-variant py-4 text-center border border-outline-variant border-dashed rounded-xl">
+          <p className="text-body-sm text-on-surface-variant py-4 text-center border border-outline-variant border-dashed rounded-md">
             Sin conceptos. Agrega del catálogo o como línea libre.
           </p>
         )}
@@ -204,7 +204,7 @@ export function PartialInvoiceForm() {
             id="partial-payment-form"
             value={paymentForm}
             onChange={(e) => setPaymentForm(e.target.value)}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           >
             {PAYMENT_FORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
@@ -215,7 +215,7 @@ export function PartialInvoiceForm() {
             id="partial-payment-method"
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value)}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           >
             {PAYMENT_METHODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>

@@ -26,7 +26,7 @@ export function WaybillMetaPanel({ wb, branchNameById }: WaybillMetaPanelProps) 
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 bg-surface-container-low rounded-2xl p-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 bg-surface-container-low rounded-lg p-4">
         <div>
           <p className="text-label-sm text-on-surface-variant">Origen</p>
           <p className="text-body-sm text-on-surface font-medium">
@@ -91,7 +91,7 @@ export function WaybillMetaPanel({ wb, branchNameById }: WaybillMetaPanelProps) 
       </div>
 
       {wb.status === "cancelled" && wb.cancelledAt && (
-        <div className="bg-surface-container-highest text-on-surface-variant rounded-xl p-4 text-body-sm">
+        <div className="bg-surface-container-highest text-on-surface-variant rounded-md p-4 text-body-sm">
           <p className="font-medium text-on-surface mb-1">Cancelado el {fmtDate(wb.cancelledAt)}</p>
           {wb.cancellationReason && <p className="mt-1">Motivo: {wb.cancellationReason}</p>}
         </div>

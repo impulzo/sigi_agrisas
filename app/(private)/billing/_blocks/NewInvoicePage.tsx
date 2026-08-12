@@ -46,7 +46,7 @@ export function NewInvoicePage({ initialSaleId, initialSaleLabel }: NewInvoicePa
         aria-label="Tipo de factura"
       />
 
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-6">
+      <div className="bg-surface-container-low rounded-lg border border-outline-variant p-6">
         {mode === "sale" ? (
           <StampSaleForm initialSaleId={initialSaleId} initialSaleLabel={initialSaleLabel} />
         ) : (

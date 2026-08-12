@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useReturnsList } from "../_logic/hooks/useReturnsList";
-import { CatalogShell } from "../../catalogs/_blocks/CatalogShell";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
 import { ReturnsToolbar } from "./ReturnsToolbar";
 import { ReturnsTable } from "./ReturnsTable";
@@ -86,7 +86,7 @@ export function ReturnsListPage() {
   }
 
   return (
-    <CatalogShell
+    <PageShell
       title="Devoluciones"
       description="Historial de devoluciones registradas"
       toolbar={
@@ -127,6 +127,6 @@ export function ReturnsListPage() {
           />
         </>
       )}
-    </CatalogShell>
+    </PageShell>
   );
 }

@@ -13,7 +13,7 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
         <h4 className="text-title-md text-on-surface">Recent Activity</h4>
         <button
           type="button"
-          className="text-primary text-label-lg hover:bg-primary/10 px-3 py-1 rounded-lg"
+          className="text-primary text-label-lg hover:bg-primary/10 px-3 py-1 rounded"
         >
           View All
         </button>

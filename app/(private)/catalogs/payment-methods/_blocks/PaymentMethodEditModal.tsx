@@ -144,14 +144,14 @@ export function PaymentMethodEditModal({
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-2xl bg-surface-container p-0 shadow-lg w-full max-w-lg backdrop:bg-black/40"
+      className="rounded-lg bg-surface-container p-0 shadow-lg w-full max-w-lg backdrop:bg-black/40"
     >
       <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
         <h2 className="text-title-md font-semibold text-on-surface">{title}</h2>
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
+          className="p-1.5 rounded text-on-surface-variant hover:bg-surface-container-high"
         >
           <Icon name="close" size={20} />
         </button>
@@ -169,7 +169,7 @@ export function PaymentMethodEditModal({
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             disabled={!isCreateMode}
             placeholder="EJ. EFECTIVO"
-            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-surface-container"
+            className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-surface-container"
           />
           {(validationErrors.code || codeError) && (
             <p className="text-label-sm text-error mt-1">
@@ -188,7 +188,7 @@ export function PaymentMethodEditModal({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Nombre de la forma de pago"
-            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
           />
           {validationErrors.name && (
             <p className="text-label-sm text-error mt-1">{validationErrors.name}</p>
@@ -205,7 +205,7 @@ export function PaymentMethodEditModal({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Descripción opcional"
             rows={3}
-            className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
           {validationErrors.description && (
             <p className="text-label-sm text-error mt-1">{validationErrors.description}</p>
@@ -225,7 +225,7 @@ export function PaymentMethodEditModal({
         </div>
 
         {mutationError && (
-          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded-lg">
+          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded">
             {mutationError}
           </p>
         )}
@@ -236,7 +236,7 @@ export function PaymentMethodEditModal({
           type="button"
           onClick={onClose}
           disabled={isSaving}
-          className="px-5 py-2.5 rounded-xl border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
+          className="px-5 py-2.5 rounded-md border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
         >
           Cancelar
         </button>
@@ -244,7 +244,7 @@ export function PaymentMethodEditModal({
           type="button"
           onClick={handleSave}
           disabled={!isDirty || isDiffEmpty || isSaving || Object.keys(validationErrors).length > 0}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isSaving ? (
             <>

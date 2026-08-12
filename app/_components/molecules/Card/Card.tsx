@@ -10,8 +10,8 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 
 const toneClasses: Record<Tone, string> = {
   default:
-    "bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm",
-  primary: "bg-primary text-on-primary rounded-xl p-xl shadow-lg",
+    "bg-surface-container-lowest border border-outline-variant rounded-lg p-lg shadow-elevation-1",
+  primary: "bg-primary text-on-primary rounded-lg p-xl shadow-elevation-2",
 };
 
 export function Card({ children, tone = "default", className, ...props }: CardProps) {

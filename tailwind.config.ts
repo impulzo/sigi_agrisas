@@ -70,11 +70,22 @@ const config: Config = {
         inter: ["var(--font-inter)", "sans-serif"],
         poppins: ["var(--font-poppins)", "sans-serif"],
       },
+      // --- M3 typography scale ---
+      // Escala normativa: ver `designer.md` y `openspec/specs/design-system/spec.md`.
+      // Toda clase `text-<categoria>-<variante>` usada en `app/` debe existir aquí;
+      // `tests/unit/ui/design-system/tokens.test.ts` lee este objeto para verificarlo.
       fontSize: {
-        // --- M3 typography scale ---
         "display-lg": [
           "57px",
           { lineHeight: "64px", letterSpacing: "-0.25px", fontWeight: "400" },
+        ],
+        "display-md": [
+          "45px",
+          { lineHeight: "52px", fontWeight: "400" },
+        ],
+        "display-sm": [
+          "36px",
+          { lineHeight: "44px", fontWeight: "400" },
         ],
         "headline-lg": [
           "32px",
@@ -84,9 +95,25 @@ const config: Config = {
           "28px",
           { lineHeight: "36px", fontWeight: "600" },
         ],
+        "headline-md": [
+          "28px",
+          { lineHeight: "36px", fontWeight: "600" },
+        ],
+        "headline-sm": [
+          "24px",
+          { lineHeight: "32px", fontWeight: "600" },
+        ],
+        "title-lg": [
+          "22px",
+          { lineHeight: "28px", fontWeight: "500" },
+        ],
         "title-md": [
           "16px",
           { lineHeight: "24px", letterSpacing: "0.15px", fontWeight: "500" },
+        ],
+        "title-sm": [
+          "14px",
+          { lineHeight: "20px", letterSpacing: "0.1px", fontWeight: "500" },
         ],
         "body-lg": [
           "16px",
@@ -96,9 +123,19 @@ const config: Config = {
           "14px",
           { lineHeight: "20px", letterSpacing: "0.25px", fontWeight: "400" },
         ],
+        // Desviación deliberada de M3 (12px/16px): 13px por legibilidad en las
+        // celdas de las tablas de datos, que son su uso mayoritario.
+        "body-sm": [
+          "13px",
+          { lineHeight: "18px", letterSpacing: "0.25px", fontWeight: "400" },
+        ],
         "label-lg": [
           "14px",
           { lineHeight: "20px", letterSpacing: "0.1px", fontWeight: "500" },
+        ],
+        "label-md": [
+          "12px",
+          { lineHeight: "16px", letterSpacing: "0.5px", fontWeight: "500" },
         ],
         "label-sm": [
           "11px",
@@ -116,11 +153,24 @@ const config: Config = {
         "margin-mobile": "16px",
         "margin-desktop": "32px",
       },
+      // Escala de radios exacta del `designMd` de Stitch. `rounded-2xl` y
+      // `rounded-3xl` quedan fuera de la escala a propósito.
       borderRadius: {
-        DEFAULT: "0.25rem",
-        lg: "0.5rem",
-        xl: "0.75rem",
+        sm: "0.25rem",
+        DEFAULT: "0.5rem",
+        md: "0.75rem",
+        lg: "1rem",
+        xl: "1.5rem",
         full: "9999px",
+      },
+      // Elevación tonal M3: sombras ambientales suaves, nunca duras.
+      boxShadow: {
+        "elevation-1":
+          "0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 3px 1px rgb(0 0 0 / 0.06)",
+        "elevation-2":
+          "0 1px 2px 0 rgb(0 0 0 / 0.06), 0 2px 6px 2px rgb(0 0 0 / 0.08)",
+        "elevation-3":
+          "0 4px 8px 3px rgb(0 0 0 / 0.08), 0 1px 3px 0 rgb(0 0 0 / 0.10)",
       },
     },
   },

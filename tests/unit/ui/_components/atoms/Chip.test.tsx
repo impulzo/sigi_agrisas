@@ -25,7 +25,7 @@ describe("Chip", () => {
 
     rerender(<Chip label="A" tone="warning" />);
     expect((container.firstChild as HTMLElement).className).toContain(
-      "bg-secondary-container",
+      "bg-secondary-fixed",
     );
 
     rerender(<Chip label="A" tone="primary" />);

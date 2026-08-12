@@ -74,7 +74,7 @@ export function PurchaseLineRow({
               const v = parseFloat(raw);
               if (!isNaN(v) && v > 0) onUpdateQuantity(line.id, v);
             }}
-            className="w-20 rounded border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-20 rounded-sm border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 
@@ -97,7 +97,7 @@ export function PurchaseLineRow({
               const v = parseFloat(raw);
               if (!isNaN(v) && v >= 0) onUpdateUnitCost(line.id, v);
             }}
-            className="w-24 rounded border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-24 rounded-sm border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 
@@ -113,7 +113,7 @@ export function PurchaseLineRow({
               const v = parseFloat(e.target.value);
               if (!isNaN(v)) onUpdateDiscount(line.id, v);
             }}
-            className="w-16 rounded border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-16 rounded-sm border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 

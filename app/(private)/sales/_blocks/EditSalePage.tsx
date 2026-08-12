@@ -192,7 +192,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
     : String(sale.folioNumber);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-74px)]">
+    <div className="flex flex-col h-[calc(100vh-64px)]">
       {/* Edit warning band */}
       <div className="bg-tertiary-container text-on-tertiary-container px-4 py-2 text-body-sm flex items-center gap-2">
         <Icon name="edit" size={16} />
@@ -258,7 +258,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
       )}
 
       {mutationError && (
-        <div className="fixed bottom-4 right-4 z-50 bg-error-container text-on-error-container rounded-xl px-4 py-3 text-body-sm shadow-lg max-w-sm">
+        <div className="fixed bottom-4 right-4 z-50 bg-error-container text-on-error-container rounded-md px-4 py-3 text-body-sm shadow-lg max-w-sm">
           {mutationError.message}
         </div>
       )}

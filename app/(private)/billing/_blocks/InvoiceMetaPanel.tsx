@@ -20,7 +20,7 @@ export function InvoiceMetaPanel({ invoice: inv }: InvoiceMetaPanelProps) {
   return (
     <div className="space-y-4">
       {inv.status === "cancelled" && (
-        <div className="rounded-xl bg-error-container/30 border border-error/30 px-4 py-3">
+        <div className="rounded-md bg-error-container/30 border border-error/30 px-4 py-3">
           <p className="text-label-sm font-semibold text-error mb-1">Factura cancelada</p>
           <p className="text-body-sm text-on-surface-variant">
             Motivo: {inv.cancellationMotive ? (MOTIVE_LABELS[inv.cancellationMotive] ?? inv.cancellationMotive) : "—"}
@@ -31,7 +31,7 @@ export function InvoiceMetaPanel({ invoice: inv }: InvoiceMetaPanelProps) {
         </div>
       )}
 
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-4">
+      <div className="bg-surface-container-low rounded-lg border border-outline-variant p-4">
         <h2 className="text-title-sm font-semibold text-on-surface mb-3">Datos del receptor</h2>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div>
@@ -57,7 +57,7 @@ export function InvoiceMetaPanel({ invoice: inv }: InvoiceMetaPanelProps) {
         </dl>
       </div>
 
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-4">
+      <div className="bg-surface-container-low rounded-lg border border-outline-variant p-4">
         <h2 className="text-title-sm font-semibold text-on-surface mb-3">Datos de pago CFDI</h2>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div>

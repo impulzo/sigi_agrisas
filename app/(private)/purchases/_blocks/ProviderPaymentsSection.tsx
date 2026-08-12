@@ -26,7 +26,7 @@ export function ProviderPaymentsSection({ purchase, canPay, canPayCancel, onChan
   const canRegister = canPay === true && purchase.paymentStatus !== "paid" && purchase.status === "completed";
 
   return (
-    <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+    <div className="bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden">
       <div className="px-4 py-3 border-b border-outline-variant flex items-center justify-between">
         <h2 className="text-title-sm font-semibold text-on-surface">Abonos a proveedor</h2>
         {canRegister && (

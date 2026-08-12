@@ -194,4 +194,22 @@ describe("EditCompletedSaleUseCase", () => {
     expect(callArg.items[0].productPriceId).toBeNull();
     expect(callArg.items[0].unitPrice).toBeCloseTo(26.75, 4);
   });
+
+  describe("recargo por cantidad fraccionaria (precio normal)", () => {
+    it("aplica el recargo al editar una línea con quantity fraccionaria", async () => {
+      const repo = makeRepo("completed");
+      await new EditCompletedSaleUseCase(repo, makeLookups()).execute("sale-1", {
+        items: [{ productId: "p1", productPriceId: "pp1", quantity: 2.5 }],
+      });
+      const callArg = (repo.replaceItemsAndRecalculate as jest.Mock).mock.calls[0][1] as EditSaleData;
+      expect(callArg.items[0].unitPrice).toBeCloseTo(107, 10); // 100 * 1.07 (mock surcharge)
+    });
+
+    it("remueve el recargo al editar una línea de fraccionaria a entera", async () => {
+      const repo = makeRepo("completed");
+      await new EditCompletedSaleUseCase(repo, makeLookups()).execute("sale-1", baseReq); // quantity: 1
+      const callArg = (repo.replaceItemsAndRecalculate as jest.Mock).mock.calls[0][1] as EditSaleData;
+      expect(callArg.items[0].unitPrice).toBe(100);
+    });
+  });
 });

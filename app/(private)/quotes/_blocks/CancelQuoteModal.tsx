@@ -44,7 +44,7 @@ export function CancelQuoteModal({
   if (convertedSaleId) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
+        <div className="bg-surface rounded-lg shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
           <h2 className="text-title-lg font-semibold text-on-surface">Cotización convertida</h2>
           <p className="text-body-md text-on-surface-variant">
             Esta cotización ya fue convertida a una venta. Para cancelarla, debes cancelar la venta generada.
@@ -71,7 +71,7 @@ export function CancelQuoteModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
+      <div className="bg-surface rounded-lg shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
         <h2 className="text-title-lg font-semibold text-on-surface">Cancelar cotización</h2>
         <p className="text-body-sm text-on-surface-variant">
           Esta acción no se puede deshacer.
@@ -86,7 +86,7 @@ export function CancelQuoteModal({
             onChange={(e) => setReason(e.target.value)}
             maxLength={500}
             rows={3}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           />
         </div>
 

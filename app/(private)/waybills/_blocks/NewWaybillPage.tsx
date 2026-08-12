@@ -93,7 +93,7 @@ export function NewWaybillPage() {
     }
 
     return (
-      <div className="rounded-lg bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error flex items-start justify-between gap-2">
+      <div className="rounded bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error flex items-start justify-between gap-2">
         <span>{content}</span>
         <button type="button" onClick={clearError} className="flex-shrink-0 hover:opacity-70">
           ×
@@ -115,7 +115,7 @@ export function NewWaybillPage() {
         </p>
       </div>
 
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-6 space-y-6">
+      <div className="bg-surface-container-low rounded-lg border border-outline-variant p-6 space-y-6">
         <WaybillTypeToggle value={type} onChange={setType} canStamp={canStamp === true} />
 
         <BranchPairSelector

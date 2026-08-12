@@ -98,7 +98,7 @@ export function QuoteEmitPanel({
               value={selectedBranchId}
               onChange={(e) => onBranchChange(e.target.value)}
               disabled={isEdit}
-              className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <option value="">— Selecciona sucursal —</option>
               {branches.map((b) => (
@@ -117,7 +117,7 @@ export function QuoteEmitPanel({
               value={selectedFolioId}
               onChange={(e) => onFolioChange(e.target.value)}
               disabled={isEdit}
-              className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <option value="">— Selecciona folio —</option>
               {folios.map((f) => (
@@ -145,7 +145,7 @@ export function QuoteEmitPanel({
             min={tomorrow()}
             max={maxDate()}
             onChange={(e) => onExpiresAtChange(e.target.value)}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
 
@@ -157,7 +157,7 @@ export function QuoteEmitPanel({
             maxLength={1000}
             rows={2}
             placeholder="Notas opcionales de la cotización..."
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           />
         </div>
 

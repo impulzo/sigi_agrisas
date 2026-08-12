@@ -14,7 +14,7 @@ export function CatalogError({ onRetry }: CatalogErrorProps) {
         <button
           type="button"
           onClick={onRetry}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors"
         >
           Reintentar
         </button>

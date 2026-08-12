@@ -33,7 +33,7 @@ export function BranchPairSelector({
           id="waybill-origin"
           value={originBranchId}
           onChange={(e) => onOriginChange(e.target.value)}
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         >
           <option value="">Selecciona sucursal de origen</option>
           {originOptions.map((b) => (
@@ -51,7 +51,7 @@ export function BranchPairSelector({
           id="waybill-destination"
           value={destinationBranchId}
           onChange={(e) => onDestinationChange(e.target.value)}
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         >
           <option value="">Selecciona sucursal de destino</option>
           {destinationOptions.map((b) => (

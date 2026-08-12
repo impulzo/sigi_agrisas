@@ -29,7 +29,7 @@ interface Props {
 }
 
 const inputCls =
-  "rounded-xl border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40";
+  "rounded-md border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40";
 
 export function StatementToolbar({
   search, onSearchChange,
@@ -41,7 +41,7 @@ export function StatementToolbar({
   isExporting, onExportPdf, isExportingXlsx, onExportXlsx, onReset,
 }: Props) {
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-outline-variant bg-surface-container-low px-4 py-3">
+    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3">
       <label className="flex flex-col gap-1">
         <span className="text-label-sm text-on-surface-variant">Buscar cliente</span>
         <input
@@ -80,7 +80,7 @@ export function StatementToolbar({
           type="checkbox"
           checked={onlyWithBalance}
           onChange={(e) => onOnlyWithBalanceChange(e.target.checked)}
-          className="h-4 w-4 rounded border-outline-variant"
+          className="h-4 w-4 rounded-sm border-outline-variant"
         />
         <span className="text-body-sm text-on-surface-variant">Solo con saldo</span>
       </label>

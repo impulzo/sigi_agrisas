@@ -197,7 +197,7 @@ describe("PosPage — gutter global de 10px izq/top/der vía layout (sales-scree
   it("el contenedor raíz NO duplica el padding top y mantiene altura sin overflow", () => {
     const { container } = render(<PosPage />);
     expect(container.firstElementChild!.className).not.toContain("pt-2.5");
-    expect(container.firstElementChild!.className).toContain("h-[calc(100vh-74px)]");
+    expect(container.firstElementChild!.className).toContain("h-[calc(100vh-64px)]");
   });
 
   it("el contenedor raíz NO duplica el padding en el estado de carga", () => {
