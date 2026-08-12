@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Expone un reporte de solo lectura que cruza ventas del periodo contra el stock actual del catálogo, agrupable por cliente, departamento o producto, para decisiones de reabasto.
+Expone un reporte de solo lectura con el detalle cruzado Departamento + Producto + Cliente de las ventas del periodo, para saber cuánto (en piezas y en dinero) compró cada cliente de cada producto.
 
 ---
 
@@ -26,41 +26,41 @@ El sistema SHALL definir el permiso `reports:sales_by_product_read` en `prisma/s
 ---
 
 ### Requirement: Sales-by-product report endpoint
-El sistema SHALL exponer `GET /api/v1/admin/reports/sales-by-product` que devuelve, para un periodo, tres desgloses agrupables — `byCustomer`, `byDepartment`, `byProduct` — y una tarjeta de `totals` (siempre presente sin importar el modo de agrupación seleccionado en la UI; los tres arrays SHALL calcularse y devolverse simultáneamente en la misma respuesta). El endpoint SHALL delegar a `reportsController` y ejecutar `GetSalesByProductReportUseCase`. Solo ventas con `status IN ('completed','edited')` del periodo/filtros SHALL sumar (mismo criterio que `sales-cut`). SHALL aceptar filtros opcionales `?branchId`, `?departmentId`, `?customerId` (UUID; `400` si inválidos) y `?from`/`?to` (`YYYY-MM-DD`).
+El sistema SHALL exponer `GET /api/v1/admin/reports/sales-by-product` que devuelve, para un periodo, una tabla de detalle `rows` — una fila por combinación única Departamento + Producto + Cliente, con `quantity` (SUM de piezas vendidas) y `total` (SUM de `line_total`, con IVA/IEPS incluido) — y una tarjeta de `totals` (ticketCount/subtotal/taxTotal/total, siempre presente). `rows` SHALL ordenarse por `total` descendente, con desempate alfabético por departamento, producto y cliente. El endpoint SHALL paginar `rows` con `?page` (default `1`) y `?pageSize` (default `20`, máx `100`), devolviendo también `rowsTotal` (número de combinaciones distintas que matchean el filtro, para paginación). El endpoint SHALL delegar a `reportsController` y ejecutar `GetSalesByProductReportUseCase`. Solo ventas con `status IN ('completed','edited')` del periodo/filtros SHALL sumar (mismo criterio que `sales-cut`). SHALL aceptar filtros opcionales `?branchId`, `?departmentId`, `?customerId` (UUID; `400` si inválidos) y `?from`/`?to` (`YYYY-MM-DD`).
 
 #### Scenario: Reporte con ventas
 - **WHEN** un usuario con permiso llama `GET /api/v1/admin/reports/sales-by-product` con un periodo con ventas
-- **THEN** responde `200 application/json` con `totals`, `byCustomer`, `byDepartment` y `byProduct`
+- **THEN** responde `200 application/json` con `totals`, `rows` (Departamento/Producto/Cliente/Cantidad/Monto) y `rowsTotal`
 
 #### Scenario: Periodo vacío
 - **WHEN** el periodo no tiene ventas
-- **THEN** `totals` es cero y los tres arrays están vacíos
+- **THEN** `totals` es cero, `rows` está vacío y `rowsTotal` es `0`
 
 #### Scenario: Ventas canceladas no cuentan
 - **WHEN** el periodo contiene ventas `cancelled`
-- **THEN** esas ventas no se suman a ninguno de los tres desgloses ni a `totals`
+- **THEN** esas ventas no se suman a `rows` ni a `totals`
 
 #### Scenario: Filtro UUID inválido
 - **WHEN** `?customerId` no es un UUID válido
 - **THEN** el sistema responde `400`
 
+#### Scenario: Paginación
+- **WHEN** un usuario pide `?page=2&pageSize=20` con más de 20 combinaciones Departamento+Producto+Cliente en el periodo
+- **THEN** responde con las filas 21–40 (ordenadas por `total` desc) y `rowsTotal` igual al conteo total de combinaciones
+
 ---
 
-### Requirement: Inventory cross-reference (stock vs sales)
-Cada fila de `byProduct` SHALL incluir, además de `quantitySold` (piezas vendidas del periodo), el stock actual (`currentStock`) desde `branch_inventory` para ese producto — acotado a la sucursal del filtro cuando aplique, o sumado entre sucursales visibles para el usuario cuando no se filtra por sucursal.
+### Requirement: Sales-by-product export row limit
+El endpoint SHALL aceptar `?format=pdf` o `?format=xlsx` para exportar, ignorando `?page`/`?pageSize` de la request y trayendo hasta el límite de export (mismo umbral que `payments/history`/`purchases`, 10 000 filas). Un dataset que exceda ese límite con `format=pdf` o `format=xlsx` SHALL responder `409 {"error":"ReportTooLarge","limit":10000}`.
 
-#### Scenario: Cruce inventario-ventas
-- **WHEN** el reporte agrupa por producto y ese producto tiene stock registrado en `branch_inventory`
-- **THEN** la fila de ese producto incluye tanto `quantitySold` como `currentStock`
-
-#### Scenario: Producto sin registro de inventario
-- **WHEN** un producto vendido no tiene fila en `branch_inventory` para la sucursal filtrada
-- **THEN** `currentStock` se reporta como `0`, sin omitir la fila del producto
+#### Scenario: Reporte demasiado grande
+- **WHEN** el filtro devuelve más de 10 000 combinaciones Departamento+Producto+Cliente y `format=pdf` o `format=xlsx`
+- **THEN** responde `409 {"error":"ReportTooLarge","limit":10000}`
 
 ---
 
 ### Requirement: Sales-by-product report PDF and Excel artifacts
-El endpoint SHALL aceptar `?format=json` (default), `?format=pdf` o `?format=xlsx`. Con `pdf`, SHALL responder `200 application/pdf` generado con `@react-pdf/renderer`, incluyendo encabezado (periodo, filtros, `generatedBy`), `totals` y los tres desgloses. Con `xlsx`, SHALL responder `200 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (`xlsx`/SheetJS) con una hoja por desglose (Cliente, Departamento, Producto) más totales. Ambos formatos SHALL responder con `Content-Disposition: attachment`. Un `format` distinto de `json`/`pdf`/`xlsx` SHALL responder `400 {"error":"Invalid format. Allowed: json, pdf, xlsx"}`.
+El endpoint SHALL aceptar `?format=json` (default), `?format=pdf` o `?format=xlsx`. Con `pdf`, SHALL responder `200 application/pdf` generado con `@react-pdf/renderer`, incluyendo encabezado (periodo, filtros, `generatedBy`), `totals` y la tabla de detalle. Con `xlsx`, SHALL responder `200 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (`xlsx`/SheetJS) con una única hoja "Detalle" (Departamento/Producto/Cliente/Cantidad/Monto) más totales. Ambos formatos SHALL responder con `Content-Disposition: attachment`. Un `format` distinto de `json`/`pdf`/`xlsx` SHALL responder `400 {"error":"Invalid format. Allowed: json, pdf, xlsx"}`.
 
 #### Scenario: Export PDF
 - **WHEN** un usuario con permiso agrega `?format=pdf`
@@ -68,7 +68,7 @@ El endpoint SHALL aceptar `?format=json` (default), `?format=pdf` o `?format=xls
 
 #### Scenario: Export Excel
 - **WHEN** un usuario con permiso agrega `?format=xlsx`
-- **THEN** responde `200` con `Content-Type` de `.xlsx`, `Content-Disposition: attachment` y un workbook con hojas por Cliente/Departamento/Producto
+- **THEN** responde `200` con `Content-Type` de `.xlsx`, `Content-Disposition: attachment` y un workbook con una hoja "Detalle"
 
 #### Scenario: Formato inválido
 - **WHEN** `?format=csv`
@@ -77,12 +77,12 @@ El endpoint SHALL aceptar `?format=json` (default), `?format=pdf` o `?format=xls
 ---
 
 ### Requirement: Branch scoping for sales-by-product report
-El endpoint SHALL aplicar `resolveScopedBranchId(req, filters.branchId, authz)`. Sin `branches:access_all`, los tres desgloses y `totals` SHALL limitarse a `branch_id = x-user-branch-id`, incluyendo el cruce de `currentStock`.
+El endpoint SHALL aplicar `resolveScopedBranchId(req, filters.branchId, authz)`. Sin `branches:access_all`, `rows` y `totals` SHALL limitarse a `branch_id = x-user-branch-id`.
 
 #### Scenario: Operador sin bypass
 - **WHEN** un operador sin `branches:access_all` genera el reporte
-- **THEN** ventas, stock y totales se limitan a su sucursal
+- **THEN** ventas y totales se limitan a su sucursal
 
 #### Scenario: Admin con bypass
 - **WHEN** un usuario con `branches:access_all` no envía `branchId`
-- **THEN** el reporte agrega ventas y stock de todas las sucursales
+- **THEN** el reporte agrega ventas de todas las sucursales

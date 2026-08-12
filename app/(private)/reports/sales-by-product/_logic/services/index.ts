@@ -4,8 +4,16 @@ import type { SalesByProductFilters } from "../types/domain";
 
 const BASE = "/api/v1/admin/reports/sales-by-product";
 
+function reportTooLarge(): Error {
+  const e = new Error("El conjunto de datos supera 10,000 registros. Aplica más filtros.");
+  e.name = "ReportTooLargeError";
+  return e;
+}
+
 function buildParams(f: SalesByProductFilters): URLSearchParams {
   const p = new URLSearchParams();
+  p.set("page", String(f.page));
+  p.set("pageSize", String(f.pageSize));
   if (f.branchId) p.set("branchId", f.branchId);
   if (f.departmentId) p.set("departmentId", f.departmentId);
   if (f.customerId) p.set("customerId", f.customerId);
@@ -42,6 +50,10 @@ async function downloadFormat(
     res = await fetchImpl(`${BASE}?${params.toString()}`);
   } catch {
     throw new NetworkError();
+  }
+  if (res.status === 409) {
+    const data = (await res.json()) as { error: string };
+    if (data.error === "ReportTooLarge") throw reportTooLarge();
   }
   if (!res.ok) throw new NetworkError();
   return res.blob();

@@ -225,8 +225,6 @@ const RAW_ELEMENT_ALLOWLIST = new Set([
   "app/(private)/reports/customer-collections/_blocks/ByTicketTable.tsx",
   "app/(private)/reports/customer-collections/_blocks/CollectionsFilters.tsx",
   "app/(private)/reports/purchases/_blocks/PurchasesFilters.tsx",
-  "app/(private)/reports/sales-by-product/_blocks/BreakdownTable.tsx",
-  "app/(private)/reports/sales-by-product/_blocks/ProductBreakdownTable.tsx",
   "app/(private)/reports/sales-by-product/_blocks/SalesByProductFilters.tsx",
   "app/(private)/reports/sales-cut/_blocks/BreakdownTable.tsx",
   "app/(private)/reports/sales-cut/_blocks/CutFilters.tsx",

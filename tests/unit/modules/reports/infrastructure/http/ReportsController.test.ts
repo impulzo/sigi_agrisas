@@ -101,7 +101,7 @@ import { GetProviderPaymentsReportUseCase } from "@/modules/reports/application/
 import { InMemoryProviderPaymentReportRepository, InMemProviderPayment } from "@/modules/reports/infrastructure/repositories/InMemoryProviderPaymentReportRepository";
 import { GetSalesByProductReportUseCase } from "@/modules/reports/application/use-cases/GetSalesByProductReportUseCase";
 import { InMemorySalesByProductRepository } from "@/modules/reports/infrastructure/repositories/InMemorySalesByProductRepository";
-import { SalesByProductAggregates } from "@/modules/reports/domain/value-objects/SalesByProductFilters";
+import { SalesByProductPage } from "@/modules/reports/domain/value-objects/SalesByProductFilters";
 import { GetCollectionsReportUseCase } from "@/modules/reports/application/use-cases/GetCollectionsReportUseCase";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 
@@ -182,9 +182,8 @@ function emptySalesByProductUseCase() {
   return new GetSalesByProductReportUseCase(
     new InMemorySalesByProductRepository(() => ({
       totals: { ticketCount: 0, subtotal: 0, taxTotal: 0, total: 0 },
-      byCustomer: [],
-      byDepartment: [],
-      byProduct: [],
+      rows: [],
+      rowsTotal: 0,
     }))
   );
 }
@@ -287,18 +286,17 @@ function makeProviderPaymentsController(rows: InMemProviderPayment[] = [], authz
   );
 }
 
-function makeSalesByProductController(agg?: SalesByProductAggregates, authz?: AuthorizationService) {
+function makeSalesByProductController(page?: SalesByProductPage, authz?: AuthorizationService) {
   const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
   const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
   const acc = emptyAccountUseCases();
-  const emptyAgg: SalesByProductAggregates = {
+  const emptyPage: SalesByProductPage = {
     totals: { ticketCount: 0, subtotal: 0, taxTotal: 0, total: 0 },
-    byCustomer: [],
-    byDepartment: [],
-    byProduct: [],
+    rows: [],
+    rowsTotal: 0,
   };
   const salesByProductUC = new GetSalesByProductReportUseCase(
-    new InMemorySalesByProductRepository(() => agg ?? emptyAgg)
+    new InMemorySalesByProductRepository(() => page ?? emptyPage)
   );
   return new ReportsController(
     stockUC, payUC, acc.summary, acc.ledger, acc.anticipo,
@@ -1298,20 +1296,38 @@ describe("ReportsController - getSalesByProductReport", () => {
     expect(res.status).toBe(400);
   });
 
-  it("200 JSON con totals y desgloses, incluye currentStock por producto", async () => {
+  it("200 JSON con totals y filas de detalle Departamento+Producto+Cliente", async () => {
     const ctrl = makeSalesByProductController({
       totals: { ticketCount: 1, subtotal: 100, taxTotal: 16, total: 116 },
-      byCustomer: [],
-      byDepartment: [],
-      byProduct: [
-        { key: "p1", label: "Fertilizante (F1)", ticketCount: 1, quantitySold: 4, currentStock: 20, subtotal: 100, taxTotal: 16, total: 116 },
+      rows: [
+        {
+          departmentId: "d1", departmentName: "Agroquímicos",
+          productId: "p1", productCode: "F1", productName: "Fertilizante",
+          customerId: "c1", customerName: "Cliente Uno",
+          quantity: 4, total: 116,
+        },
       ],
+      rowsTotal: 1,
     });
     const res = await ctrl.getSalesByProductReport(req(URL, authHeaders()));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.totals.total).toBe("116.0000");
-    expect(body.byProduct[0].currentStock).toBe(20);
+    expect(body.rows[0].productName).toBe("Fertilizante");
+    expect(body.rowsTotal).toBe(1);
+  });
+
+  it("409 ReportTooLarge al exportar con más de 10000 combinaciones", async () => {
+    const ctrl = makeSalesByProductController({
+      totals: { ticketCount: 1, subtotal: 100, taxTotal: 16, total: 116 },
+      rows: [],
+      rowsTotal: 10001,
+    });
+    const res = await ctrl.getSalesByProductReport(req(`${URL}?format=pdf`, authHeaders()));
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("ReportTooLarge");
+    expect(body.limit).toBe(10000);
   });
 });
 

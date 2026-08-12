@@ -195,27 +195,39 @@ La ruta `/reports/purchases` SHALL renderizar el reporte de compras con dos secc
 ---
 
 ### Requirement: Sales-by-product report view
-La ruta `/reports/sales-by-product` SHALL renderizar el cruce de inventario y ventas: filtros de sucursal (visible solo con `can("branches:access_all")`), departamento, cliente y rango de fechas; un `SegmentedButton` de agrupación "Cliente \| Departamento \| Producto" que determina qué tabla se muestra; una tarjeta de Total siempre visible independiente del modo de agrupación; la tabla de modo "Producto" SHALL incluir columnas de piezas vendidas y stock actual; y botones "Exportar PDF"/"Exportar Excel". Los `_blocks` SHALL ser presentacionales; el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. Sin ventas en el periodo SHALL mostrar un estado vacío.
+La ruta `/reports/sales-by-product` SHALL renderizar filtros de sucursal (visible solo con `can("branches:access_all")`), departamento y rango de fechas, más una tarjeta de Total siempre visible. Debajo, un único `Card` SHALL agrupar: un `SegmentedButton` de alcance "Global \| Por Cliente"; si el alcance es "Por Cliente", un combobox de cliente (mismo componente compartido `CustomerFilterCombobox` que otros reportes) visible dentro de ese card; una tabla de detalle con columnas Departamento, Producto, Cliente, Cantidad y Monto (una fila por combinación única de esas tres dimensiones, ordenada por Monto desc); y paginación (`CatalogPagination`) debajo de la tabla. Botones "Exportar PDF"/"Exportar Excel" en la cabecera. Los `_blocks` SHALL ser presentacionales; el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. Sin ventas en el periodo SHALL mostrar un estado vacío.
 
 #### Scenario: Tarjeta en el hub
 - **WHEN** un usuario con `reports:sales_by_product_read` abre `/reports`
 - **THEN** ve la tarjeta "Ventas por Producto" que navega a `/reports/sales-by-product`
 
-#### Scenario: Cambio de agrupación
-- **WHEN** el usuario cambia el `SegmentedButton` de "Cliente" a "Producto"
-- **THEN** la tabla cambia a mostrar filas por producto, con columnas de piezas vendidas y stock actual
+#### Scenario: Toggle Global/Por Cliente
+- **WHEN** el usuario cambia el `SegmentedButton` de alcance de "Global" a "Por Cliente"
+- **THEN** aparece el combobox de cliente dentro del mismo card; mientras no haya cliente elegido, la tabla permanece en modo agregado (todos los clientes)
 
-#### Scenario: Tarjeta de Total constante
-- **WHEN** el usuario cambia entre los tres modos de agrupación
-- **THEN** la tarjeta de Total no cambia (refleja el mismo periodo/filtros, no el modo de agrupación)
+#### Scenario: Seleccionar cliente en modo Por Cliente
+- **WHEN** el usuario, con el alcance en "Por Cliente", elige un cliente en el combobox
+- **THEN** la tarjeta de Total y la tabla de detalle se angostan a ese cliente, y la página vuelve a 1
+
+#### Scenario: Volver a Global
+- **WHEN** el usuario cambia el alcance de "Por Cliente" (con un cliente elegido) de vuelta a "Global"
+- **THEN** el combobox se oculta y el reporte vuelve a mostrar datos agregados de todos los clientes, sin enviar `customerId`
+
+#### Scenario: Paginación de la tabla de detalle
+- **WHEN** el periodo tiene más combinaciones Departamento+Producto+Cliente que el `pageSize` actual
+- **THEN** `CatalogPagination` permite navegar entre páginas y cambiar el tamaño de página, reseteando a la página 1 al cambiar cualquier filtro o el alcance
 
 #### Scenario: Exportar PDF
 - **WHEN** el usuario pulsa "Exportar PDF"
-- **THEN** se descarga el PDF con el modo de agrupación activo y los filtros aplicados, autenticado vía `authFetch`
+- **THEN** se descarga el PDF con los filtros y el alcance activo aplicados, autenticado vía `authFetch`
 
 #### Scenario: Exportar Excel
 - **WHEN** el usuario pulsa "Exportar Excel"
-- **THEN** se descarga un `.xlsx` con hojas para Cliente, Departamento y Producto, autenticado vía `authFetch`
+- **THEN** se descarga un `.xlsx` con una sola hoja "Detalle", autenticado vía `authFetch`
+
+#### Scenario: Reporte demasiado grande para exportar
+- **WHEN** el usuario exporta PDF o Excel y el backend responde `409 ReportTooLarge`
+- **THEN** la UI muestra un mensaje legible pidiendo aplicar más filtros, sin descargar archivo
 
 #### Scenario: Periodo sin ventas
 - **WHEN** el periodo no tiene ventas

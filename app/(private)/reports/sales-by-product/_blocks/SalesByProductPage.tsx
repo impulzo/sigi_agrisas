@@ -6,17 +6,13 @@ import { useDepartmentsOptions } from "../../../../_hooks/useDepartmentsOptions"
 import { useBranchesOptions } from "../../../inventory/_logic/hooks/useBranchesOptions";
 import { useSalesByProductReport } from "../_logic/hooks/useSalesByProductReport";
 import { SalesByProductFilters } from "./SalesByProductFilters";
-import { BreakdownTable } from "./BreakdownTable";
-import { ProductBreakdownTable } from "./ProductBreakdownTable";
+import { SalesByProductBreakdownCard, SalesByProductScope } from "./SalesByProductBreakdownCard";
 import { PageShell } from "../../../../_components/organisms/PageShell";
-import { SegmentedButton } from "../../../../_components/molecules/SegmentedButton/SegmentedButton";
 import { EmptyState } from "../../../../_components/molecules/EmptyState/EmptyState";
 import { PageLoading } from "../../../../_components/molecules/PageLoading/PageLoading";
 import { Card } from "../../../../_components/molecules/Card/Card";
 import { Button } from "../../../../_components/atoms/Button/Button";
 import { Spinner } from "../../../../_components/atoms/Spinner/Spinner";
-
-type GroupBy = "customer" | "department" | "product";
 
 function defaultFrom(): string {
   const now = new Date();
@@ -35,20 +31,28 @@ export function SalesByProductPage() {
   const { options: branches } = useBranchesOptions();
   const { options: departments } = useDepartmentsOptions();
 
-  const [groupBy, setGroupBy] = useState<GroupBy>("product");
+  const [scope, setScope] = useState<SalesByProductScope>("global");
   const [branchId, setBranchId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [from, setFrom] = useState(defaultFrom());
   const [to, setTo] = useState(defaultTo());
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-  const { report, isLoading, error, isExportingPdf, isExportingXlsx, exportPdf, exportXlsx } =
+  const resetPage = () => setPage(1);
+
+  const effectiveCustomerId = scope === "customer" ? customerId : "";
+
+  const { report, isLoading, error, isExportingPdf, isExportingXlsx, exportError, exportPdf, exportXlsx } =
     useSalesByProductReport({
       branchId: branchId || undefined,
       departmentId: departmentId || undefined,
-      customerId: customerId || undefined,
+      customerId: effectiveCustomerId || undefined,
       from,
       to,
+      page,
+      pageSize,
     });
 
   if (canRead === "loading") {
@@ -67,18 +71,16 @@ export function SalesByProductPage() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <SalesByProductFilters
             branchId={branchId}
-            onBranchIdChange={setBranchId}
+            onBranchIdChange={(v) => { setBranchId(v); resetPage(); }}
             branches={branches}
             showBranchFilter={isBypass === true}
             departmentId={departmentId}
-            onDepartmentIdChange={setDepartmentId}
+            onDepartmentIdChange={(v) => { setDepartmentId(v); resetPage(); }}
             departments={departments}
-            customerId={customerId}
-            onCustomerIdChange={setCustomerId}
             from={from}
-            onFromChange={setFrom}
+            onFromChange={(v) => { setFrom(v); resetPage(); }}
             to={to}
-            onToChange={setTo}
+            onToChange={(v) => { setTo(v); resetPage(); }}
           />
           <div className="flex gap-2">
             <Button icon="print" onClick={() => exportPdf()} disabled={isExportingPdf || !hasData}>
@@ -93,13 +95,14 @@ export function SalesByProductPage() {
         {error && (
           <div className="bg-error-container/20 rounded px-4 py-3 text-body-sm text-error">{error.message}</div>
         )}
+        {exportError && (
+          <div className="bg-error-container/20 rounded px-4 py-3 text-body-sm text-error">{exportError.message}</div>
+        )}
 
         {isLoading || !report ? (
           <div className="flex h-40 items-center justify-center">
             <Spinner size="lg" />
           </div>
-        ) : !hasData ? (
-          <EmptyState icon="trending_up" title="Sin ventas" description="No hay ventas en el periodo seleccionado." />
         ) : (
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -113,20 +116,22 @@ export function SalesByProductPage() {
               </Card>
             </div>
 
-            <SegmentedButton<GroupBy>
-              value={groupBy}
-              onChange={setGroupBy}
-              aria-label="Agrupar por"
-              options={[
-                { value: "customer", label: "Cliente" },
-                { value: "department", label: "Departamento" },
-                { value: "product", label: "Producto" },
-              ]}
-            />
-
-            {groupBy === "customer" && <BreakdownTable rows={report.byCustomer} nameLabel="Cliente" />}
-            {groupBy === "department" && <BreakdownTable rows={report.byDepartment} nameLabel="Departamento" />}
-            {groupBy === "product" && <ProductBreakdownTable rows={report.byProduct} />}
+            {!hasData ? (
+              <EmptyState icon="trending_up" title="Sin ventas" description="No hay ventas en el periodo seleccionado." />
+            ) : (
+              <SalesByProductBreakdownCard
+                scope={scope}
+                onScopeChange={(s) => { setScope(s); resetPage(); }}
+                customerId={customerId}
+                onCustomerIdChange={(v) => { setCustomerId(v); resetPage(); }}
+                page={page}
+                pageSize={pageSize}
+                rowsTotal={report.rowsTotal}
+                onPageChange={setPage}
+                onPageSizeChange={(n) => { setPageSize(n); resetPage(); }}
+                rows={report.rows}
+              />
+            )}
           </div>
         )}
       </div>

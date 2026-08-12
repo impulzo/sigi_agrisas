@@ -1,5 +1,5 @@
-import { SalesByProductFilters, SalesByProductAggregates } from "../../domain/value-objects/SalesByProductFilters";
+import { SalesByProductFilters, SalesByProductPage } from "../../domain/value-objects/SalesByProductFilters";
 
 export interface SalesByProductRepository {
-  getAggregates(filters: SalesByProductFilters): Promise<SalesByProductAggregates>;
+  getPage(filters: SalesByProductFilters, page: number, pageSize: number): Promise<SalesByProductPage>;
 }
