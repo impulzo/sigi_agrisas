@@ -68,7 +68,7 @@ export function ProductsTable({
               <td className="px-4 py-3 text-on-surface-variant">{item.departmentName}</td>
               <td className="px-4 py-3 text-on-surface-variant">{item.providerName ?? "—"}</td>
               <td className="px-4 py-3 font-mono text-on-surface-variant text-label-sm">{item.taxRateCode ?? "—"}</td>
-              <td className="px-4 py-3 text-on-surface-variant">{item.unit}</td>
+              <td className="px-4 py-3 text-on-surface-variant">{item.unitDescription ?? item.unit}</td>
               <td className="px-4 py-3 text-right">{formatTaxRate(item.ivaRate)}</td>
               <td className="px-4 py-3 text-right">{formatTaxRate(item.iepsRate)}</td>
               <td className="px-4 py-3">

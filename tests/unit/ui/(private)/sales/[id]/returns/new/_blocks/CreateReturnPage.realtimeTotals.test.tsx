@@ -38,6 +38,7 @@ const SALE: SaleDetail = {
   cashierId: "u1",
   cashierName: "Cajero",
   folioId: "f1",
+  folioCode: "VNT",
   folioNumber: 10,
   folioPrefix: "VNT",
   paymentMethodId: "pm1",

@@ -15,7 +15,7 @@ function PriceRows({ product }: { product: DepartmentProductDto }) {
   return (
     <View style={s.section}>
       <Text style={s.departmentTitle}>
-        {product.code} — {product.name} ({product.unit}) · Stock: {product.stockQuantity}
+        {product.code} — {product.name} ({product.unitDescription ?? product.unit}) · Stock: {product.stockQuantity}
       </Text>
       {product.prices.length === 0 ? (
         <View style={s.tableRow}>

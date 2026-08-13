@@ -12,6 +12,7 @@ export interface DepartmentProductDto {
   code: string;
   name: string;
   unit: string;
+  unitDescription: string | null;
   stockQuantity: string;
   ivaRate: string | null;
   iepsRate: string | null;

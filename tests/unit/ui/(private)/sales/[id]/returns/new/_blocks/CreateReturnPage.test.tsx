@@ -63,6 +63,7 @@ function makeSale(status: "completed" | "cancelled" | "edited" = "completed"): S
     cashierId: "u1",
     cashierName: "Cajero",
     folioId: "f1",
+    folioCode: "A",
     folioNumber: 42,
     folioPrefix: "A",
     paymentMethodId: "pm1",

@@ -33,6 +33,7 @@ export class GetKardexReportUseCase {
         code: productView.product.code,
         name: productView.product.name,
         unit: productView.product.unit,
+        unitDescription: productView.unitDescription,
       },
       header,
       movements: rows.map((m) => ({

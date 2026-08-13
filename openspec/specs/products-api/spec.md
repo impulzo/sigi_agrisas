@@ -7,7 +7,7 @@ Define the Products API: CRUD endpoints for the product catalog (SKUs), sub-reso
 ---
 ## Requirements
 ### Requirement: List products
-The system SHALL expose `GET /api/v1/admin/products` that returns a paginated list of products. Requires the `products:read` permission. Query parameters control the result set: `page` (default 1), `pageSize` (default 20, max 100), `includeInactive` (default `false`), `search` (optional, min 2 chars when present; matches `name` OR `code` via `OR ILIKE '%search%'`), `departmentId` (optional UUID filter), `branchId` (optional UUID). Response: `{ items: ProductDto[], total: number, page: number, pageSize: number }`. Each `ProductDto` includes `id`, `code`, `name`, `unit`, `satProductCode` (string or `null`), `departmentId`, `departmentName` (joined), `ivaRate` (decimal 0–1 or `null`), `iepsRate` (decimal 0–1 or `null`), `imageUrl` (string or `null`), `isTaxable` (boolean), `isActive`, `createdAt`, `updatedAt`, and `stock: number | null`. Results ordered by `createdAt DESC`.
+The system SHALL expose `GET /api/v1/admin/products` that returns a paginated list of products. Requires the `products:read` permission. Query parameters control the result set: `page` (default 1), `pageSize` (default 20, max 100), `includeInactive` (default `false`), `search` (optional, min 2 chars when present; matches `name` OR `code` via `OR ILIKE '%search%'`), `departmentId` (optional UUID filter), `branchId` (optional UUID). Response: `{ items: ProductDto[], total: number, page: number, pageSize: number }`. Each `ProductDto` includes `id`, `code`, `name`, `unit` (clave SAT `c_ClaveUnidad`), `unitDescription` (string or `null` — human-readable description resolved against the SAT unit-of-measure catalog; `null` if `unit` does not match any catalog entry), `satProductCode` (string or `null`), `departmentId`, `departmentName` (joined), `ivaRate` (decimal 0–1 or `null`), `iepsRate` (decimal 0–1 or `null`), `imageUrl` (string or `null`), `isTaxable` (boolean), `isActive`, `createdAt`, `updatedAt`, and `stock: number | null`. Results ordered by `createdAt DESC`.
 
 **`stock` field**: when the request includes `branchId`, the system SHALL join `branch_inventory` filtered by `(branch_id = branchId, product_id = product.id)` (unique pair) and set `stock = branch_inventory.quantity` for that product, or `stock = null` if no `branch_inventory` row exists for that pair. When the request omits `branchId`, `stock` is always `null` (no branch context to resolve stock against). This does NOT require the `inventory:read` permission — `products:read` alone is sufficient, since it is the same list endpoint, only enriched with an extra field.
 
@@ -51,6 +51,14 @@ The system SHALL expose `GET /api/v1/admin/products` that returns a paginated li
 - **WHEN** the request includes `?branchId=not-a-uuid`
 - **THEN** the system returns HTTP 400
 
+#### Scenario: Product with valid SAT code includes resolved description
+- **WHEN** a listed product has `unit: "KGM"` and the SAT catalog is seeded
+- **THEN** the corresponding item includes `unitDescription: "Kilogramo"`
+
+#### Scenario: Product with legacy data includes unitDescription null
+- **WHEN** a listed product has `unit` as free text not captured from the catalog (data prior to this change)
+- **THEN** the corresponding item includes `unitDescription: null`
+
 ---
 
 ### Requirement: Get product detail
@@ -75,7 +83,7 @@ The system SHALL expose `POST /api/v1/admin/products`. Requires `products:write`
 
 - `code: string` matching `^[A-Z0-9_]{1,32}$`
 - `name: string` (1–200 chars)
-- `unit: string` (1–32 chars; e.g. "pieza", "kg", "lt")
+- `unit: string` matching `^[A-Za-z0-9]{2,3}$` (SAT unit-of-measure catalog code, `c_ClaveUnidad`; e.g. `"KGM"`, `"H87"`, `"LTR"`)
 - `departmentId: string` (UUID of an existing `Department`)
 
 Optional fields:
@@ -87,10 +95,10 @@ Optional fields:
 - `isActive: boolean` (default `true`)
 - `isTaxable: boolean` (default `false`)
 
-The controller SHALL trim and uppercase `code` before persisting. The controller SHALL validate `isTaxable` as a boolean (non-boolean value → HTTP 400). Returns HTTP 201 with the new `ProductDto` including `isTaxable`. Duplicate `code` returns HTTP 409. `departmentId` not found returns HTTP 400 (or 422 — implementer's choice, must be documented). When `imageUrl` is provided in `POST` it MUST be a URL pointing to the configured Supabase Storage public bucket (`product-images`); URLs from other origins SHALL be rejected with HTTP 400.
+The controller SHALL trim and uppercase `code` before persisting. The controller SHALL validate `isTaxable` as a boolean (non-boolean value → HTTP 400). The controller SHALL validate `unit` against the SAT unit-of-measure code format — this is a format check only (no FK to the catalog table), consistent with `satProductCode`: a full catalog re-seed cannot orphan an existing product's `unit`. Returns HTTP 201 with the new `ProductDto` including `isTaxable`. Duplicate `code` returns HTTP 409. `departmentId` not found returns HTTP 400 (or 422 — implementer's choice, must be documented). When `imageUrl` is provided in `POST` it MUST be a URL pointing to the configured Supabase Storage public bucket (`product-images`); URLs from other origins SHALL be rejected with HTTP 400.
 
 #### Scenario: Minimal creation
-- **WHEN** the body is `{ "code": "ARROZ_001", "name": "Arroz", "unit": "kg", "departmentId": "<uuid>" }` with an existing department
+- **WHEN** the body is `{ "code": "ARROZ_001", "name": "Arroz", "unit": "KGM", "departmentId": "<uuid>" }` with an existing department
 - **THEN** the system returns HTTP 201 with `satProductCode`, `ivaRate`, `iepsRate`, `imageUrl` all `null` and `isActive: true`
 
 #### Scenario: Minimal creation defaults isTaxable to false
@@ -121,6 +129,10 @@ The controller SHALL trim and uppercase `code` before persisting. The controller
 - **WHEN** the body contains `satProductCode: "ABC123"` (not 8 digits)
 - **THEN** the system returns HTTP 400
 
+#### Scenario: Invalid unit format rejected
+- **WHEN** the body contains `unit: "kilogramos"` (free text, does not match the SAT unit code format)
+- **THEN** the system returns HTTP 400
+
 #### Scenario: imageUrl from foreign origin rejected
 - **WHEN** the body contains `imageUrl: "https://evil.example.com/x.jpg"` (not the configured Supabase Storage bucket)
 - **THEN** the system returns HTTP 400 `{"error": "Invalid image URL"}`
@@ -132,7 +144,7 @@ The controller SHALL trim and uppercase `code` before persisting. The controller
 ---
 
 ### Requirement: Update product
-The system SHALL expose `PATCH /api/v1/admin/products/:id`. Requires `products:write`. The body MAY include any of `name`, `unit`, `satProductCode`, `departmentId`, `ivaRate`, `iepsRate`, `imageUrl`, `isActive`, `isTaxable`. The field `code` MUST NOT be updatable; if present it SHALL be ignored silently. `isTaxable` MAY be included and SHALL be validated as boolean. Body MUST contain at least one updatable field, else HTTP 400. Optional fields set to `null` clear the value. Setting `imageUrl: null` clears the persisted URL but does NOT delete the underlying object in Supabase Storage (use `DELETE /products/:id/image` for that). Setting `imageUrl` to a non-bucket URL SHALL return HTTP 400. Returns HTTP 200 with updated `ProductDto` including `isTaxable`.
+The system SHALL expose `PATCH /api/v1/admin/products/:id`. Requires `products:write`. The body MAY include any of `name`, `unit`, `satProductCode`, `departmentId`, `ivaRate`, `iepsRate`, `imageUrl`, `isActive`, `isTaxable`. The field `code` MUST NOT be updatable; if present it SHALL be ignored silently. `unit`, when present, MUST match the SAT unit code format `^[A-Za-z0-9]{2,3}$` (same rule as creation). `isTaxable` MAY be included and SHALL be validated as boolean. Body MUST contain at least one updatable field, else HTTP 400. Optional fields set to `null` clear the value. Setting `imageUrl: null` clears the persisted URL but does NOT delete the underlying object in Supabase Storage (use `DELETE /products/:id/image` for that). Setting `imageUrl` to a non-bucket URL SHALL return HTTP 400. Returns HTTP 200 with updated `ProductDto` including `isTaxable`.
 
 #### Scenario: Update name and tax
 - **WHEN** the body is `{ "name": "Arroz Integral", "ivaRate": 0 }`
@@ -165,6 +177,14 @@ The system SHALL expose `PATCH /api/v1/admin/products/:id`. Requires `products:w
 #### Scenario: Product not found
 - **WHEN** the `:id` does not match any product
 - **THEN** the system returns HTTP 404
+
+#### Scenario: Update to invalid unit format rejected
+- **WHEN** the body is `{ "unit": "saco 25kg" }` (free text, does not match the SAT unit code format)
+- **THEN** the system returns HTTP 400
+
+#### Scenario: Update to valid SAT unit code accepted
+- **WHEN** the body is `{ "unit": "LTR" }` on an existing product
+- **THEN** the system returns HTTP 200 with `unit: "LTR"`
 
 ---
 

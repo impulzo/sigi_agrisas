@@ -31,7 +31,7 @@ function DeptTable({ dept }: { dept: StockDepartmentDto }) {
         <View key={p.productId} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
           <Text style={s.cell}>{p.code}</Text>
           <Text style={s.cellWide}>{p.name}</Text>
-          <Text style={s.cellNarrow}>{p.unit}</Text>
+          <Text style={s.cellNarrow}>{p.unitDescription ?? p.unit}</Text>
           <Text style={s.cellNarrow}>{p.quantity}</Text>
           <Text style={s.cellNarrow}>{p.reservedQuantity}</Text>
           <Text style={s.cellNarrow}>{p.availableQuantity}</Text>

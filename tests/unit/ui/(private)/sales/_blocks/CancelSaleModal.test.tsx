@@ -14,6 +14,7 @@ function makeSale(status: "completed" | "cancelled" | "edited", cancellationReas
     cashierId: "u1",
     cashierName: "Operador",
     folioId: "f1",
+    folioCode: "A",
     folioNumber: 1,
     folioPrefix: "A",
     paymentMethodId: "pm1",

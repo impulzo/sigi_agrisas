@@ -57,6 +57,7 @@ export class GetInventoryStockReportUseCase {
         code: row.code,
         name: row.name,
         unit: row.unit,
+        unitDescription: row.unitDescription,
         quantity: row.quantity.toFixed(4),
         reservedQuantity: row.reservedQuantity.toFixed(4),
         reorderPoint: row.reorderPoint.toFixed(4),

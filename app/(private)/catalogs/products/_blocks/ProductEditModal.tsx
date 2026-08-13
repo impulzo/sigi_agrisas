@@ -6,6 +6,7 @@ import { createProductSchema, updateProductSchema } from "../_logic/schemas/prod
 import { useTaxRatesOptions } from "../../../../_hooks/useTaxRatesOptions";
 import { TaxRateSelect } from "./TaxRateSelect";
 import { SatCodeCombobox } from "./SatCodeCombobox";
+import { SatCatalogCombobox } from "../../../../_components/molecules/SatCatalogCombobox/SatCatalogCombobox";
 import type { Product } from "../_logic/types/domain";
 import type { CreateProductBody, UpdateProductBody } from "../_logic/types/api";
 
@@ -202,12 +203,13 @@ export function ProductEditModal({
             </div>
 
             <div>
-              <label className="block text-label-lg text-on-surface-variant mb-1">Unidad *</label>
-              <input
-                type="text"
+              <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="product-unit">Unidad (clave SAT) *</label>
+              <SatCatalogCombobox
+                catalog="clave-unidad"
+                id="product-unit"
                 value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                maxLength={30}
+                onChange={setUnit}
+                placeholder="KGM"
                 className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.unit && (

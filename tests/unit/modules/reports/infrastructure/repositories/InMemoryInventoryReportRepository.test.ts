@@ -15,6 +15,7 @@ function makeRow(overrides: Partial<RawStockRow> & { branchId: string; productId
     code: overrides.code ?? "P001",
     name: overrides.name ?? "Producto 1",
     unit: overrides.unit ?? "PZA",
+    unitDescription: overrides.unitDescription !== undefined ? overrides.unitDescription : null,
     quantity: overrides.quantity ?? new Decimal("10"),
     reservedQuantity: overrides.reservedQuantity ?? new Decimal("0"),
     reorderPoint: overrides.reorderPoint ?? new Decimal("5"),

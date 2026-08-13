@@ -44,6 +44,7 @@ export class GetDepartmentPriceListReportUseCase {
           code: row.code,
           name: row.name,
           unit: row.unit,
+          unitDescription: row.unitDescription,
           stockQuantity: row.stockQuantity.toFixed(4),
           ivaRate: row.ivaRate ? row.ivaRate.toFixed(4) : null,
           iepsRate: row.iepsRate ? row.iepsRate.toFixed(4) : null,

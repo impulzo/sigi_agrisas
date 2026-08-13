@@ -3,6 +3,7 @@ export interface Product {
   code: string;
   name: string;
   unit: string;
+  unitDescription: string | null;
   satProductCode: string | null;
   departmentId: string;
   departmentName: string;

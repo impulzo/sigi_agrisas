@@ -63,6 +63,7 @@ const baseSale: SaleDetail = {
   customerId: null,
   customerName: null,
   folioId: "f1",
+  folioCode: "A",
   folioNumber: 1,
   folioPrefix: "A",
   paymentMethodId: "pm1",

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { shouldNotifyLowStock } from "@/shared/domain/services/checkAndNotifyLowStock";
+import { resolveUnitDescriptions } from "@/shared/infrastructure/sat-codes/resolveUnitDescriptions";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -109,7 +110,9 @@ export async function recordInventoryMovement(
     where: { id: data.productId },
     select: { unit: true, name: true, code: true },
   });
-  const unit = data.unit ?? product?.unit ?? "";
+  const rawUnit = data.unit ?? product?.unit ?? "";
+  const unitMap = await resolveUnitDescriptions(tx, [rawUnit]);
+  const unit = unitMap.get(rawUnit) ?? rawUnit;
 
   await tx.inventoryMovement.create({
     data: {

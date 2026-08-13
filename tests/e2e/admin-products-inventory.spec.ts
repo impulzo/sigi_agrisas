@@ -58,7 +58,8 @@ test.describe("Task 10.2 — admin: productos e inventario", () => {
     // Fill required fields using nth index within dialog (Código, Unidad, Nombre)
     const code = `E2E${Date.now().toString().slice(-5)}`;
     await dialog.locator("input").nth(0).fill(code); // Código
-    await dialog.locator("input").nth(1).fill("kg"); // Unidad
+    await dialog.getByLabel("Unidad (clave SAT) *").fill("KGM"); // Unidad — combobox SAT
+    await dialog.getByRole("button", { name: /Kilogramo/ }).first().click();
     await dialog.locator("input").nth(2).fill(`Producto E2E ${code}`); // Nombre
     await deptSelect.selectOption({ index: 1 });
 
@@ -132,6 +133,50 @@ test.describe("Task 10.2 — admin: productos e inventario", () => {
     await sat.fill("10171601");
     await dialog.getByRole("button", { name: /10171601/ }).first().click();
     await expect(sat).toHaveValue("10171601");
+  });
+
+  // ── Productos — combobox Unidad (clave SAT, catálogo real c_ClaveUnidad) ──
+
+  test("productos: modal crear tiene combobox de Unidad con clave SAT", async ({ page }) => {
+    await page.goto("/catalogs/products");
+    await page.click('button:has-text("Nuevo")');
+    const dialog = page.locator('dialog, [role="dialog"]').first();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel("Unidad (clave SAT) *")).toBeVisible();
+  });
+
+  test("productos: combobox Unidad filtra por código con catálogo real", async ({ page }) => {
+    await page.goto("/catalogs/products");
+    await page.click('button:has-text("Nuevo")');
+    const dialog = page.locator('dialog, [role="dialog"]').first();
+    await expect(dialog).toBeVisible();
+
+    const unit = dialog.getByLabel("Unidad (clave SAT) *");
+    await unit.fill("KGM");
+    await expect(dialog.getByRole("button", { name: /Kilogramo/ }).first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test("productos: combobox Unidad filtra por descripción con catálogo real", async ({ page }) => {
+    await page.goto("/catalogs/products");
+    await page.click('button:has-text("Nuevo")');
+    const dialog = page.locator('dialog, [role="dialog"]').first();
+    await expect(dialog).toBeVisible();
+
+    const unit = dialog.getByLabel("Unidad (clave SAT) *");
+    await unit.fill("kilogramo");
+    await expect(dialog.getByRole("button", { name: /Kilogramo/i }).first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test("productos: seleccionar sugerencia de Unidad completa la clave", async ({ page }) => {
+    await page.goto("/catalogs/products");
+    await page.click('button:has-text("Nuevo")');
+    const dialog = page.locator('dialog, [role="dialog"]').first();
+    await expect(dialog).toBeVisible();
+
+    const unit = dialog.getByLabel("Unidad (clave SAT) *");
+    await unit.fill("KGM");
+    await dialog.getByRole("button", { name: /Kilogramo/ }).first().click();
+    await expect(unit).toHaveValue("KGM");
   });
 
   // ── Productos — detalle con tabs ───────────────────────────────────────────

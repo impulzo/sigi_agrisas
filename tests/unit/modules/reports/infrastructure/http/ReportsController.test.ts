@@ -124,7 +124,7 @@ function makeStockRow(): RawStockRow {
   return {
     branchId: BRANCH_ID, branchCode: "MAT", branchName: "Matriz", isHeadquarters: true,
     departmentId: DEPT_ID, departmentCode: "D1", departmentName: "Dept 1",
-    productId: "prod-1", code: "P001", name: "Prod 1", unit: "PZA",
+    productId: "prod-1", code: "P001", name: "Prod 1", unit: "PZA", unitDescription: null,
     quantity: new Decimal("10"), reservedQuantity: new Decimal("0"), reorderPoint: new Decimal("5"),
   };
 }
@@ -141,7 +141,7 @@ function makePaymentRow(): RawPaymentRow {
 function makePriceListRow(): RawPriceListRow {
   return {
     departmentId: DEPT_ID, departmentCode: "D1", departmentName: "Dept 1",
-    productId: "prod-1", code: "P001", name: "Prod 1", unit: "PZA",
+    productId: "prod-1", code: "P001", name: "Prod 1", unit: "PZA", unitDescription: null,
     stockQuantity: new Decimal("10.0000"),
     ivaRate: new Decimal("0.1600"), iepsRate: null,
     priceId: "price-1", priceName: "Menudeo", price: new Decimal("100.0000"),

@@ -14,6 +14,7 @@ function makeRow(overrides: Partial<RawPriceListRow> & { productId: string }): R
     code: overrides.code ?? "P001",
     name: overrides.name ?? "Producto 1",
     unit: overrides.unit ?? "PZA",
+    unitDescription: overrides.unitDescription !== undefined ? overrides.unitDescription : null,
     stockQuantity: overrides.stockQuantity ?? new Decimal("0.0000"),
     ivaRate: overrides.ivaRate !== undefined ? overrides.ivaRate : new Decimal("0.1600"),
     iepsRate: overrides.iepsRate !== undefined ? overrides.iepsRate : null,

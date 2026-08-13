@@ -3,6 +3,7 @@ export interface StockProductDto {
   code: string;
   name: string;
   unit: string;
+  unitDescription: string | null;
   quantity: string;
   reservedQuantity: string;
   reorderPoint: string;

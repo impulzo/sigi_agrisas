@@ -38,7 +38,7 @@ const USER_ID = "00000000-0000-0000-0000-000000000001";
 function makeLookups(overrides: Partial<PosLookupService> = {}): PosLookupService {
   return {
     async getCustomer(id) {
-      return overrides.getCustomer ? overrides.getCustomer(id) : { id, isActive: true, creditLimit: null, currentBalance: 0 };
+      return overrides.getCustomer ? overrides.getCustomer(id) : { id, isActive: true, creditLimit: null, currentBalance: 0, email: null };
     },
     async getBranch(id) {
       return overrides.getBranch ? overrides.getBranch(id) : { id, isActive: true };
@@ -63,6 +63,9 @@ function makeLookups(overrides: Partial<PosLookupService> = {}): PosLookupServic
     },
     async getDosificationForSale(id) {
       return overrides.getDosificationForSale ? overrides.getDosificationForSale(id) : null;
+    },
+    async getDosificationSurchargePct() {
+      return overrides.getDosificationSurchargePct ? overrides.getDosificationSurchargePct() : 5;
     },
   };
 }
@@ -203,7 +206,7 @@ describe("QuotesController.create", () => {
   });
 
   it("400 cuando customer está inactivo", async () => {
-    const lookups = makeLookups({ getCustomer: async (id) => ({ id, isActive: false, creditLimit: null, currentBalance: 0 }) });
+    const lookups = makeLookups({ getCustomer: async (id) => ({ id, isActive: false, creditLimit: null, currentBalance: 0, email: null }) });
     const { controller, quoteRepo } = buildController({ lookups });
     quoteRepo.reset();
     const res = await controller.create(req("POST", "/quotes", baseCreateBody));
@@ -446,7 +449,7 @@ describe("QuotesController.convert", () => {
   it("200 con creditLimitExceeded=true cuando el cliente excede su línea de crédito al convertir (ya no bloquea)", async () => {
     const lookups = makeLookups({
       getPaymentMethod: async (id) => ({ id, isActive: true, isCredit: true }),
-      getCustomer: async (id) => ({ id, isActive: true, creditLimit: 50, currentBalance: 0 }),
+      getCustomer: async (id) => ({ id, isActive: true, creditLimit: 50, currentBalance: 0, email: null }),
     });
     const { controller, quoteRepo } = buildController({ lookups });
     const created = await seedQuote(quoteRepo, controller);
@@ -466,7 +469,7 @@ describe("QuotesController.convert", () => {
   it("200 con creditLimitExceeded=false cuando el cliente no tiene creditLimit configurado (ya no bloquea)", async () => {
     const lookups = makeLookups({
       getPaymentMethod: async (id) => ({ id, isActive: true, isCredit: true }),
-      getCustomer: async (id) => ({ id, isActive: true, creditLimit: null, currentBalance: 0 }),
+      getCustomer: async (id) => ({ id, isActive: true, creditLimit: null, currentBalance: 0, email: null }),
     });
     const { controller, quoteRepo } = buildController({ lookups });
     const created = await seedQuote(quoteRepo, controller);

@@ -38,7 +38,7 @@ function ProductRow({
     <Tr>
       <Td>{product.code}</Td>
       <Td>{product.name}</Td>
-      <Td className="text-on-surface-variant">{product.unit}</Td>
+      <Td className="text-on-surface-variant">{product.unitDescription ?? product.unit}</Td>
       <Td align="right">{product.stockQuantity}</Td>
       {priceColumns.map((name) => {
         const price = product.prices.find((p) => p.name === name);

@@ -22,6 +22,7 @@ const BASE_DTO = {
   code: "PROD_01",
   name: "Producto Uno",
   unit: "kg",
+  unitDescription: null,
   satProductCode: null,
   departmentId: "d1",
   departmentName: "Agrícola",

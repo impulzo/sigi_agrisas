@@ -2,11 +2,12 @@ import { z } from "zod";
 
 const codeRegex = /^[A-Z0-9_]{1,32}$/;
 const satProductCodeRegex = /^\d{8}$/;
+const satUnitCodeRegex = /^[A-Za-z0-9]{2,3}$/;
 
 export const createProductSchema = z.object({
   code: z.string().regex(codeRegex, "El código debe ser MAYÚSCULAS, dígitos y guiones bajos (máx. 32)."),
   name: z.string().min(1, "El nombre es obligatorio.").max(120),
-  unit: z.string().min(1, "La unidad es obligatoria.").max(30),
+  unit: z.string().regex(satUnitCodeRegex, "Selecciona una unidad SAT válida."),
   departmentId: z.string().uuid("Selecciona un departamento válido."),
   satProductCode: z
     .string()
@@ -22,7 +23,7 @@ export const createProductSchema = z.object({
 export const updateProductSchema = z
   .object({
     name: z.string().min(1).max(120).optional(),
-    unit: z.string().min(1).max(30).optional(),
+    unit: z.string().regex(satUnitCodeRegex, "Selecciona una unidad SAT válida.").optional(),
     departmentId: z.string().uuid().optional(),
     satProductCode: z
       .string()

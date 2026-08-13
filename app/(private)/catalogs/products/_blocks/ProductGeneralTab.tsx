@@ -12,6 +12,7 @@ import { useTaxRatesOptions } from "../../../../_hooks/useTaxRatesOptions";
 import { useDepartmentsOptions } from "../../../../_hooks/useDepartmentsOptions";
 import { TaxRateSelect } from "./TaxRateSelect";
 import { SatCodeCombobox } from "./SatCodeCombobox";
+import { SatCatalogCombobox } from "../../../../_components/molecules/SatCatalogCombobox/SatCatalogCombobox";
 import type { Product } from "../_logic/types/domain";
 import type { UpdateProductBody } from "../_logic/types/api";
 
@@ -112,8 +113,16 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
           <input type="text" value={product.code} disabled className={fieldClass} />
         </div>
         <div>
-          <label className="block text-label-lg text-on-surface-variant mb-1">Unidad *</label>
-          <input type="text" value={unit} onChange={(e) => setUnit(e.target.value)} disabled={!canWrite} maxLength={30} className={fieldClass} />
+          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="product-unit">Unidad (clave SAT) *</label>
+          <SatCatalogCombobox
+            catalog="clave-unidad"
+            id="product-unit"
+            value={unit}
+            onChange={setUnit}
+            placeholder="KGM"
+            disabled={!canWrite}
+            className={fieldClass}
+          />
           {validationErrors.unit && <p className="text-label-sm text-error mt-1">{validationErrors.unit}</p>}
         </div>
       </div>

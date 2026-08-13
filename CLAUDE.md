@@ -18,17 +18,20 @@ Rol y tarea se sobrescriben cuando el usuario asigna un rol y/o una tarea explí
 
 **Todo plan (incluido Plan Mode) y todo superprompt se aborda con este rol y tarea por defecto, salvo indicación explícita en contrario del usuario.**
 
-## Protocolo de superprompt (obligatorio)
+## Protocolo de desarrollo (obligatorio) — SDD con OpenSpec
 
-Toda indicación nueva que implique **escribir** (código, migraciones, specs, comandos con efecto) se procesa así:
+Este proyecto sigue **Spec-Driven Development**. Rol y tarea por defecto ya están fijos arriba — no hace falta redactar un "superprompt" desde cero repitiendo rol/tarea/contexto genérico en cada tarea; eso es tiempo perdido cuando todas comparten el mismo rol. Lo que sí es obligatorio, tarea por tarea, es correr el workflow de OpenSpec — **ese proposal ES el superprompt** (scope, archivos a tocar, criterios de aceptación, plan de verificación), versionado en el repo en vez de texto de chat descartable:
 
-1. **Asumir** rol + tarea vigentes (los de arriba, o los que el usuario haya asignado explícitamente).
-2. **Extraer contexto** de este `CLAUDE.md` (arquitectura hexagonal, reglas de capas, módulo tocado), de `designer.md` si toca `app/`, y de `openspec/specs/<capability>/spec.md` correspondiente.
-3. **Armar el superprompt**: rol, tarea, contexto extraído, alcance, archivos a tocar, criterios de aceptación y plan de verificación.
-4. **Presentarlo al usuario y esperar aprobación explícita.** Sin aprobación no se edita ningún archivo ni se corre ningún comando de escritura.
-5. **Ejecutar** el superprompt tal como quedó aprobado. Cambio de alcance a mitad de ejecución → nuevo superprompt aprobado.
+1. **Identificar la tarea.** Alcance, módulo(s) tocados, capability(ies) de `openspec/specs/` involucradas (nuevas o modificadas).
+2. **`opsx:propose`** — genera `openspec/changes/<nombre>/{proposal.md, design.md, tasks.md, specs/}`. Si la tarea ya pasó por Plan Mode, usa ese plan aprobado como insumo — **no lo sustituye**: el plan file es efímero y no vive en el repo, el proposal sí.
+3. **Presentar el proposal al usuario y esperar aprobación explícita.** Sin aprobación no se edita ningún archivo ni se corre ningún comando de escritura.
+4. **`opsx:apply`** — implementar siguiendo `tasks.md`.
+5. **`opsx:verify`** — confirmar que la implementación cumple specs y design.
+6. **`opsx:archive`** — **sólo cuando el usuario lo indique explícitamente.** Nunca automático al terminar apply/verify, ni siquiera con toda la suite en verde.
 
-**Excepción:** consultas de sólo lectura (explicar código, localizar símbolos, `git status`, leer specs) se responden directo, sin superprompt ni aprobación.
+Cambio de alcance a mitad de ejecución → proposal actualizado y re-aprobado, no se improvisa.
+
+**Excepción:** consultas de sólo lectura (explicar código, localizar símbolos, `git status`, leer specs) se responden directo, sin propose ni aprobación. Cambios triviales de 1 línea sin impacto de spec (typo, rename mecánico) pueden saltarse el propose únicamente si el usuario lo indica explícitamente para esa tarea puntual — no por default.
 
 ## Skills activas
 
@@ -523,7 +526,7 @@ Children de `catalogs`: `payment_methods:read`, `folios:read`, `departments:read
 
 ## OpenSpec
 
-Workflow activo: `opsx:propose` → `opsx:apply` → `opsx:verify` → `opsx:archive`.
+Workflow obligatorio: ver "Protocolo de desarrollo (obligatorio) — SDD con OpenSpec" arriba.
 
 Specs canónicas (source of truth para reglas finas): ver `openspec/specs/<capability>/spec.md`.
 
