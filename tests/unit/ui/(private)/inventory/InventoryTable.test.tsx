@@ -14,6 +14,9 @@ const ITEMS: InventoryItem[] = [
     reservedQuantity: 10,
     reorderPoint: 20,
     updatedAt: new Date("2026-05-20"),
+    nearestExpirationDate: null,
+    nearestExpirationLotNumber: null,
+    expiryStatus: null,
   },
   {
     id: "i2",
@@ -25,6 +28,9 @@ const ITEMS: InventoryItem[] = [
     reservedQuantity: 0,
     reorderPoint: 50,
     updatedAt: new Date("2026-05-20"),
+    nearestExpirationDate: null,
+    nearestExpirationLotNumber: null,
+    expiryStatus: null,
   },
 ];
 

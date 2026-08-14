@@ -8,4 +8,7 @@ export interface BranchInventoryDto {
   reservedQuantity: number;
   reorderPoint: number;
   updatedAt: string;
+  nearestExpirationDate: string | null;
+  nearestExpirationLotNumber: string | null;
+  expiryStatus: "ok" | "warning" | "critical" | null;
 }

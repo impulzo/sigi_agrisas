@@ -97,7 +97,7 @@ describe("useCreatePurchaseForm", () => {
         providerId: "prov1",
         branchId: "branch-1",
         paymentMethodId: "pm-cash",
-        items: [{ productId: "prod1", quantity: 1, unitCost: 100, discountPct: null }],
+        items: [{ productId: "prod1", quantity: 1, unitCost: 100, discountPct: null, lotNumber: null, expirationDate: null }],
       })
     );
     expect(pushMock).toHaveBeenCalledWith("/purchases/new-purchase");

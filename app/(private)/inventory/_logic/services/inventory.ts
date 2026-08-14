@@ -26,6 +26,9 @@ export function toInventoryItem(dto: BranchInventoryDto): InventoryItem {
     reservedQuantity: dto.reservedQuantity,
     reorderPoint: dto.reorderPoint,
     updatedAt: new Date(dto.updatedAt),
+    nearestExpirationDate: dto.nearestExpirationDate ? new Date(dto.nearestExpirationDate) : null,
+    nearestExpirationLotNumber: dto.nearestExpirationLotNumber,
+    expiryStatus: dto.expiryStatus,
   };
 }
 

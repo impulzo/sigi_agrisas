@@ -3,6 +3,7 @@ import { PrismaBranchRepository } from "@/modules/branches/infrastructure/reposi
 import { PrismaProductRepository } from "@/modules/products/infrastructure/repositories/PrismaProductRepository";
 import { PrismaBranchInventoryRepository } from "@/modules/inventory/infrastructure/repositories/PrismaBranchInventoryRepository";
 import { PrismaInventoryMovementRepository } from "@/modules/inventory/infrastructure/repositories/PrismaInventoryMovementRepository";
+import { PrismaInventoryLotRepository } from "@/modules/inventory/infrastructure/repositories/PrismaInventoryLotRepository";
 import { ListBranchInventoryUseCase } from "@/modules/inventory/application/use-cases/ListBranchInventoryUseCase";
 import { GetBranchInventoryItemUseCase } from "@/modules/inventory/application/use-cases/GetBranchInventoryItemUseCase";
 import { CreateBranchInventoryItemUseCase } from "@/modules/inventory/application/use-cases/CreateBranchInventoryItemUseCase";
@@ -20,10 +21,11 @@ const branchRepo = new PrismaBranchRepository(prisma);
 const productRepo = new PrismaProductRepository(prisma);
 const inventoryRepo = new PrismaBranchInventoryRepository(prisma, adminNotificationService);
 const movementRepo = new PrismaInventoryMovementRepository(prisma);
+const inventoryLotRepo = new PrismaInventoryLotRepository(prisma);
 
 export const branchInventoryController = new BranchInventoryController(
-  new ListBranchInventoryUseCase(inventoryRepo, branchRepo),
-  new GetBranchInventoryItemUseCase(inventoryRepo),
+  new ListBranchInventoryUseCase(inventoryRepo, branchRepo, inventoryLotRepo),
+  new GetBranchInventoryItemUseCase(inventoryRepo, inventoryLotRepo),
   new CreateBranchInventoryItemUseCase(inventoryRepo, branchRepo, productRepo),
   new UpdateBranchInventoryItemUseCase(inventoryRepo),
   new AdjustStockUseCase(inventoryRepo),

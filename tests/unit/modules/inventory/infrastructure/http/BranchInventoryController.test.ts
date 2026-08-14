@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { BranchInventoryController } from "@/modules/inventory/infrastructure/http/BranchInventoryController";
 import { InMemoryBranchInventoryRepository } from "@/modules/inventory/infrastructure/repositories/InMemoryBranchInventoryRepository";
+import { InMemoryInventoryLotRepository } from "@/modules/inventory/infrastructure/repositories/InMemoryInventoryLotRepository";
 import { InMemoryBranchRepository } from "@/modules/branches/infrastructure/repositories/InMemoryBranchRepository";
 import { InMemoryProductRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductRepository";
 import { ListBranchInventoryUseCase } from "@/modules/inventory/application/use-cases/ListBranchInventoryUseCase";
@@ -19,9 +20,10 @@ function buildController() {
   const branchRepo = new InMemoryBranchRepository();
   const productRepo = new InMemoryProductRepository();
   productRepo.reset();
+  const lotRepo = new InMemoryInventoryLotRepository();
   return new BranchInventoryController(
-    new ListBranchInventoryUseCase(repo, branchRepo),
-    new GetBranchInventoryItemUseCase(repo),
+    new ListBranchInventoryUseCase(repo, branchRepo, lotRepo),
+    new GetBranchInventoryItemUseCase(repo, lotRepo),
     new CreateBranchInventoryItemUseCase(repo, branchRepo, productRepo),
     new UpdateBranchInventoryItemUseCase(repo),
     new AdjustStockUseCase(repo),

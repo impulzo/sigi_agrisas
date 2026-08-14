@@ -1,11 +1,13 @@
 import { ListBranchInventoryUseCase } from "@/modules/inventory/application/use-cases/ListBranchInventoryUseCase";
 import { InMemoryBranchInventoryRepository } from "@/modules/inventory/infrastructure/repositories/InMemoryBranchInventoryRepository";
+import { InMemoryInventoryLotRepository } from "@/modules/inventory/infrastructure/repositories/InMemoryInventoryLotRepository";
 import { InMemoryBranchRepository } from "@/modules/branches/infrastructure/repositories/InMemoryBranchRepository";
 import { InventoryBranchNotFoundError } from "@/modules/inventory/domain/errors/InventoryBranchNotFoundError";
 
 describe("ListBranchInventoryUseCase", () => {
   let repo: InMemoryBranchInventoryRepository;
   let branchRepo: InMemoryBranchRepository;
+  let lotRepo: InMemoryInventoryLotRepository;
   let useCase: ListBranchInventoryUseCase;
   let branchId: string;
 
@@ -13,7 +15,8 @@ describe("ListBranchInventoryUseCase", () => {
     repo = new InMemoryBranchInventoryRepository();
     repo.reset();
     branchRepo = new InMemoryBranchRepository();
-    useCase = new ListBranchInventoryUseCase(repo, branchRepo);
+    lotRepo = new InMemoryInventoryLotRepository();
+    useCase = new ListBranchInventoryUseCase(repo, branchRepo, lotRepo);
     const branch = await branchRepo.create({ code: "SUC1", name: "Sucursal Centro" });
     branchId = branch.id;
 
@@ -50,5 +53,34 @@ describe("ListBranchInventoryUseCase", () => {
     await expect(
       useCase.execute({ branchId: "nope", page: 1, pageSize: 20, belowReorder: false })
     ).rejects.toThrow(InventoryBranchNotFoundError);
+  });
+
+  it("returns null expiryStatus for products without registered lots", async () => {
+    const result = await useCase.execute({ branchId, page: 1, pageSize: 20, belowReorder: false });
+    const arroz = result.items.find((i) => i.productCode === "ARROZ_001")!;
+    expect(arroz.expiryStatus).toBeNull();
+    expect(arroz.nearestExpirationDate).toBeNull();
+  });
+
+  it("computes expiryStatus from the registered lot", async () => {
+    const soon = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    lotRepo.seedLot({ branchId, productId: "prod-arroz", lotNumber: "L1", expirationDate: soon });
+
+    const result = await useCase.execute({ branchId, page: 1, pageSize: 20, belowReorder: false });
+    const arroz = result.items.find((i) => i.productCode === "ARROZ_001")!;
+    expect(arroz.expiryStatus).toBe("critical");
+    expect(arroz.nearestExpirationLotNumber).toBe("L1");
+  });
+
+  it("uses the nearest lot when a product has multiple lots", async () => {
+    const far = new Date(Date.now() + 45 * 24 * 60 * 60 * 1000);
+    const near = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+    lotRepo.seedLot({ branchId, productId: "prod-arroz", lotNumber: "L-FAR", expirationDate: far });
+    lotRepo.seedLot({ branchId, productId: "prod-arroz", lotNumber: "L-NEAR", expirationDate: near });
+
+    const result = await useCase.execute({ branchId, page: 1, pageSize: 20, belowReorder: false });
+    const arroz = result.items.find((i) => i.productCode === "ARROZ_001")!;
+    expect(arroz.nearestExpirationLotNumber).toBe("L-NEAR");
+    expect(arroz.expiryStatus).toBe("warning");
   });
 });

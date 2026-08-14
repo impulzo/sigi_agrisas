@@ -50,10 +50,21 @@ interface ProductMock {
   isActive: boolean;
 }
 
+export interface InventoryLotMock {
+  id: string;
+  branchId: string;
+  productId: string;
+  purchaseItemId: string;
+  lotNumber: string;
+  expirationDate: Date;
+  quantity: number;
+}
+
 export class InMemoryPurchaseRepository implements PurchaseRepository {
   private purchases = new Map<string, Purchase>();
   private itemsByPurchase = new Map<string, PurchaseItem[]>();
   providerPaymentsByPurchase = new Map<string, ProviderPayment[]>();
+  inventoryLots = new Map<string, InventoryLotMock>();
   providers = new Map<string, ProviderMock>();
   branches = new Map<string, BranchMock>();
   paymentMethods = new Map<string, PaymentMethodMock>();
@@ -173,6 +184,8 @@ export class InMemoryPurchaseRepository implements PurchaseRepository {
       discountPct: number | null;
       ivaRate: number | null;
       iepsRate: number | null;
+      lotNumber: string | null;
+      expirationDate: Date | null;
     }> = [];
 
     for (const item of data.items) {
@@ -196,6 +209,8 @@ export class InMemoryPurchaseRepository implements PurchaseRepository {
         discountPct: item.discountPct,
         ivaRate: product.isTaxable ? product.ivaRate : 0,
         iepsRate: product.isTaxable ? product.iepsRate : 0,
+        lotNumber: item.lotNumber ?? null,
+        expirationDate: item.expirationDate ?? null,
       });
     }
 
@@ -261,6 +276,21 @@ export class InMemoryPurchaseRepository implements PurchaseRepository {
     this.itemsByPurchase.set(purchaseId, items);
     this.providerPaymentsByPurchase.set(purchaseId, []);
 
+    for (let i = 0; i < items.length; i++) {
+      const snapshot = snapshots[i];
+      if (!snapshot.lotNumber || !snapshot.expirationDate) continue;
+      const lotId = randomUUID();
+      this.inventoryLots.set(lotId, {
+        id: lotId,
+        branchId: data.branchId,
+        productId: snapshot.productId,
+        purchaseItemId: items[i].id,
+        lotNumber: snapshot.lotNumber,
+        expirationDate: snapshot.expirationDate,
+        quantity: snapshot.quantity,
+      });
+    }
+
     return { purchase, items, providerPayments: [], joined: this.joinedFor(purchase) };
   }
 
@@ -283,6 +313,11 @@ export class InMemoryPurchaseRepository implements PurchaseRepository {
     if (outstanding > 0) {
       const provider = this.providers.get(current.providerId);
       if (provider) provider.currentBalance -= outstanding;
+    }
+
+    const itemIds = new Set((this.itemsByPurchase.get(id) ?? []).map((item) => item.id));
+    for (const [lotId, lot] of this.inventoryLots) {
+      if (itemIds.has(lot.purchaseItemId)) this.inventoryLots.delete(lotId);
     }
 
     const cancelled = Purchase.create({

@@ -24,6 +24,9 @@ const BASE_DTO = {
   reservedQuantity: 10,
   reorderPoint: 20,
   updatedAt: "2026-05-20T00:00:00.000Z",
+  nearestExpirationDate: null,
+  nearestExpirationLotNumber: null,
+  expiryStatus: null,
 };
 
 function mockFetch(status: number, body: unknown): typeof fetch {

@@ -262,6 +262,8 @@ export function CreatePurchasePage() {
                 onUpdateQuantity={form.updateQuantity}
                 onUpdateUnitCost={form.updateUnitCost}
                 onUpdateDiscount={form.updateDiscount}
+                onUpdateLot={form.updateLot}
+                onUpdateExpiration={form.updateExpiration}
                 onRemove={form.removeLine}
               />
             ))}

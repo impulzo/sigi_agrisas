@@ -14,6 +14,8 @@ interface PurchaseLineRowProps {
   onUpdateQuantity: (id: string, qty: number) => void;
   onUpdateUnitCost: (id: string, cost: number) => void;
   onUpdateDiscount: (id: string, pct: number) => void;
+  onUpdateLot: (id: string, lotNumber: string) => void;
+  onUpdateExpiration: (id: string, expirationDate: string) => void;
   onRemove: (id: string) => void;
 }
 
@@ -22,6 +24,8 @@ export function PurchaseLineRow({
   onUpdateQuantity,
   onUpdateUnitCost,
   onUpdateDiscount,
+  onUpdateLot,
+  onUpdateExpiration,
   onRemove,
 }: PurchaseLineRowProps) {
   const [quantityDraft, setQuantityDraft] = useState(String(line.quantity));
@@ -114,6 +118,27 @@ export function PurchaseLineRow({
               if (!isNaN(v)) onUpdateDiscount(line.id, v);
             }}
             className="w-16 rounded-sm border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+
+        <div className="flex items-center gap-1">
+          <label className="text-label-sm text-on-surface-variant">Lote</label>
+          <input
+            type="text"
+            value={line.lotNumber}
+            onChange={(e) => onUpdateLot(line.id, e.target.value)}
+            placeholder="Opcional"
+            className="w-28 rounded-sm border border-outline px-2 py-1 text-body-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+
+        <div className="flex items-center gap-1">
+          <label className="text-label-sm text-on-surface-variant">Caducidad</label>
+          <input
+            type="date"
+            value={line.expirationDate}
+            onChange={(e) => onUpdateExpiration(line.id, e.target.value)}
+            className="rounded-sm border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 
