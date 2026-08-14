@@ -94,13 +94,10 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
               alt="Logo"
               className="h-[105px] w-[75px] object-contain mb-[4.8px]"
             />
-            {ticketSettings?.headerText ? (
-              <p className="text-body-sm text-on-surface-variant whitespace-pre-wrap">{ticketSettings.headerText}</p>
-            ) : (
-              <p className="text-body-sm text-on-surface-variant">Centro Agrícola Integral</p>
-            )}
-            {(ticketSettings?.businessAddress || ticketSettings?.businessPhone || ticketSettings?.businessTaxRegime) && (
+            {(ticketSettings?.businessName || ticketSettings?.businessRfc || ticketSettings?.businessAddress || ticketSettings?.businessPhone || ticketSettings?.businessTaxRegime) && (
               <div className="text-body-sm text-on-surface-variant whitespace-pre-wrap">
+                {ticketSettings.businessName && <p className="font-bold text-on-surface">{ticketSettings.businessName}</p>}
+                {ticketSettings.businessRfc && <p>RFC: {ticketSettings.businessRfc}</p>}
                 {ticketSettings.businessAddress && <p>{ticketSettings.businessAddress}</p>}
                 {ticketSettings.businessPhone && <p>Tel. {ticketSettings.businessPhone}</p>}
                 {ticketSettings.businessTaxRegime && <p>{ticketSettings.businessTaxRegime}</p>}

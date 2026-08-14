@@ -6,7 +6,7 @@ Vista previa en pantalla del ticket de una venta con el diseño de marca de Agri
 ---
 ## Requirements
 ### Requirement: Ticket preview page
-The system SHALL render `/sales/:id/ticket`, gated by the same `sales:read` permission (and branch scoping) that already protects `/sales/:id`. The page SHALL reuse the `SaleDetail` data already available to the sale detail flow (no additional data fetch beyond what `GET /sales/:id` already provides) and render: brand logo/header text (from `GET /settings/ticket`, falling back to the Agrisas default brand mark when `logoUrl` is `null`), folio label (labeled "Folio" — NOT "Orden"), date, seller name (labeled "Vendedor", over `cashierName` — NOT "Cajero"), a business info section (address, "Tel. <phone>", and tax regime from `GET /settings/ticket`, omitting `null` fields), a line-item table (product name, quantity × unit price, line total), a financial summary showing Subtotal, IVA, and IEPS (ALWAYS visible, even when `$0.00` — consistent with `pos-ui`'s `TaxBreakdownRows`/`CartTotals` behavior), Total (labeled "Total a pagar"), a customer section (RFC, name, address — ONLY when the sale has `customerId`), credit conditions ("Condiciones: Crédito a <N> días" — ONLY when `customerCreditDays` is non-null), payment method name, footer text (from `GET /settings/ticket`), a decorative barcode-style element rendering `sale.folioCode` (the fully formatted folio, with its prefix — never the bare `folioNumber`) as text (no barcode-generation library), and the legend text (from `GET /settings/ticket.legendText`, omitted when `null`).
+The system SHALL render `/sales/:id/ticket`, gated by the same `sales:read` permission (and branch scoping) that already protects `/sales/:id`. The page SHALL reuse the `SaleDetail` data already available to the sale detail flow (no additional data fetch beyond what `GET /sales/:id` already provides) and render: brand logo (from `GET /settings/ticket`, falling back to the Agrisas default brand mark when `logoUrl` is `null` — with NO header-text tagline fallback of any kind), folio label (labeled "Folio" — NOT "Orden"), date, seller name (labeled "Vendedor", over `cashierName` — NOT "Cajero"), a business info section immediately below the logo (razón social `businessName`, RFC `businessRfc`, address, "Tel. <phone>", and tax regime from `GET /settings/ticket`, omitting `null` fields), a line-item table (product name, quantity × unit price, line total), a financial summary showing Subtotal, IVA, and IEPS (ALWAYS visible, even when `$0.00` — consistent with `pos-ui`'s `TaxBreakdownRows`/`CartTotals` behavior), Total (labeled "Total a pagar"), a customer section (RFC, name, address — ONLY when the sale has `customerId`), credit conditions ("Condiciones: Crédito a <N> días" — ONLY when `customerCreditDays` is non-null), payment method name, footer text (from `GET /settings/ticket`), a decorative barcode-style element rendering `sale.folioCode` (the fully formatted folio, with its prefix — never the bare `folioNumber`) as text (no barcode-generation library), and the legend text (from `GET /settings/ticket.legendText`, omitted when `null`). `headerText` no longer exists as a field of `TicketSettings`; there is no header-text paragraph and no fallback tagline (e.g. the prior "Centro Agrícola Integral" text) anywhere on this page.
 
 This page is display-only styling on top of existing data — it introduces no new backend endpoint for reading sale data.
 
@@ -31,8 +31,12 @@ This page is display-only styling on top of existing data — it introduces no n
 - **THEN** the preview omits the customer section and the conditions line entirely (no empty rows)
 
 #### Scenario: Business info and legend from settings
-- **WHEN** `GET /settings/ticket` returns `businessAddress`, `businessPhone`, `businessTaxRegime`, and `legendText`
-- **THEN** the preview shows the business section under the header and the legend near the footer; `null` fields are omitted
+- **WHEN** `GET /settings/ticket` returns `businessName`, `businessRfc`, `businessAddress`, `businessPhone`, `businessTaxRegime`, and `legendText`
+- **THEN** the preview shows the business section immediately under the logo, in this order: razón social (`businessName`), "RFC: <businessRfc>", address, "Tel. <phone>", tax regime, and the legend near the footer; `null` fields are each omitted individually without breaking the layout
+
+#### Scenario: Header text paragraph and fallback tagline no longer rendered
+- **WHEN** the preview page renders the brand header block, regardless of whether `GET /settings/ticket` succeeded, is still loading, or every `business*` field is `null`
+- **THEN** no header-text paragraph and no fallback tagline (e.g. "Centro Agrícola Integral") is rendered between the logo and the business info section — that slot was removed, not merely left empty
 
 #### Scenario: IVA and IEPS always visible, even at $0
 - **WHEN** the sale has no `IEPS`-taxed items (`iepsTotal = 0`)
@@ -47,7 +51,7 @@ This page is display-only styling on top of existing data — it introduces no n
 - **THEN** the logo `img` is sized to 75px wide × 105px tall with `object-fit: contain` (matching the printed ticket) so both views show the logo at the same size
 
 #### Scenario: Logo bottom margin reduced 40%
-- **WHEN** the preview page renders the logo above the header text
+- **WHEN** the preview page renders the logo above the business info section
 - **THEN** the logo's bottom margin is `mb-[4.8px]` — a 40% reduction from the prior `mb-2` (8px)
 
 #### Scenario: Folio rendered below the decorative barcode

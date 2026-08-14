@@ -530,6 +530,6 @@ Workflow obligatorio: ver "Protocolo de desarrollo (obligatorio) — SDD con Ope
 
 Specs canónicas (source of truth para reglas finas): ver `openspec/specs/<capability>/spec.md`.
 
-Changes archivados (en orden cronológico): create-auth-api, add-login-ui, fix-login, emit-token-on-register, panel-front, add-roles-permissions, add-roles-ui, admin-users-crud, users-ui, logout-ui, crud-settings-models, add-catalogs-ui, add-providers-crud, add-providers-ui, inventory-backend, ui-ux-inventory, add-pos, ui-ux-pos, add-quotes-crud, ui-ux-quotes, apis-devoluciones, ui-ux-devoluciones, api-abonos, dosification-surcharge-settings.
+Changes archivados (en orden cronológico): create-auth-api, add-login-ui, fix-login, emit-token-on-register, panel-front, add-roles-permissions, add-roles-ui, admin-users-crud, users-ui, logout-ui, crud-settings-models, add-catalogs-ui, add-providers-crud, add-providers-ui, inventory-backend, ui-ux-inventory, add-pos, ui-ux-pos, add-quotes-crud, ui-ux-quotes, apis-devoluciones, ui-ux-devoluciones, api-abonos, dosification-surcharge-settings, add-ticket-issuer-fiscal-data, remove-ticket-header-text.
 
 Changes activos: ver `openspec/changes/` (excluyendo `archive/`).

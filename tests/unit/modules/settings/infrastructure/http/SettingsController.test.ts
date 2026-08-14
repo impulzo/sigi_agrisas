@@ -42,12 +42,13 @@ describe("SettingsController", () => {
       const body = await res.json();
       expect(body).toEqual({
         logoUrl: null,
-        headerText: null,
         footerText: null,
         paperWidth: "80mm",
-        businessAddress: "Ocotlán de Morelos, Oaxaca, C.P. 71520",
-        businessPhone: "951 292 80 86",
-        businessTaxRegime: "612 Personas Físicas con Actividad Empresarial",
+        businessName: null,
+        businessRfc: null,
+        businessAddress: null,
+        businessPhone: null,
+        businessTaxRegime: null,
         legendText: "Favor de revisar su mercancia. No se hacen cambios ni devoluciones. Gracias por su compra.",
       });
     });
@@ -82,6 +83,36 @@ describe("SettingsController", () => {
       expect(body.businessAddress).toBe("Ocotlan de Morelos, Oaxaca. CP 71520");
       expect(body.businessTaxRegime).toBe("612");
       expect(body.legendText).toBe("Leyenda");
+    });
+
+    it("returns 200 on a valid businessName/businessRfc update", async () => {
+      const { controller } = buildController();
+      const res = await controller.updateTicket(req("PATCH", { businessName: "Agrisas S.A. de C.V.", businessRfc: "AGR010101AB1" }));
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.businessName).toBe("Agrisas S.A. de C.V.");
+      expect(body.businessRfc).toBe("AGR010101AB1");
+    });
+
+    it("returns 400 when businessRfc exceeds 13 chars", async () => {
+      const { controller } = buildController();
+      const res = await controller.updateTicket(req("PATCH", { businessRfc: "AGR010101AB123" }));
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 when businessName exceeds 200 chars", async () => {
+      const { controller } = buildController();
+      const res = await controller.updateTicket(req("PATCH", { businessName: "A".repeat(201) }));
+      expect(res.status).toBe(400);
+    });
+
+    it("ignores a legacy headerText field in the body without rejecting the request", async () => {
+      const { controller } = buildController();
+      const res = await controller.updateTicket(req("PATCH", { headerText: "algún texto", footerText: "Gracias" }));
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.footerText).toBe("Gracias");
+      expect(body.headerText).toBeUndefined();
     });
   });
 

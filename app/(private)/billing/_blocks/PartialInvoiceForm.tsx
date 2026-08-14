@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CustomerPicker } from "../../pos/_blocks/CustomerPicker";
 import { CustomerQuickAddModal } from "../../pos/_blocks/CustomerQuickAddModal";
 import { ProductCatalogPanel } from "../../pos/_blocks/ProductCatalogPanel";
 import { PartialInvoiceLineRow } from "./PartialInvoiceLineRow";
+import { InvoicePreviewModal } from "./InvoicePreviewModal";
 import { usePartialInvoiceForm } from "../_logic/hooks/usePartialInvoiceForm";
+import { buildInvoicePreview } from "../_logic/lib/buildInvoicePreview";
 import { ReceiverFiscalDataIncompleteError, FacturamaStampError } from "../_logic/errors";
 import type { CustomerDto } from "../../pos/_logic/types/api";
 import type { ProductDto } from "../../pos/_logic/types/api";
@@ -36,6 +38,34 @@ export function PartialInvoiceForm() {
   const [customerId, setCustomerId] = useState("");
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showCatalog, setShowCatalog] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const canPreview = lines.length > 0 && !!customer && fiscalMissingFields.length === 0;
+
+  const previewData = useMemo(() => {
+    if (!customer) return null;
+    return buildInvoicePreview({
+      issuer: { name: "Agrisas" },
+      receiver: customer,
+      lines: lines.map((l) => ({
+        description: l.description,
+        productCode: l.productCode,
+        satProductCode: l.satProductCode || null,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        discountPct: l.discountPct,
+        ivaRate: l.ivaRate,
+        iepsRate: l.iepsRate,
+      })),
+      paymentForm,
+      paymentMethod,
+    });
+  }, [customer, lines, paymentForm, paymentMethod]);
+
+  async function handleConfirmStamp() {
+    setShowPreview(false);
+    await submit();
+  }
 
   function handleCustomerSelect(id: string, dto: CustomerDto | null) {
     setCustomerId(id);
@@ -240,15 +270,33 @@ export function PartialInvoiceForm() {
             <span className="tabular-nums">{MX.format(totals.total)}</span>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => submit()}
-          disabled={isSubmitting || lines.length === 0 || !customer || fiscalMissingFields.length > 0}
-          className="rounded-full bg-secondary text-on-secondary px-6 py-2.5 text-label-lg font-medium hover:bg-secondary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSubmitting ? "Timbrando…" : "Emitir factura parcial"}
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => setShowPreview(true)}
+            disabled={!canPreview}
+            className="rounded-full border border-outline px-6 py-2.5 text-label-lg font-medium hover:bg-surface-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Vista previa
+          </button>
+          <button
+            type="button"
+            onClick={() => submit()}
+            disabled={isSubmitting || lines.length === 0 || !customer || fiscalMissingFields.length > 0}
+            className="rounded-full bg-secondary text-on-secondary px-6 py-2.5 text-label-lg font-medium hover:bg-secondary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? "Timbrando…" : "Emitir factura parcial"}
+          </button>
+        </div>
       </div>
+
+      <InvoicePreviewModal
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        data={previewData}
+        onConfirmStamp={handleConfirmStamp}
+        isSubmitting={isSubmitting}
+      />
 
       {showQuickAdd && (
         <CustomerQuickAddModal

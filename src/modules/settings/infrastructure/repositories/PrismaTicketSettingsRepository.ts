@@ -6,9 +6,10 @@ const SINGLETON_ID = "ticket-settings-singleton";
 
 type Row = {
   logoUrl: string | null;
-  headerText: string | null;
   footerText: string | null;
   paperWidth: string;
+  businessName: string | null;
+  businessRfc: string | null;
   businessAddress: string | null;
   businessPhone: string | null;
   businessTaxRegime: string | null;
@@ -18,9 +19,10 @@ type Row = {
 function toEntity(row: Row): TicketSettings {
   return {
     logoUrl: row.logoUrl,
-    headerText: row.headerText,
     footerText: row.footerText,
     paperWidth: row.paperWidth as PaperWidth,
+    businessName: row.businessName,
+    businessRfc: row.businessRfc,
     businessAddress: row.businessAddress,
     businessPhone: row.businessPhone,
     businessTaxRegime: row.businessTaxRegime,
@@ -41,18 +43,20 @@ export class PrismaTicketSettingsRepository implements TicketSettingsRepository 
       where: { id: SINGLETON_ID },
       create: {
         id: SINGLETON_ID,
-        headerText: data.headerText !== undefined ? data.headerText : DEFAULT_TICKET_SETTINGS.headerText,
         footerText: data.footerText !== undefined ? data.footerText : DEFAULT_TICKET_SETTINGS.footerText,
         paperWidth: data.paperWidth !== undefined ? data.paperWidth : DEFAULT_TICKET_SETTINGS.paperWidth,
+        businessName: data.businessName !== undefined ? data.businessName : DEFAULT_TICKET_SETTINGS.businessName,
+        businessRfc: data.businessRfc !== undefined ? data.businessRfc : DEFAULT_TICKET_SETTINGS.businessRfc,
         businessAddress: data.businessAddress !== undefined ? data.businessAddress : DEFAULT_TICKET_SETTINGS.businessAddress,
         businessPhone: data.businessPhone !== undefined ? data.businessPhone : DEFAULT_TICKET_SETTINGS.businessPhone,
         businessTaxRegime: data.businessTaxRegime !== undefined ? data.businessTaxRegime : DEFAULT_TICKET_SETTINGS.businessTaxRegime,
         legendText: data.legendText !== undefined ? data.legendText : DEFAULT_TICKET_SETTINGS.legendText,
       },
       update: {
-        ...(data.headerText !== undefined ? { headerText: data.headerText } : {}),
         ...(data.footerText !== undefined ? { footerText: data.footerText } : {}),
         ...(data.paperWidth !== undefined ? { paperWidth: data.paperWidth } : {}),
+        ...(data.businessName !== undefined ? { businessName: data.businessName } : {}),
+        ...(data.businessRfc !== undefined ? { businessRfc: data.businessRfc } : {}),
         ...(data.businessAddress !== undefined ? { businessAddress: data.businessAddress } : {}),
         ...(data.businessPhone !== undefined ? { businessPhone: data.businessPhone } : {}),
         ...(data.businessTaxRegime !== undefined ? { businessTaxRegime: data.businessTaxRegime } : {}),
@@ -68,9 +72,10 @@ export class PrismaTicketSettingsRepository implements TicketSettingsRepository 
       create: {
         id: SINGLETON_ID,
         logoUrl,
-        headerText: DEFAULT_TICKET_SETTINGS.headerText,
         footerText: DEFAULT_TICKET_SETTINGS.footerText,
         paperWidth: DEFAULT_TICKET_SETTINGS.paperWidth,
+        businessName: DEFAULT_TICKET_SETTINGS.businessName,
+        businessRfc: DEFAULT_TICKET_SETTINGS.businessRfc,
         businessAddress: DEFAULT_TICKET_SETTINGS.businessAddress,
         businessPhone: DEFAULT_TICKET_SETTINGS.businessPhone,
         businessTaxRegime: DEFAULT_TICKET_SETTINGS.businessTaxRegime,

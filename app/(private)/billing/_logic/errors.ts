@@ -70,3 +70,7 @@ export class InvoiceNotStampedError extends Error {
 export class InvoiceEmailSendFailedError extends Error {
   constructor() { super("No se pudo enviar el correo. Intenta de nuevo."); this.name = "InvoiceEmailSendFailedError"; }
 }
+
+export class InvoiceFileDownloadFailedError extends Error {
+  constructor() { super("No se pudo descargar el archivo de la factura. Intenta de nuevo."); this.name = "InvoiceFileDownloadFailedError"; }
+}

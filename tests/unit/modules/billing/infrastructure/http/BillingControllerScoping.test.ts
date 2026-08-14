@@ -279,6 +279,49 @@ describe("BillingController — branch scoping: download", () => {
     );
     expect(res.status).toBe(200);
   });
+
+  it("400 InvoiceNotStamped when the invoice has no facturamaCfdiId", async () => {
+    const repo = new InMemoryInvoiceRepository();
+    const inv = await repo.createStamped(makeInvoiceData(VALID_BRANCH, { facturamaCfdiId: null }));
+
+    const { controller } = buildController({ repo });
+    const res = await controller.download(
+      req("GET", `/admin/invoices/${inv.id}/download?format=pdf`),
+      inv.id
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invoice has not been stamped");
+  });
+
+  it("502 when the Facturama gateway fails to retrieve the file", async () => {
+    class FailingGateway extends FakeFacturamaGateway {
+      async download(): Promise<never> {
+        throw new Error("Facturama timeout");
+      }
+    }
+    const repo = new InMemoryInvoiceRepository();
+    const inv = await repo.createStamped(makeInvoiceData(VALID_BRANCH));
+
+    const { controller } = buildController({ repo, gateway: new FailingGateway() });
+    const res = await controller.download(
+      req("GET", `/admin/invoices/${inv.id}/download?format=pdf`),
+      inv.id
+    );
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error).toBe("Failed to download invoice file");
+  });
+
+  it("404 when the invoice does not exist", async () => {
+    const { controller } = buildController();
+    const missingId = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee";
+    const res = await controller.download(
+      req("GET", `/admin/invoices/${missingId}/download?format=pdf`),
+      missingId
+    );
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("BillingController — sendEmail", () => {

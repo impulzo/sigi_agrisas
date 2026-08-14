@@ -24,6 +24,7 @@ import {
   InvoiceNoEmailError,
   InvoiceNotStampedError,
   InvoiceEmailSendFailedError,
+  InvoiceFileDownloadFailedError,
 } from "../../domain/errors";
 import { isValidCancellationMotive } from "../../domain/value-objects/CancellationMotive";
 import {
@@ -325,6 +326,12 @@ export class BillingController {
     } catch (err) {
       if (err instanceof InvoiceNotFoundError) {
         return NextResponse.json({ error: "InvoiceNotFound" }, { status: 404 });
+      }
+      if (err instanceof InvoiceNotStampedError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      if (err instanceof InvoiceFileDownloadFailedError) {
+        return NextResponse.json({ error: err.message }, { status: 502 });
       }
       throw err;
     }

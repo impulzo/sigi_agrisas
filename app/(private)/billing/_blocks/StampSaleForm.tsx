@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { SalePickerField } from "./SalePickerField";
+import { InvoicePreviewModal } from "./InvoicePreviewModal";
 import { useStampSaleForm } from "../_logic/hooks/useStampSaleForm";
+import { useInvoicePreview } from "../_logic/hooks/useInvoicePreview";
 import { SaleAlreadyInvoicedError, ReceiverFiscalDataIncompleteError, FacturamaStampError } from "../_logic/errors";
 
 const PAYMENT_FORMS = [
@@ -33,6 +36,18 @@ interface StampSaleFormProps {
 
 export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleFormProps) {
   const { form, setField, isSubmitting, error, clearError, submit } = useStampSaleForm(initialSaleId, initialSaleLabel);
+  const [showPreview, setShowPreview] = useState(false);
+  const preview = useInvoicePreview();
+
+  function handleOpenPreview() {
+    setShowPreview(true);
+    preview.load(form.saleId, { paymentForm: form.paymentForm, paymentMethod: form.paymentMethod });
+  }
+
+  async function handleConfirmStamp() {
+    setShowPreview(false);
+    await submit();
+  }
 
   function renderError() {
     if (!error) return null;
@@ -128,6 +143,14 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
       <div className="flex justify-end gap-3">
         <button
           type="button"
+          onClick={handleOpenPreview}
+          disabled={!form.saleId}
+          className="rounded-full border border-outline px-6 py-2.5 text-label-lg font-medium hover:bg-surface-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Vista previa
+        </button>
+        <button
+          type="button"
           onClick={() => submit()}
           disabled={isSubmitting || !form.saleId}
           className="rounded-full bg-primary text-on-primary px-6 py-2.5 text-label-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -135,6 +158,16 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
           {isSubmitting ? "Timbrando…" : "Emitir factura"}
         </button>
       </div>
+
+      <InvoicePreviewModal
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        data={preview.data}
+        isLoading={preview.isLoading}
+        loadError={preview.error}
+        onConfirmStamp={handleConfirmStamp}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }

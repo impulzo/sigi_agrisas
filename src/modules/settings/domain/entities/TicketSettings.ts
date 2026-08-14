@@ -2,9 +2,10 @@ export type PaperWidth = "58mm" | "80mm";
 
 export interface TicketSettings {
   logoUrl: string | null;
-  headerText: string | null;
   footerText: string | null;
   paperWidth: PaperWidth;
+  businessName: string | null;
+  businessRfc: string | null;
   businessAddress: string | null;
   businessPhone: string | null;
   businessTaxRegime: string | null;
@@ -13,11 +14,12 @@ export interface TicketSettings {
 
 export const DEFAULT_TICKET_SETTINGS: TicketSettings = {
   logoUrl: null,
-  headerText: null,
   footerText: null,
   paperWidth: "80mm",
-  businessAddress: "Ocotlán de Morelos, Oaxaca, C.P. 71520",
-  businessPhone: "951 292 80 86",
-  businessTaxRegime: "612 Personas Físicas con Actividad Empresarial",
+  businessName: null,
+  businessRfc: null,
+  businessAddress: null,
+  businessPhone: null,
+  businessTaxRegime: null,
   legendText: "Favor de revisar su mercancia. No se hacen cambios ni devoluciones. Gracias por su compra.",
 };

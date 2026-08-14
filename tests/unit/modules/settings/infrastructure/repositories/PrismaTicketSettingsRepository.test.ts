@@ -9,6 +9,8 @@ function makePrisma(upsertImpl: jest.Mock) {
 }
 
 function resolveLikeRow(args: {
+  businessName?: string | null;
+  businessRfc?: string | null;
   businessAddress?: string | null;
   businessPhone?: string | null;
   businessTaxRegime?: string | null;
@@ -16,9 +18,10 @@ function resolveLikeRow(args: {
 }) {
   return {
     logoUrl: null,
-    headerText: null,
     footerText: null,
     paperWidth: "80mm",
+    businessName: args.businessName ?? null,
+    businessRfc: args.businessRfc ?? null,
     businessAddress: args.businessAddress ?? null,
     businessPhone: args.businessPhone ?? null,
     businessTaxRegime: args.businessTaxRegime ?? null,
@@ -30,6 +33,8 @@ describe("PrismaTicketSettingsRepository", () => {
   it("first write defaults absent business fields to the business defaults", async () => {
     const upsert = jest.fn().mockResolvedValue(
       resolveLikeRow({
+        businessName: DEFAULT_TICKET_SETTINGS.businessName,
+        businessRfc: DEFAULT_TICKET_SETTINGS.businessRfc,
         businessAddress: DEFAULT_TICKET_SETTINGS.businessAddress,
         businessPhone: DEFAULT_TICKET_SETTINGS.businessPhone,
         businessTaxRegime: DEFAULT_TICKET_SETTINGS.businessTaxRegime,
@@ -41,6 +46,8 @@ describe("PrismaTicketSettingsRepository", () => {
     await repo.update({ paperWidth: "58mm" });
 
     const create = upsert.mock.calls[0][0].create;
+    expect(create.businessName).toBe(DEFAULT_TICKET_SETTINGS.businessName);
+    expect(create.businessRfc).toBe(DEFAULT_TICKET_SETTINGS.businessRfc);
     expect(create.businessAddress).toBe(DEFAULT_TICKET_SETTINGS.businessAddress);
     expect(create.businessPhone).toBe(DEFAULT_TICKET_SETTINGS.businessPhone);
     expect(create.businessTaxRegime).toBe(DEFAULT_TICKET_SETTINGS.businessTaxRegime);
@@ -77,5 +84,17 @@ describe("PrismaTicketSettingsRepository", () => {
 
     const update = upsert.mock.calls[0][0].update;
     expect(update).toEqual({ businessPhone: null });
+  });
+
+  it("update branch includes businessName/businessRfc when provided", async () => {
+    const upsert = jest.fn().mockResolvedValue(
+      resolveLikeRow({ businessName: "Agrisas S.A. de C.V.", businessRfc: "AGR010101AB1" })
+    );
+    const repo = new PrismaTicketSettingsRepository(makePrisma(upsert));
+
+    await repo.update({ businessName: "Agrisas S.A. de C.V.", businessRfc: "AGR010101AB1" });
+
+    const update = upsert.mock.calls[0][0].update;
+    expect(update).toEqual({ businessName: "Agrisas S.A. de C.V.", businessRfc: "AGR010101AB1" });
   });
 });

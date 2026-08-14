@@ -92,3 +92,11 @@ export class InvoiceEmailSendFailedError extends Error {
     this.cause = cause;
   }
 }
+
+export class InvoiceFileDownloadFailedError extends Error {
+  constructor(cause: unknown) {
+    super("Failed to download invoice file");
+    this.name = "InvoiceFileDownloadFailedError";
+    this.cause = cause;
+  }
+}

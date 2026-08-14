@@ -19,6 +19,8 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
   const ivaTotal = sale.items.reduce((sum, item) => sum + item.lineIva, 0);
   const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
 
+  const businessName = ticketSettings?.businessName ?? null;
+  const businessRfc = ticketSettings?.businessRfc ?? null;
   const businessAddress = ticketSettings?.businessAddress ?? null;
   const businessPhone = ticketSettings?.businessPhone ?? null;
   const businessTaxRegime = ticketSettings?.businessTaxRegime ?? null;
@@ -42,14 +44,12 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
         // eslint-disable-next-line @next/next/no-img-element
         <img src="/logo.png" alt="Logo" />
       )}
-      {ticketSettings?.headerText && (
-        <p style={{ textAlign: "center", whiteSpace: "pre-wrap" }}>{ticketSettings.headerText}</p>
-      )}
-
       <hr />
 
       {/* Información del negocio */}
       <div style={{ textAlign: "center", whiteSpace: "pre-wrap" }}>
+        {businessName && <p style={{ fontWeight: "bold" }}>{businessName}</p>}
+        {businessRfc && <p>RFC: {businessRfc}</p>}
         {businessAddress && <p>{businessAddress}</p>}
         {businessPhone && <p>Tel. {businessPhone}</p>}
         {businessTaxRegime && <p>{businessTaxRegime}</p>}

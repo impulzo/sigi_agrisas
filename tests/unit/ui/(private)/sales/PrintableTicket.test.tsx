@@ -57,9 +57,10 @@ const sale: SaleDetail = {
 
 const defaultSettings: TicketSettingsDto = {
   logoUrl: null,
-  headerText: null,
   footerText: null,
   paperWidth: "80mm",
+  businessName: null,
+  businessRfc: null,
   businessAddress: null,
   businessPhone: null,
   businessTaxRegime: null,
@@ -68,11 +69,25 @@ const defaultSettings: TicketSettingsDto = {
 
 describe("PrintableTicket", () => {
   it("falls back to the embedded Agrisas logo when logoUrl is null", () => {
-    const settings: TicketSettingsDto = { ...defaultSettings, headerText: "Encabezado", footerText: "Pie" };
+    const settings: TicketSettingsDto = { ...defaultSettings, footerText: "Pie" };
     render(<PrintableTicket sale={sale} ticketSettings={settings} />);
 
     expect(screen.getByAltText("Logo")).toHaveAttribute("src", "/logo.png");
-    expect(screen.getByText("Encabezado")).toBeInTheDocument();
+  });
+
+  it("no longer renders a header text paragraph — business info is the first block after the logo", () => {
+    const settings: TicketSettingsDto = {
+      ...defaultSettings,
+      businessName: "Agrisas S.A. de C.V.",
+      businessRfc: "AGR010101AB1",
+    };
+    const { container } = render(<PrintableTicket sale={sale} ticketSettings={settings} />);
+
+    const paragraphs = Array.from(container.querySelectorAll("p")).map((p) => p.textContent);
+    expect(paragraphs).not.toContain("Encabezado");
+    const logo = screen.getByAltText("Logo");
+    const hr = container.querySelector("hr");
+    expect(logo.nextElementSibling).toBe(hr);
   });
 
   it("renders the logo when logoUrl is present", () => {
@@ -185,6 +200,26 @@ describe("PrintableTicket", () => {
     expect(screen.getByText("Ocotlan de Morelos, Oaxaca. CP 71520")).toBeInTheDocument();
     expect(screen.getByText("Tel. 951 292 80 86")).toBeInTheDocument();
     expect(screen.getByText("612 Personas Físicas con Actividad Empresarial")).toBeInTheDocument();
+  });
+
+  it("renders issuer razón social and RFC when set", () => {
+    const settings: TicketSettingsDto = {
+      ...defaultSettings,
+      businessName: "Agrisas S.A. de C.V.",
+      businessRfc: "AGR010101AB1",
+    };
+    render(<PrintableTicket sale={sale} ticketSettings={settings} />);
+
+    expect(screen.getByText("Agrisas S.A. de C.V.")).toBeInTheDocument();
+    expect(screen.getByText("RFC: AGR010101AB1")).toBeInTheDocument();
+  });
+
+  it("omits razón social and RFC lines when null (customer RFC section unaffected)", () => {
+    render(<PrintableTicket sale={sale} ticketSettings={defaultSettings} />);
+
+    // only the customer's "RFC: ..." line renders; no issuer razón social/RFC line
+    expect(screen.getAllByText(/^RFC:/)).toHaveLength(1);
+    expect(screen.getByText(/RFC: XAXX010101000/i)).toBeInTheDocument();
   });
 
   it("renders the legend text when set", () => {

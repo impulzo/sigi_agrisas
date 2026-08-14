@@ -1,4 +1,5 @@
 import { authFetch, NetworkError } from "../../../../_lib/authFetch";
+import { InvoiceNotFoundError, InvoiceNotStampedError, InvoiceFileDownloadFailedError } from "../errors";
 
 export async function downloadInvoiceFile(
   id: string,
@@ -12,6 +13,13 @@ export async function downloadInvoiceFile(
     throw new NetworkError();
   }
 
+  if (res.status === 404) throw new InvoiceNotFoundError();
+  if (res.status === 400) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    if (body.error === "Invoice has not been stamped") throw new InvoiceNotStampedError();
+    throw new NetworkError();
+  }
+  if (res.status === 502) throw new InvoiceFileDownloadFailedError();
   if (!res.ok) throw new NetworkError();
 
   const disposition = res.headers.get("Content-Disposition") ?? "";
@@ -19,6 +27,8 @@ export async function downloadInvoiceFile(
   const filename = filenameMatch?.[1] ?? `factura-${id}.${format}`;
 
   const blob = await res.blob();
+  if (blob.size === 0) throw new InvoiceNotStampedError();
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
