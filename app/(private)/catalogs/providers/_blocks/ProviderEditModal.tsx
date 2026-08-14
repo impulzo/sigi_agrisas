@@ -199,14 +199,14 @@ export function ProviderEditModal({
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-2xl bg-surface-container p-0 shadow-lg w-full max-w-2xl backdrop:bg-black/40"
+      className="rounded-lg bg-surface-container p-0 shadow-lg w-full max-w-2xl backdrop:bg-black/40"
     >
       <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
         <h2 className="text-title-md font-semibold text-on-surface">{title}</h2>
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
+          className="p-1.5 rounded text-on-surface-variant hover:bg-surface-container-high"
         >
           <Icon name="close" size={20} />
         </button>
@@ -230,7 +230,7 @@ export function ProviderEditModal({
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               disabled={!isCreateMode}
               placeholder="EJ. PROV_001"
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-surface-container"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-surface-container"
             />
             {(validationErrors.code || codeError) && (
               <p className="text-label-sm text-error mt-1">{validationErrors.code ?? codeError}</p>
@@ -247,7 +247,7 @@ export function ProviderEditModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Nombre comercial del proveedor"
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {validationErrors.name && (
               <p className="text-label-sm text-error mt-1">{validationErrors.name}</p>
@@ -283,7 +283,7 @@ export function ProviderEditModal({
               value={rfc}
               onChange={(e) => setRfc(e.target.value.toUpperCase())}
               placeholder="EJ. SAC120101A12"
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {(validationErrors.rfc || rfcError) && (
               <p className="text-label-sm text-error mt-1">{validationErrors.rfc ?? rfcError}</p>
@@ -300,7 +300,7 @@ export function ProviderEditModal({
               value={legalName}
               onChange={(e) => setLegalName(e.target.value)}
               placeholder="Denominación legal (opcional)"
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {validationErrors.legalName && (
               <p className="text-label-sm text-error mt-1">{validationErrors.legalName}</p>
@@ -319,7 +319,7 @@ export function ProviderEditModal({
                 onChange={(e) => setTaxRegime(e.target.value)}
                 placeholder="601"
                 maxLength={3}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.taxRegime && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.taxRegime}</p>
@@ -337,7 +337,7 @@ export function ProviderEditModal({
                 onChange={(e) => setCfdiUse(e.target.value.toUpperCase())}
                 placeholder="G03"
                 maxLength={3}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.cfdiUse && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.cfdiUse}</p>
@@ -355,7 +355,7 @@ export function ProviderEditModal({
                 onChange={(e) => setTaxZipCode(e.target.value)}
                 placeholder="06600"
                 maxLength={5}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.taxZipCode && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.taxZipCode}</p>
@@ -381,7 +381,7 @@ export function ProviderEditModal({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="contacto@proveedor.com"
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.email && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.email}</p>
@@ -398,7 +398,7 @@ export function ProviderEditModal({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Opcional"
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.phone && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.phone}</p>
@@ -416,7 +416,7 @@ export function ProviderEditModal({
               value={contactName}
               onChange={(e) => setContactName(e.target.value)}
               placeholder="Nombre del contacto principal (opcional)"
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {validationErrors.contactName && (
               <p className="text-label-sm text-error mt-1">{validationErrors.contactName}</p>
@@ -433,7 +433,7 @@ export function ProviderEditModal({
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Dirección postal (opcional)"
               rows={2}
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
             {validationErrors.address && (
               <p className="text-label-sm text-error mt-1">{validationErrors.address}</p>
@@ -450,7 +450,7 @@ export function ProviderEditModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Notas internas (opcional)"
               rows={2}
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
             {validationErrors.notes && (
               <p className="text-label-sm text-error mt-1">{validationErrors.notes}</p>
@@ -459,7 +459,7 @@ export function ProviderEditModal({
         </section>
 
         {mutationError && (
-          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded-lg">
+          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded">
             {mutationError}
           </p>
         )}
@@ -470,7 +470,7 @@ export function ProviderEditModal({
           type="button"
           onClick={onClose}
           disabled={isSaving}
-          className="px-5 py-2.5 rounded-xl border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
+          className="px-5 py-2.5 rounded-md border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
         >
           Cancelar
         </button>
@@ -478,7 +478,7 @@ export function ProviderEditModal({
           type="button"
           onClick={handleSave}
           disabled={isDiffEmpty || isSaving || hasValidationErrors}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isSaving ? (
             <>

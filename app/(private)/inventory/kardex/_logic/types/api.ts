@@ -21,7 +21,7 @@ export interface KardexMovementDto {
 }
 
 export interface KardexReportDto {
-  product: { id: string; code: string; name: string; unit: string };
+  product: { id: string; code: string; name: string; unit: string; unitDescription: string | null };
   header: {
     existenciaTotal: number;
     existenciaAlmacen: number;

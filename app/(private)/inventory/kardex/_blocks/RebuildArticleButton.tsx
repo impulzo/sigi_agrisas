@@ -24,7 +24,7 @@ export function RebuildArticleButton({ disabled, isRebuilding, onRebuild }: Rebu
         type="button"
         onClick={() => setConfirmOpen(true)}
         disabled={disabled || isRebuilding}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-outline text-on-surface text-label-lg font-medium hover:bg-surface-container transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md border border-outline text-on-surface text-label-lg font-medium hover:bg-surface-container transition-colors disabled:opacity-50"
       >
         <Icon name="restore" size={18} />
         {isRebuilding ? "Reconstruyendo…" : "Reconstruir Artículo"}

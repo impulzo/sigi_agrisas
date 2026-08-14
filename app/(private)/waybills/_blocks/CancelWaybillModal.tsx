@@ -76,7 +76,7 @@ export function CancelWaybillModal({ waybillId, type, open, onClose, onSuccess }
       <dialog
         ref={dialogRef}
         aria-labelledby="cancel-waybill-modal-title"
-        className="rounded-xl bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
+        className="rounded-md bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
       >
         <h2 id="cancel-waybill-modal-title" className="text-title-md font-semibold text-on-surface mb-2">
           Cancelar traspaso
@@ -86,7 +86,7 @@ export function CancelWaybillModal({ waybillId, type, open, onClose, onSuccess }
             ? "Al cancelar este traspaso, el inventario afectado será revertido y el CFDI se cancelará ante el SAT."
             : "Al cancelar este traspaso, el inventario afectado será revertido."}
         </p>
-        <div className="bg-tertiary-container/30 rounded-lg p-3 mb-4 text-body-sm text-on-surface-variant">
+        <div className="bg-tertiary-container/30 rounded p-3 mb-4 text-body-sm text-on-surface-variant">
           ⚠️ El stock de destino podría quedar negativo si ya se consumió parte de la mercancía transferida.
         </div>
 
@@ -103,7 +103,7 @@ export function CancelWaybillModal({ waybillId, type, open, onClose, onSuccess }
             }}
             rows={3}
             maxLength={500}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
             placeholder="Describe el motivo de cancelación..."
           />
           <div className="flex justify-between mt-1">
@@ -117,7 +117,7 @@ export function CancelWaybillModal({ waybillId, type, open, onClose, onSuccess }
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-4 py-2 rounded-lg text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
+            className="px-4 py-2 rounded text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
           >
             Volver
           </button>
@@ -125,7 +125,7 @@ export function CancelWaybillModal({ waybillId, type, open, onClose, onSuccess }
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="px-4 py-2 rounded-lg text-label-lg bg-error-container text-on-error-container hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded text-label-lg bg-error-container text-on-error-container hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? "Cancelando..." : "Cancelar traspaso"}
           </button>

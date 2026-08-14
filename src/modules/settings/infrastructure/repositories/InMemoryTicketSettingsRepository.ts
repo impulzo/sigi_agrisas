@@ -12,9 +12,10 @@ export class InMemoryTicketSettingsRepository implements TicketSettingsRepositor
     const base = this.row ?? DEFAULT_TICKET_SETTINGS;
     this.row = {
       ...base,
-      ...(data.headerText !== undefined ? { headerText: data.headerText } : {}),
       ...(data.footerText !== undefined ? { footerText: data.footerText } : {}),
       ...(data.paperWidth !== undefined ? { paperWidth: data.paperWidth } : {}),
+      ...(data.businessName !== undefined ? { businessName: data.businessName } : {}),
+      ...(data.businessRfc !== undefined ? { businessRfc: data.businessRfc } : {}),
       ...(data.businessAddress !== undefined ? { businessAddress: data.businessAddress } : {}),
       ...(data.businessPhone !== undefined ? { businessPhone: data.businessPhone } : {}),
       ...(data.businessTaxRegime !== undefined ? { businessTaxRegime: data.businessTaxRegime } : {}),

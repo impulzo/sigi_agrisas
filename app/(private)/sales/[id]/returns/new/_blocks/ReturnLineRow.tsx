@@ -28,7 +28,7 @@ export function ReturnLineRow({ productName, maxQuantity, value, error, onChange
         step="0.0001"
         value={value || ""}
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        className="w-24 rounded-md border border-outline px-2 py-1 text-body-sm text-right tabular-nums bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        className="w-24 rounded border border-outline px-2 py-1 text-body-sm text-right tabular-nums bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         aria-label={`Cantidad a devolver de ${productName}`}
       />
       <p className="text-label-sm text-on-surface-variant text-right">

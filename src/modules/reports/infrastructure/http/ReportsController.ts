@@ -170,6 +170,7 @@ const cashCutQuerySchema = z.object({
 
 const departmentPriceListQuerySchema = z.object({
   departmentId: z.string().uuid("Invalid departmentId").optional(),
+  branchId: z.string().uuid("Invalid branchId").optional(),
   format: cashCutFormatEnum,
 });
 
@@ -203,6 +204,8 @@ const salesByProductQuerySchema = z.object({
   customerId: z.string().uuid("Invalid customerId").optional(),
   from: dateOnly,
   to: dateOnly,
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
   format: cashCutFormatEnum,
 });
 
@@ -667,7 +670,10 @@ export class ReportsController {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const { departmentId, format } = parsed.data;
+    const { departmentId, branchId, format } = parsed.data;
+
+    const scopeResult = await resolveScopedBranchId(req, branchId, this.authzService);
+    if (scopeResult instanceof NextResponse) return scopeResult;
 
     const userId = req.headers.get("x-user-id")!;
     const email = req.headers.get("x-user-email") ?? "";
@@ -675,6 +681,7 @@ export class ReportsController {
     try {
       const dto = await this.departmentPriceListUseCase.execute({
         departmentId: departmentId ?? null,
+        branchId: scopeResult.branchId ?? null,
         generatedBy: { userId, email },
       });
 
@@ -855,7 +862,7 @@ export class ReportsController {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const { branchId, departmentId, customerId, format } = parsed.data;
+    const { branchId, departmentId, customerId, page, pageSize, format } = parsed.data;
 
     const todayStr = new Date().toISOString().split("T")[0];
     const from = parsed.data.from ?? new Date(`${todayStr}T00:00:00.000Z`);
@@ -869,16 +876,24 @@ export class ReportsController {
 
     const userId = req.headers.get("x-user-id")!;
     const email = req.headers.get("x-user-email") ?? "";
+    const forExport = format === "pdf" || format === "xlsx";
 
     try {
-      const dto = await this.salesByProductUseCase.execute({
+      const { dto, tooLarge } = await this.salesByProductUseCase.execute({
         branchId: scopeResult.branchId ?? null,
         departmentId: departmentId ?? null,
         customerId: customerId ?? null,
         from,
         to,
+        page,
+        pageSize,
+        forExport,
         generatedBy: { userId, email },
       });
+
+      if (forExport && tooLarge) {
+        return NextResponse.json({ error: "ReportTooLarge", limit: EXPORT_ROW_LIMIT }, { status: 409 });
+      }
 
       if (format === "pdf") {
         const buffer = await renderToBuffer(createElement(SalesByProductReportPdf, { data: dto }) as never);

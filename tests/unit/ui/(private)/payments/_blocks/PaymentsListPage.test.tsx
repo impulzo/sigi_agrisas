@@ -23,8 +23,8 @@ jest.mock("../../../../../../app/(private)/payments/_logic/hooks/usePaymentsList
 jest.mock("../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions", () => ({
   useBranchesOptions: () => ({ options: [] }),
 }));
-jest.mock("../../../../../../app/(private)/catalogs/_blocks/CatalogShell", () => ({
-  CatalogShell: ({ title, children, toolbar }: { title: string; children: React.ReactNode; toolbar: React.ReactNode }) => (
+jest.mock("../../../../../../app/_components/organisms/PageShell", () => ({
+  PageShell: ({ title, children, toolbar }: { title: string; children: React.ReactNode; toolbar: React.ReactNode }) => (
     <div>
       <h1>{title}</h1>
       {toolbar}

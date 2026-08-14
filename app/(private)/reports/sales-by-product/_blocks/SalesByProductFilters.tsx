@@ -1,7 +1,5 @@
 "use client";
 
-import { CustomerFilterCombobox } from "../../_blocks/CustomerFilterCombobox";
-
 interface Option {
   id: string;
   name: string;
@@ -15,8 +13,6 @@ interface Props {
   departmentId: string;
   onDepartmentIdChange: (v: string) => void;
   departments: Option[];
-  customerId: string;
-  onCustomerIdChange: (v: string) => void;
   from: string;
   onFromChange: (v: string) => void;
   to: string;
@@ -24,12 +20,11 @@ interface Props {
 }
 
 const inputCls =
-  "rounded-xl border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40";
+  "rounded-md border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40";
 
 export function SalesByProductFilters({
   branchId, onBranchIdChange, branches, showBranchFilter,
   departmentId, onDepartmentIdChange, departments,
-  customerId, onCustomerIdChange,
   from, onFromChange, to, onToChange,
 }: Props) {
   return (
@@ -55,10 +50,6 @@ export function SalesByProductFilters({
           ))}
         </select>
       </label>
-
-      <div className="w-56">
-        <CustomerFilterCombobox value={customerId} onChange={onCustomerIdChange} />
-      </div>
 
       <label className="flex flex-col gap-1">
         <span className="text-label-sm text-on-surface-variant">Desde</span>

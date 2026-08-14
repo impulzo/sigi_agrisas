@@ -13,9 +13,5 @@ export default function CatalogsLayout({ children }: { children: ReactNode }) {
     redirect("/auth/login");
   }
 
-  return (
-    <div className="px-gutter py-lg max-w-screen-2xl mx-auto">
-      {children}
-    </div>
-  );
+  return <>{children}</>;
 }

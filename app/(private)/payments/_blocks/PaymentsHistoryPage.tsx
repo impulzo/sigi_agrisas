@@ -149,7 +149,7 @@ export function PaymentsHistoryPage() {
       />
 
       {error && (
-        <div className="bg-error-container/20 rounded-xl px-4 py-3 text-body-sm text-error">
+        <div className="bg-error-container/20 rounded-md px-4 py-3 text-body-sm text-error">
           {error.message}
         </div>
       )}
@@ -187,7 +187,7 @@ export function PaymentsHistoryPage() {
           </div>
 
           {view === "grouped" ? (
-            <div className="rounded-2xl border border-outline-variant bg-surface-container-low overflow-hidden">
+            <div className="rounded-lg border border-outline-variant bg-surface-container-low overflow-hidden">
               <GroupedPaymentsTable<PaymentHistoryRowDto>
                 groups={groupPaymentsBySale(report.items)}
                 isLoading={isLoading}
@@ -224,7 +224,7 @@ export function PaymentsHistoryPage() {
               />
             </div>
           ) : (
-          <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-low">
+          <div className="overflow-x-auto rounded-lg border border-outline-variant bg-surface-container-low">
             <table className="w-full text-body-sm">
               <thead>
                 <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
@@ -277,7 +277,7 @@ export function PaymentsHistoryPage() {
             </>
           )}
 
-          <div className="rounded-2xl border border-outline-variant bg-surface-container px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-label-sm text-on-surface-variant font-medium">
+          <div className="rounded-lg border border-outline-variant bg-surface-container px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-label-sm text-on-surface-variant font-medium">
             <span>
               Total registros: {report.totals.rowCount} — {report.totals.completedCount} completados / {report.totals.cancelledCount} cancelados
             </span>

@@ -6,7 +6,7 @@ import { useBranches } from "../_logic/hooks/useBranches";
 import { useBranchMutations } from "../_logic/hooks/useBranchMutations";
 import { BranchesTable } from "./BranchesTable";
 import { BranchEditModal } from "./BranchEditModal";
-import { CatalogShell } from "../../_blocks/CatalogShell";
+import { PageShell } from "../../../../_components/organisms/PageShell";
 import { CatalogToolbar } from "../../_blocks/CatalogToolbar";
 import { CatalogPagination } from "../../_blocks/CatalogPagination";
 import { CatalogEmpty } from "../../_blocks/CatalogEmpty";
@@ -170,7 +170,7 @@ export function BranchesPage() {
 
   return (
     <>
-      <CatalogShell
+      <PageShell
         title="Sucursales"
         description="Gestiona las sucursales de la organización"
         toolbar={
@@ -213,7 +213,7 @@ export function BranchesPage() {
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
         />
-      </CatalogShell>
+      </PageShell>
 
       <BranchEditModal
         open={modalState !== null}
@@ -237,7 +237,7 @@ export function BranchesPage() {
       />
 
       {toast && (
-        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-xl bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
+        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-md bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
           {toast}
         </div>
       )}

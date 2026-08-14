@@ -73,14 +73,14 @@ export function QuoteDetailPage({ id }: QuoteDetailPageProps) {
     : String(quote.folioNumber);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="flex flex-col gap-lg px-gutter py-lg mx-auto w-full max-w-4xl">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <Link href="/quotes" className="text-on-surface-variant hover:text-on-surface">
-              <Icon name="arrow_back" className="text-[20px]" />
+              <Icon name="arrow_back" size={20} />
             </Link>
-            <h1 className="text-headline-md font-semibold text-on-surface">
+            <h1 className="text-headline-sm font-semibold text-on-surface">
               Cotización {folioLabel}
             </h1>
             <QuoteStatusBadge
@@ -103,8 +103,8 @@ export function QuoteDetailPage({ id }: QuoteDetailPageProps) {
 
       {/* Expired banner */}
       {quote.isExpired && (
-        <div className="flex items-center gap-2 bg-error-container text-on-error-container rounded-xl px-4 py-3">
-          <Icon name="warning" className="text-[20px]" />
+        <div className="flex items-center gap-2 bg-error-container text-on-error-container rounded-md px-4 py-3">
+          <Icon name="warning" size={20} />
           <span className="text-body-sm font-medium">
             Esta cotización venció el {fmtDate(quote.expiresAt)}.
             Las acciones Autorizar y Convertir están deshabilitadas.
@@ -114,7 +114,7 @@ export function QuoteDetailPage({ id }: QuoteDetailPageProps) {
 
       {/* Cancelled banner */}
       {quote.status === "cancelled" && quote.cancellationReason && (
-        <div className="bg-surface-container-high rounded-xl px-4 py-3">
+        <div className="bg-surface-container-high rounded-md px-4 py-3">
           <p className="text-label-sm text-on-surface-variant">Motivo de cancelación</p>
           <p className="text-body-sm text-on-surface mt-1">{quote.cancellationReason}</p>
         </div>
@@ -122,8 +122,8 @@ export function QuoteDetailPage({ id }: QuoteDetailPageProps) {
 
       {/* Converted banner */}
       {quote.status === "converted" && quote.convertedSaleId && (
-        <div className="flex items-center gap-2 bg-primary-container text-on-primary-container rounded-xl px-4 py-3">
-          <Icon name="task_alt" className="text-[20px]" />
+        <div className="flex items-center gap-2 bg-primary-container text-on-primary-container rounded-md px-4 py-3">
+          <Icon name="task_alt" size={20} />
           <span className="text-body-sm font-medium">
             Convertida a venta.{" "}
             <Link href={`/sales/${quote.convertedSaleId}`} className="underline">
@@ -144,7 +144,7 @@ export function QuoteDetailPage({ id }: QuoteDetailPageProps) {
       />
 
       {/* Metadata grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-surface-container-low rounded-2xl p-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-surface-container-low rounded-lg p-4">
         <div>
           <p className="text-label-sm text-on-surface-variant">Cliente</p>
           <p className="text-body-md text-on-surface">{quote.customerName ?? "—"}</p>
@@ -176,7 +176,7 @@ export function QuoteDetailPage({ id }: QuoteDetailPageProps) {
       </div>
 
       {/* Items */}
-      <div className="bg-surface-container-low rounded-2xl overflow-hidden">
+      <div className="bg-surface-container-low rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-outline-variant">
           <h2 className="text-title-md font-semibold text-on-surface">Artículos</h2>
         </div>
@@ -235,7 +235,7 @@ export function QuoteDetailPage({ id }: QuoteDetailPageProps) {
       )}
 
       {toast && (
-        <div className="fixed bottom-4 right-4 z-50 bg-error-container text-on-error-container rounded-xl px-4 py-3 text-body-sm shadow-lg max-w-sm">
+        <div className="fixed bottom-4 right-4 z-50 bg-error-container text-on-error-container rounded-md px-4 py-3 text-body-sm shadow-lg max-w-sm">
           {toast}
         </div>
       )}

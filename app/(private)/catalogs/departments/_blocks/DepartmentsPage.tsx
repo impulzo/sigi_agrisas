@@ -6,7 +6,7 @@ import { useDepartments } from "../_logic/hooks/useDepartments";
 import { useDepartmentMutations } from "../_logic/hooks/useDepartmentMutations";
 import { DepartmentsTable } from "./DepartmentsTable";
 import { DepartmentEditModal } from "./DepartmentEditModal";
-import { CatalogShell } from "../../_blocks/CatalogShell";
+import { PageShell } from "../../../../_components/organisms/PageShell";
 import { CatalogToolbar } from "../../_blocks/CatalogToolbar";
 import { CatalogPagination } from "../../_blocks/CatalogPagination";
 import { CatalogEmpty } from "../../_blocks/CatalogEmpty";
@@ -172,7 +172,7 @@ export function DepartmentsPage() {
 
   return (
     <>
-      <CatalogShell
+      <PageShell
         title="Departamentos"
         description="Gestiona los departamentos de la organización"
         toolbar={
@@ -215,7 +215,7 @@ export function DepartmentsPage() {
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
         />
-      </CatalogShell>
+      </PageShell>
 
       <DepartmentEditModal
         open={modalState !== null}
@@ -239,7 +239,7 @@ export function DepartmentsPage() {
       />
 
       {toast && (
-        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-xl bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
+        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-md bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
           {toast}
         </div>
       )}

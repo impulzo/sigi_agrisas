@@ -89,7 +89,7 @@ export function PurchaseDetailPage({ id }: PurchaseDetailPageProps) {
   const purchase = purchaseDetail;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="flex flex-col gap-lg px-gutter py-lg mx-auto w-full max-w-4xl">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
@@ -115,7 +115,7 @@ export function PurchaseDetailPage({ id }: PurchaseDetailPageProps) {
         </div>
       </div>
 
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+      <div className="bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden">
         <div className="px-4 py-3 border-b border-outline-variant">
           <h2 className="text-title-sm font-semibold text-on-surface">Productos comprados</h2>
         </div>

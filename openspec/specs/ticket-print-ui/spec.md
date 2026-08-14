@@ -7,7 +7,7 @@ Impresión del ticket de una venta desde su vista de detalle (`/sales/:id`), ví
 ---
 ## Requirements
 ### Requirement: Print ticket action on the ticket view
-The system SHALL render the "Imprimir Ticket" action on `/sales/:id/ticket` (la vista de ticket), visible bajo el mismo permiso `sales:read` que ya gatea `/sales/:id` (sin permiso nuevo). La acción SHALL ubicarse en la parte inferior del ticket. Al hacer clic, el sistema SHALL imprimir únicamente el ticket térmico (`PrintableTicket`) — sin cargar en la impresión la barra de navegación, el back link, los botones de acción ni la tarjeta de vista previa. El contenido impreso SHALL incluir, en orden de secciones: logo de Agrisas (`logoUrl` de `GET /settings/ticket` o el logo embebido `/logo.png` como fallback — el logo nunca se omite), marca "Agrisas", header de negocio (dirección, "Tel. <phone>" y régimen fiscal desde `GET /settings/ticket`, omitiendo los campos nulos), `folioCode`, fecha, vendedor (etiqueta "Vendedor" sobre `cashierName`), sucursal, método de pago, sección cliente (RFC, nombre y dirección — SOLO si la venta tiene `customerId`), condiciones de crédito ("Condiciones: Crédito a <N> días" — SOLO si `customerCreditDays` no es null), items (nombre de producto, cantidad, precio unitario, total de línea), totales (subtotal, IVA e IEPS — ambos SIEMPRE como líneas separadas independientemente de su valor — y "Total a pagar"), footer, leyenda de revisión de mercancía (desde `GET /settings/ticket.legendText`, omitida si es null), y el folio (`folioCode` completo, con su prefijo/formato — nunca solo el número) como elemento decorativo tipo código de barras. El sistema NO SHALL renderizar la etiqueta "Cajero" en el ticket impreso (se usa "Vendedor"). La impresión SHALL invocar `window.print()`.
+The system SHALL render the "Imprimir Ticket" action on `/sales/:id/ticket` (la vista de ticket), visible bajo el mismo permiso `sales:read` que ya gatea `/sales/:id` (sin permiso nuevo). La acción SHALL ubicarse en la parte inferior del ticket. Al hacer clic, el sistema SHALL imprimir únicamente el ticket térmico (`PrintableTicket`) — sin cargar en la impresión la barra de navegación, el back link, los botones de acción ni la tarjeta de vista previa. El contenido impreso SHALL incluir, en orden de secciones: logo de Agrisas (`logoUrl` de `GET /settings/ticket` o el logo embebido `/logo.png` como fallback — el logo nunca se omite), header de negocio (razón social `businessName`, RFC `businessRfc`, dirección, "Tel. <phone>" y régimen fiscal desde `GET /settings/ticket`, omitiendo los campos nulos) — SIN texto de encabezado libre entre el logo y este bloque, `folioCode`, fecha, vendedor (etiqueta "Vendedor" sobre `cashierName`), sucursal, método de pago, sección cliente (RFC, nombre y dirección — SOLO si la venta tiene `customerId`), condiciones de crédito ("Condiciones: Crédito a <N> días" — SOLO si `customerCreditDays` no es null), items (nombre de producto, cantidad, precio unitario, total de línea), totales (subtotal, IVA e IEPS — ambos SIEMPRE como líneas separadas independientemente de su valor — y "Total a pagar"), footer, leyenda de revisión de mercancía (desde `GET /settings/ticket.legendText`, omitida si es null), y el folio (`folioCode` completo, con su prefijo/formato — nunca solo el número) como elemento decorativo tipo código de barras. El sistema NO SHALL renderizar la etiqueta "Cajero" en el ticket impreso (se usa "Vendedor"). El sistema NO SHALL renderizar ningún párrafo de "texto de encabezado" — ese campo fue eliminado de `TicketSettings`; el bloque de datos del negocio ocupa el espacio inmediatamente debajo del logo. La impresión SHALL invocar `window.print()`.
 
 #### Scenario: Print action available regardless of sale status
 - **WHEN** viewing a sale with `status` of `completed`, `cancelled`, or `edited` on `/sales/:id/ticket`
@@ -34,8 +34,12 @@ The system SHALL render the "Imprimir Ticket" action on `/sales/:id/ticket` (la 
 - **THEN** the conditions line is omitted
 
 #### Scenario: Business info section from settings
-- **WHEN** `GET /settings/ticket` returns `businessAddress`, `businessPhone`, `businessTaxRegime`
-- **THEN** the printed ticket shows the business section under the header (address, "Tel. <phone>", tax regime); when a field is `null`, that line is omitted
+- **WHEN** `GET /settings/ticket` returns `businessName`, `businessRfc`, `businessAddress`, `businessPhone`, `businessTaxRegime`
+- **THEN** the printed ticket shows the business section under the logo, in this order: razón social (`businessName`), "RFC: <businessRfc>", address, "Tel. <phone>", tax regime; when a field is `null`, that specific line is omitted without breaking the layout
+
+#### Scenario: Header text no longer rendered
+- **WHEN** the printed ticket renders its content between the logo and the business info section
+- **THEN** no separate "texto de encabezado" paragraph appears — the business info section (razón social, RFC, address, phone, tax regime) is the first content block after the logo, even when all `business*` fields are `null` (nothing renders in that slot)
 
 #### Scenario: Total labeled as "Total a pagar"
 - **WHEN** the ticket renders its totals
@@ -63,15 +67,15 @@ The system SHALL render the "Imprimir Ticket" action on `/sales/:id/ticket` (la 
 
 #### Scenario: Settings fetch failure degrades gracefully
 - **WHEN** `GET /settings/ticket` fails (network error, missing `settings:read`, etc.)
-- **THEN** the print view still renders with the sale data, omitting logo/header/footer/business/legend (falling back to `80mm` width) rather than blocking the print action entirely
+- **THEN** the print view still renders with the sale data, omitting logo/footer/business (name, RFC, address, phone, tax regime)/legend (falling back to `80mm` width) rather than blocking the print action entirely
 
 #### Scenario: Logo rendered at 75x105px
 - **WHEN** the printed ticket renders its logo (either `logoUrl` from settings or the `/logo.png` fallback)
 - **THEN** the `img` is sized to 75px wide × 105px tall with `object-fit: contain` so the aspect ratio is preserved (no distortion)
 
 #### Scenario: Logo bottom margin reduced 40%
-- **WHEN** the printed ticket renders its logo above the header text
-- **THEN** the bottom margin separating the logo from the text below it is `2.4px` (a 40% reduction from the prior `4px`)
+- **WHEN** the printed ticket renders its logo above the business info section
+- **THEN** the bottom margin separating the logo from the content below it is `2.4px` (a 40% reduction from the prior `4px`)
 
 #### Scenario: Folio rendered below the decorative barcode
 - **WHEN** the printed ticket renders the folio as a decorative barcode-style element near the footer

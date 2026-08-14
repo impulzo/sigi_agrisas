@@ -15,7 +15,7 @@ exports[`RegisterForm renders initial state 1`] = `
       class="flex flex-col gap-1"
     >
       <label
-        class="text-sm font-medium text-gray-700"
+        class="text-label-lg text-on-surface-variant"
         for="name"
       >
         Nombre completo
@@ -23,7 +23,7 @@ exports[`RegisterForm renders initial state 1`] = `
       <input
         aria-invalid="false"
         autocomplete="name"
-        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        class="w-full rounded border border-outline bg-surface-container-lowest px-3 py-2 text-body-md text-on-surface focus:outline-none focus:ring-2 disabled:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60 transition-colors duration-150 focus:ring-agrisas-medium focus:border-agrisas-medium"
         id="name"
         name="name"
         type="text"
@@ -34,7 +34,7 @@ exports[`RegisterForm renders initial state 1`] = `
       class="flex flex-col gap-1"
     >
       <label
-        class="text-sm font-medium text-gray-700"
+        class="text-label-lg text-on-surface-variant"
         for="email"
       >
         Correo electrónico
@@ -42,7 +42,7 @@ exports[`RegisterForm renders initial state 1`] = `
       <input
         aria-invalid="false"
         autocomplete="email"
-        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        class="w-full rounded border border-outline bg-surface-container-lowest px-3 py-2 text-body-md text-on-surface focus:outline-none focus:ring-2 disabled:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60 transition-colors duration-150 focus:ring-agrisas-medium focus:border-agrisas-medium"
         id="email"
         name="email"
         type="email"
@@ -53,7 +53,7 @@ exports[`RegisterForm renders initial state 1`] = `
       class="flex flex-col gap-1"
     >
       <label
-        class="text-sm font-medium text-gray-700"
+        class="text-label-lg text-on-surface-variant"
         for="password"
       >
         Contraseña
@@ -61,7 +61,7 @@ exports[`RegisterForm renders initial state 1`] = `
       <input
         aria-invalid="false"
         autocomplete="new-password"
-        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        class="w-full rounded border border-outline bg-surface-container-lowest px-3 py-2 text-body-md text-on-surface focus:outline-none focus:ring-2 disabled:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60 transition-colors duration-150 focus:ring-agrisas-medium focus:border-agrisas-medium"
         id="password"
         name="password"
         type="password"
@@ -70,7 +70,7 @@ exports[`RegisterForm renders initial state 1`] = `
     </div>
     <button
       aria-busy="false"
-      class="inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 primary w-full mt-2"
+      class="inline-flex items-center justify-center gap-2 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-label-lg w-full mt-2 rounded bg-agrisas-dark text-agrisas-mint hover:bg-agrisas-medium"
       type="submit"
     >
       Crear cuenta
@@ -105,7 +105,7 @@ exports[`RegisterForm renders with formError 1`] = `
       class="flex flex-col gap-1"
     >
       <label
-        class="text-sm font-medium text-gray-700"
+        class="text-label-lg text-on-surface-variant"
         for="name"
       >
         Nombre completo
@@ -113,7 +113,7 @@ exports[`RegisterForm renders with formError 1`] = `
       <input
         aria-invalid="false"
         autocomplete="name"
-        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        class="w-full rounded border border-outline bg-surface-container-lowest px-3 py-2 text-body-md text-on-surface focus:outline-none focus:ring-2 disabled:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60 transition-colors duration-150 focus:ring-agrisas-medium focus:border-agrisas-medium"
         id="name"
         name="name"
         type="text"
@@ -124,7 +124,7 @@ exports[`RegisterForm renders with formError 1`] = `
       class="flex flex-col gap-1"
     >
       <label
-        class="text-sm font-medium text-gray-700"
+        class="text-label-lg text-on-surface-variant"
         for="email"
       >
         Correo electrónico
@@ -132,7 +132,7 @@ exports[`RegisterForm renders with formError 1`] = `
       <input
         aria-invalid="false"
         autocomplete="email"
-        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        class="w-full rounded border border-outline bg-surface-container-lowest px-3 py-2 text-body-md text-on-surface focus:outline-none focus:ring-2 disabled:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60 transition-colors duration-150 focus:ring-agrisas-medium focus:border-agrisas-medium"
         id="email"
         name="email"
         type="email"
@@ -143,7 +143,7 @@ exports[`RegisterForm renders with formError 1`] = `
       class="flex flex-col gap-1"
     >
       <label
-        class="text-sm font-medium text-gray-700"
+        class="text-label-lg text-on-surface-variant"
         for="password"
       >
         Contraseña
@@ -151,7 +151,7 @@ exports[`RegisterForm renders with formError 1`] = `
       <input
         aria-invalid="false"
         autocomplete="new-password"
-        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agrisas-medium focus:border-agrisas-medium disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors duration-150"
+        class="w-full rounded border border-outline bg-surface-container-lowest px-3 py-2 text-body-md text-on-surface focus:outline-none focus:ring-2 disabled:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60 transition-colors duration-150 focus:ring-agrisas-medium focus:border-agrisas-medium"
         id="password"
         name="password"
         type="password"
@@ -166,7 +166,7 @@ exports[`RegisterForm renders with formError 1`] = `
     </p>
     <button
       aria-busy="false"
-      class="inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 primary w-full mt-2"
+      class="inline-flex items-center justify-center gap-2 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-label-lg w-full mt-2 rounded bg-agrisas-dark text-agrisas-mint hover:bg-agrisas-medium"
       type="submit"
     >
       Crear cuenta

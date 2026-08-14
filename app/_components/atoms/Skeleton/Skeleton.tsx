@@ -9,8 +9,8 @@ interface SkeletonProps {
 
 const roundedClasses = {
   sm: "rounded-sm",
-  md: "rounded-md",
-  lg: "rounded-lg",
+  md: "rounded",
+  lg: "rounded",
   full: "rounded-full",
 };
 

@@ -77,7 +77,7 @@ export function RegisterProviderPaymentModal({ purchaseId, dueAmount, open, onCl
       <dialog
         ref={dialogRef}
         aria-labelledby="register-provider-payment-title"
-        className="rounded-xl bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
+        className="rounded-md bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
       >
         <h2 id="register-provider-payment-title" className="text-title-md font-semibold text-on-surface mb-2">
           Registrar abono
@@ -100,7 +100,7 @@ export function RegisterProviderPaymentModal({ purchaseId, dueAmount, open, onCl
               setClientError(null);
             }}
             placeholder="0.00"
-            className={`w-full rounded-lg border px-3 py-2 text-body-sm tabular-nums focus:outline-none focus:ring-1 ${clientError ? "border-error focus:ring-error" : "border-outline focus:border-primary focus:ring-primary"}`}
+            className={`w-full rounded border px-3 py-2 text-body-sm tabular-nums focus:outline-none focus:ring-1 ${clientError ? "border-error focus:ring-error" : "border-outline focus:border-primary focus:ring-primary"}`}
           />
           {clientError && <p className="text-label-sm text-error mt-1">{clientError}</p>}
         </div>
@@ -110,7 +110,7 @@ export function RegisterProviderPaymentModal({ purchaseId, dueAmount, open, onCl
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-4 py-2 rounded-lg text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
+            className="px-4 py-2 rounded text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
           >
             Cancelar
           </button>
@@ -118,7 +118,7 @@ export function RegisterProviderPaymentModal({ purchaseId, dueAmount, open, onCl
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="px-4 py-2 rounded-lg text-label-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded text-label-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? "Registrando..." : "Registrar abono"}
           </button>

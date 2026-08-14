@@ -9,11 +9,14 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:e2e": "playwright test",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "seed:inventory": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/inventory.ts",
     "seed:folios": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/folios.ts",
     "seed:sat-codes": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/satCodes.ts",
-    "seed:sat-catalogs": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/satCatalogs.ts"
+    "seed:sat-catalogs": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/satCatalogs.ts",
+    "seed:sat-units": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/satUnits.ts",
+    "seed:ticket-settings": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/ticketSettings.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useCurrentUser } from "../../../../_hooks/useCurrentUser";
 import { useBranchesOptions } from "../../../inventory/_logic/hooks/useBranchesOptions";
 import { useCashCut } from "../_logic/hooks/useCashCut";
@@ -9,9 +8,11 @@ import { CashCutFilters } from "./CashCutFilters";
 import { TotalsCards } from "./TotalsCards";
 import { PaymentMethodBreakdownTable } from "./PaymentMethodBreakdownTable";
 import { CollectionsRowsTable } from "./CollectionsRowsTable";
+import { PageShell } from "../../../../_components/organisms/PageShell";
 import { EmptyState } from "../../../../_components/molecules/EmptyState/EmptyState";
+import { PageLoading } from "../../../../_components/molecules/PageLoading/PageLoading";
+import { Button } from "../../../../_components/atoms/Button/Button";
 import { Spinner } from "../../../../_components/atoms/Spinner/Spinner";
-import { Icon } from "../../../../_components/atoms/Icon/Icon";
 
 function defaultFrom(): string {
   const now = new Date();
@@ -48,11 +49,7 @@ export function CashCutPage() {
   }
 
   if (canRead === "loading") {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <PageLoading />;
   }
 
   if (canRead === false) {
@@ -68,79 +65,71 @@ export function CashCutPage() {
   const hasData = report && report.rows.length > 0;
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto px-4 py-6">
-      <div className="flex items-center gap-3">
-        <Link href="/reports" className="text-on-surface-variant hover:text-on-surface">
-          <Icon name="arrow_back" size={20} />
-        </Link>
-        <h1 className="text-headline-sm font-semibold text-on-surface">Corte de Caja (Cobranza)</h1>
-      </div>
+    <PageShell title="Corte de Caja (Cobranza)" backHref="/reports">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <CashCutFilters
+            branchId={branchId}
+            onBranchIdChange={setBranchId}
+            branches={branches}
+            showBranchFilter={isBypass === true}
+            from={from}
+            onFromChange={setFrom}
+            to={to}
+            onToChange={setTo}
+          />
+          <div className="flex gap-2">
+            <Button
+              icon="print"
+              onClick={() => handleExport(exportPdf)}
+              disabled={isExportingPdf || !hasData}
+            >
+              {isExportingPdf ? "Generando…" : "Exportar PDF"}
+            </Button>
+            <Button
+              variant="outlined"
+              icon="summarize"
+              onClick={() => handleExport(exportXlsx)}
+              disabled={isExportingXlsx || !hasData}
+            >
+              {isExportingXlsx ? "Generando…" : "Exportar Excel"}
+            </Button>
+          </div>
+        </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <CashCutFilters
-          branchId={branchId}
-          onBranchIdChange={setBranchId}
-          branches={branches}
-          showBranchFilter={isBypass === true}
-          from={from}
-          onFromChange={setFrom}
-          to={to}
-          onToChange={setTo}
-        />
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => handleExport(exportPdf)}
-            disabled={isExportingPdf || !hasData}
-            className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-body-sm text-on-primary hover:bg-primary/90 disabled:opacity-50"
+        {error && (
+          <div className="bg-error-container/20 rounded px-4 py-3 text-body-sm text-error">
+            {error.message}
+          </div>
+        )}
+
+        {isLoading || !report ? (
+          <div className="flex h-40 items-center justify-center">
+            <Spinner size="lg" />
+          </div>
+        ) : !hasData ? (
+          <EmptyState
+            icon="summarize"
+            title="Sin cobranza"
+            description="No hay abonos cobrados en el periodo seleccionado."
+          />
+        ) : (
+          <div className="space-y-5">
+            <TotalsCards report={report} />
+            <PaymentMethodBreakdownTable rows={report.byPaymentMethod} />
+            <CollectionsRowsTable rows={report.rows} />
+          </div>
+        )}
+
+        {toastError && (
+          <div
+            role="alert"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-error-container text-on-error-container px-5 py-3 rounded-full text-body-sm shadow-lg z-50"
           >
-            <Icon name="print" size={18} />
-            {isExportingPdf ? "Generando…" : "Exportar PDF"}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleExport(exportXlsx)}
-            disabled={isExportingXlsx || !hasData}
-            className="flex items-center gap-2 rounded-full border border-outline-variant px-4 py-2 text-body-sm text-on-surface hover:bg-surface-container disabled:opacity-50"
-          >
-            <Icon name="summarize" size={18} />
-            {isExportingXlsx ? "Generando…" : "Exportar Excel"}
-          </button>
-        </div>
+            {toastError}
+          </div>
+        )}
       </div>
-
-      {error && (
-        <div className="bg-error-container/20 rounded-xl px-4 py-3 text-body-sm text-error">
-          {error.message}
-        </div>
-      )}
-
-      {isLoading || !report ? (
-        <div className="flex h-40 items-center justify-center">
-          <Spinner size="lg" />
-        </div>
-      ) : !hasData ? (
-        <EmptyState
-          icon="summarize"
-          title="Sin cobranza"
-          description="No hay abonos cobrados en el periodo seleccionado."
-        />
-      ) : (
-        <div className="space-y-5">
-          <TotalsCards report={report} />
-          <PaymentMethodBreakdownTable rows={report.byPaymentMethod} />
-          <CollectionsRowsTable rows={report.rows} />
-        </div>
-      )}
-
-      {toastError && (
-        <div
-          role="alert"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-error-container text-on-error-container px-5 py-3 rounded-full text-body-sm shadow-lg z-50"
-        >
-          {toastError}
-        </div>
-      )}
-    </div>
+    </PageShell>
   );
 }

@@ -10,9 +10,10 @@ import { InvalidImageFormatError } from "../../domain/errors/InvalidImageFormatE
 import { ImageTooLargeError } from "../../domain/errors/ImageTooLargeError";
 
 const updateTicketSchema = z.object({
-  headerText: z.string().max(500).nullable().optional(),
   footerText: z.string().max(500).nullable().optional(),
   paperWidth: z.enum(["58mm", "80mm"]).optional(),
+  businessName: z.string().max(200).nullable().optional(),
+  businessRfc: z.string().max(13).nullable().optional(),
   businessAddress: z.string().max(300).nullable().optional(),
   businessPhone: z.string().max(30).nullable().optional(),
   businessTaxRegime: z.string().max(120).nullable().optional(),

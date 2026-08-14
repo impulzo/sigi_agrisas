@@ -145,7 +145,7 @@ export function CreateReturnPage({ saleId }: CreateReturnPageProps) {
       </div>
 
       {/* Items table with quantity inputs */}
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+      <div className="bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden">
         <div className="px-4 py-3 border-b border-outline-variant">
           <h2 className="text-title-sm font-semibold text-on-surface">
             Selecciona los artículos a devolver

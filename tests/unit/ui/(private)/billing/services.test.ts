@@ -13,6 +13,8 @@ import {
   InvoiceAlreadyCancelledError,
   FacturamaCancelError,
   FacturamaCsdError,
+  InvoiceNotStampedError,
+  InvoiceFileDownloadFailedError,
 } from "../../../../../app/(private)/billing/_logic/errors";
 import type { InvoiceDto } from "../../../../../app/(private)/billing/_logic/types/api";
 
@@ -183,6 +185,30 @@ describe("downloadInvoiceFile — filename derivation", () => {
     await downloadInvoiceFile("inv-abcdefgh", "xml", fetchImpl);
     const lastCall = clickSpy.mock.instances[0] as unknown as HTMLAnchorElement;
     expect(lastCall.download).toMatch(/factura-.*\.xml$/);
+  });
+
+  it("400 Invoice has not been stamped → InvoiceNotStampedError, no download triggered", async () => {
+    const fetch = errFetch(400, { error: "Invoice has not been stamped" });
+    const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    await expect(downloadInvoiceFile("inv-1", "pdf", fetch)).rejects.toBeInstanceOf(InvoiceNotStampedError);
+    expect(clickSpy).not.toHaveBeenCalled();
+  });
+
+  it("502 → InvoiceFileDownloadFailedError", async () => {
+    const fetch = errFetch(502, { error: "Failed to download invoice file" });
+    await expect(downloadInvoiceFile("inv-1", "pdf", fetch)).rejects.toBeInstanceOf(InvoiceFileDownloadFailedError);
+  });
+
+  it("200 with empty blob → InvoiceNotStampedError (defensa adicional)", async () => {
+    const fetchImpl: typeof globalThis.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: () => Promise.resolve(new Blob([])),
+      headers: new Headers(),
+    }) as unknown as typeof globalThis.fetch;
+    const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    await expect(downloadInvoiceFile("inv-1", "pdf", fetchImpl)).rejects.toBeInstanceOf(InvoiceNotStampedError);
+    expect(clickSpy).not.toHaveBeenCalled();
   });
 });
 

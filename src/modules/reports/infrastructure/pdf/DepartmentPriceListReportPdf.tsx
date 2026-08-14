@@ -15,7 +15,7 @@ function PriceRows({ product }: { product: DepartmentProductDto }) {
   return (
     <View style={s.section}>
       <Text style={s.departmentTitle}>
-        {product.code} — {product.name} ({product.unit})
+        {product.code} — {product.name} ({product.unitDescription ?? product.unit}) · Stock: {product.stockQuantity}
       </Text>
       {product.prices.length === 0 ? (
         <View style={s.tableRow}>
@@ -58,6 +58,7 @@ function DeptSection({ dept }: { dept: DepartmentPriceListDepartmentDto }) {
         <Text style={s.cellWide}>Subtotal depto.</Text>
         <Text style={s.cell}>{dept.subtotal.productCount} productos</Text>
         <Text style={s.cell}>{dept.subtotal.priceCount} precios</Text>
+        <Text style={s.cell}>Stock: {dept.subtotal.totalStock}</Text>
       </View>
     </View>
   );
@@ -71,7 +72,7 @@ export function DepartmentPriceListReportPdf({ data }: { data: DepartmentPriceLi
           <Text style={s.headerTitle}>Inventario por Departamento</Text>
           <Text style={s.headerMeta}>Generado: {formatDate(data.generatedAt)} | Por: {data.generatedBy.email}</Text>
           <Text style={s.headerMeta}>
-            Filtros: depto={data.filters.departmentId ?? "todos"}
+            Filtros: depto={data.filters.departmentId ?? "todos"} | sucursal={data.filters.branchId ?? "todas"}
           </Text>
         </View>
 
@@ -96,6 +97,10 @@ export function DepartmentPriceListReportPdf({ data }: { data: DepartmentPriceLi
           <View style={s.totalsRow}>
             <Text style={s.totalsLabel}>Listas de precio</Text>
             <Text style={s.totalsValue}>{data.totals.priceCount}</Text>
+          </View>
+          <View style={s.totalsRow}>
+            <Text style={s.totalsLabel}>Stock total</Text>
+            <Text style={s.totalsValue}>{data.totals.totalStock}</Text>
           </View>
         </View>
 

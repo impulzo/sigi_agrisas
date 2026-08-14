@@ -18,7 +18,7 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
       </div>
       <Link
         href="/pos"
-        className="inline-flex items-center justify-center gap-sm px-6 py-3 bg-primary text-on-primary rounded-xl text-title-md hover:shadow-lg transition-all"
+        className="inline-flex items-center justify-center gap-sm px-6 py-3 bg-primary text-on-primary rounded-md text-title-md hover:shadow-lg transition-all"
       >
         <Icon name="add" />
         Nueva venta

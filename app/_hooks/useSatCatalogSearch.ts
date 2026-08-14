@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { authFetch } from "../_lib/authFetch";
 
-export type SatCatalog = "regimen-fiscal" | "uso-cfdi";
+export type SatCatalog = "regimen-fiscal" | "uso-cfdi" | "clave-unidad";
 
 export interface SatCatalogOption {
   code: string;

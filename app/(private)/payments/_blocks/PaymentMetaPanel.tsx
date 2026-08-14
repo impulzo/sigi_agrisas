@@ -12,7 +12,7 @@ interface PaymentMetaPanelProps {
 
 export function PaymentMetaPanel({ payment }: PaymentMetaPanelProps) {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 bg-surface-container-low rounded-2xl p-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 bg-surface-container-low rounded-lg p-4">
       <div>
         <p className="text-label-sm text-on-surface-variant">Cliente</p>
         <p className="text-body-sm text-on-surface">{payment.customerName ?? "—"}</p>
@@ -44,7 +44,7 @@ export function PaymentMetaPanel({ payment }: PaymentMetaPanelProps) {
         </div>
       )}
       {payment.status === "cancelled" && payment.cancellationReason && (
-        <div className="col-span-2 sm:col-span-3 bg-error-container/20 rounded-xl p-3">
+        <div className="col-span-2 sm:col-span-3 bg-error-container/20 rounded-md p-3">
           <p className="text-label-sm text-on-surface-variant">Motivo de cancelación</p>
           <p className="text-body-sm text-on-surface">{payment.cancellationReason}</p>
           {payment.cancelledAt && (

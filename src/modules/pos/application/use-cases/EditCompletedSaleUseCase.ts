@@ -10,6 +10,7 @@ import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMisma
 import { DosificationMismatchError } from "../../domain/errors/DosificationMismatchError";
 import { DosificationRequiresDefaultPriceError } from "../../domain/errors/DosificationRequiresDefaultPriceError";
 import { DosificationPriceCalculator } from "@/modules/products/domain/services/DosificationPriceCalculator";
+import { isFractionalQuantity } from "@/modules/products/domain/services/isFractionalQuantity";
 import { CancelledSaleNotEditableError } from "../../domain/errors/CancelledSaleNotEditableError";
 import { ReturnedTotalSaleNotEditableError } from "../../domain/errors/ReturnedTotalSaleNotEditableError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
@@ -84,7 +85,12 @@ export class EditCompletedSaleUseCase {
         if (!price) throw new InactiveResourceError("Product price not found");
         if (price.productId !== item.productId) throw new ProductPriceMismatchError();
 
-        unitPrice = price.price;
+        if (isFractionalQuantity(item.quantity)) {
+          const surchargePct = await this.lookups.getDosificationSurchargePct();
+          unitPrice = price.price * (1 + surchargePct / 100);
+        } else {
+          unitPrice = price.price;
+        }
         discountPct = price.discountPct;
         priceNameSnapshot = price.name;
         productPriceId = price.id;

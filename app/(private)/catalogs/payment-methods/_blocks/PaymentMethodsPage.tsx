@@ -6,7 +6,7 @@ import { usePaymentMethods } from "../_logic/hooks/usePaymentMethods";
 import { usePaymentMethodMutations } from "../_logic/hooks/usePaymentMethodMutations";
 import { PaymentMethodsTable } from "./PaymentMethodsTable";
 import { PaymentMethodEditModal } from "./PaymentMethodEditModal";
-import { CatalogShell } from "../../_blocks/CatalogShell";
+import { PageShell } from "../../../../_components/organisms/PageShell";
 import { CatalogToolbar } from "../../_blocks/CatalogToolbar";
 import { CatalogPagination } from "../../_blocks/CatalogPagination";
 import { CatalogEmpty } from "../../_blocks/CatalogEmpty";
@@ -170,7 +170,7 @@ export function PaymentMethodsPage() {
 
   return (
     <>
-      <CatalogShell
+      <PageShell
         title="Formas de Pago"
         description="Gestiona los métodos de pago disponibles en el sistema"
         toolbar={
@@ -213,7 +213,7 @@ export function PaymentMethodsPage() {
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
         />
-      </CatalogShell>
+      </PageShell>
 
       <PaymentMethodEditModal
         open={modalState !== null}
@@ -237,7 +237,7 @@ export function PaymentMethodsPage() {
       />
 
       {toast && (
-        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-xl bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
+        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-md bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
           {toast}
         </div>
       )}

@@ -20,7 +20,7 @@ function NumField({ value, onChange, min = 0, step = "any", placeholder = "" }: 
       step={step}
       placeholder={placeholder}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="w-full rounded border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary tabular-nums"
+      className="w-full rounded-sm border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary tabular-nums"
     />
   );
 }
@@ -35,7 +35,7 @@ export function PartialInvoiceLineRow({ line, lineTotal, onUpdate, onRemove }: P
             value={line.description}
             onChange={(e) => onUpdate({ description: e.target.value })}
             placeholder="Descripción *"
-            className="w-full rounded border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary"
+            className="w-full rounded-sm border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary"
           />
           {!line.productId && (
             <input
@@ -44,7 +44,7 @@ export function PartialInvoiceLineRow({ line, lineTotal, onUpdate, onRemove }: P
               onChange={(e) => onUpdate({ satProductCode: e.target.value })}
               placeholder="Clave SAT (8 dígitos)"
               maxLength={8}
-              className="w-full rounded border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary font-mono"
+              className="w-full rounded-sm border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary font-mono"
             />
           )}
           <p className="text-label-sm text-on-surface-variant font-mono">{line.productCode}</p>

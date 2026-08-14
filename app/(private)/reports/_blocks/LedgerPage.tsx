@@ -12,6 +12,7 @@ import { LedgerTable } from "./LedgerTable";
 import { ExportPdfButton } from "./ExportPdfButton";
 import { ExportXlsxButton } from "./ExportXlsxButton";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
+import { PageLoading } from "../../../_components/molecules/PageLoading/PageLoading";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 
@@ -67,11 +68,7 @@ export function LedgerPage({ customerId }: { customerId: string }) {
   }
 
   if (canRead === "loading") {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <PageLoading />;
   }
 
   if (canRead === false) {
@@ -85,7 +82,7 @@ export function LedgerPage({ customerId }: { customerId: string }) {
   }
 
   return (
-    <div className="space-y-4 max-w-6xl mx-auto px-4 py-6">
+    <div className="flex flex-col gap-lg px-gutter py-lg mx-auto w-full max-w-screen-2xl">
       <div className="flex items-center gap-3">
         <Link href="/reports/account-statements" className="text-on-surface-variant hover:text-on-surface">
           <Icon name="arrow_back" size={20} />
@@ -94,7 +91,7 @@ export function LedgerPage({ customerId }: { customerId: string }) {
       </div>
 
       {error ? (
-        <div className="bg-error-container/20 rounded-xl px-4 py-3 text-body-sm text-error">
+        <div className="bg-error-container/20 rounded px-4 py-3 text-body-sm text-error">
           {error.message}
         </div>
       ) : isLoading || !ledger ? (

@@ -11,8 +11,12 @@ import { InventoryAssignModal } from "./InventoryAssignModal";
 import { StockAdjustModal } from "./StockAdjustModal";
 import { InventoryEditModal } from "./InventoryEditModal";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { Switch } from "../../../_components/atoms/Switch/Switch";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
+import { Input } from "../../../_components/atoms/Input/Input";
+import { Select } from "../../../_components/atoms/Select/Select";
+import { Button } from "../../../_components/atoms/Button/Button";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog/ConfirmDialog";
@@ -123,101 +127,106 @@ export function InventoryPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-headline-lg font-semibold text-on-surface">Inventario</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">Gestión de stock por sucursal.</p>
-      </div>
-
-      {isBypass === true ? (
-        <div className="flex items-center gap-3">
-          <label className="text-label-lg text-on-surface-variant">Sucursal:</label>
-          <select
-            value={branchId ?? ""}
-            onChange={(e) => handleBranchChange(e.target.value)}
-            disabled={branchesLoading}
-            className="rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary min-w-[200px]"
-          >
-            <option value="">Selecciona una sucursal</option>
-            {branchOptions.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-        </div>
-      ) : (
-        branchId && (
-          <div className="flex items-center gap-2">
-            <label className="text-label-lg text-on-surface-variant">Sucursal:</label>
-            <span className="text-body-md font-medium text-on-surface">
-              {branchOptions.find((b) => b.id === branchId)?.name ?? "—"}
-            </span>
-          </div>
-        )
-      )}
-
-      {!branchId ? (
-        isBypass === true ? (
-          <EmptyState icon="store" title="Selecciona una sucursal" description="Elige una sucursal para ver su inventario." />
-        ) : (
-          <EmptyState icon="store" title="Sin sucursal asignada" description="Tu usuario no tiene una sucursal asignada. Contacta a un administrador." />
-        )
-      ) : (
-        <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
-          <div className="px-4 py-4 border-b border-outline-variant flex flex-col gap-3">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="relative flex-1 min-w-[180px]">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"><Icon name="search" size={18} /></span>
-                <input
-                  type="text"
-                  value={searchInput}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Buscar productos..."
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+    <PageShell
+      title="Inventario"
+      description="Gestión de stock por sucursal."
+      toolbar={
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {isBypass === true ? (
+              <div className="flex items-center gap-2 min-w-[220px]">
+                <label className="text-label-lg text-on-surface-variant shrink-0">Sucursal:</label>
+                <Select
+                  value={branchId ?? ""}
+                  onChange={(e) => handleBranchChange(e.target.value)}
+                  disabled={branchesLoading}
+                >
+                  <option value="">Selecciona una sucursal</option>
+                  {branchOptions.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </Select>
               </div>
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <Switch checked={belowReorder} onChange={handleBelowReorderChange} aria-label="Solo bajo punto de reorden" />
-                <span className="text-label-lg text-on-surface-variant">Solo bajo punto de reorden</span>
-              </label>
-              {canWrite === true && (
-                <button type="button" onClick={() => { clearError(); setAssignError(null); setModal({ type: "assign", item: null }); }} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity">
-                  <Icon name="add" size={18} />Asignar producto
-                </button>
-              )}
-            </div>
-            {mutationError && <p className="text-label-sm text-error">{mutationError}</p>}
+            ) : (
+              branchId && (
+                <div className="flex items-center gap-2">
+                  <label className="text-label-lg text-on-surface-variant">Sucursal:</label>
+                  <span className="text-body-md font-medium text-on-surface">
+                    {branchOptions.find((b) => b.id === branchId)?.name ?? "—"}
+                  </span>
+                </div>
+              )
+            )}
+            {branchId && (
+              <>
+                <div className="relative flex-1 min-w-[180px]">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"><Icon name="search" size={18} /></span>
+                  <Input
+                    type="text"
+                    value={searchInput}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    placeholder="Buscar productos..."
+                    className="pl-9"
+                  />
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <Switch checked={belowReorder} onChange={handleBelowReorderChange} aria-label="Solo bajo punto de reorden" />
+                  <span className="text-label-lg text-on-surface-variant">Solo bajo punto de reorden</span>
+                </label>
+                {canWrite === true && (
+                  <Button
+                    icon="add"
+                    onClick={() => { clearError(); setAssignError(null); setModal({ type: "assign", item: null }); }}
+                  >
+                    Asignar producto
+                  </Button>
+                )}
+              </>
+            )}
           </div>
-
-          {isLoading ? (
-            <div className="p-6 space-y-3">{Array.from({length:5}).map((_,i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}</div>
-          ) : error ? (
-            <div className="p-6 text-center"><p className="text-error text-body-md">{error}</p><button onClick={refresh} className="mt-2 text-label-lg text-primary hover:underline">Reintentar</button></div>
-          ) : total === 0 ? (
-            <div className="p-6">
-              <EmptyState icon="inventory_2" title="Esta sucursal no tiene productos asignados" description={canWrite === true ? "Agrega el primer producto con el botón superior." : "No hay stock registrado para esta sucursal."} />
-            </div>
+          {mutationError && <p className="text-label-sm text-error">{mutationError}</p>}
+        </div>
+      }
+    >
+      {!branchId ? (
+        <div className="p-6">
+          {isBypass === true ? (
+            <EmptyState icon="store" title="Selecciona una sucursal" description="Elige una sucursal para ver su inventario." />
           ) : (
-            <>
-              <InventoryTable
-                items={items}
-                canWrite={canWrite === true}
-                canViewKardex={canViewKardex === true}
-                onAdjust={(item) => { setAdjustError(null); setModal({ type: "adjust", item }); }}
-                onEdit={(item) => setModal({ type: "edit", item })}
-                onRemove={(item) => setConfirmRemoveId(item.productId)}
-                onEnter={canWrite === true ? (item) => { setAdjustError(null); setModal({ type: "adjust", item }); } : undefined}
-              />
-              <CatalogPagination
-                page={page}
-                pageSize={pageSize}
-                total={total}
-                count={items.length}
-                onPageChange={setPage}
-                onPageSizeChange={(ps) => { setPageSize(ps); setPage(1); }}
-              />
-            </>
+            <EmptyState icon="store" title="Sin sucursal asignada" description="Tu usuario no tiene una sucursal asignada. Contacta a un administrador." />
           )}
         </div>
+      ) : isLoading ? (
+        <div className="p-6 space-y-3">{Array.from({length:5}).map((_,i) => <Skeleton key={i} className="h-12 w-full rounded" />)}</div>
+      ) : error ? (
+        <div className="p-6 text-center">
+          <p className="text-error text-body-md">{error}</p>
+          <Button variant="text" onClick={refresh} className="mt-2">Reintentar</Button>
+        </div>
+      ) : total === 0 ? (
+        <div className="p-6">
+          <EmptyState icon="inventory_2" title="Esta sucursal no tiene productos asignados" description={canWrite === true ? "Agrega el primer producto con el botón superior." : "No hay stock registrado para esta sucursal."} />
+        </div>
+      ) : (
+        <>
+          <InventoryTable
+            items={items}
+            canWrite={canWrite === true}
+            canViewKardex={canViewKardex === true}
+            onAdjust={(item) => { setAdjustError(null); setModal({ type: "adjust", item }); }}
+            onEdit={(item) => setModal({ type: "edit", item })}
+            onRemove={(item) => setConfirmRemoveId(item.productId)}
+            onEnter={canWrite === true ? (item) => { setAdjustError(null); setModal({ type: "adjust", item }); } : undefined}
+          />
+          <CatalogPagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            count={items.length}
+            onPageChange={setPage}
+            onPageSizeChange={(ps) => { setPageSize(ps); setPage(1); }}
+          />
+        </>
       )}
 
       {modal.type === "assign" && branchId && (
@@ -260,6 +269,6 @@ export function InventoryPage() {
         onConfirm={handleRemove}
         onCancel={() => setConfirmRemoveId(null)}
       />
-    </div>
+    </PageShell>
   );
 }

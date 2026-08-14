@@ -1,9 +1,10 @@
 import type { TicketSettings } from "../../domain/entities/TicketSettings";
 
 export interface UpdateTicketSettingsData {
-  headerText?: string | null;
   footerText?: string | null;
   paperWidth?: "58mm" | "80mm";
+  businessName?: string | null;
+  businessRfc?: string | null;
   businessAddress?: string | null;
   businessPhone?: string | null;
   businessTaxRegime?: string | null;

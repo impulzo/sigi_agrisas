@@ -69,22 +69,22 @@ export function InventoryAssignModal({ open, branchId, isSaving, assignError, on
     onAssign(selectedProductId, qty, rp);
   };
 
-  const fieldClass = "w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md focus:outline-none focus:ring-2 focus:ring-primary";
+  const fieldClass = "w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md focus:outline-none focus:ring-2 focus:ring-primary";
 
   return (
-    <dialog ref={dialogRef} className="rounded-2xl shadow-xl bg-surface p-0 w-full max-w-md backdrop:bg-black/40">
+    <dialog ref={dialogRef} className="rounded-lg shadow-xl bg-surface p-0 w-full max-w-md backdrop:bg-black/40">
       <form onSubmit={handleSubmit} noValidate>
         <div className="px-6 pt-6 pb-4 border-b border-outline-variant">
           <h2 className="text-title-md font-semibold text-on-surface">Asignar producto</h2>
         </div>
         <div className="px-6 py-4 space-y-4">
-          {assignError && <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-xl">{assignError}</p>}
+          {assignError && <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-md">{assignError}</p>}
 
           <div>
             <label className="block text-label-lg text-on-surface-variant mb-1">Buscar producto *</label>
             <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setSelectedProductId(""); }} placeholder="Escribe el nombre o código (mín. 2 caracteres)" className={fieldClass} />
             {productOptions.length > 0 && !selectedProductId && (
-              <ul className="mt-1 border border-outline-variant rounded-xl bg-surface shadow-lg max-h-40 overflow-y-auto">
+              <ul className="mt-1 border border-outline-variant rounded-md bg-surface shadow-lg max-h-40 overflow-y-auto">
                 {productOptions.map((p) => (
                   <li key={p.id}>
                     <button type="button" onClick={() => { setSelectedProductId(p.id); setSearch(`${p.code} - ${p.name}`); setProductOptions([]); }} className="w-full text-left px-3 py-2 hover:bg-surface-container-low text-body-md">
@@ -111,8 +111,8 @@ export function InventoryAssignModal({ open, branchId, isSaving, assignError, on
           </div>
         </div>
         <div className="px-6 pb-6 pt-2 flex justify-end gap-3 border-t border-outline-variant">
-          <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 rounded-xl text-label-lg text-on-surface-variant hover:bg-surface-container transition-colors">Cancelar</button>
-          <button type="submit" disabled={isSaving} className="px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 disabled:opacity-50">{isSaving ? "Asignando…" : "Asignar"}</button>
+          <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 rounded-md text-label-lg text-on-surface-variant hover:bg-surface-container transition-colors">Cancelar</button>
+          <button type="submit" disabled={isSaving} className="px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 disabled:opacity-50">{isSaving ? "Asignando…" : "Asignar"}</button>
         </div>
       </form>
     </dialog>

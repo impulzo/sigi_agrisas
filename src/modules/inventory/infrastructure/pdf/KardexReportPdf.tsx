@@ -22,7 +22,7 @@ export function KardexReportPdf({ data, from, to }: Props) {
       <Page size="A4" orientation="landscape" style={styles.page}>
         <Text style={styles.title}>Kardex — {product.code} · {product.name}</Text>
         <Text style={styles.subtitle}>
-          Periodo: {from} a {to} · Unidad: {product.unit}
+          Periodo: {from} a {to} · Unidad: {product.unitDescription ?? product.unit}
         </Text>
 
         <View style={styles.headerSection}>

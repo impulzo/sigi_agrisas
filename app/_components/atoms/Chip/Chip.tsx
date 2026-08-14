@@ -14,7 +14,7 @@ interface ChipProps {
 const toneClasses: Record<Tone, string> = {
   primary: "bg-primary-fixed/20 text-primary",
   success: "bg-primary-container/20 text-on-primary-container",
-  warning: "bg-secondary-container text-on-secondary-container",
+  warning: "bg-secondary-fixed text-on-secondary-fixed",
   error: "bg-error-container text-on-error-container",
 };
 
@@ -27,7 +27,7 @@ export function Chip({ label, tone = "primary", icon, className }: ChipProps) {
         className,
       )}
     >
-      {icon && <Icon name={icon} className="text-[18px]" />}
+      {icon && <Icon name={icon} size={18} />}
       <span>{label}</span>
     </span>
   );

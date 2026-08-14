@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useInvoicesList } from "../_logic/hooks/useInvoicesList";
-import { CatalogShell } from "../../catalogs/_blocks/CatalogShell";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
 import { BillingToolbar } from "./BillingToolbar";
 import { InvoicesTable } from "./InvoicesTable";
@@ -61,47 +61,45 @@ export function BillingListPage() {
   }
 
   return (
-    <CatalogShell
+    <PageShell
       title="Facturación"
       description="Comprobantes fiscales digitales (CFDI 4.0)"
+      actions={
+        <>
+          {(canManageCsd === true || canManageCsd === "loading") && (
+            <Link
+              href="/billing/csd"
+              className="inline-flex items-center justify-center rounded-full border border-outline text-on-surface px-4 py-2 text-label-lg font-medium hover:bg-surface-container transition-colors"
+            >
+              Configurar CSD
+            </Link>
+          )}
+          {(canWrite === true || canWrite === "loading") && (
+            <Link
+              href="/billing/new"
+              className="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-4 py-2 text-label-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              Nueva factura
+            </Link>
+          )}
+        </>
+      }
       toolbar={
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <BillingToolbar
-              search={searchInput}
-              onSearchChange={handleSearch}
-              branchId={branchId}
-              onBranchChange={(v) => { setBranchId(v); setPage(1); }}
-              branches={branches}
-              showBranchFilter={isBypass === true}
-              statusFilter={statusFilter}
-              onStatusChange={(v) => { setStatusFilter(v); setPage(1); }}
-              from={from}
-              to={to}
-              onFromChange={(v) => { setFrom(v); setPage(1); }}
-              onToChange={(v) => { setTo(v); setPage(1); }}
-              onReset={handleReset}
-            />
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {(canManageCsd === true || canManageCsd === "loading") && (
-                <Link
-                  href="/billing/csd"
-                  className="rounded-full border border-outline text-on-surface px-4 py-2 text-label-sm font-medium hover:bg-surface-container transition-colors"
-                >
-                  Configurar CSD
-                </Link>
-              )}
-              {(canWrite === true || canWrite === "loading") && (
-                <Link
-                  href="/billing/new"
-                  className="rounded-full bg-primary text-on-primary px-4 py-2 text-label-sm font-medium hover:bg-primary/90 transition-colors"
-                >
-                  Nueva factura
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
+        <BillingToolbar
+          search={searchInput}
+          onSearchChange={handleSearch}
+          branchId={branchId}
+          onBranchChange={(v) => { setBranchId(v); setPage(1); }}
+          branches={branches}
+          showBranchFilter={isBypass === true}
+          statusFilter={statusFilter}
+          onStatusChange={(v) => { setStatusFilter(v); setPage(1); }}
+          from={from}
+          to={to}
+          onFromChange={(v) => { setFrom(v); setPage(1); }}
+          onToChange={(v) => { setTo(v); setPage(1); }}
+          onReset={handleReset}
+        />
       }
     >
       {!isLoading && items.length === 0 ? (
@@ -123,6 +121,6 @@ export function BillingListPage() {
           />
         </>
       )}
-    </CatalogShell>
+    </PageShell>
   );
 }

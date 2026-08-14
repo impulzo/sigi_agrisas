@@ -3,6 +3,7 @@ import { ProductDosificationsController } from "@/modules/products/infrastructur
 import { InMemoryProductRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductRepository";
 import { InMemoryProductPriceRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductPriceRepository";
 import { InMemoryProductDosificationRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductDosificationRepository";
+import { InMemoryPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryPricingSettingsRepository";
 import { ListProductDosificationsUseCase } from "@/modules/products/application/use-cases/ListProductDosificationsUseCase";
 import { CreateProductDosificationUseCase } from "@/modules/products/application/use-cases/CreateProductDosificationUseCase";
 import { UpdateProductDosificationUseCase } from "@/modules/products/application/use-cases/UpdateProductDosificationUseCase";
@@ -17,10 +18,11 @@ function buildController() {
   priceRepo.reset();
   const dosificationRepo = new InMemoryProductDosificationRepository();
   dosificationRepo.reset();
+  const pricingSettingsRepo = new InMemoryPricingSettingsRepository();
   return new ProductDosificationsController(
-    new ListProductDosificationsUseCase(productRepo, priceRepo, dosificationRepo),
-    new CreateProductDosificationUseCase(productRepo, priceRepo, dosificationRepo),
-    new UpdateProductDosificationUseCase(priceRepo, dosificationRepo),
+    new ListProductDosificationsUseCase(productRepo, priceRepo, dosificationRepo, pricingSettingsRepo),
+    new CreateProductDosificationUseCase(productRepo, priceRepo, dosificationRepo, pricingSettingsRepo),
+    new UpdateProductDosificationUseCase(priceRepo, dosificationRepo, pricingSettingsRepo),
     new SoftDeleteProductDosificationUseCase(dosificationRepo)
   );
 }

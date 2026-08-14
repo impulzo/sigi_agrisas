@@ -22,6 +22,7 @@ function makeSale(id: string, status: "completed" | "cancelled" | "edited"): Sal
     cashierId: "user-1",
     cashierName: "Operador Test",
     folioId: "folio-1",
+    folioCode: "A",
     folioNumber: 42,
     folioPrefix: "A",
     paymentMethodId: "pm-1",

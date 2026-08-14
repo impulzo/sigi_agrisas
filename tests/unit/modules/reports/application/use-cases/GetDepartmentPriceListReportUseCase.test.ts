@@ -14,6 +14,8 @@ function makeRow(overrides: Partial<RawPriceListRow> & { productId: string }): R
     code: overrides.code ?? "P001",
     name: overrides.name ?? "Producto 1",
     unit: overrides.unit ?? "PZA",
+    unitDescription: overrides.unitDescription !== undefined ? overrides.unitDescription : null,
+    stockQuantity: overrides.stockQuantity ?? new Decimal("0.0000"),
     ivaRate: overrides.ivaRate !== undefined ? overrides.ivaRate : new Decimal("0.1600"),
     iepsRate: overrides.iepsRate !== undefined ? overrides.iepsRate : null,
     priceId: overrides.priceId !== undefined ? overrides.priceId : "price-1",
@@ -92,18 +94,46 @@ describe("GetDepartmentPriceListReportUseCase", () => {
 
   it("calcula subtotales y totales consistentes", async () => {
     const rows = [
-      makeRow({ departmentId: "dept-1", productId: "prod-1" }),
-      makeRow({ departmentId: "dept-1", productId: "prod-1", priceId: "p2", priceName: "Mayoreo", isDefault: false }),
-      makeRow({ departmentId: "dept-1", productId: "prod-2" }),
-      makeRow({ departmentId: "dept-2", departmentCode: "D2", departmentName: "Depto 2", productId: "prod-3" }),
+      makeRow({ departmentId: "dept-1", productId: "prod-1", stockQuantity: new Decimal("10.0000") }),
+      makeRow({
+        departmentId: "dept-1",
+        productId: "prod-1",
+        priceId: "p2",
+        priceName: "Mayoreo",
+        isDefault: false,
+        stockQuantity: new Decimal("10.0000"),
+      }),
+      makeRow({ departmentId: "dept-1", productId: "prod-2", stockQuantity: new Decimal("5.0000") }),
+      makeRow({
+        departmentId: "dept-2",
+        departmentCode: "D2",
+        departmentName: "Depto 2",
+        productId: "prod-3",
+        stockQuantity: new Decimal("2.5000"),
+      }),
     ];
     const uc = new GetDepartmentPriceListReportUseCase(new InMemoryDepartmentPriceListRepository(rows));
 
     const dto = await uc.execute({ departmentId: null, generatedBy: GENERATED_BY });
 
-    expect(dto.departments[0].subtotal).toEqual({ productCount: 2, priceCount: 3 });
-    expect(dto.departments[1].subtotal).toEqual({ productCount: 1, priceCount: 1 });
-    expect(dto.totals).toEqual({ departmentCount: 2, productCount: 3, priceCount: 4 });
+    expect(dto.departments[0].subtotal).toEqual({ productCount: 2, priceCount: 3, totalStock: "15.0000" });
+    expect(dto.departments[1].subtotal).toEqual({ productCount: 1, priceCount: 1, totalStock: "2.5000" });
+    expect(dto.totals).toEqual({
+      departmentCount: 2,
+      productCount: 3,
+      priceCount: 4,
+      totalStock: "17.5000",
+    });
+  });
+
+  it("propaga stockQuantity por producto y branchId en filters", async () => {
+    const rows = [makeRow({ productId: "prod-1", stockQuantity: new Decimal("42.0000") })];
+    const uc = new GetDepartmentPriceListReportUseCase(new InMemoryDepartmentPriceListRepository(rows));
+
+    const dto = await uc.execute({ departmentId: null, branchId: "branch-1", generatedBy: GENERATED_BY });
+
+    expect(dto.departments[0].products[0].stockQuantity).toBe("42.0000");
+    expect(dto.filters.branchId).toBe("branch-1");
   });
 
   it("devuelve departments vacíos con totales en cero sin filas", async () => {
@@ -112,6 +142,11 @@ describe("GetDepartmentPriceListReportUseCase", () => {
     const dto = await uc.execute({ departmentId: null, generatedBy: GENERATED_BY });
 
     expect(dto.departments).toEqual([]);
-    expect(dto.totals).toEqual({ departmentCount: 0, productCount: 0, priceCount: 0 });
+    expect(dto.totals).toEqual({
+      departmentCount: 0,
+      productCount: 0,
+      priceCount: 0,
+      totalStock: "0.0000",
+    });
   });
 });

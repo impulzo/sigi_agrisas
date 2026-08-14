@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog/ConfirmDialog";
 import { SegmentedButton } from "../../../_components/molecules/SegmentedButton/SegmentedButton";
+import { Select } from "../../../_components/atoms/Select/Select";
 import type { BranchOption } from "../_logic/types/api";
 
 type PosMode = "sale" | "quote";
@@ -47,7 +48,7 @@ export function PosHeader({
 
   return (
     <header className="sticky top-0 z-10 bg-surface border-b border-outline-variant px-4 py-3 flex items-center gap-4">
-      <h1 className="text-title-md font-semibold text-on-surface shrink-0">Punto de Venta</h1>
+      <h1 className="text-title-lg font-semibold text-on-surface shrink-0">Punto de Venta</h1>
 
       {canQuote && onModeChange && (
         <SegmentedButton
@@ -63,17 +64,17 @@ export function PosHeader({
 
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {isBypass || branches.length > 1 ? (
-          <select
+          <Select
             value={selectedBranchId}
             onChange={(e) => onBranchChange(e.target.value)}
-            className="rounded-lg border border-outline px-3 py-1.5 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="py-1.5"
             aria-label="Sucursal"
           >
             <option value="">— Selecciona sucursal —</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
-          </select>
+          </Select>
         ) : branches.length === 1 ? (
           <span className="text-body-sm text-on-surface-variant">{branches[0].name}</span>
         ) : null}
@@ -93,7 +94,7 @@ export function PosHeader({
         type="button"
         onClick={onShowShortcuts}
         title="Atajos de teclado (?)"
-        className="shrink-0 text-label-sm text-on-surface-variant hover:text-on-surface transition-colors px-2 py-1 rounded"
+        className="shrink-0 text-label-sm text-on-surface-variant hover:text-on-surface transition-colors px-2 py-1 rounded-sm"
         aria-label="Mostrar atajos de teclado"
       >
         ?

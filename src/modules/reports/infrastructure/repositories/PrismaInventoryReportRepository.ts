@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { InventoryReportRepository, RawStockRow } from "../../application/ports/InventoryReportRepository";
 import { StockReportFilters } from "../../domain/value-objects/StockReportFilters";
+import { resolveUnitDescriptions } from "@/shared/infrastructure/sat-codes/resolveUnitDescriptions";
 
 export class PrismaInventoryReportRepository implements InventoryReportRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -25,6 +26,8 @@ export class PrismaInventoryReportRepository implements InventoryReportRepositor
       ],
     });
 
+    const unitMap = await resolveUnitDescriptions(this.prisma, rows.map((r) => r.product.unit));
+
     return rows.map((row) => ({
       branchId: row.branchId,
       branchCode: row.branch.code,
@@ -37,6 +40,7 @@ export class PrismaInventoryReportRepository implements InventoryReportRepositor
       code: row.product.code,
       name: row.product.name,
       unit: row.product.unit,
+      unitDescription: unitMap.get(row.product.unit) ?? null,
       quantity: row.quantity as unknown as Decimal,
       reservedQuantity: row.reservedQuantity as unknown as Decimal,
       reorderPoint: row.reorderPoint as unknown as Decimal,

@@ -2,6 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Tokens Material 3 "Agro-Systemic" como variables CSS, para consumo fuera de
+ * Tailwind (scrollbars, estilos de impresión, PDF). Los valores son tripletas
+ * RGB para poder componerlos con alpha: rgb(var(--md-sys-color-primary) / 0.5).
+ *
+ * Fuente de verdad: `tailwind.config.ts` → `theme.extend.colors`.
+ * Los dos deben mantenerse sincronizados; ver `designer.md`.
+ */
+@layer base {
+  :root {
+    --md-sys-color-primary: 13 99 27;
+    --md-sys-color-on-primary: 255 255 255;
+    --md-sys-color-primary-container: 46 125 50;
+    --md-sys-color-on-primary-container: 203 255 194;
+    --md-sys-color-primary-fixed: 163 246 156;
+    --md-sys-color-primary-fixed-dim: 136 217 130;
+    --md-sys-color-on-primary-fixed: 0 34 4;
+    --md-sys-color-on-primary-fixed-variant: 0 83 18;
+    --md-sys-color-inverse-primary: 136 217 130;
+    --md-sys-color-secondary: 119 87 77;
+    --md-sys-color-on-secondary: 255 255 255;
+    --md-sys-color-secondary-container: 254 211 199;
+    --md-sys-color-on-secondary-container: 121 89 80;
+    --md-sys-color-secondary-fixed: 255 219 208;
+    --md-sys-color-secondary-fixed-dim: 231 189 177;
+    --md-sys-color-on-secondary-fixed: 44 22 14;
+    --md-sys-color-on-secondary-fixed-variant: 93 64 55;
+    --md-sys-color-tertiary: 68 89 99;
+    --md-sys-color-on-tertiary: 255 255 255;
+    --md-sys-color-tertiary-container: 92 113 123;
+    --md-sys-color-on-tertiary-container: 225 244 255;
+    --md-sys-color-tertiary-fixed: 207 230 242;
+    --md-sys-color-tertiary-fixed-dim: 180 202 214;
+    --md-sys-color-on-tertiary-fixed: 7 30 39;
+    --md-sys-color-on-tertiary-fixed-variant: 53 74 83;
+    --md-sys-color-surface: 249 249 247;
+    --md-sys-color-on-surface: 26 28 27;
+    --md-sys-color-on-surface-variant: 64 73 61;
+    --md-sys-color-surface-variant: 226 227 225;
+    --md-sys-color-surface-bright: 249 249 247;
+    --md-sys-color-surface-dim: 218 218 216;
+    --md-sys-color-surface-tint: 27 109 36;
+    --md-sys-color-surface-container-lowest: 255 255 255;
+    --md-sys-color-surface-container-low: 244 244 242;
+    --md-sys-color-surface-container: 238 238 236;
+    --md-sys-color-surface-container-high: 232 232 230;
+    --md-sys-color-surface-container-highest: 226 227 225;
+    --md-sys-color-inverse-surface: 47 49 48;
+    --md-sys-color-inverse-on-surface: 241 241 239;
+    --md-sys-color-outline: 112 122 108;
+    --md-sys-color-outline-variant: 191 202 186;
+    --md-sys-color-error: 186 26 26;
+    --md-sys-color-on-error: 255 255 255;
+    --md-sys-color-error-container: 255 218 214;
+    --md-sys-color-on-error-container: 147 0 10;
+    --md-sys-color-background: 249 249 247;
+    --md-sys-color-on-background: 26 28 27;
+  }
+}
+
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;

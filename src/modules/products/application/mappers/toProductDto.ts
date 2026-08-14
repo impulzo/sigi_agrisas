@@ -1,12 +1,13 @@
 import { ProductWithDepartment } from "../ports/ProductRepository";
 import { ProductDto } from "../dto/ProductDto";
 
-export function toProductDto({ product, departmentName, taxRateCode, taxRate, providerName, providerId, stock }: ProductWithDepartment): ProductDto {
+export function toProductDto({ product, departmentName, taxRateCode, taxRate, providerName, providerId, stock, unitDescription }: ProductWithDepartment): ProductDto {
   return {
     id: product.id,
     code: product.code,
     name: product.name,
     unit: product.unit,
+    unitDescription,
     satProductCode: product.satProductCode,
     departmentId: product.departmentId,
     departmentName,

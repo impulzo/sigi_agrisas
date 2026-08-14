@@ -107,9 +107,9 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
     : String(sale.folioNumber);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="flex flex-col gap-lg px-gutter py-lg mx-auto w-full max-w-4xl">
       {showCreditLimitBanner && (
-        <div className="flex items-center justify-between gap-3 rounded-xl bg-error/10 text-error px-4 py-2 text-body-sm">
+        <div className="flex items-center justify-between gap-3 rounded-md bg-error/10 text-error px-4 py-2 text-body-sm">
           <span>Se ha excedido el límite de crédito establecido para este cliente.</span>
           <button
             type="button"
@@ -177,7 +177,7 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
       </div>
 
       {/* Metadata */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 bg-surface-container-low rounded-2xl p-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 bg-surface-container-low rounded-lg p-4">
         <div>
           <p className="text-label-sm text-on-surface-variant">Cliente</p>
           <p className="text-body-sm text-on-surface">{sale.customerName ?? "—"}</p>
@@ -197,7 +197,7 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
       </div>
 
       {/* Items */}
-      <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+      <div className="bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden">
         <div className="px-4 py-3 border-b border-outline-variant">
           <h2 className="text-title-sm font-semibold text-on-surface">Artículos</h2>
         </div>
@@ -253,7 +253,7 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
 
       {/* Cancellation / edit info */}
       {sale.status === "cancelled" && (
-        <div className="bg-error-container text-on-error-container rounded-xl p-4 text-body-sm">
+        <div className="bg-error-container text-on-error-container rounded-md p-4 text-body-sm">
           <p className="font-medium mb-1">Venta cancelada el {fmtDate(sale.cancelledAt!)}</p>
           {sale.cancellationReason && (
             <p>Motivo: {sale.cancellationReason}</p>

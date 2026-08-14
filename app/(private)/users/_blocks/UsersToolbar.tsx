@@ -34,14 +34,14 @@ export function UsersToolbar({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Buscar por nombre o email"
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full pl-10 pr-4 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
         {canCreate && (
           <button
             type="button"
             onClick={onCreateClick}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
           >
             <Icon name="person_add" size={18} />
             Crear usuario

@@ -8,6 +8,8 @@ export interface ProductWithDepartment {
   providerName: string | null;
   providerId: string | null;
   stock: number | null;
+  /** Description resuelta contra `sat_units_of_measure`; null si `unit` no matchea el catálogo (dato legacy). */
+  unitDescription: string | null;
 }
 
 export interface FindAllProductsOptions {

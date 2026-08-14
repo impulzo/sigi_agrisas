@@ -17,7 +17,7 @@ La ruta `/auth/login` SHALL ser pública y accesible sin access token. El `AuthM
 
 #### Scenario: Usuario autenticado accede a /auth/login
 - **WHEN** un usuario con cookie `refreshToken` válida navega a `/auth/login`
-- **THEN** el Server Component lee la cookie con `cookies()` de `next/headers` y llama `redirect("/dashboard")` antes de renderizar el formulario
+- **THEN** el Server Component lee la cookie con `cookies()` de `next/headers` y llama `redirect("/pos")` antes de renderizar el formulario
 
 ---
 
@@ -30,7 +30,7 @@ La ruta `/auth/register` SHALL ser pública y accesible sin access token. El `Au
 
 #### Scenario: Usuario autenticado accede a /auth/register
 - **WHEN** un usuario con cookie `refreshToken` válida navega a `/auth/register`
-- **THEN** el sistema redirige a `/dashboard` server-side antes de renderizar
+- **THEN** el sistema redirige a `/pos` server-side antes de renderizar
 
 ---
 

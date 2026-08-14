@@ -13,7 +13,7 @@ jest.mock("next/link", () => {
 });
 jest.mock("../../../../../../../../app/(private)/sales/_logic/hooks/useSaleDetail");
 jest.mock("../../../../../../../../app/(private)/settings/_logic/services/getTicketSettings", () => ({
-  getTicketSettings: jest.fn().mockResolvedValue({ logoUrl: null, headerText: null, footerText: null, paperWidth: "80mm" }),
+  getTicketSettings: jest.fn().mockResolvedValue({ logoUrl: null, footerText: null, paperWidth: "80mm" }),
 }));
 
 import { useSaleDetail } from "../../../../../../../../app/(private)/sales/_logic/hooks/useSaleDetail";
@@ -131,7 +131,6 @@ describe("TicketPreviewPage", () => {
       .mocked(getTicketSettings)
       .mockResolvedValueOnce({
         logoUrl: "https://x.test/logo.png",
-        headerText: null,
         footerText: null,
         paperWidth: "80mm",
         businessAddress: null,
@@ -203,6 +202,35 @@ describe("TicketPreviewPage", () => {
     expect(screen.getAllByText(/Nombre: Cliente Test/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Dirección: Av. Central 123, Oaxaca/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Crédito a 30 días").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("muestra razón social y RFC del emisor cuando settings los trae", async () => {
+    jest.mocked(getTicketSettings).mockResolvedValueOnce({
+      logoUrl: null,
+      footerText: null,
+      paperWidth: "80mm",
+      businessName: "Agrisas S.A. de C.V.",
+      businessRfc: "AGR010101AB1",
+      businessAddress: null,
+      businessPhone: null,
+      businessTaxRegime: null,
+      legendText: null,
+    });
+    mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Agrisas S.A. de C.V.").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("RFC: AGR010101AB1").length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it("no renderiza texto de encabezado ni fallback 'Centro Agrícola Integral'", async () => {
+    mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
+    await renderPage();
+
+    expect(screen.queryByText(/centro agrícola integral/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Encabezado")).not.toBeInTheDocument();
   });
 
   it("muestra 'Total a pagar' como etiqueta del total de la venta", async () => {

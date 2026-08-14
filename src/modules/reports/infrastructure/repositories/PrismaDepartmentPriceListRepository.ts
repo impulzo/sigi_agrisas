@@ -1,10 +1,11 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import {
   DepartmentPriceListRepository,
   RawPriceListRow,
 } from "../../application/ports/DepartmentPriceListRepository";
 import { DepartmentPriceListFilters } from "../../domain/value-objects/DepartmentPriceListFilters";
+import { resolveUnitDescriptions } from "@/shared/infrastructure/sat-codes/resolveUnitDescriptions";
 
 export class PrismaDepartmentPriceListRepository implements DepartmentPriceListRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -24,6 +25,15 @@ export class PrismaDepartmentPriceListRepository implements DepartmentPriceListR
       ],
     });
 
+    const stockRows = await this.prisma.$queryRaw<Array<{ product_id: string; qty: string }>>`
+      SELECT product_id, COALESCE(SUM(quantity), 0) AS qty
+      FROM branch_inventory
+      WHERE ${filters.branchId ? Prisma.sql`branch_id = ${filters.branchId}` : Prisma.sql`TRUE`}
+      GROUP BY product_id
+    `;
+    const stockMap = new Map(stockRows.map((r) => [r.product_id, new Decimal(r.qty)]));
+    const unitMap = await resolveUnitDescriptions(this.prisma, products.map((p) => p.unit));
+
     const rows: RawPriceListRow[] = [];
 
     for (const product of products) {
@@ -35,6 +45,8 @@ export class PrismaDepartmentPriceListRepository implements DepartmentPriceListR
         code: product.code,
         name: product.name,
         unit: product.unit,
+        unitDescription: unitMap.get(product.unit) ?? null,
+        stockQuantity: (stockMap.get(product.id) ?? new Decimal(0)) as unknown as Decimal,
         ivaRate: product.ivaRate as unknown as Decimal | null,
         iepsRate: product.iepsRate as unknown as Decimal | null,
       };

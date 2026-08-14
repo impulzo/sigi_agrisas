@@ -101,7 +101,7 @@ import { GetProviderPaymentsReportUseCase } from "@/modules/reports/application/
 import { InMemoryProviderPaymentReportRepository, InMemProviderPayment } from "@/modules/reports/infrastructure/repositories/InMemoryProviderPaymentReportRepository";
 import { GetSalesByProductReportUseCase } from "@/modules/reports/application/use-cases/GetSalesByProductReportUseCase";
 import { InMemorySalesByProductRepository } from "@/modules/reports/infrastructure/repositories/InMemorySalesByProductRepository";
-import { SalesByProductAggregates } from "@/modules/reports/domain/value-objects/SalesByProductFilters";
+import { SalesByProductPage } from "@/modules/reports/domain/value-objects/SalesByProductFilters";
 import { GetCollectionsReportUseCase } from "@/modules/reports/application/use-cases/GetCollectionsReportUseCase";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 
@@ -124,7 +124,7 @@ function makeStockRow(): RawStockRow {
   return {
     branchId: BRANCH_ID, branchCode: "MAT", branchName: "Matriz", isHeadquarters: true,
     departmentId: DEPT_ID, departmentCode: "D1", departmentName: "Dept 1",
-    productId: "prod-1", code: "P001", name: "Prod 1", unit: "PZA",
+    productId: "prod-1", code: "P001", name: "Prod 1", unit: "PZA", unitDescription: null,
     quantity: new Decimal("10"), reservedQuantity: new Decimal("0"), reorderPoint: new Decimal("5"),
   };
 }
@@ -141,7 +141,8 @@ function makePaymentRow(): RawPaymentRow {
 function makePriceListRow(): RawPriceListRow {
   return {
     departmentId: DEPT_ID, departmentCode: "D1", departmentName: "Dept 1",
-    productId: "prod-1", code: "P001", name: "Prod 1", unit: "PZA",
+    productId: "prod-1", code: "P001", name: "Prod 1", unit: "PZA", unitDescription: null,
+    stockQuantity: new Decimal("10.0000"),
     ivaRate: new Decimal("0.1600"), iepsRate: null,
     priceId: "price-1", priceName: "Menudeo", price: new Decimal("100.0000"),
     minQuantity: 1, discountPct: new Decimal("0.00"), isDefault: true,
@@ -181,9 +182,8 @@ function emptySalesByProductUseCase() {
   return new GetSalesByProductReportUseCase(
     new InMemorySalesByProductRepository(() => ({
       totals: { ticketCount: 0, subtotal: 0, taxTotal: 0, total: 0 },
-      byCustomer: [],
-      byDepartment: [],
-      byProduct: [],
+      rows: [],
+      rowsTotal: 0,
     }))
   );
 }
@@ -286,18 +286,17 @@ function makeProviderPaymentsController(rows: InMemProviderPayment[] = [], authz
   );
 }
 
-function makeSalesByProductController(agg?: SalesByProductAggregates, authz?: AuthorizationService) {
+function makeSalesByProductController(page?: SalesByProductPage, authz?: AuthorizationService) {
   const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
   const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
   const acc = emptyAccountUseCases();
-  const emptyAgg: SalesByProductAggregates = {
+  const emptyPage: SalesByProductPage = {
     totals: { ticketCount: 0, subtotal: 0, taxTotal: 0, total: 0 },
-    byCustomer: [],
-    byDepartment: [],
-    byProduct: [],
+    rows: [],
+    rowsTotal: 0,
   };
   const salesByProductUC = new GetSalesByProductReportUseCase(
-    new InMemorySalesByProductRepository(() => agg ?? emptyAgg)
+    new InMemorySalesByProductRepository(() => page ?? emptyPage)
   );
   return new ReportsController(
     stockUC, payUC, acc.summary, acc.ledger, acc.anticipo,
@@ -1134,6 +1133,47 @@ describe("ReportsController - getDepartmentPriceListReport", () => {
     const buf = Buffer.from(await res.arrayBuffer());
     expect(buf.length).toBeGreaterThan(0);
   });
+
+  it("200 incluye stockQuantity por producto y totalStock", async () => {
+    const ctrl = makeDepartmentPriceListController([makePriceListRow()]);
+    const res = await ctrl.getDepartmentPriceListReport(req(URL, authHeaders()));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.departments[0].products[0].stockQuantity).toBe("10.0000");
+    expect(body.departments[0].subtotal.totalStock).toBe("10.0000");
+    expect(body.totals.totalStock).toBe("10.0000");
+  });
+
+  it("400 con branchId UUID inválido", async () => {
+    const ctrl = makeDepartmentPriceListController();
+    const res = await ctrl.getDepartmentPriceListReport(req(`${URL}?branchId=bad`, authHeaders()));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid branchId" });
+  });
+
+  it("403 branch scope cross-branch sin bypass", async () => {
+    const authz = makeAuthz({
+      userCan: jest.fn().mockImplementation(async (_id, key) => {
+        if (key === "reports:inventory_read") return true;
+        return false;
+      }),
+    });
+    const ctrl = makeDepartmentPriceListController([], authz);
+    const res = await ctrl.getDepartmentPriceListReport(
+      req(`${URL}?branchId=${OTHER_BRANCH}`, authHeaders(BRANCH_ID))
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("200 JSON propaga branchId en filters", async () => {
+    const ctrl = makeDepartmentPriceListController([makePriceListRow()]);
+    const res = await ctrl.getDepartmentPriceListReport(
+      req(`${URL}?branchId=${BRANCH_ID}`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.filters.branchId).toBe(BRANCH_ID);
+  });
 });
 
 describe("ReportsController - getPurchasesReport", () => {
@@ -1256,20 +1296,38 @@ describe("ReportsController - getSalesByProductReport", () => {
     expect(res.status).toBe(400);
   });
 
-  it("200 JSON con totals y desgloses, incluye currentStock por producto", async () => {
+  it("200 JSON con totals y filas de detalle Departamento+Producto+Cliente", async () => {
     const ctrl = makeSalesByProductController({
       totals: { ticketCount: 1, subtotal: 100, taxTotal: 16, total: 116 },
-      byCustomer: [],
-      byDepartment: [],
-      byProduct: [
-        { key: "p1", label: "Fertilizante (F1)", ticketCount: 1, quantitySold: 4, currentStock: 20, subtotal: 100, taxTotal: 16, total: 116 },
+      rows: [
+        {
+          departmentId: "d1", departmentName: "Agroquímicos",
+          productId: "p1", productCode: "F1", productName: "Fertilizante",
+          customerId: "c1", customerName: "Cliente Uno",
+          quantity: 4, total: 116,
+        },
       ],
+      rowsTotal: 1,
     });
     const res = await ctrl.getSalesByProductReport(req(URL, authHeaders()));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.totals.total).toBe("116.0000");
-    expect(body.byProduct[0].currentStock).toBe(20);
+    expect(body.rows[0].productName).toBe("Fertilizante");
+    expect(body.rowsTotal).toBe(1);
+  });
+
+  it("409 ReportTooLarge al exportar con más de 10000 combinaciones", async () => {
+    const ctrl = makeSalesByProductController({
+      totals: { ticketCount: 1, subtotal: 100, taxTotal: 16, total: 116 },
+      rows: [],
+      rowsTotal: 10001,
+    });
+    const res = await ctrl.getSalesByProductReport(req(`${URL}?format=pdf`, authHeaders()));
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("ReportTooLarge");
+    expect(body.limit).toBe(10000);
   });
 });
 

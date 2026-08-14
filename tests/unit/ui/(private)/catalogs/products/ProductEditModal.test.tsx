@@ -8,6 +8,12 @@ jest.mock("../../../../../../app/_hooks/useTaxRatesOptions", () => ({
 jest.mock("../../../../../../app/_hooks/useSatCodesSearch", () => ({
   useSatCodesSearch: jest.fn(() => ({ options: [], isLoading: false })),
 }));
+jest.mock("../../../../../../app/_hooks/useSatCatalogSearch", () => ({
+  useSatCatalogSearch: jest.fn(() => ({
+    options: [{ code: "KGM", description: "Kilogramo" }],
+    isLoading: false,
+  })),
+}));
 
 import { useSatCodesSearch } from "../../../../../../app/_hooks/useSatCodesSearch";
 
@@ -41,6 +47,7 @@ const BASE_PRODUCT: Product = {
   code: "PROD_01",
   name: "Arroz",
   unit: "kg",
+  unitDescription: null,
   satProductCode: null,
   departmentId: DEPT_UUID_1,
   departmentName: "Agrícola",
@@ -239,7 +246,8 @@ describe("ProductEditModal — create mode deferred upload (task 8.3)", () => {
     );
     await user.type(screen.getAllByRole("textbox")[0], "PROD_IMG");
     await user.type(screen.getAllByRole("textbox")[2], "Producto con Imagen");
-    await user.type(screen.getAllByRole("textbox")[1], "kg");
+    await user.type(screen.getAllByRole("textbox")[1], "KGM");
+    await user.click(screen.getByRole("button", { name: /Kilogramo/ }));
     await user.selectOptions(screen.getAllByRole("combobox")[0], DEPT_UUID_1);
 
     const fileInput = document.querySelector("input[type='file']") as HTMLInputElement;
@@ -307,7 +315,8 @@ describe("ProductEditModal — combobox Cód. SAT (catálogo real)", () => {
 
     await user.type(screen.getAllByRole("textbox")[0], "VALID_01");
     await user.type(screen.getAllByRole("textbox")[2], "Producto");
-    await user.type(screen.getAllByRole("textbox")[1], "kg");
+    await user.type(screen.getAllByRole("textbox")[1], "KGM");
+    await user.click(screen.getByRole("button", { name: /Kilogramo/ }));
     await user.type(screen.getAllByRole("textbox")[3], "99999999");
     await user.selectOptions(screen.getAllByRole("combobox")[0], DEPT_UUID_1);
 

@@ -1,12 +1,16 @@
 import { SalesByProductRepository } from "../../application/ports/SalesByProductRepository";
-import { SalesByProductFilters, SalesByProductAggregates } from "../../domain/value-objects/SalesByProductFilters";
+import { SalesByProductFilters, SalesByProductPage } from "../../domain/value-objects/SalesByProductFilters";
 
 export class InMemorySalesByProductRepository implements SalesByProductRepository {
   constructor(
-    private readonly fixture: (filters: SalesByProductFilters) => SalesByProductAggregates
+    private readonly fixture: (
+      filters: SalesByProductFilters,
+      page: number,
+      pageSize: number
+    ) => SalesByProductPage
   ) {}
 
-  async getAggregates(filters: SalesByProductFilters): Promise<SalesByProductAggregates> {
-    return this.fixture(filters);
+  async getPage(filters: SalesByProductFilters, page: number, pageSize: number): Promise<SalesByProductPage> {
+    return this.fixture(filters, page, pageSize);
   }
 }

@@ -6,9 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function RolesLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="px-gutter py-lg max-w-screen-2xl mx-auto">
-      {children}
-    </div>
-  );
+  return <>{children}</>;
 }

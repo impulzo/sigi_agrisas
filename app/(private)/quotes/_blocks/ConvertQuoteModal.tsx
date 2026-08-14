@@ -66,11 +66,11 @@ export function ConvertQuoteModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
+      <div className="bg-surface rounded-lg shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
         <h2 className="text-title-lg font-semibold text-on-surface">Convertir a venta</h2>
 
         {inlineError && (
-          <div className="bg-error-container text-on-error-container rounded-xl px-3 py-2 text-body-sm">
+          <div className="bg-error-container text-on-error-container rounded-md px-3 py-2 text-body-sm">
             {inlineError}
           </div>
         )}
@@ -83,7 +83,7 @@ export function ConvertQuoteModal({
             <select
               value={folioId}
               onChange={(e) => setFolioId(e.target.value)}
-              className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             >
               <option value="">— Selecciona folio fiscal —</option>
               {folios.map((f) => (
@@ -103,7 +103,7 @@ export function ConvertQuoteModal({
             <select
               value={paymentMethodId}
               onChange={(e) => setPaymentMethodId(e.target.value)}
-              className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             >
               <option value="">— Selecciona forma de pago —</option>
               {paymentMethods.map((pm) => (
@@ -122,7 +122,7 @@ export function ConvertQuoteModal({
             onChange={(e) => setNotes(e.target.value)}
             maxLength={1000}
             rows={2}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           />
         </div>
 

@@ -16,7 +16,7 @@ export function InlineFilterInput({ value, onChange }: InlineFilterInputProps) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Filtrar filas cargadas..."
-        className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+        className="w-full pl-9 pr-3 py-1.5 rounded-md border border-outline-variant bg-surface-container-lowest text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
       />
     </div>
   );

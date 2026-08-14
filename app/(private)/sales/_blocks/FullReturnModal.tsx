@@ -47,7 +47,7 @@ export function FullReturnModal({ saleId, onSuccess, onClose }: FullReturnModalP
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
         <h2 className="text-title-md font-semibold text-on-surface mb-2">Devolución total</h2>
         <p className="text-body-sm text-on-surface-variant mb-4">
           Se devolverán todas las líneas restantes del ticket al inventario.
@@ -63,7 +63,7 @@ export function FullReturnModal({ saleId, onSuccess, onClose }: FullReturnModalP
             maxLength={500}
             rows={3}
             placeholder="Describe el motivo de la devolución..."
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           />
           <div className="flex justify-between items-center mt-0.5">
             {reasonError && (
@@ -83,7 +83,7 @@ export function FullReturnModal({ saleId, onSuccess, onClose }: FullReturnModalP
             maxLength={1000}
             rows={2}
             placeholder="Información adicional..."
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           />
           <p className="text-label-sm text-on-surface-variant text-right mt-0.5">{notes.length}/1000</p>
         </div>

@@ -9,6 +9,7 @@ import {
 import { Product } from "../../domain/entities/Product";
 import { ProductNotFoundError } from "../../domain/errors/ProductNotFoundError";
 import { ProductCodeAlreadyInUseError } from "../../domain/errors/ProductCodeAlreadyInUseError";
+import { resolveUnitDescriptions } from "@/shared/infrastructure/sat-codes/resolveUnitDescriptions";
 
 const INCLUDE_WITH_RELATIONS = {
   department: { select: { name: true, providerId: true, provider: { select: { id: true, name: true } } } },
@@ -21,7 +22,11 @@ function decToNullableNumber(value: Prisma.Decimal | null): number | null {
   return value === null ? null : value.toNumber();
 }
 
-function toProductWithDepartment(row: ProductRow, stock: number | null = null): ProductWithDepartment {
+function toProductWithDepartment(
+  row: ProductRow,
+  stock: number | null = null,
+  unitDescription: string | null = null
+): ProductWithDepartment {
   return {
     product: Product.create({
       id: row.id,
@@ -47,6 +52,7 @@ function toProductWithDepartment(row: ProductRow, stock: number | null = null): 
     providerId: row.department?.provider?.id ?? null,
     providerName: row.department?.provider?.name ?? null,
     stock,
+    unitDescription,
   };
 }
 
@@ -112,10 +118,13 @@ export class PrismaProductRepository implements ProductRepository {
       this.prisma.product.count({ where }),
     ]);
 
+    const typedRows = rows as unknown as (ProductRow & { inventory?: { quantity: Prisma.Decimal }[] })[];
+    const unitMap = await resolveUnitDescriptions(this.prisma, typedRows.map((r) => r.unit));
+
     return {
-      items: (rows as unknown as (ProductRow & { inventory?: { quantity: Prisma.Decimal }[] })[]).map((row) => {
+      items: typedRows.map((row) => {
         const stockRow = row.inventory?.[0];
-        return toProductWithDepartment(row, stockRow ? stockRow.quantity.toNumber() : null);
+        return toProductWithDepartment(row, stockRow ? stockRow.quantity.toNumber() : null, unitMap.get(row.unit) ?? null);
       }),
       total,
     };
@@ -123,7 +132,9 @@ export class PrismaProductRepository implements ProductRepository {
 
   async findById(id: string): Promise<ProductWithDepartment | null> {
     const row = await this.prisma.product.findUnique({ where: { id }, include: INCLUDE_WITH_RELATIONS });
-    return row ? toProductWithDepartment(row) : null;
+    if (!row) return null;
+    const unitMap = await resolveUnitDescriptions(this.prisma, [row.unit]);
+    return toProductWithDepartment(row, null, unitMap.get(row.unit) ?? null);
   }
 
   async create(data: CreateProductData): Promise<ProductWithDepartment> {
@@ -143,7 +154,8 @@ export class PrismaProductRepository implements ProductRepository {
         },
         include: INCLUDE_WITH_RELATIONS,
       });
-      return toProductWithDepartment(row);
+      const unitMap = await resolveUnitDescriptions(this.prisma, [row.unit]);
+      return toProductWithDepartment(row, null, unitMap.get(row.unit) ?? null);
     } catch (err) {
       if (isPrismaUniqueError(err, "code")) throw new ProductCodeAlreadyInUseError(data.code);
       throw err;
@@ -168,7 +180,8 @@ export class PrismaProductRepository implements ProductRepository {
         },
         include: INCLUDE_WITH_RELATIONS,
       });
-      return toProductWithDepartment(row);
+      const unitMap = await resolveUnitDescriptions(this.prisma, [row.unit]);
+      return toProductWithDepartment(row, null, unitMap.get(row.unit) ?? null);
     } catch (err) {
       if (isPrismaNotFoundError(err)) throw new ProductNotFoundError(id);
       throw err;

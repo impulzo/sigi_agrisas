@@ -106,7 +106,7 @@ export function UsersTable({
                         onClick={() => onEdit(user)}
                         disabled={isSelf}
                         title={isSelf ? "No puedes editar tu propia cuenta" : "Editar usuario"}
-                        className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         <Icon name="edit" size={18} />
                       </button>
@@ -115,7 +115,7 @@ export function UsersTable({
                         onClick={() => onDelete(user)}
                         disabled={isSelf}
                         title={isSelf ? "No puedes eliminar tu propia cuenta" : "Eliminar usuario"}
-                        className="p-2 rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-2 rounded text-on-surface-variant hover:bg-error-container hover:text-error transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         <Icon name="delete" size={18} />
                       </button>

@@ -12,6 +12,7 @@ import { useTaxRatesOptions } from "../../../../_hooks/useTaxRatesOptions";
 import { useDepartmentsOptions } from "../../../../_hooks/useDepartmentsOptions";
 import { TaxRateSelect } from "./TaxRateSelect";
 import { SatCodeCombobox } from "./SatCodeCombobox";
+import { SatCatalogCombobox } from "../../../../_components/molecules/SatCatalogCombobox/SatCatalogCombobox";
 import type { Product } from "../_logic/types/domain";
 import type { UpdateProductBody } from "../_logic/types/api";
 
@@ -98,12 +99,12 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
     }
   };
 
-  const fieldClass = "w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50";
+  const fieldClass = "w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50";
 
   return (
     <form onSubmit={handleSubmit} noValidate className="max-w-xl space-y-4">
       {saveError && (
-        <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-xl">{saveError}</p>
+        <p className="text-label-sm text-error bg-error-container/30 px-3 py-2 rounded-md">{saveError}</p>
       )}
 
       <div className="grid grid-cols-2 gap-4">
@@ -112,8 +113,16 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
           <input type="text" value={product.code} disabled className={fieldClass} />
         </div>
         <div>
-          <label className="block text-label-lg text-on-surface-variant mb-1">Unidad *</label>
-          <input type="text" value={unit} onChange={(e) => setUnit(e.target.value)} disabled={!canWrite} maxLength={30} className={fieldClass} />
+          <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="product-unit">Unidad (clave SAT) *</label>
+          <SatCatalogCombobox
+            catalog="clave-unidad"
+            id="product-unit"
+            value={unit}
+            onChange={setUnit}
+            placeholder="KGM"
+            disabled={!canWrite}
+            className={fieldClass}
+          />
           {validationErrors.unit && <p className="text-label-sm text-error mt-1">{validationErrors.unit}</p>}
         </div>
       </div>
@@ -194,7 +203,7 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
         <button
           type="submit"
           disabled={isSaving || isDiffEmpty}
-          className="px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isSaving ? "Guardando…" : "Guardar cambios"}
         </button>

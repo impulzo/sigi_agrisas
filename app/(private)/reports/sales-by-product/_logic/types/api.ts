@@ -1,15 +1,13 @@
-export interface SalesByProductBreakdownRowDto {
-  key: string;
-  label: string;
-  ticketCount: number;
-  subtotal: string;
-  taxTotal: string;
+export interface SalesByProductDetailRowDto {
+  departmentId: string;
+  departmentName: string;
+  productId: string;
+  productCode: string;
+  productName: string;
+  customerId: string | null;
+  customerName: string;
+  quantity: string;
   total: string;
-}
-
-export interface SalesByProductRowDto extends SalesByProductBreakdownRowDto {
-  quantitySold: string;
-  currentStock: number;
 }
 
 export interface SalesByProductReportDto {
@@ -28,7 +26,6 @@ export interface SalesByProductReportDto {
     taxTotal: string;
     total: string;
   };
-  byCustomer: SalesByProductBreakdownRowDto[];
-  byDepartment: SalesByProductBreakdownRowDto[];
-  byProduct: SalesByProductRowDto[];
+  rows: SalesByProductDetailRowDto[];
+  rowsTotal: number;
 }

@@ -23,10 +23,11 @@ describe("PrivateLayout — layout structure", () => {
     expect(layoutSrc).toMatch(/overflow-y-auto/);
   });
 
-  it("main aplica gutter global de 10px izq/top/der (sales-screens-padding)", () => {
-    expect(layoutSrc).toMatch(/pl-\[90px\]/);
-    expect(layoutSrc).toMatch(/pt-\[74px\]/);
-    expect(layoutSrc).toMatch(/pr-2\.5/);
+  it("main aplica solo la geometría del chrome (rail 80px + barra 64px), sin padding de página (design-system: PageShell lo aporta)", () => {
+    expect(layoutSrc).toMatch(/pl-20\b/);
+    expect(layoutSrc).toMatch(/pt-16\b/);
+    expect(layoutSrc).not.toMatch(/pr-2\.5/);
+    expect(layoutSrc).not.toMatch(/pl-\[90px\]/);
   });
 
   it("is a Server Component (no use client directive)", () => {

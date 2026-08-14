@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useQuotesList } from "../_logic/hooks/useQuotesList";
-import { CatalogShell } from "../../catalogs/_blocks/CatalogShell";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
 import { QuotesToolbar } from "./QuotesToolbar";
 import { QuotesTable } from "./QuotesTable";
@@ -80,7 +80,7 @@ export function QuotesListPage() {
   }
 
   return (
-    <CatalogShell
+    <PageShell
       title="Cotizaciones"
       description="Listado de cotizaciones emitidas"
       toolbar={
@@ -117,6 +117,6 @@ export function QuotesListPage() {
           />
         </>
       )}
-    </CatalogShell>
+    </PageShell>
   );
 }

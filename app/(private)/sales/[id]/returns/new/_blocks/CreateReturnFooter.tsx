@@ -41,7 +41,7 @@ export function CreateReturnFooter({
   refundTotal,
 }: CreateReturnFooterProps) {
   return (
-    <div className="space-y-4 bg-surface-container-low rounded-2xl p-4">
+    <div className="space-y-4 bg-surface-container-low rounded-lg p-4">
       <div>
         <label htmlFor="return-reason" className="block text-label-md text-on-surface mb-1">
           Motivo <span className="text-error">*</span>
@@ -53,7 +53,7 @@ export function CreateReturnFooter({
           rows={3}
           maxLength={500}
           required
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+          className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           placeholder="Describe el motivo de la devolución (mín. 3 caracteres)..."
         />
         <p className="text-right text-label-sm text-on-surface-variant mt-1">{reason.length}/500</p>
@@ -72,7 +72,7 @@ export function CreateReturnFooter({
           value={returnedAt}
           max={today}
           onChange={(e) => onReturnedAtChange(e.target.value)}
-          className="rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className="rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </div>
 
@@ -86,7 +86,7 @@ export function CreateReturnFooter({
           onChange={(e) => onNotesChange(e.target.value.slice(0, 1000))}
           rows={2}
           maxLength={1000}
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+          className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           placeholder="Observaciones adicionales..."
         />
         <p className="text-right text-label-sm text-on-surface-variant mt-1">{notes.length}/1000</p>

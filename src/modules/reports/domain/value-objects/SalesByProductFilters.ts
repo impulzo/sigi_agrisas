@@ -7,23 +7,7 @@ export interface SalesByProductFilters {
   to: Date;
 }
 
-/** Fila de un desglose (por cliente o por departamento). */
-export interface SalesByProductBreakdownRow {
-  key: string;
-  label: string;
-  ticketCount: number;
-  subtotal: number;
-  taxTotal: number;
-  total: number;
-}
-
-/** Fila del desglose por producto: piezas vendidas + stock actual (cruce inventario × ventas). */
-export interface SalesByProductRow extends SalesByProductBreakdownRow {
-  quantitySold: number;
-  currentStock: number;
-}
-
-/** Totales globales del periodo/filtros, constantes sin importar el modo de agrupación de la UI. */
+/** Totales globales del periodo/filtros. */
 export interface SalesByProductTotals {
   ticketCount: number;
   subtotal: number;
@@ -31,10 +15,22 @@ export interface SalesByProductTotals {
   total: number;
 }
 
-/** Bolsa de agregados crudos que devuelve el repositorio. */
-export interface SalesByProductAggregates {
+/** Fila de detalle: cruce Departamento + Producto + Cliente, con cantidad y monto vendidos. */
+export interface SalesByProductDetailRow {
+  departmentId: string;
+  departmentName: string;
+  productId: string;
+  productCode: string;
+  productName: string;
+  customerId: string | null;
+  customerName: string;
+  quantity: number;
+  total: number;
+}
+
+/** Página de resultados que devuelve el repositorio: totales + filas de detalle paginadas. */
+export interface SalesByProductPage {
   totals: SalesByProductTotals;
-  byCustomer: SalesByProductBreakdownRow[];
-  byDepartment: SalesByProductBreakdownRow[];
-  byProduct: SalesByProductRow[];
+  rows: SalesByProductDetailRow[];
+  rowsTotal: number;
 }

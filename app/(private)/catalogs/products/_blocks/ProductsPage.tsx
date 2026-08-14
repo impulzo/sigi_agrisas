@@ -10,7 +10,7 @@ import { useDepartmentsOptions } from "../../../../_hooks/useDepartmentsOptions"
 import { useProvidersOptions } from "../../../../_hooks/useProvidersOptions";
 import { ProductsTable } from "./ProductsTable";
 import { ProductEditModal } from "./ProductEditModal";
-import { CatalogShell } from "../../_blocks/CatalogShell";
+import { PageShell } from "../../../../_components/organisms/PageShell";
 import { CatalogToolbar } from "../../_blocks/CatalogToolbar";
 import { CatalogPagination } from "../../_blocks/CatalogPagination";
 import { CatalogEmpty } from "../../_blocks/CatalogEmpty";
@@ -184,7 +184,7 @@ export function ProductsPage() {
           value={providerId ?? ""}
           onChange={(e) => handleProviderChange(e.target.value)}
           disabled={providerLoading}
-          className="rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+          className="rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="">Todos los proveedores</option>
           {providerOptions.map((p) => (
@@ -195,7 +195,7 @@ export function ProductsPage() {
           value={departmentId ?? ""}
           onChange={(e) => handleDepartmentChange(e.target.value)}
           disabled={deptLoading}
-          className="rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+          className="rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="">Todos los departamentos</option>
           {deptOptions.map((d) => (
@@ -208,7 +208,7 @@ export function ProductsPage() {
 
   return (
     <>
-      <CatalogShell
+      <PageShell
         title="Productos"
         description="Gestiona el catálogo de productos, precios y dosificaciones."
         toolbar={toolbar}
@@ -216,7 +216,7 @@ export function ProductsPage() {
         {isLoading ? (
           <div className="p-6 space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-xl" />
+              <Skeleton key={i} className="h-12 w-full rounded-md" />
             ))}
           </div>
         ) : error ? (
@@ -244,7 +244,7 @@ export function ProductsPage() {
             />
           </>
         )}
-      </CatalogShell>
+      </PageShell>
 
       {modalState && (
         <ProductEditModal

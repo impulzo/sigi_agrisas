@@ -117,7 +117,7 @@ export function KardexPage({ initialProductId, initialBranchId }: KardexPageProp
       />
 
       {error && (
-        <div className="bg-error-container/20 rounded-xl px-4 py-3 text-body-sm text-error">{error.message}</div>
+        <div className="bg-error-container/20 rounded-md px-4 py-3 text-body-sm text-error">{error.message}</div>
       )}
 
       {isLoading ? (
@@ -156,12 +156,12 @@ export function KardexPage({ initialProductId, initialBranchId }: KardexPageProp
             </div>
 
             {rebuildError && (
-              <div className="bg-error-container/20 rounded-xl px-4 py-3 text-body-sm text-error">
+              <div className="bg-error-container/20 rounded-md px-4 py-3 text-body-sm text-error">
                 {rebuildError.message}
               </div>
             )}
             {rebuildResult && (
-              <div className="bg-tertiary-container/30 rounded-xl px-4 py-3 text-body-sm text-on-surface">
+              <div className="bg-tertiary-container/30 rounded-md px-4 py-3 text-body-sm text-on-surface">
                 Saldo reconstruido: {rebuildResult.previousQuantity} → {rebuildResult.newQuantity}
               </div>
             )}
@@ -173,7 +173,7 @@ export function KardexPage({ initialProductId, initialBranchId }: KardexPageProp
                 description="No hay movimientos para el artículo y rango seleccionados."
               />
             ) : (
-              <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+              <div className="bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden">
                 <KardexTable movements={filteredMovements} />
               </div>
             )}

@@ -60,13 +60,13 @@ export function InventoryTable({ items, canWrite, canViewKardex = false, onAdjus
                     <div className="flex items-center gap-2">
                       {canWrite && (
                         <>
-                          <button type="button" onClick={() => onAdjust(item)} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-label-sm text-primary hover:bg-primary/10 transition-colors" title="Ajustar stock">
+                          <button type="button" onClick={() => onAdjust(item)} className="inline-flex items-center gap-1 px-2 py-1 rounded text-label-sm text-primary hover:bg-primary/10 transition-colors" title="Ajustar stock">
                             <Icon name="tune" size={14} />Ajustar
                           </button>
-                          <button type="button" onClick={() => onEdit(item)} className="p-1 rounded-lg hover:bg-surface-container text-on-surface-variant" title="Editar registro">
+                          <button type="button" onClick={() => onEdit(item)} className="p-1 rounded hover:bg-surface-container text-on-surface-variant" title="Editar registro">
                             <Icon name="edit" size={14} />
                           </button>
-                          <button type="button" onClick={() => onRemove(item)} className="p-1 rounded-lg hover:bg-error/10 text-error" title="Quitar de sucursal">
+                          <button type="button" onClick={() => onRemove(item)} className="p-1 rounded hover:bg-error/10 text-error" title="Quitar de sucursal">
                             <Icon name="remove_circle" size={14} />
                           </button>
                         </>
@@ -74,7 +74,7 @@ export function InventoryTable({ items, canWrite, canViewKardex = false, onAdjus
                       {canViewKardex && (
                         <Link
                           href={`/inventory/kardex?productId=${item.productId}&branchId=${item.branchId}`}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-label-sm text-on-surface-variant hover:bg-surface-container transition-colors"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-label-sm text-on-surface-variant hover:bg-surface-container transition-colors"
                           title="Ver Kardex"
                         >
                           <Icon name="summarize" size={14} />Ver Kardex

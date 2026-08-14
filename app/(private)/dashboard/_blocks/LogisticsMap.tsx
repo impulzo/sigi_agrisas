@@ -19,7 +19,7 @@ export function LogisticsMap({ data }: LogisticsMapProps) {
   const status = statusConfig[data.status];
 
   return (
-    <div className="bg-surface-container-high rounded-xl overflow-hidden h-[300px] relative">
+    <div className="bg-surface-container-high rounded-md overflow-hidden h-[300px] relative">
       <Image
         src={data.mapImageSrc}
         alt={`Mapa de ${data.hubName}`}
@@ -29,7 +29,7 @@ export function LogisticsMap({ data }: LogisticsMapProps) {
         priority={false}
         unoptimized
       />
-      <div className="absolute bottom-4 left-4 bg-surface-container-lowest/90 backdrop-blur p-4 rounded-lg border border-outline-variant">
+      <div className="absolute bottom-4 left-4 bg-surface-container-lowest/90 backdrop-blur p-4 rounded border border-outline-variant">
         <p className="text-title-md text-on-surface">{data.hubName}</p>
         <div className="flex items-center gap-sm mt-1">
           <span className={cn("w-2 h-2 rounded-full", status.dot)} />

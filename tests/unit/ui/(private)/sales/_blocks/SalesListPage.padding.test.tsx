@@ -27,8 +27,8 @@ jest.mock("../../../../../../app/(private)/sales/_logic/hooks/useSalesList", () 
 jest.mock("../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions", () => ({
   useBranchesOptions: () => ({ options: [], isLoading: false }),
 }));
-jest.mock("../../../../../../app/(private)/catalogs/_blocks/CatalogShell", () => ({
-  CatalogShell: ({ title, description, toolbar, children }: { title: string; description: string; toolbar: React.ReactNode; children: React.ReactNode }) => (
+jest.mock("../../../../../../app/_components/organisms/PageShell", () => ({
+  PageShell: ({ title, description, toolbar, children }: { title: string; description: string; toolbar: React.ReactNode; children: React.ReactNode }) => (
     <div data-testid="catalog-shell">
       <div>{title}</div>
       {toolbar}

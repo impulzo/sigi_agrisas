@@ -46,7 +46,7 @@ export function CancelPaymentModal({ paymentId, onSuccess, onClose }: CancelPaym
     <dialog
       ref={dialogRef}
       aria-labelledby="cancel-payment-modal-title"
-      className="rounded-xl bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
+      className="rounded-md bg-surface-container p-6 shadow-lg w-full max-w-md backdrop:bg-black/40"
       onClose={onClose}
     >
       <h2 id="cancel-payment-modal-title" className="text-title-md font-semibold text-on-surface mb-2">
@@ -66,7 +66,7 @@ export function CancelPaymentModal({ paymentId, onSuccess, onClose }: CancelPaym
           onChange={(e) => setReason(e.target.value.slice(0, 500))}
           rows={3}
           maxLength={500}
-          className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+          className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           placeholder="Describe el motivo de cancelación..."
         />
         <p className="text-right text-label-sm text-on-surface-variant mt-1">{reason.length}/500</p>
@@ -81,7 +81,7 @@ export function CancelPaymentModal({ paymentId, onSuccess, onClose }: CancelPaym
           type="button"
           onClick={onClose}
           disabled={isSaving}
-          className="px-4 py-2 rounded-lg text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
+          className="px-4 py-2 rounded text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
         >
           Volver
         </button>
@@ -89,7 +89,7 @@ export function CancelPaymentModal({ paymentId, onSuccess, onClose }: CancelPaym
           type="button"
           onClick={handleConfirm}
           disabled={isSaving}
-          className="px-4 py-2 rounded-lg text-label-lg bg-error-container text-on-error-container hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 rounded text-label-lg bg-error-container text-on-error-container hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSaving ? "Cancelando..." : "Confirmar cancelación"}
         </button>

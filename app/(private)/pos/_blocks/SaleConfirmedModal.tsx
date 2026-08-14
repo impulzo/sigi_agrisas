@@ -47,7 +47,7 @@ export function SaleConfirmedModal({ sale, onNewSale }: SaleConfirmedModalProps)
     <dialog
       ref={dialogRef}
       onKeyDown={handleKeyDown}
-      className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl text-center backdrop:bg-black/40"
+      className="w-full max-w-sm rounded-lg bg-surface p-6 shadow-xl text-center backdrop:bg-black/40"
     >
       <div className="flex justify-center mb-4">
         <span className="text-5xl text-primary">
@@ -64,12 +64,12 @@ export function SaleConfirmedModal({ sale, onNewSale }: SaleConfirmedModalProps)
       </p>
 
       {sale.creditLimitExceeded === true && (
-        <div className="mb-4 rounded-xl bg-error/10 text-error px-4 py-2 text-body-sm text-left">
+        <div className="mb-4 rounded-md bg-error/10 text-error px-4 py-2 text-body-sm text-left">
           Se ha excedido el límite de crédito establecido para este cliente.
         </div>
       )}
 
-      <div className="space-y-2 mb-6 text-left bg-surface-container-low rounded-xl p-4">
+      <div className="space-y-2 mb-6 text-left bg-surface-container-low rounded-md p-4">
         <div className="flex justify-between text-body-sm">
           <span className="text-on-surface-variant">Total</span>
           <span className="font-semibold tabular-nums text-on-surface">

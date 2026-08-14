@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { usePurchasesList } from "../_logic/hooks/usePurchasesList";
-import { CatalogShell } from "../../catalogs/_blocks/CatalogShell";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
 import { PurchasesToolbar } from "./PurchasesToolbar";
 import { PurchasesTable } from "./PurchasesTable";
@@ -80,7 +80,7 @@ export function PurchasesListPage() {
   }
 
   return (
-    <CatalogShell
+    <PageShell
       title="Compras"
       description="Historial de compras registradas a proveedores"
       toolbar={
@@ -122,6 +122,6 @@ export function PurchasesListPage() {
           />
         </>
       )}
-    </CatalogShell>
+    </PageShell>
   );
 }

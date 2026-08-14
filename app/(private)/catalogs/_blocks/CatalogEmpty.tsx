@@ -37,7 +37,7 @@ export function CatalogEmpty({ canWrite, onCreate, filtered, onClearFilters }: C
           <button
             type="button"
             onClick={onCreate}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity"
           >
             Crear el primero
           </button>

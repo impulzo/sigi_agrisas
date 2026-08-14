@@ -7,7 +7,7 @@ import { useCustomers } from "../_logic/hooks/useCustomers";
 import { useCustomerMutations } from "../_logic/hooks/useCustomerMutations";
 import { CustomersTable } from "./CustomersTable";
 import { CustomerEditModal } from "./CustomerEditModal";
-import { CatalogShell } from "../../_blocks/CatalogShell";
+import { PageShell } from "../../../../_components/organisms/PageShell";
 import { CatalogToolbar } from "../../_blocks/CatalogToolbar";
 import { CatalogPagination } from "../../_blocks/CatalogPagination";
 import { CatalogEmpty } from "../../_blocks/CatalogEmpty";
@@ -180,7 +180,7 @@ export function CustomersPage() {
 
   return (
     <>
-      <CatalogShell
+      <PageShell
         title="Clientes"
         description="Gestiona los clientes, sus datos fiscales y crédito"
         toolbar={
@@ -232,10 +232,10 @@ export function CustomersPage() {
             setPage(1);
           }}
         />
-      </CatalogShell>
+      </PageShell>
 
       {filtered && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl bg-surface-container-high text-label-lg text-on-surface-variant shadow-md z-40">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-md bg-surface-container-high text-label-lg text-on-surface-variant shadow-md z-40">
           Mínimo 2 caracteres para buscar.
         </div>
       )}
@@ -265,7 +265,7 @@ export function CustomersPage() {
       />
 
       {toast && (
-        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-xl bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
+        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-md bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
           {toast}
         </div>
       )}

@@ -51,7 +51,7 @@ export function CartLine({
     <div
       {...itemProps}
       aria-keyshortcuts="+ - Delete Enter"
-      className="flex flex-col gap-2 py-3 border-b border-outline-variant last:border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary rounded"
+      className="flex flex-col gap-2 py-3 border-b border-outline-variant last:border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary rounded-sm"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -106,7 +106,7 @@ export function CartLine({
               const v = parseFloat(raw);
               if (!isNaN(v) && v > 0) onUpdateQuantity(line.id, v);
             }}
-            className="w-20 rounded border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-20 rounded-sm border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
         <div className="flex items-center gap-1">
@@ -122,7 +122,7 @@ export function CartLine({
               const v = parseFloat(e.target.value);
               if (!isNaN(v)) onUpdateDiscount(line.id, v);
             }}
-            className="w-16 rounded border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-16 rounded-sm border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
         <span className="ml-auto text-body-sm font-medium tabular-nums text-on-surface">

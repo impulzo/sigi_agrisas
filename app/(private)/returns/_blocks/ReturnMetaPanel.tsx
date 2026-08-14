@@ -11,7 +11,7 @@ interface ReturnMetaPanelProps {
 export function ReturnMetaPanel({ ret }: ReturnMetaPanelProps) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 bg-surface-container-low rounded-2xl p-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 bg-surface-container-low rounded-lg p-4">
         <div>
           <p className="text-label-sm text-on-surface-variant">Cliente</p>
           <p className="text-body-sm text-on-surface">{ret.customerName ?? "—"}</p>
@@ -42,7 +42,7 @@ export function ReturnMetaPanel({ ret }: ReturnMetaPanelProps) {
       </div>
 
       {ret.status === "cancelled" && ret.cancelledAt && (
-        <div className="bg-surface-container-highest text-on-surface-variant rounded-xl p-4 text-body-sm">
+        <div className="bg-surface-container-highest text-on-surface-variant rounded-md p-4 text-body-sm">
           <p className="font-medium text-on-surface mb-1">
             Cancelada el {fmtDate(ret.cancelledAt)}
           </p>

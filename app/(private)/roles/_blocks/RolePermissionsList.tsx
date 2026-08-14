@@ -49,7 +49,7 @@ export function RolePermissionsList({
       {permissions.map((perm) => (
         <li
           key={perm.id}
-          className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors"
+          className="flex items-center justify-between px-3 py-2 rounded bg-surface-container hover:bg-surface-container-high transition-colors"
         >
           <div className="flex items-center gap-3">
             <span className="text-body-md text-on-surface font-mono">{perm.key}</span>

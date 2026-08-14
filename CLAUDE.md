@@ -8,6 +8,31 @@ Panel de administración agrícola. Next.js 14 App Router + TypeScript + Arquite
 
 Responde siempre en español.
 
+## Rol y tarea por defecto
+
+**Rol:** Software engineer experto, 10 años de experiencia en Next.js 14 y desarrollo de sistemas POS.
+
+**Tarea:** Diseñar, implementar y revisar features del proyecto con buenas prácticas, siguiendo los lineamientos de este archivo, de `designer.md` y de `openspec/specs/`.
+
+Rol y tarea se sobrescriben cuando el usuario asigna un rol y/o una tarea explícitos en su mensaje. El rol asignado rige hasta que el usuario indique otro.
+
+**Todo plan (incluido Plan Mode) y todo superprompt se aborda con este rol y tarea por defecto, salvo indicación explícita en contrario del usuario.**
+
+## Protocolo de desarrollo (obligatorio) — SDD con OpenSpec
+
+Este proyecto sigue **Spec-Driven Development**. Rol y tarea por defecto ya están fijos arriba — no hace falta redactar un "superprompt" desde cero repitiendo rol/tarea/contexto genérico en cada tarea; eso es tiempo perdido cuando todas comparten el mismo rol. Lo que sí es obligatorio, tarea por tarea, es correr el workflow de OpenSpec — **ese proposal ES el superprompt** (scope, archivos a tocar, criterios de aceptación, plan de verificación), versionado en el repo en vez de texto de chat descartable:
+
+1. **Identificar la tarea.** Alcance, módulo(s) tocados, capability(ies) de `openspec/specs/` involucradas (nuevas o modificadas).
+2. **`opsx:propose`** — genera `openspec/changes/<nombre>/{proposal.md, design.md, tasks.md, specs/}`. Si la tarea ya pasó por Plan Mode, usa ese plan aprobado como insumo — **no lo sustituye**: el plan file es efímero y no vive en el repo, el proposal sí.
+3. **Presentar el proposal al usuario y esperar aprobación explícita.** Sin aprobación no se edita ningún archivo ni se corre ningún comando de escritura.
+4. **`opsx:apply`** — implementar siguiendo `tasks.md`.
+5. **`opsx:verify`** — confirmar que la implementación cumple specs y design.
+6. **`opsx:archive`** — **sólo cuando el usuario lo indique explícitamente.** Nunca automático al terminar apply/verify, ni siquiera con toda la suite en verde.
+
+Cambio de alcance a mitad de ejecución → proposal actualizado y re-aprobado, no se improvisa.
+
+**Excepción:** consultas de sólo lectura (explicar código, localizar símbolos, `git status`, leer specs) se responden directo, sin propose ni aprobación. Cambios triviales de 1 línea sin impacto de spec (typo, rename mecánico) pueden saltarse el propose únicamente si el usuario lo indica explícitamente para esa tarea puntual — no por default.
+
 ## Skills activas
 
 Usa estas skills en cada sesión:
@@ -79,10 +104,10 @@ Convención: **Atomic Design + Route Groups + `_logic/` por feature**. Todo lo d
 app/
 ├── api/v1/                # Route Handlers versionados → delegan a src/ vía DI
 ├── _components/           # Atomic Design — UI genérica, 0 lógica de negocio
-│   ├── atoms/             # Button, Input, Spinner, Switch, Badge, Skeleton
-│   ├── molecules/         # FormField, SearchBar, Combobox, ConfirmDialog,
-│   │                      # EmptyState, RailFlyout, SegmentedButton
-│   └── organisms/         # NavigationRail, TopAppBar
+│   ├── atoms/             # Button, Input, Select, Spinner, Switch, Badge, Skeleton
+│   ├── molecules/         # FormField, DataTable, PageLoading, SearchBar, Combobox,
+│   │                      # ConfirmDialog, EmptyState, RailFlyout, SegmentedButton
+│   └── organisms/         # PageShell, NavigationRail, TopAppBar
 ├── _hooks/                # Hooks globales reutilizables en ≥2 módulos
 │   ├── useCurrentUser.ts useHeadquarters.ts useFoliosOptions.ts
 │   └── usePaymentMethodsOptions.ts useDebounce.ts useMediaQuery.ts ...
@@ -102,6 +127,16 @@ app/
 - **Páginas (`page.tsx`)**: Server Components por defecto, exportan `metadata`, leen cookies con `next/headers`. Nunca llevan `"use client"`.
 - **Naming**: el prefijo `_` (en `_components`, `_hooks`, `_lib`, `_logic`, `_blocks`) marca carpetas privadas no enrutables para Next.js.
 - **Imports**: `@/*` apunta a `src/*`; para `app/` usar rutas relativas o `app/*`.
+
+## Sistema de diseño
+
+**Lectura obligatoria antes de tocar cualquier archivo bajo `app/`:** [`designer.md`](./designer.md) (raíz del repo). Fuente canónica: Stitch proyecto `5227157529282603342` ("Agro-Systemic", Material 3). Cubre paleta, escala tipográfica (16 tokens en `tailwind.config.ts`), spacing, radios, elevación, catálogo de primitivas (`PageShell`, `Button`, `DataTable`, `Select`, `Input`/`FormField`, `Card`, `PageLoading`), recetas cerradas por tipo de pantalla, prohibiciones y desviaciones documentadas.
+
+Todo spec `openspec/specs/*-ui/spec.md` **referencia la capability `design-system`** y no redefine tokens de color, tipografía, spacing, radio ni elevación — esas viven únicamente en `designer.md` y `tailwind.config.ts`.
+
+Guardarraíl automatizado: `tests/unit/ui/design-system/tokens.test.ts` falla ante clases tipográficas fuera de escala, hex crudo, `bg-gray-*`, `rounded-2xl`/`rounded-3xl`, o `<button>`/`<table>`/`<select>` crudos nuevos en `_blocks/` (los existentes están en una allowlist de deuda declarada que sólo puede encoger).
+
+**Nota de implementación:** `app/_lib/cn.ts` extiende `tailwind-merge` (`extendTailwindMerge`) para registrar la escala tipográfica M3 como grupo `font-size` propio. Sin esa extensión, `tailwind-merge` clasifica erróneamente clases como `text-label-lg` o `text-headline-sm` como "color de texto" y las descarta silenciosamente al combinarlas con una clase de color real (`text-on-primary`, etc.) en el mismo `cn(...)`. Si se añade un token nuevo a `tailwind.config.ts` → `fontSize`, agregarlo también a `M3_FONT_SIZE_TOKENS` en `cn.ts`.
 
 ## Prisma y Supabase
 
@@ -244,14 +279,14 @@ Cada módulo CRUD admin sigue el mismo patrón hexagonal y la misma forma de end
 - **Customers**: `currentBalance` read-only (no se mueve desde POST/PATCH/sales — diferido a futuro `add-customer-credit`). `creditLimit >= 0` o `null`. `creditDays` entero `>= 0` (default `30`, sin tope superior), administrable vía POST/PATCH; consumido por `PrismaSaleRepository` para calcular `dueDate` en ventas a crédito (`addDays(completedAt, customer.creditDays ?? 30)`).
 - **Products**: `iva_rate`/`ieps_rate` decimal `0–1` nullable; el controller normaliza valores `> 1` dividiendo entre 100 (acepta `16` → `0.16`). `sat_product_code` `^\d{8}$`. `department_id` FK obligatoria a depto **activo** (sino 400).
   - **Prices**: `name` único por producto; máximo un `is_default=true` (partial unique index `product_default_price_idx`); en PATCH `isDefault:true` desactiva el default previo atómicamente. Hard delete.
-  - **Dosifications**: `name` único por producto; `num_parts >= 2`. Soft delete. `computedUnitPrice = basePrice / numParts * 1.07` (recargo fijo 7%, `DOSIFICATION_SURCHARGE_PCT = 7.0`). Sin precio default → `computedUnitPrice: null`, `requiresDefaultPrice: true`.
+  - **Dosifications**: `name` único por producto; `num_parts >= 2`. Soft delete. `computedUnitPrice = basePrice / numParts * (1 + dosificationSurchargePct / 100)` vía `DosificationPriceCalculator` (servicio puro, sin I/O). El recargo YA NO es constante fija — se resuelve en runtime desde `settings-api` (`GET/PATCH /api/v1/admin/settings/pricing`, tabla `pricing_settings` singleton, default `5.0`% si no hay fila). Mismo % aplica en catálogo (`toProductDosificationDto`) y en POS (`CreateSaleUseCase`/`EditCompletedSaleUseCase` vía `PosLookupService.getDosificationSurchargePct()`) — un solo punto de configuración. Sin precio default → `computedUnitPrice: null`, `requiresDefaultPrice: true`.
 - **Inventory**: rutas bajo `/api/v1/admin/branches/[id]/inventory` (Next.js no permite slugs distintos hermanos como `[branchId]`). `(branch_id, product_id)` único (409). `POST /adjust` aplica delta atómico vía `UPDATE ... WHERE quantity + delta >= 0`; 0 filas afectadas → 404 o 409 (`Negative stock not allowed`). `?belowReorder=true` filtra `quantity < reorder_point`. `quantity` **puede ser negativo** sólo cuando lo origina una venta del POS (la migración `add-pos` eliminó el CHECK `quantity >= 0`); el admin `/adjust` sigue rechazando negativos. Aplica branch scoping.
 - **Branches**: campo `isHeadquarters` con regla descrita en sección HQ.
 - **Folios**: campo `scope: 'POS' | 'INVENTORY' | 'OPERATIONS'` (NOT NULL, default `'OPERATIONS'`, editable on PATCH). Catálogo canónico de 8 folios sembrado vía `npm run seed:folios`: TK/TC/COT (POS), TS (INVENTORY), RB/AB/DEV/CP (OPERATIONS). `GET /folios?scope=POS` filtra. Backend enforza scope en `CreateSale`/`CreateQuote`/`ConvertQuote` (esperan `POS`) y `RegisterPayment` (espera `OPERATIONS`); mismatch → 400 `{"error":"FolioScopeMismatch","expected":"...","actual":"..."}`. El seed `prisma/seeds/folios.ts` borra folios legacy sin referencias y aborta con mensaje claro si alguno tiene FKs activas.
 
 ### Migraciones relevantes
 
-- `add_rbac_tables`, `20260518000001_add_avatar_url_to_users`, `20260519000001_add_settings_catalog_tables`, `20260525000001_add_providers_table`, `20260528000001_add_products_and_inventory_tables`, `20260530000001_add_pos_tables_and_branch_scoping`, `20260531000001_add_quotes_tables_and_link_to_sale`, `20260611000001_add_folios_scope_column`.
+- `add_rbac_tables`, `20260518000001_add_avatar_url_to_users`, `20260519000001_add_settings_catalog_tables`, `20260525000001_add_providers_table`, `20260528000001_add_products_and_inventory_tables`, `20260530000001_add_pos_tables_and_branch_scoping`, `20260531000001_add_quotes_tables_and_link_to_sale`, `20260611000001_add_folios_scope_column`, `20260806000001_add_pricing_settings`.
 
 ## POS y Cotizaciones (Backend)
 
@@ -491,10 +526,10 @@ Children de `catalogs`: `payment_methods:read`, `folios:read`, `departments:read
 
 ## OpenSpec
 
-Workflow activo: `opsx:propose` → `opsx:apply` → `opsx:verify` → `opsx:archive`.
+Workflow obligatorio: ver "Protocolo de desarrollo (obligatorio) — SDD con OpenSpec" arriba.
 
 Specs canónicas (source of truth para reglas finas): ver `openspec/specs/<capability>/spec.md`.
 
-Changes archivados (en orden cronológico): create-auth-api, add-login-ui, fix-login, emit-token-on-register, panel-front, add-roles-permissions, add-roles-ui, admin-users-crud, users-ui, logout-ui, crud-settings-models, add-catalogs-ui, add-providers-crud, add-providers-ui, inventory-backend, ui-ux-inventory, add-pos, ui-ux-pos, add-quotes-crud, ui-ux-quotes, apis-devoluciones, ui-ux-devoluciones, api-abonos.
+Changes archivados (en orden cronológico): create-auth-api, add-login-ui, fix-login, emit-token-on-register, panel-front, add-roles-permissions, add-roles-ui, admin-users-crud, users-ui, logout-ui, crud-settings-models, add-catalogs-ui, add-providers-crud, add-providers-ui, inventory-backend, ui-ux-inventory, add-pos, ui-ux-pos, add-quotes-crud, ui-ux-quotes, apis-devoluciones, ui-ux-devoluciones, api-abonos, dosification-surcharge-settings, add-ticket-issuer-fiscal-data, remove-ticket-header-text.
 
 Changes activos: ver `openspec/changes/` (excluyendo `archive/`).

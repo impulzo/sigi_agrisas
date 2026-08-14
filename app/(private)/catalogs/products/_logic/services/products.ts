@@ -19,6 +19,7 @@ export function toProduct(dto: ProductDto): Product {
     code: dto.code,
     name: dto.name,
     unit: dto.unit,
+    unitDescription: dto.unitDescription ?? null,
     satProductCode: dto.satProductCode,
     departmentId: dto.departmentId,
     departmentName: dto.departmentName,

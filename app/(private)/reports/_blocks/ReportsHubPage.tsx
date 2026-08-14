@@ -1,14 +1,14 @@
 "use client";
 
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { CatalogHubCard } from "../../catalogs/_blocks/CatalogHubCard";
 
 export function ReportsHubPage() {
   const { can } = useCurrentUser();
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto px-4 py-6">
-      <h1 className="text-headline-sm font-semibold text-on-surface">Reportes</h1>
+    <PageShell title="Reportes" description="Reportes operativos y de cierre del panel">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <CatalogHubCard
           icon="summarize"
@@ -36,9 +36,9 @@ export function ReportsHubPage() {
         />
         <CatalogHubCard
           icon="inventory_2"
-          title="Inventario por Departamento"
-          description="Productos del catálogo con sus listas de precio, agrupados por producto."
-          href="/reports/inventory-by-department"
+          title="Inventario"
+          description="Stock actual y listas de precio por departamento o vista global, filtrable por sucursal."
+          href="/reports/inventory"
           canAccess={can("reports:inventory_read")}
           tooltip="Requiere permiso reports:inventory_read"
         />
@@ -67,6 +67,6 @@ export function ReportsHubPage() {
           tooltip="Requiere permiso reports:customer_collections_read"
         />
       </div>
-    </div>
+    </PageShell>
   );
 }

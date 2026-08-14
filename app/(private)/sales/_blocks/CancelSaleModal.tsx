@@ -19,7 +19,7 @@ export function CancelSaleModal({ sale, isSaving, onConfirm, onClose }: CancelSa
   if (sale.status === "cancelled") {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl">
+        <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
           <h2 className="text-title-md font-semibold text-on-surface mb-3">Venta ya cancelada</h2>
           <div className="space-y-2 text-body-sm text-on-surface-variant mb-6">
             <div className="flex items-center gap-2">
@@ -44,7 +44,7 @@ export function CancelSaleModal({ sale, isSaving, onConfirm, onClose }: CancelSa
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
         <h2 className="text-title-md font-semibold text-on-surface mb-2">Cancelar venta</h2>
         <p className="text-body-sm text-on-surface-variant mb-4">
           Esta acción cancelará la venta y restaurará el stock. No se puede deshacer.
@@ -60,7 +60,7 @@ export function CancelSaleModal({ sale, isSaving, onConfirm, onClose }: CancelSa
             maxLength={500}
             rows={3}
             placeholder="Describe el motivo de la cancelación..."
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
           />
           <p className="text-label-sm text-on-surface-variant text-right mt-0.5">
             {reason.length}/500

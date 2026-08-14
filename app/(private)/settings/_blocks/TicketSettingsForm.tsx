@@ -14,9 +14,10 @@ interface TicketSettingsFormProps {
 }
 
 export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSettingsFormProps) {
-  const [headerText, setHeaderText] = useState(settings.headerText ?? "");
   const [footerText, setFooterText] = useState(settings.footerText ?? "");
   const [paperWidth, setPaperWidth] = useState<PaperWidthDto>(settings.paperWidth);
+  const [businessName, setBusinessName] = useState(settings.businessName ?? "");
+  const [businessRfc, setBusinessRfc] = useState(settings.businessRfc ?? "");
   const [businessAddress, setBusinessAddress] = useState(settings.businessAddress ?? "");
   const [businessPhone, setBusinessPhone] = useState(settings.businessPhone ?? "");
   const [businessTaxRegime, setBusinessTaxRegime] = useState(settings.businessTaxRegime ?? "");
@@ -25,9 +26,10 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
   const { isSaving, mutationError, clearError, update } = useTicketSettingsMutations(onChange);
 
   useEffect(() => {
-    setHeaderText(settings.headerText ?? "");
     setFooterText(settings.footerText ?? "");
     setPaperWidth(settings.paperWidth);
+    setBusinessName(settings.businessName ?? "");
+    setBusinessRfc(settings.businessRfc ?? "");
     setBusinessAddress(settings.businessAddress ?? "");
     setBusinessPhone(settings.businessPhone ?? "");
     setBusinessTaxRegime(settings.businessTaxRegime ?? "");
@@ -36,9 +38,10 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
 
   async function handleSave() {
     await update({
-      headerText: headerText.trim() || null,
       footerText: footerText.trim() || null,
       paperWidth,
+      businessName: businessName.trim() || null,
+      businessRfc: businessRfc.trim() || null,
       businessAddress: businessAddress.trim() || null,
       businessPhone: businessPhone.trim() || null,
       businessTaxRegime: businessTaxRegime.trim() || null,
@@ -47,7 +50,7 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
   }
 
   const inputCls =
-    "w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60";
+    "w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60";
 
   return (
     <div className="max-w-xl space-y-6">
@@ -66,6 +69,36 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
 
       <div className="space-y-4 border-t border-outline-variant pt-4">
         <p className="text-label-md text-on-surface font-semibold">Información del negocio</p>
+
+        <div>
+          <label htmlFor="business-name" className="block text-label-md text-on-surface mb-1">
+            Razón social
+          </label>
+          <input
+            id="business-name"
+            type="text"
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value.slice(0, 200))}
+            disabled={!canWrite}
+            placeholder="Agrisas"
+            className={inputCls}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="business-rfc" className="block text-label-md text-on-surface mb-1">
+            RFC
+          </label>
+          <input
+            id="business-rfc"
+            type="text"
+            value={businessRfc}
+            onChange={(e) => setBusinessRfc(e.target.value.slice(0, 13))}
+            disabled={!canWrite}
+            placeholder="AGR010101AB1"
+            className={inputCls}
+          />
+        </div>
 
         <div>
           <label htmlFor="business-address" className="block text-label-md text-on-surface mb-1">
@@ -115,21 +148,6 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
 
       <div className="space-y-4 border-t border-outline-variant pt-4">
         <p className="text-label-md text-on-surface font-semibold">Texto del ticket</p>
-
-        <div>
-          <label htmlFor="header-text" className="block text-label-md text-on-surface mb-1">
-            Texto de encabezado
-          </label>
-          <textarea
-            id="header-text"
-            value={headerText}
-            onChange={(e) => setHeaderText(e.target.value.slice(0, 500))}
-            disabled={!canWrite}
-            rows={2}
-            placeholder="Dirección, teléfono, etc."
-            className={inputCls}
-          />
-        </div>
 
         <div>
           <label htmlFor="footer-text" className="block text-label-md text-on-surface mb-1">
@@ -182,7 +200,7 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
       </div>
 
       {mutationError && (
-        <div className="rounded-lg bg-error-container/30 px-3 py-2 text-body-sm text-error flex items-center justify-between gap-2">
+        <div className="rounded bg-error-container/30 px-3 py-2 text-body-sm text-error flex items-center justify-between gap-2">
           {mutationError.message}
           <button type="button" onClick={clearError} className="text-error hover:underline flex-shrink-0">Cerrar</button>
         </div>
@@ -193,7 +211,7 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
           type="button"
           onClick={handleSave}
           disabled={isSaving}
-          className="px-4 py-2 rounded-lg text-label-lg bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-4 py-2 rounded text-label-lg bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isSaving ? "Guardando…" : "Guardar cambios"}
         </button>

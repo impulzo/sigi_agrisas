@@ -42,6 +42,7 @@ export class InMemoryProductRepository implements ProductRepository {
       providerName: null,
       providerId: null,
       stock: branchId ? this.inventory.get(`${branchId}:${product.id}`) ?? null : null,
+      unitDescription: null,
     };
   }
 

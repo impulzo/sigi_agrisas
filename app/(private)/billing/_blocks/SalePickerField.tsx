@@ -66,13 +66,13 @@ export function SalePickerField({ value, label, onSelect }: SalePickerFieldProps
         placeholder="Buscar venta por folio o cliente (mín. 2 caracteres)..."
         onChange={(e) => { setQuery(e.target.value); if (value) onSelect("", ""); }}
         onFocus={() => { if (results.length > 0) setOpen(true); }}
-        className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
       />
       {isLoading && (
         <span className="absolute right-3 top-2.5 text-label-sm text-on-surface-variant">Buscando…</span>
       )}
       {open && results.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-surface border border-outline rounded-xl shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-surface border border-outline rounded-md shadow-lg max-h-60 overflow-y-auto">
           {results.map((opt) => (
             <button
               key={opt.id}

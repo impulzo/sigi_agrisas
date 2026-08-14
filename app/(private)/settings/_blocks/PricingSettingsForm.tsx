@@ -41,7 +41,7 @@ export function PricingSettingsForm({ settings, canWrite, onChange }: PricingSet
           value={dosificationSurchargePct}
           onChange={(e) => setDosificationSurchargePct(e.target.value)}
           disabled={!canWrite}
-          className="w-full max-w-[160px] rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
+          className="w-full max-w-[160px] rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
         />
         <p className="mt-1 text-label-sm text-on-surface-variant">
           Porcentaje que se suma al precio base calculado de cada dosificación en catálogo y punto de venta. Default: 5%.
@@ -52,7 +52,7 @@ export function PricingSettingsForm({ settings, canWrite, onChange }: PricingSet
       </div>
 
       {mutationError && (
-        <div className="rounded-lg bg-error-container/30 px-3 py-2 text-body-sm text-error flex items-center justify-between gap-2">
+        <div className="rounded bg-error-container/30 px-3 py-2 text-body-sm text-error flex items-center justify-between gap-2">
           {mutationError.message}
           <button type="button" onClick={clearError} className="text-error hover:underline flex-shrink-0">Cerrar</button>
         </div>
@@ -63,7 +63,7 @@ export function PricingSettingsForm({ settings, canWrite, onChange }: PricingSet
           type="button"
           onClick={handleSave}
           disabled={isSaving || !isValid}
-          className="px-4 py-2 rounded-lg text-label-lg bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-4 py-2 rounded text-label-lg bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isSaving ? "Guardando…" : "Guardar cambios"}
         </button>

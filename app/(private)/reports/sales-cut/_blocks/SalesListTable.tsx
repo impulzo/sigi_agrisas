@@ -11,7 +11,7 @@ export function SalesListTable({ rows }: { rows: SaleListRowDto[] }) {
   return (
     <div className="space-y-2">
       <h3 className="text-title-sm font-medium text-on-surface">Detalle de tickets</h3>
-      <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-low">
+      <div className="overflow-x-auto rounded-lg border border-outline-variant bg-surface-container-low">
         <table className="w-full text-body-sm">
           <thead>
             <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">

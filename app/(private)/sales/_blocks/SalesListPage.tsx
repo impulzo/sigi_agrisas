@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useDebounce } from "../../../_hooks/useDebounce";
 import { useSalesList } from "../_logic/hooks/useSalesList";
-import { CatalogShell } from "../../catalogs/_blocks/CatalogShell";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
 import { SalesToolbar } from "./SalesToolbar";
 import { SalesTable } from "./SalesTable";
@@ -95,38 +95,36 @@ export function SalesListPage() {
   }
 
   return (
-    <div>
-      <CatalogShell
-        title="Ventas"
-        description="Historial de ventas emitidas"
-        toolbar={
-          <SalesToolbar
-            search={searchInput}
-            onSearchChange={handleSearch}
-            branchId={branchId}
-            onBranchChange={(v) => { setBranchId(v); setPage(1); }}
-            branches={branches}
-            showBranchFilter={isBypass === true}
-            statusFilter={statusFilter}
-            onStatusChange={(v) => { setStatusFilter(v); setPage(1); }}
-            from={from}
-            to={to}
-            onFromChange={(v) => { setFrom(v); setPage(1); }}
-            onToChange={(v) => { setTo(v); setPage(1); }}
-            onReset={handleReset}
-          />
-        }
-      >
-        <SalesTable items={items} isLoading={isLoading} onEnter={(sale) => router.push(`/sales/${sale.id}`)} />
-        <CatalogPagination
-          page={page}
-          pageSize={pageSize}
-          total={total}
-          count={items.length}
-          onPageChange={setPage}
-          onPageSizeChange={(ps) => { setPageSize(ps); setPage(1); }}
+    <PageShell
+      title="Ventas"
+      description="Historial de ventas emitidas"
+      toolbar={
+        <SalesToolbar
+          search={searchInput}
+          onSearchChange={handleSearch}
+          branchId={branchId}
+          onBranchChange={(v) => { setBranchId(v); setPage(1); }}
+          branches={branches}
+          showBranchFilter={isBypass === true}
+          statusFilter={statusFilter}
+          onStatusChange={(v) => { setStatusFilter(v); setPage(1); }}
+          from={from}
+          to={to}
+          onFromChange={(v) => { setFrom(v); setPage(1); }}
+          onToChange={(v) => { setTo(v); setPage(1); }}
+          onReset={handleReset}
         />
-      </CatalogShell>
-    </div>
+      }
+    >
+      <SalesTable items={items} isLoading={isLoading} onEnter={(sale) => router.push(`/sales/${sale.id}`)} />
+      <CatalogPagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        count={items.length}
+        onPageChange={setPage}
+        onPageSizeChange={(ps) => { setPageSize(ps); setPage(1); }}
+      />
+    </PageShell>
   );
 }

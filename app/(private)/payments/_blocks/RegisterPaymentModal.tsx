@@ -153,7 +153,7 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-2xl bg-surface shadow-elevation-3 p-0 w-full max-w-md backdrop:bg-black/40"
+      className="rounded-lg bg-surface shadow-elevation-3 p-0 w-full max-w-md backdrop:bg-black/40"
       onClose={onClose}
     >
       <div className="px-6 py-4 border-b border-outline-variant">
@@ -167,7 +167,7 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
               type="checkbox"
               checked={byLine}
               onChange={(e) => { setByLine(e.target.checked); setAmountError(null); setLineErrors({}); }}
-              className="rounded border-outline"
+              className="rounded-sm border-outline"
             />
             Repartir por producto
           </label>
@@ -188,7 +188,7 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
               min="0.01"
               value={amount}
               onChange={(e) => { setAmount(e.target.value); setAmountError(null); }}
-              className="rounded-xl border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary"
+              className="rounded-md border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary"
               placeholder="0.00"
             />
             {amountError && <p className="text-body-sm text-error">{amountError}</p>}
@@ -219,7 +219,7 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
                       setLineErrors((prev) => { const next = { ...prev }; delete next[lb.saleItemId]; return next; });
                     }}
                     placeholder="0.00"
-                    className="rounded-xl border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary disabled:opacity-50 disabled:bg-surface-container-low"
+                    className="rounded-md border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary disabled:opacity-50 disabled:bg-surface-container-low"
                   />
                   {err && <p className="text-body-sm text-error">{err}</p>}
                 </div>
@@ -237,7 +237,7 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
             id="reg-method"
             value={paymentMethodId}
             onChange={(e) => setPaymentMethodId(e.target.value)}
-            className="rounded-xl border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary"
+            className="rounded-md border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary"
             disabled={methodsLoading}
           >
             {methodOptions.map((m) => (
@@ -255,7 +255,7 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
             id="reg-folio"
             value={folioId}
             onChange={(e) => setFolioId(e.target.value)}
-            className="rounded-xl border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary"
+            className="rounded-md border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary"
             disabled={foliosLoading}
           >
             {folioOptions.map((f) => (
@@ -275,13 +275,13 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
             maxLength={1000}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="rounded-xl border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary resize-none"
+            className="rounded-md border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary resize-none"
             placeholder="Comentarios adicionales..."
           />
         </div>
 
         {formError && (
-          <p className="text-body-sm text-error bg-error-container/20 rounded-lg px-3 py-2">{formError}</p>
+          <p className="text-body-sm text-error bg-error-container/20 rounded px-3 py-2">{formError}</p>
         )}
 
         <div className="flex justify-end gap-3 pt-2">

@@ -54,7 +54,7 @@ export function SatCodeCombobox({ value, onChange, disabled, className }: SatCod
         className={className}
       />
       {isOpen && options.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-outline-variant bg-surface shadow-lg">
+        <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded border border-outline-variant bg-surface shadow-lg">
           {options.map((opt) => (
             <li key={opt.code}>
               <button

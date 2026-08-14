@@ -290,6 +290,53 @@ describe("CreateSaleUseCase", () => {
     });
   });
 
+  describe("recargo por cantidad fraccionaria (precio normal)", () => {
+    it("aplica el recargo configurado cuando quantity es fraccionaria", async () => {
+      const repo = makeRepo();
+      await new CreateSaleUseCase(repo, makeLookups()).execute(
+        { ...baseReq, items: [{ productId: "p1", productPriceId: "pp1", quantity: 0.5 }] },
+        "user-1"
+      );
+      const call = (repo.createCompleted as jest.Mock).mock.calls[0][0] as CreateSaleData;
+      expect(call.items[0].unitPrice).toBeCloseTo(107, 10); // 100 * 1.07 (mock surcharge)
+    });
+
+    it("no aplica recargo cuando quantity es entera", async () => {
+      const repo = makeRepo();
+      await new CreateSaleUseCase(repo, makeLookups()).execute(baseReq, "user-1"); // quantity: 2
+      const call = (repo.createCompleted as jest.Mock).mock.calls[0][0] as CreateSaleData;
+      expect(call.items[0].unitPrice).toBe(100);
+    });
+
+    it("aplica el recargo por igual a productos de distintos departamentos, sin excepción", async () => {
+      const repo = makeRepo();
+      const lookups = makeLookups({
+        getProduct: jest.fn().mockResolvedValue({
+          id: "p2", code: "P2", name: "Producto 2", ivaRate: 0.16, iepsRate: null, isActive: true,
+        }),
+        getProductPrice: jest.fn().mockResolvedValue({
+          id: "pp2", productId: "p2", name: "Menudeo", price: 50, discountPct: null,
+        }),
+      });
+      await new CreateSaleUseCase(repo, lookups).execute(
+        { ...baseReq, items: [{ productId: "p2", productPriceId: "pp2", quantity: 1.25 }] },
+        "user-1"
+      );
+      const call = (repo.createCompleted as jest.Mock).mock.calls[0][0] as CreateSaleData;
+      expect(call.items[0].unitPrice).toBeCloseTo(53.5, 10); // 50 * 1.07
+    });
+
+    it("línea de dosificación con quantity fraccionaria NO recibe el recargo dos veces", async () => {
+      const repo = makeRepo();
+      await new CreateSaleUseCase(repo, makeLookups()).execute(
+        { ...baseReq, items: [{ productId: "p1", dosificationId: "d1", quantity: 1.5 }] },
+        "user-1"
+      );
+      const call = (repo.createCompleted as jest.Mock).mock.calls[0][0] as CreateSaleData;
+      expect(call.items[0].unitPrice).toBeCloseTo(26.75, 4); // (100/4)*1.07 — mismo valor que quantity entera
+    });
+  });
+
   describe("ventas a crédito", () => {
     const creditLookups = (creditLimit: number | null = 5000, currentBalance = 0) =>
       makeLookups({

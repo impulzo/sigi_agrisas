@@ -148,9 +148,9 @@ Optional body: `notes: string | null` (max 1000 chars), `expiresAt: string | nul
 **Atomic flow (inside a Prisma transaction)**:
 
 1. Validate `customer.isActive`, `branch.isActive`, `folio.isActive`. Any inactive → HTTP 400.
-2. For each item: load the `Product` and `ProductPrice`; verify `productPrice.productId === item.productId` (else `ProductPriceMismatchError` → HTTP 400) and that `productPrice` belongs to a product whose `isActive = true` (else HTTP 400). `quantity > 0` (else HTTP 400 via Zod).
-3. Snapshot `productCodeSnapshot = product.code`, `productNameSnapshot = product.name`, `priceNameSnapshot = price.name`, `unitPrice = price.price`, `discountPct = price.discountPct`, `ivaRate = product.ivaRate`, `iepsRate = product.iepsRate`.
-4. Compute totals using `QuoteTotalsCalculator` (domain service).
+2. For each item: load the `Product` and `ProductPrice`; verify `productPrice.productId === item.productId` (else `ProductPriceMismatchError` → HTTP 400) and that `productPrice` belongs to a product whose `isActive = true` (else HTTP 400). `quantity > 0` (else HTTP 400 via Zod). If `item.quantity` is NOT an integer (`quantity % 1 !== 0`), resolve the currently configured `dosificationSurchargePct` from `settings-api` (default `5.0` when unconfigured) and compute `unitPrice = price.price * (1 + surchargePct / 100)`; if `item.quantity` IS an integer, `unitPrice = price.price` unchanged. This applies uniformly to every product — no per-product or per-department opt-out — and is the same rule `pos-api` applies to normal-price sale lines.
+3. Snapshot `productCodeSnapshot = product.code`, `productNameSnapshot = product.name`, `priceNameSnapshot = price.name`, `unitPrice` per step 2 above (recharged when `quantity` is fractional, else `price.price` unchanged), `discountPct = price.discountPct`, `ivaRate = product.ivaRate`, `iepsRate = product.iepsRate`.
+4. Compute totals using `QuoteTotalsCalculator` (domain service) — unchanged by the fractional-quantity surcharge (operates on `quantity * unitPrice`, agnostic to how `unitPrice` was resolved).
 5. Allocate the next folio number atomically: `UPDATE folios SET current_number = current_number + 1 WHERE id = ? AND is_active = true RETURNING current_number, code, prefix`. If `RETURNING` is empty (folio inactive) → HTTP 400.
 6. `INSERT` the `quotes` row with `status='draft'`, `creator_id=<userId from x-user-id>`, snapshotted folio info, and `expires_at` from the body.
 7. `INSERT` the `quote_items` rows.
@@ -197,6 +197,14 @@ The endpoint SHALL NOT touch `branch_inventory` at any point. Returns HTTP 201 w
 - **WHEN** the target branch has no `branch_inventory` row for the item's `productId`
 - **THEN** the system returns HTTP 201 — the quote does not require existing inventory
 
+#### Scenario: Fractional quantity applies the same surcharge as a sale
+- **WHEN** the body has an item with `price.price = 100`, `quantity = 0.5`, and `dosificationSurchargePct = 5` (default)
+- **THEN** the system returns HTTP 201 with `unitPrice = 105` on that line (`100 * 1.05`), matching what `POST /api/v1/admin/sales` would compute for the same line
+
+#### Scenario: Integer quantity never gets the surcharge
+- **WHEN** the body has an item with `price.price = 100`, `quantity = 3`
+- **THEN** the system returns HTTP 201 with `unitPrice = 100` (unchanged)
+
 ---
 
 ### Requirement: Update quote (draft only)
@@ -209,7 +217,7 @@ The endpoint SHALL reject any quote whose `status !== 'draft'` with HTTP 409 `{"
 Behavior (inside a Prisma transaction) when `items` is present:
 
 - Validate each item (same rules as creation: active product, matching `productPrice.productId`, `quantity > 0`).
-- Snapshot each item (same fields as creation).
+- Snapshot each item (same fields as creation, including the fractional-quantity surcharge resolution: `unitPrice` recharged when `item.quantity` is not an integer, unchanged otherwise).
 - Delete all rows from `quote_items` for this `quoteId`.
 - Insert new `quote_items`.
 - Recompute totals via `QuoteTotalsCalculator` and `UPDATE quotes SET subtotal=?, tax_total=?, total=?, notes=?, expires_at=?`.
@@ -249,6 +257,10 @@ Branch scoping applies (cannot edit a quote in another branch without bypass).
 #### Scenario: Edit zeroes out items
 - **WHEN** the body has `items: []`
 - **THEN** the system returns HTTP 400 `{"error": "Quote must include at least one item"}`
+
+#### Scenario: Edit changes a line from integer to fractional quantity
+- **WHEN** the body replaces an item that previously had `quantity=2` (no surcharge) with the same `productPriceId` but `quantity=2.5`
+- **THEN** the system recomputes `unitPrice` for that line WITH the configured surcharge applied, and the resulting totals reflect it
 
 ---
 

@@ -9,7 +9,9 @@ import { useAccountStatementsSummary } from "../_logic/hooks/useAccountStatement
 import { StatementToolbar } from "./StatementToolbar";
 import { SummaryTable } from "./SummaryTable";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
+import { PageLoading } from "../../../_components/molecules/PageLoading/PageLoading";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 
 export function AccountStatementsPage() {
@@ -69,11 +71,7 @@ export function AccountStatementsPage() {
   }
 
   if (canRead === "loading") {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <PageLoading />;
   }
 
   if (canRead === false) {
@@ -87,72 +85,70 @@ export function AccountStatementsPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto px-4 py-6">
-      <div className="flex items-center gap-3">
-        <h1 className="text-headline-sm font-semibold text-on-surface">Estados de Cuenta</h1>
-      </div>
-
-      <StatementToolbar
-        search={searchRaw}
-        onSearchChange={(v) => { setSearchRaw(v); setPage(1); }}
-        from={from}
-        onFromChange={(v) => { setFrom(v); setPage(1); }}
-        to={to}
-        onToChange={(v) => { setTo(v); setPage(1); }}
-        onlyWithBalance={onlyWithBalance}
-        onOnlyWithBalanceChange={(v) => { setOnlyWithBalance(v); setPage(1); }}
-        branchId={branchId}
-        onBranchIdChange={(v) => { setBranchId(v); setPage(1); }}
-        branches={branches}
-        showBranchFilter={isBypass === true}
-        isExporting={isExporting}
-        onExportPdf={handleExportPdf}
-        isExportingXlsx={isExportingXlsx}
-        onExportXlsx={handleExportXlsx}
-        onReset={handleReset}
-      />
-
-      {error && (
-        <div className="bg-error-container/20 rounded-xl px-4 py-3 text-body-sm text-error">
-          {error.message}
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="flex h-40 items-center justify-center">
-          <Spinner size="lg" />
-        </div>
-      ) : !report || report.items.length === 0 ? (
-        <EmptyState
-          icon="summarize"
-          title="Sin resultados"
-          description="No se encontraron clientes con los filtros seleccionados."
+    <PageShell title="Estados de Cuenta" backHref="/reports">
+      <div className="flex flex-col gap-4">
+        <StatementToolbar
+          search={searchRaw}
+          onSearchChange={(v) => { setSearchRaw(v); setPage(1); }}
+          from={from}
+          onFromChange={(v) => { setFrom(v); setPage(1); }}
+          to={to}
+          onToChange={(v) => { setTo(v); setPage(1); }}
+          onlyWithBalance={onlyWithBalance}
+          onOnlyWithBalanceChange={(v) => { setOnlyWithBalance(v); setPage(1); }}
+          branchId={branchId}
+          onBranchIdChange={(v) => { setBranchId(v); setPage(1); }}
+          branches={branches}
+          showBranchFilter={isBypass === true}
+          isExporting={isExporting}
+          onExportPdf={handleExportPdf}
+          isExportingXlsx={isExportingXlsx}
+          onExportXlsx={handleExportXlsx}
+          onReset={handleReset}
         />
-      ) : (
-        <>
-          <SummaryTable
-            rows={report.items}
-            onRowClick={(id) => router.push(`/reports/account-statements/${id}`)}
-          />
-          <CatalogPagination
-            page={page}
-            pageSize={pageSize}
-            total={report.total}
-            count={report.items.length}
-            onPageChange={setPage}
-            onPageSizeChange={() => {}}
-          />
-        </>
-      )}
 
-      {toastError && (
-        <div
-          role="alert"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-error-container text-on-error-container px-5 py-3 rounded-full text-body-sm shadow-lg z-50"
-        >
-          {toastError}
-        </div>
-      )}
-    </div>
+        {error && (
+          <div className="bg-error-container/20 rounded px-4 py-3 text-body-sm text-error">
+            {error.message}
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="flex h-40 items-center justify-center">
+            <Spinner size="lg" />
+          </div>
+        ) : !report || report.items.length === 0 ? (
+          <EmptyState
+            icon="summarize"
+            title="Sin resultados"
+            description="No se encontraron clientes con los filtros seleccionados."
+          />
+        ) : (
+          <>
+            <SummaryTable
+              rows={report.items}
+              onRowClick={(id) => router.push(`/reports/account-statements/${id}`)}
+            />
+            <CatalogPagination
+              page={page}
+              pageSize={pageSize}
+              total={report.total}
+              count={report.items.length}
+              onPageChange={setPage}
+              onPageSizeChange={() => {}}
+            />
+          </>
+        )}
+
+        {toastError && (
+          <div
+            role="alert"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-error-container text-on-error-container px-5 py-3 rounded-full text-body-sm shadow-lg z-50"
+          >
+            {toastError}
+          </div>
+        )}
+      </div>
+    </PageShell>
   );
 }

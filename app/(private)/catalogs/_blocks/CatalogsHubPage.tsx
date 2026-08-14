@@ -1,6 +1,7 @@
 "use client";
 
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { CatalogHubCard } from "./CatalogHubCard";
 
 const CATALOG_CARDS = [
@@ -74,14 +75,7 @@ export function CatalogsHubPage() {
   const { can } = useCurrentUser();
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-headline-lg font-semibold text-on-surface">Catálogos</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">
-          Administra los catálogos del sistema
-        </p>
-      </div>
-
+    <PageShell title="Catálogos" description="Administra los catálogos del sistema">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {CATALOG_CARDS.map((card) => {
           const canAccess = can(card.permission);
@@ -98,6 +92,6 @@ export function CatalogsHubPage() {
           );
         })}
       </div>
-    </div>
+    </PageShell>
   );
 }

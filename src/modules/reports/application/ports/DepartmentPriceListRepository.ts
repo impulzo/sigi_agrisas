@@ -14,6 +14,8 @@ export interface RawPriceListRow {
   code: string;
   name: string;
   unit: string;
+  unitDescription: string | null;
+  stockQuantity: Decimal;
   ivaRate: Decimal | null;
   iepsRate: Decimal | null;
   priceId: string | null;

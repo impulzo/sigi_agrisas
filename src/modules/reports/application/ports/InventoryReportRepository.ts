@@ -13,6 +13,7 @@ export interface RawStockRow {
   code: string;
   name: string;
   unit: string;
+  unitDescription: string | null;
   quantity: Decimal;
   reservedQuantity: Decimal;
   reorderPoint: Decimal;

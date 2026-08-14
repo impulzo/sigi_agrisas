@@ -14,6 +14,7 @@ import { ProductTaxRateNotFoundError } from "../../domain/errors/ProductTaxRateN
 
 const CODE_REGEX = /^[A-Z0-9_]{1,32}$/;
 const SAT_PRODUCT_CODE_REGEX = /^\d{8}$/;
+const SAT_UNIT_CODE_REGEX = /^[A-Za-z0-9]{2,3}$/;
 const SUPABASE_BUCKET_HOST = "supabase.co/storage/v1/object/public/product-images";
 
 const uuidParamSchema = z.string().uuid("Invalid product ID format");
@@ -57,7 +58,7 @@ const createBodySchema = z.object({
     .transform((v) => v.trim().toUpperCase())
     .pipe(z.string().regex(CODE_REGEX, "code must match ^[A-Z0-9_]{1,32}$")),
   name: z.string().min(1).max(200),
-  unit: z.string().min(1).max(32),
+  unit: z.string().regex(SAT_UNIT_CODE_REGEX, "unit must be a valid SAT unit code"),
   departmentId: z.string().uuid("departmentId must be a valid UUID"),
   taxRateId: z.string().uuid("taxRateId must be a valid UUID").nullable().optional(),
   satProductCode: z
@@ -75,7 +76,7 @@ const createBodySchema = z.object({
 const updateBodySchema = z
   .object({
     name: z.string().min(1).max(200).optional(),
-    unit: z.string().min(1).max(32).optional(),
+    unit: z.string().regex(SAT_UNIT_CODE_REGEX, "unit must be a valid SAT unit code").optional(),
     departmentId: z.string().uuid("departmentId must be a valid UUID").optional(),
     taxRateId: z.string().uuid("taxRateId must be a valid UUID").nullable().optional(),
     satProductCode: z

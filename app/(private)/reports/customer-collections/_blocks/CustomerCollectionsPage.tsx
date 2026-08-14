@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useCurrentUser } from "../../../../_hooks/useCurrentUser";
 import { useBranchesOptions } from "../../../inventory/_logic/hooks/useBranchesOptions";
 import { useCustomerCollectionsReport } from "../_logic/hooks/useCustomerCollectionsReport";
 import { CollectionsFilters } from "./CollectionsFilters";
 import { ByCustomerTable } from "./ByCustomerTable";
 import { ByTicketTable } from "./ByTicketTable";
+import { PageShell } from "../../../../_components/organisms/PageShell";
 import { SegmentedButton } from "../../../../_components/molecules/SegmentedButton/SegmentedButton";
 import { EmptyState } from "../../../../_components/molecules/EmptyState/EmptyState";
+import { PageLoading } from "../../../../_components/molecules/PageLoading/PageLoading";
+import { Card } from "../../../../_components/molecules/Card/Card";
+import { Button } from "../../../../_components/atoms/Button/Button";
 import { Spinner } from "../../../../_components/atoms/Spinner/Spinner";
-import { Icon } from "../../../../_components/atoms/Icon/Icon";
 
 type View = "customer" | "ticket";
 
@@ -41,11 +43,7 @@ export function CustomerCollectionsPage() {
     useCustomerCollectionsReport({ branchId: branchId || undefined, customerId: customerId || undefined, from, to });
 
   if (canRead === "loading") {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <PageLoading />;
   }
 
   if (canRead === false) {
@@ -55,81 +53,64 @@ export function CustomerCollectionsPage() {
   const hasData = report && report.rows.length > 0;
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto px-4 py-6">
-      <div className="flex items-center gap-3">
-        <Link href="/reports" className="text-on-surface-variant hover:text-on-surface">
-          <Icon name="arrow_back" size={20} />
-        </Link>
-        <h1 className="text-headline-sm font-semibold text-on-surface">Cobranza por Cliente</h1>
-      </div>
-
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <CollectionsFilters
-          branchId={branchId}
-          onBranchIdChange={setBranchId}
-          branches={branches}
-          showBranchFilter={isBypass === true}
-          customerId={customerId}
-          onCustomerIdChange={setCustomerId}
-          from={from}
-          onFromChange={setFrom}
-          to={to}
-          onToChange={setTo}
-        />
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => exportPdf()}
-            disabled={isExportingPdf || !hasData}
-            className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-body-sm text-on-primary hover:bg-primary/90 disabled:opacity-50"
-          >
-            <Icon name="print" size={18} />
-            {isExportingPdf ? "Generando…" : "Exportar PDF"}
-          </button>
-          <button
-            type="button"
-            onClick={() => exportXlsx()}
-            disabled={isExportingXlsx || !hasData}
-            className="flex items-center gap-2 rounded-full border border-outline-variant px-4 py-2 text-body-sm text-on-surface hover:bg-surface-container disabled:opacity-50"
-          >
-            <Icon name="summarize" size={18} />
-            {isExportingXlsx ? "Generando…" : "Exportar Excel"}
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-error-container/20 rounded-xl px-4 py-3 text-body-sm text-error">{error.message}</div>
-      )}
-
-      {isLoading || !report ? (
-        <div className="flex h-40 items-center justify-center">
-          <Spinner size="lg" />
-        </div>
-      ) : !hasData ? (
-        <EmptyState icon="groups" title="Sin cobranza" description="No hay abonos cobrados en el periodo seleccionado." />
-      ) : (
-        <div className="space-y-5">
-          <div className="flex flex-col rounded-2xl border border-outline-variant bg-surface-container-low px-4 py-3 w-fit">
-            <span className="text-label-sm text-on-surface-variant">Total cobrado</span>
-            <span className="text-title-md font-semibold text-on-surface tabular-nums">
-              {MX.format(Number(report.totals.totalCollected))}
-            </span>
-          </div>
-
-          <SegmentedButton<View>
-            value={view}
-            onChange={setView}
-            aria-label="Vista de cobranza"
-            options={[
-              { value: "customer", label: "Por Cliente" },
-              { value: "ticket", label: "Por Ticket" },
-            ]}
+    <PageShell title="Cobranza por Cliente" backHref="/reports">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <CollectionsFilters
+            branchId={branchId}
+            onBranchIdChange={setBranchId}
+            branches={branches}
+            showBranchFilter={isBypass === true}
+            customerId={customerId}
+            onCustomerIdChange={setCustomerId}
+            from={from}
+            onFromChange={setFrom}
+            to={to}
+            onToChange={setTo}
           />
-
-          {view === "customer" ? <ByCustomerTable rows={report.byCustomer} /> : <ByTicketTable rows={report.byTicket} />}
+          <div className="flex gap-2">
+            <Button icon="print" onClick={() => exportPdf()} disabled={isExportingPdf || !hasData}>
+              {isExportingPdf ? "Generando…" : "Exportar PDF"}
+            </Button>
+            <Button variant="outlined" icon="summarize" onClick={() => exportXlsx()} disabled={isExportingXlsx || !hasData}>
+              {isExportingXlsx ? "Generando…" : "Exportar Excel"}
+            </Button>
+          </div>
         </div>
-      )}
-    </div>
+
+        {error && (
+          <div className="bg-error-container/20 rounded px-4 py-3 text-body-sm text-error">{error.message}</div>
+        )}
+
+        {isLoading || !report ? (
+          <div className="flex h-40 items-center justify-center">
+            <Spinner size="lg" />
+          </div>
+        ) : !hasData ? (
+          <EmptyState icon="groups" title="Sin cobranza" description="No hay abonos cobrados en el periodo seleccionado." />
+        ) : (
+          <div className="space-y-5">
+            <Card className="flex flex-col w-fit">
+              <span className="text-label-sm text-on-surface-variant">Total cobrado</span>
+              <span className="text-title-md font-semibold text-on-surface tabular-nums">
+                {MX.format(Number(report.totals.totalCollected))}
+              </span>
+            </Card>
+
+            <SegmentedButton<View>
+              value={view}
+              onChange={setView}
+              aria-label="Vista de cobranza"
+              options={[
+                { value: "customer", label: "Por Cliente" },
+                { value: "ticket", label: "Por Ticket" },
+              ]}
+            />
+
+            {view === "customer" ? <ByCustomerTable rows={report.byCustomer} /> : <ByTicketTable rows={report.byTicket} />}
+          </div>
+        )}
+      </div>
+    </PageShell>
   );
 }

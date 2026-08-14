@@ -7,7 +7,7 @@ interface KardexHeaderCardsProps {
 
 function Card({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex-1 min-w-[160px] rounded-2xl border border-outline-variant bg-surface-container-low px-4 py-3">
+    <div className="flex-1 min-w-[160px] rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3">
       <p className="text-label-sm text-on-surface-variant">{label}</p>
       <p className="text-headline-sm font-semibold text-on-surface">{value}</p>
     </div>

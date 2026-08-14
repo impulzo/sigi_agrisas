@@ -5,7 +5,9 @@ import { useTicketSettings } from "../_logic/hooks/useTicketSettings";
 import { usePricingSettings } from "../_logic/hooks/usePricingSettings";
 import { TicketSettingsForm } from "./TicketSettingsForm";
 import { PricingSettingsForm } from "./PricingSettingsForm";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
+import { PageLoading } from "../../../_components/molecules/PageLoading/PageLoading";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 
 export function SettingsPage() {
@@ -17,7 +19,7 @@ export function SettingsPage() {
   const { settings: pricingSettings, isLoading: isPricingLoading, error: pricingError, refresh: refreshPricing } = usePricingSettings();
 
   if (canRead === "loading") {
-    return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
+    return <PageLoading />;
   }
 
   if (canRead !== true) {
@@ -25,9 +27,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-10">
-      <h1 className="text-headline-sm font-semibold text-on-surface">Configuración</h1>
-
+    <PageShell title="Configuración" width="narrow">
       <section className="space-y-6">
         <h2 className="text-title-md font-semibold text-on-surface">Ticket de venta</h2>
 
@@ -63,6 +63,6 @@ export function SettingsPage() {
           />
         )}
       </section>
-    </div>
+    </PageShell>
   );
 }

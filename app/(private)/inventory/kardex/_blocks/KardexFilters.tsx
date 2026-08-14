@@ -28,7 +28,7 @@ interface KardexFiltersProps {
 }
 
 const inputCls =
-  "rounded-xl border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40";
+  "rounded-md border border-outline-variant bg-surface px-3 py-2 text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40";
 
 export function KardexFilters({
   productId,
@@ -93,7 +93,7 @@ export function KardexFilters({
         type="button"
         onClick={onSubmit}
         disabled={isSubmitDisabled}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
       >
         <Icon name="search" size={18} />
         Mostrar información

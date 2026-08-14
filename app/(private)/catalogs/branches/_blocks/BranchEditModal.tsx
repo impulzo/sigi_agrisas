@@ -203,14 +203,14 @@ export function BranchEditModal({
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-2xl bg-surface-container p-0 shadow-lg w-full max-w-2xl backdrop:bg-black/40"
+      className="rounded-lg bg-surface-container p-0 shadow-lg w-full max-w-2xl backdrop:bg-black/40"
     >
       <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
         <h2 className="text-title-md font-semibold text-on-surface">{title}</h2>
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
+          className="p-1.5 rounded text-on-surface-variant hover:bg-surface-container-high"
         >
           <Icon name="close" size={20} />
         </button>
@@ -234,7 +234,7 @@ export function BranchEditModal({
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               disabled={!isCreateMode}
               placeholder="EJ. CDMX_01"
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-surface-container"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-surface-container"
             />
             {(validationErrors.code || codeError) && (
               <p className="text-label-sm text-error mt-1">{validationErrors.code ?? codeError}</p>
@@ -251,7 +251,7 @@ export function BranchEditModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Nombre de la sucursal"
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {validationErrors.name && <p className="text-label-sm text-error mt-1">{validationErrors.name}</p>}
           </div>
@@ -279,7 +279,7 @@ export function BranchEditModal({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Teléfono (opcional)"
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.phone && <p className="text-label-sm text-error mt-1">{validationErrors.phone}</p>}
             </div>
@@ -294,7 +294,7 @@ export function BranchEditModal({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email de contacto (opcional)"
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.email && <p className="text-label-sm text-error mt-1">{validationErrors.email}</p>}
             </div>
@@ -310,7 +310,7 @@ export function BranchEditModal({
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Dirección de la sucursal (opcional)"
               rows={2}
-              className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
             {validationErrors.address && <p className="text-label-sm text-error mt-1">{validationErrors.address}</p>}
           </div>
@@ -333,7 +333,7 @@ export function BranchEditModal({
                 value={addressStreet}
                 onChange={(e) => setAddressStreet(e.target.value)}
                 placeholder="Opcional"
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.addressStreet && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.addressStreet}</p>
@@ -354,7 +354,7 @@ export function BranchEditModal({
                   value={addressExteriorNumber}
                   onChange={(e) => setAddressExteriorNumber(e.target.value)}
                   placeholder="Opcional"
-                  className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 {validationErrors.addressExteriorNumber && (
                   <p className="text-label-sm text-error mt-1">{validationErrors.addressExteriorNumber}</p>
@@ -373,7 +373,7 @@ export function BranchEditModal({
                   value={addressInteriorNumber}
                   onChange={(e) => setAddressInteriorNumber(e.target.value)}
                   placeholder="Opcional"
-                  className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 {validationErrors.addressInteriorNumber && (
                   <p className="text-label-sm text-error mt-1">{validationErrors.addressInteriorNumber}</p>
@@ -391,7 +391,7 @@ export function BranchEditModal({
                 value={addressNeighborhood}
                 onChange={(e) => setAddressNeighborhood(e.target.value)}
                 placeholder="Opcional"
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.addressNeighborhood && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.addressNeighborhood}</p>
@@ -408,7 +408,7 @@ export function BranchEditModal({
                 value={addressMunicipality}
                 onChange={(e) => setAddressMunicipality(e.target.value)}
                 placeholder="Opcional"
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.addressMunicipality && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.addressMunicipality}</p>
@@ -426,7 +426,7 @@ export function BranchEditModal({
                 onChange={(e) => setAddressState(e.target.value.toUpperCase())}
                 placeholder="SON"
                 maxLength={3}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.addressState && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.addressState}</p>
@@ -444,7 +444,7 @@ export function BranchEditModal({
                 onChange={(e) => setAddressCountry(e.target.value.toUpperCase())}
                 placeholder="MEX"
                 maxLength={3}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.addressCountry && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.addressCountry}</p>
@@ -462,7 +462,7 @@ export function BranchEditModal({
                 onChange={(e) => setAddressZipCode(e.target.value)}
                 placeholder="83000"
                 maxLength={5}
-                className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {validationErrors.addressZipCode && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.addressZipCode}</p>
@@ -472,7 +472,7 @@ export function BranchEditModal({
         </section>
 
         {mutationError && (
-          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded-lg">{mutationError}</p>
+          <p className="text-body-md text-error bg-error-container px-4 py-2 rounded">{mutationError}</p>
         )}
       </div>
 
@@ -481,7 +481,7 @@ export function BranchEditModal({
           type="button"
           onClick={onClose}
           disabled={isSaving}
-          className="px-5 py-2.5 rounded-xl border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
+          className="px-5 py-2.5 rounded-md border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
         >
           Cancelar
         </button>
@@ -489,7 +489,7 @@ export function BranchEditModal({
           type="button"
           onClick={handleSave}
           disabled={isDiffEmpty || isSaving || hasValidationErrors}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isSaving ? (
             <>

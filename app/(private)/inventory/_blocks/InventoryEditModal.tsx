@@ -69,10 +69,10 @@ export function InventoryEditModal({ open, item, isSaving, onSave, onClose }: In
     onSave(diff);
   };
 
-  const fieldClass = "w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-body-md focus:outline-none focus:ring-2 focus:ring-primary";
+  const fieldClass = "w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md focus:outline-none focus:ring-2 focus:ring-primary";
 
   return (
-    <dialog ref={dialogRef} className="rounded-2xl shadow-xl bg-surface p-0 w-full max-w-sm backdrop:bg-black/40">
+    <dialog ref={dialogRef} className="rounded-lg shadow-xl bg-surface p-0 w-full max-w-sm backdrop:bg-black/40">
       <form onSubmit={handleSubmit} noValidate>
         <div className="px-6 pt-6 pb-4 border-b border-outline-variant">
           <h2 className="text-title-md font-semibold text-on-surface">Editar registro de inventario</h2>
@@ -96,8 +96,8 @@ export function InventoryEditModal({ open, item, isSaving, onSave, onClose }: In
           </div>
         </div>
         <div className="px-6 pb-6 pt-2 flex justify-end gap-3 border-t border-outline-variant">
-          <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 rounded-xl text-label-lg text-on-surface-variant hover:bg-surface-container transition-colors">Cancelar</button>
-          <button type="submit" disabled={isSaving || isDiffEmpty} className="px-4 py-2 rounded-xl bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 disabled:opacity-50">{isSaving ? "Guardando…" : "Guardar"}</button>
+          <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 rounded-md text-label-lg text-on-surface-variant hover:bg-surface-container transition-colors">Cancelar</button>
+          <button type="submit" disabled={isSaving || isDiffEmpty} className="px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 disabled:opacity-50">{isSaving ? "Guardando…" : "Guardar"}</button>
         </div>
       </form>
     </dialog>

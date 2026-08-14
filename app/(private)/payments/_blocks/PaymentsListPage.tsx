@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { usePaymentsList } from "../_logic/hooks/usePaymentsList";
 import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
-import { CatalogShell } from "../../catalogs/_blocks/CatalogShell";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
 import { PaymentsToolbar } from "./PaymentsToolbar";
 import { PaymentsTable } from "./PaymentsTable";
@@ -90,7 +90,7 @@ export function PaymentsListPage() {
   }
 
   return (
-    <CatalogShell
+    <PageShell
       title="Abonos"
       description="Historial de abonos registrados"
       toolbar={
@@ -187,6 +187,6 @@ export function PaymentsListPage() {
           />
         </>
       )}
-    </CatalogShell>
+    </PageShell>
   );
 }

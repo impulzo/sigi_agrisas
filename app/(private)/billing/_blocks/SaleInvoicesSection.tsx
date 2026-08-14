@@ -27,7 +27,7 @@ export function SaleInvoicesSection({ saleId, saleStatus, saleFolioLabel }: Sale
   if (canRead === false) return null;
 
   return (
-    <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
+    <div className="bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden">
       <div className="px-4 py-3 border-b border-outline-variant flex items-center justify-between gap-2">
         <h2 className="text-title-sm font-semibold text-on-surface">Facturas CFDI</h2>
         {saleStatus === "completed" && !hasStampedInvoice && canWrite === true && (

@@ -1,5 +1,6 @@
 "use client";
 
+import { Table, THead, TBody, Tr, Th, Td } from "../../../../_components/molecules/DataTable";
 import type { PurchasesReportRowDto } from "../_logic/types/api";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
@@ -10,52 +11,47 @@ function dateOnly(iso: string): string {
   return new Date(iso).toLocaleDateString("es-MX", { timeZone: "UTC" });
 }
 
-const th = "px-3 py-3 text-left font-medium whitespace-nowrap";
-const thRight = "px-3 py-3 text-right font-medium whitespace-nowrap";
-const td = "px-3 py-3 whitespace-nowrap";
-const tdRight = "px-3 py-3 text-right tabular-nums whitespace-nowrap";
-
 export function PurchasesTable({ rows }: { rows: PurchasesReportRowDto[] }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-low">
-      <table className="w-full text-body-sm">
-        <thead>
-          <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
-            <th className={th}>Folio</th>
-            <th className={th}>Proveedor</th>
-            <th className={th}>Sucursal</th>
-            <th className={thRight}>Subtotal</th>
-            <th className={thRight}>Impuestos</th>
-            <th className={thRight}>Total</th>
-            <th className={thRight}>Pagado</th>
-            <th className={th}>Estado pago</th>
-            <th className={th}>Estado</th>
-            <th className={th}>Fecha</th>
+    <div className="overflow-x-auto rounded-lg border border-outline-variant bg-surface-container-low">
+      <Table>
+        <THead>
+          <tr>
+            <Th>Folio</Th>
+            <Th>Proveedor</Th>
+            <Th>Sucursal</Th>
+            <Th align="right">Subtotal</Th>
+            <Th align="right">Impuestos</Th>
+            <Th align="right">Total</Th>
+            <Th align="right">Pagado</Th>
+            <Th>Estado pago</Th>
+            <Th>Estado</Th>
+            <Th>Fecha</Th>
           </tr>
-        </thead>
-        <tbody>
+        </THead>
+        <TBody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={10} className="px-4 py-4 text-center text-on-surface-variant">Sin compras</td>
+              <Td colSpan={10} className="text-center text-on-surface-variant">Sin compras</Td>
             </tr>
           ) : (
             rows.map((r) => (
-              <tr key={r.id} className="border-b border-outline-variant/40">
-                <td className={td}>{r.folioCode}</td>
-                <td className={td}>{r.providerName ?? "—"}</td>
-                <td className={td}>{r.branchName ?? "—"}</td>
-                <td className={tdRight}>{money(r.subtotal)}</td>
-                <td className={tdRight}>{money(r.taxTotal)}</td>
-                <td className={tdRight}>{money(r.total)}</td>
-                <td className={tdRight}>{money(r.paidAmount)}</td>
-                <td className={td}>{r.paymentStatus}</td>
-                <td className={td}>{r.status}</td>
-                <td className={td}>{dateOnly(r.purchasedAt)}</td>
-              </tr>
+              <Tr key={r.id}>
+                <Td>{r.folioCode}</Td>
+                <Td>{r.providerName ?? "—"}</Td>
+                <Td>{r.branchName ?? "—"}</Td>
+                <Td align="right">{money(r.subtotal)}</Td>
+                <Td align="right">{money(r.taxTotal)}</Td>
+                <Td align="right">{money(r.total)}</Td>
+                <Td align="right">{money(r.paidAmount)}</Td>
+                <Td>{r.paymentStatus}</Td>
+                <Td>{r.status}</Td>
+                <Td>{dateOnly(r.purchasedAt)}</Td>
+              </Tr>
             ))
           )}
-        </tbody>
-      </table>
+        </TBody>
+      </Table>
     </div>
   );
 }

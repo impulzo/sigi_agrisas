@@ -28,6 +28,7 @@ export interface KardexReportResponseDto {
     code: string;
     name: string;
     unit: string;
+    unitDescription: string | null;
   };
   header: {
     existenciaTotal: number;

@@ -38,7 +38,7 @@ export function RolesList({ roles, selectedRoleId, onSelect, isLoading }: RolesL
               type="button"
               onClick={() => onSelect(role.id)}
               className={cn(
-                "w-full text-left px-3 py-3 rounded-xl transition-colors duration-150",
+                "w-full text-left px-3 py-3 rounded-md transition-colors duration-150",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 isActive
                   ? "bg-primary-container text-on-primary-container"

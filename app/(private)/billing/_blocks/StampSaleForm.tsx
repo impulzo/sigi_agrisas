@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { SalePickerField } from "./SalePickerField";
+import { InvoicePreviewModal } from "./InvoicePreviewModal";
 import { useStampSaleForm } from "../_logic/hooks/useStampSaleForm";
+import { useInvoicePreview } from "../_logic/hooks/useInvoicePreview";
 import { SaleAlreadyInvoicedError, ReceiverFiscalDataIncompleteError, FacturamaStampError } from "../_logic/errors";
 
 const PAYMENT_FORMS = [
@@ -33,12 +36,24 @@ interface StampSaleFormProps {
 
 export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleFormProps) {
   const { form, setField, isSubmitting, error, clearError, submit } = useStampSaleForm(initialSaleId, initialSaleLabel);
+  const [showPreview, setShowPreview] = useState(false);
+  const preview = useInvoicePreview();
+
+  function handleOpenPreview() {
+    setShowPreview(true);
+    preview.load(form.saleId, { paymentForm: form.paymentForm, paymentMethod: form.paymentMethod });
+  }
+
+  async function handleConfirmStamp() {
+    setShowPreview(false);
+    await submit();
+  }
 
   function renderError() {
     if (!error) return null;
     if (error instanceof SaleAlreadyInvoicedError) {
       return (
-        <div className="rounded-lg bg-warning-container/30 border border-warning/30 px-4 py-3 text-body-sm">
+        <div className="rounded bg-warning-container/30 border border-warning/30 px-4 py-3 text-body-sm">
           Esta venta ya tiene una factura vigente.{" "}
           <Link href={`/billing/${error.invoiceId}`} className="text-primary underline">
             Ver factura existente
@@ -49,7 +64,7 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
     }
     if (error instanceof ReceiverFiscalDataIncompleteError) {
       return (
-        <div className="rounded-lg bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
+        <div className="rounded bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
           Datos fiscales del receptor incompletos: <strong>{error.missingFields.join(", ")}</strong>
           <button type="button" onClick={clearError} className="ml-3 hover:opacity-70">×</button>
         </div>
@@ -57,14 +72,14 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
     }
     if (error instanceof FacturamaStampError) {
       return (
-        <div className="rounded-lg bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
+        <div className="rounded bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
           Error Facturama: {error.detail}
           <button type="button" onClick={clearError} className="ml-3 hover:opacity-70">×</button>
         </div>
       );
     }
     return (
-      <div className="rounded-lg bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
+      <div className="rounded bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error">
         {error.message}
         <button type="button" onClick={clearError} className="ml-3 hover:opacity-70">×</button>
       </div>
@@ -94,7 +109,7 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
             id="stamp-payment-form"
             value={form.paymentForm}
             onChange={(e) => setField("paymentForm", e.target.value)}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           >
             {PAYMENT_FORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
@@ -105,7 +120,7 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
             id="stamp-payment-method"
             value={form.paymentMethod}
             onChange={(e) => setField("paymentMethod", e.target.value)}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           >
             {PAYMENT_METHODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
@@ -116,7 +131,7 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
             id="stamp-cfdi-use"
             value={form.cfdiUse}
             onChange={(e) => setField("cfdiUse", e.target.value)}
-            className="w-full rounded-lg border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           >
             {CFDI_USES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
@@ -128,6 +143,14 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
       <div className="flex justify-end gap-3">
         <button
           type="button"
+          onClick={handleOpenPreview}
+          disabled={!form.saleId}
+          className="rounded-full border border-outline px-6 py-2.5 text-label-lg font-medium hover:bg-surface-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Vista previa
+        </button>
+        <button
+          type="button"
           onClick={() => submit()}
           disabled={isSubmitting || !form.saleId}
           className="rounded-full bg-primary text-on-primary px-6 py-2.5 text-label-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -135,6 +158,16 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
           {isSubmitting ? "Timbrando…" : "Emitir factura"}
         </button>
       </div>
+
+      <InvoicePreviewModal
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        data={preview.data}
+        isLoading={preview.isLoading}
+        loadError={preview.error}
+        onConfirmStamp={handleConfirmStamp}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }

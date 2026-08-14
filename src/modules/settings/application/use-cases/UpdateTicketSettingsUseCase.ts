@@ -13,9 +13,10 @@ export class UpdateTicketSettingsUseCase {
 
   async execute(data: UpdateTicketSettingsData): Promise<TicketSettings> {
     const keys: (keyof UpdateTicketSettingsData)[] = [
-      "headerText",
       "footerText",
       "paperWidth",
+      "businessName",
+      "businessRfc",
       "businessAddress",
       "businessPhone",
       "businessTaxRegime",

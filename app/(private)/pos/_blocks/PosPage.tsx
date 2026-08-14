@@ -6,6 +6,7 @@ import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useCart } from "../_logic/hooks/useCart";
 import { useFoliosOptions } from "../../../_hooks/useFoliosOptions";
 import { usePaymentMethodsOptions } from "../../../_hooks/usePaymentMethodsOptions";
+import { usePricingSettingsOptions } from "../../../_hooks/usePricingSettingsOptions";
 import { useSaleSubmission } from "../_logic/hooks/useSaleSubmission";
 import { useQuoteSubmission } from "../_logic/hooks/useQuoteSubmission";
 import { usePosKeyboard } from "../_logic/hooks/usePosKeyboard";
@@ -44,6 +45,7 @@ export function PosPage() {
 
   const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
   const { options: paymentMethods, isLoading: pmLoading } = usePaymentMethodsOptions();
+  const { dosificationSurchargePct } = usePricingSettingsOptions();
   const {
     lines,
     totals,
@@ -54,7 +56,7 @@ export function PosPage() {
     changeTier,
     removeLine,
     clear,
-  } = useCart();
+  } = useCart(dosificationSurchargePct);
 
   const { status: saleStatus, sale, error: saleError, submit: submitSale, reset: resetSale } = useSaleSubmission();
   const { status: quoteStatus, quote, error: quoteError, submit: submitQuote, reset: resetQuote } = useQuoteSubmission();
@@ -277,7 +279,7 @@ export function PosPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-74px)]">
+    <div className="flex flex-col h-[calc(100vh-64px)]">
       {/* Accessible live region for screen readers */}
       <div
         ref={liveRegionRef}
@@ -389,7 +391,7 @@ export function PosPage() {
       />
 
       {submitError && (
-        <div className="fixed bottom-4 right-4 z-50 bg-error-container text-on-error-container rounded-xl px-4 py-3 text-body-sm shadow-lg max-w-sm">
+        <div className="fixed bottom-4 right-4 z-50 bg-error-container text-on-error-container rounded-md px-4 py-3 text-body-sm shadow-lg max-w-sm">
           {submitError.message}
         </div>
       )}

@@ -73,7 +73,7 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
       </Link>
 
       {/* Ticket card — diseño Stitch "Ticket de Venta - Agrisas" */}
-      <div className="bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-md shadow-lg border border-outline-variant overflow-hidden">
         <div
           aria-hidden="true"
           style={{
@@ -94,13 +94,10 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
               alt="Logo"
               className="h-[105px] w-[75px] object-contain mb-[4.8px]"
             />
-            {ticketSettings?.headerText ? (
-              <p className="text-body-sm text-on-surface-variant whitespace-pre-wrap">{ticketSettings.headerText}</p>
-            ) : (
-              <p className="text-body-sm text-on-surface-variant">Centro Agrícola Integral</p>
-            )}
-            {(ticketSettings?.businessAddress || ticketSettings?.businessPhone || ticketSettings?.businessTaxRegime) && (
+            {(ticketSettings?.businessName || ticketSettings?.businessRfc || ticketSettings?.businessAddress || ticketSettings?.businessPhone || ticketSettings?.businessTaxRegime) && (
               <div className="text-body-sm text-on-surface-variant whitespace-pre-wrap">
+                {ticketSettings.businessName && <p className="font-bold text-on-surface">{ticketSettings.businessName}</p>}
+                {ticketSettings.businessRfc && <p>RFC: {ticketSettings.businessRfc}</p>}
                 {ticketSettings.businessAddress && <p>{ticketSettings.businessAddress}</p>}
                 {ticketSettings.businessPhone && <p>Tel. {ticketSettings.businessPhone}</p>}
                 {ticketSettings.businessTaxRegime && <p>{ticketSettings.businessTaxRegime}</p>}
@@ -183,15 +180,15 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
 
           {/* Payment method & footer */}
           <div className="flex flex-col gap-4 items-center mt-2 text-center border-t border-outline-variant pt-4">
-            <div className="text-body-sm text-on-surface-variant flex items-center justify-center bg-surface-container-low px-4 py-2 rounded">
+            <div className="text-body-sm text-on-surface-variant flex items-center justify-center bg-surface-container-low px-4 py-2 rounded-sm">
               {sale.paymentMethodName ?? "—"}
             </div>
             {ticketSettings?.footerText ? (
-              <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded whitespace-pre-wrap">
+              <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded-sm whitespace-pre-wrap">
                 {ticketSettings.footerText}
               </p>
             ) : (
-              <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded">
+              <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded-sm">
                 ¡Gracias por su compra! <br />
                 <span className="font-medium">Agricultura Sana &amp; Sustentable.</span>
               </p>

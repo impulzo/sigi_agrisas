@@ -6,7 +6,7 @@ import { useTaxRatesList } from "../_logic/hooks/useTaxRatesList";
 import { useTaxRateMutations } from "../_logic/hooks/useTaxRateMutations";
 import { TaxRatesTable } from "./TaxRatesTable";
 import { TaxRateEditModal } from "./TaxRateEditModal";
-import { CatalogShell } from "../../_blocks/CatalogShell";
+import { PageShell } from "../../../../_components/organisms/PageShell";
 import { CatalogToolbar } from "../../_blocks/CatalogToolbar";
 import { CatalogPagination } from "../../_blocks/CatalogPagination";
 import { CatalogEmpty } from "../../_blocks/CatalogEmpty";
@@ -131,7 +131,7 @@ export function TaxRatesPage() {
 
   return (
     <>
-      <CatalogShell
+      <PageShell
         title="Tasas de Impuesto"
         description="Gestiona las tasas de IVA e IEPS aplicables a productos"
         toolbar={
@@ -173,7 +173,7 @@ export function TaxRatesPage() {
           onPageChange={setPage}
           onPageSizeChange={(ps) => { setPageSize(ps); setPage(1); }}
         />
-      </CatalogShell>
+      </PageShell>
 
       <TaxRateEditModal
         open={modalState !== null}
@@ -202,7 +202,7 @@ export function TaxRatesPage() {
       />
 
       {toast && (
-        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-xl bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
+        <div className="fixed bottom-6 right-6 px-4 py-3 rounded-md bg-surface-container-high text-on-surface text-body-md shadow-lg z-50">
           {toast}
         </div>
       )}

@@ -54,7 +54,7 @@ export function ConfirmDialog({
       ref={dialogRef}
       aria-labelledby="confirm-dialog-title"
       className={cn(
-        "rounded-xl bg-surface-container p-6 shadow-lg w-full max-w-sm",
+        "rounded-md bg-surface-container p-6 shadow-lg w-full max-w-sm",
         "backdrop:bg-black/40",
         className
       )}
@@ -66,14 +66,14 @@ export function ConfirmDialog({
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 rounded-lg text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
+          className="px-4 py-2 rounded text-label-lg text-on-surface hover:bg-surface-container-highest transition-colors"
         >
           {cancelLabel}
         </button>
         <button
           type="button"
           onClick={onConfirm}
-          className="px-4 py-2 rounded-lg text-label-lg bg-error text-on-error hover:opacity-90 transition-opacity"
+          className="px-4 py-2 rounded text-label-lg bg-error text-on-error hover:opacity-90 transition-opacity"
         >
           {confirmLabel}
         </button>

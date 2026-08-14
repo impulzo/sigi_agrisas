@@ -40,16 +40,14 @@ export function SegmentedButton<T extends string>({
             disabled={disabled}
             onClick={() => onChange(opt.value)}
             className={[
-              "flex items-center gap-1 px-4 py-2 text-label-large transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+              "flex items-center gap-1 px-4 py-2 text-label-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               isSelected
                 ? "bg-secondary-container text-on-secondary-container"
                 : "bg-surface text-on-surface-variant hover:bg-surface-container-low",
               disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
             ].join(" ")}
           >
-            {opt.icon && (
-              <Icon name={opt.icon} className="text-[18px]" />
-            )}
+            {opt.icon && <Icon name={opt.icon} size={18} />}
             <span>{opt.label}</span>
           </button>
         );
