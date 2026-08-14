@@ -1,22 +1,23 @@
-import { authFetch, NetworkError } from "../../../../../_lib/authFetch";
-import type { CollectionsReportDto } from "../types/api";
-import type { CustomerCollectionsFilters } from "../types/domain";
+import { authFetch, NetworkError } from "../../../../../../_lib/authFetch";
+import type { CashCutReportDto } from "../types/api";
+import type { CashCutFilters } from "../types/domain";
 
-const BASE = "/api/v1/admin/reports/customer-collections";
+const BASE = "/api/v1/admin/reports/cash-cut";
 
-function buildParams(f: CustomerCollectionsFilters): URLSearchParams {
+function buildParams(f: CashCutFilters): URLSearchParams {
   const p = new URLSearchParams();
   p.set("from", f.from);
   p.set("to", f.to);
   if (f.branchId) p.set("branchId", f.branchId);
   if (f.customerId) p.set("customerId", f.customerId);
+  if (f.paymentMethodId) p.set("paymentMethodId", f.paymentMethodId);
   return p;
 }
 
-export async function getCustomerCollectionsReport(
-  filters: CustomerCollectionsFilters & { signal?: AbortSignal },
+export async function getCashCut(
+  filters: CashCutFilters & { signal?: AbortSignal },
   fetchImpl = authFetch
-): Promise<CollectionsReportDto> {
+): Promise<CashCutReportDto> {
   const { signal, ...f } = filters;
   let res: Response;
   try {
@@ -26,11 +27,11 @@ export async function getCustomerCollectionsReport(
     throw new NetworkError();
   }
   if (!res.ok) throw new NetworkError();
-  return res.json() as Promise<CollectionsReportDto>;
+  return res.json() as Promise<CashCutReportDto>;
 }
 
 async function downloadFormat(
-  filters: CustomerCollectionsFilters,
+  filters: CashCutFilters,
   format: "pdf" | "xlsx",
   fetchImpl: typeof authFetch
 ): Promise<Blob> {
@@ -46,16 +47,16 @@ async function downloadFormat(
   return res.blob();
 }
 
-export async function downloadCustomerCollectionsPdf(
-  f: CustomerCollectionsFilters,
+export async function downloadCashCutPdf(
+  filters: CashCutFilters,
   fetchImpl = authFetch
 ): Promise<Blob> {
-  return downloadFormat(f, "pdf", fetchImpl);
+  return downloadFormat(filters, "pdf", fetchImpl);
 }
 
-export async function downloadCustomerCollectionsXlsx(
-  f: CustomerCollectionsFilters,
+export async function downloadCashCutXlsx(
+  filters: CashCutFilters,
   fetchImpl = authFetch
 ): Promise<Blob> {
-  return downloadFormat(f, "xlsx", fetchImpl);
+  return downloadFormat(filters, "xlsx", fetchImpl);
 }

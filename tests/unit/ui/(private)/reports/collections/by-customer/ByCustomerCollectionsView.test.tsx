@@ -4,16 +4,16 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 
-jest.mock("../../../../../../app/_hooks/useCurrentUser");
-jest.mock("../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions");
-jest.mock("../../../../../../app/(private)/payments/_logic/hooks/useCustomerSearch");
-jest.mock("../../../../../../app/(private)/reports/customer-collections/_logic/hooks/useCustomerCollectionsReport");
+jest.mock("../../../../../../../app/_hooks/useCurrentUser");
+jest.mock("../../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions");
+jest.mock("../../../../../../../app/(private)/payments/_logic/hooks/useCustomerSearch");
+jest.mock("../../../../../../../app/(private)/reports/collections/_logic/by-customer/hooks/useCustomerCollectionsReport");
 
-import { useCurrentUser } from "../../../../../../app/_hooks/useCurrentUser";
-import { useBranchesOptions } from "../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions";
-import { useCustomerSearch } from "../../../../../../app/(private)/payments/_logic/hooks/useCustomerSearch";
-import { useCustomerCollectionsReport } from "../../../../../../app/(private)/reports/customer-collections/_logic/hooks/useCustomerCollectionsReport";
-import { CustomerCollectionsPage } from "../../../../../../app/(private)/reports/customer-collections/_blocks/CustomerCollectionsPage";
+import { useCurrentUser } from "../../../../../../../app/_hooks/useCurrentUser";
+import { useBranchesOptions } from "../../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions";
+import { useCustomerSearch } from "../../../../../../../app/(private)/payments/_logic/hooks/useCustomerSearch";
+import { useCustomerCollectionsReport } from "../../../../../../../app/(private)/reports/collections/_logic/by-customer/hooks/useCustomerCollectionsReport";
+import { ByCustomerCollectionsView } from "../../../../../../../app/(private)/reports/collections/_blocks/by-customer/ByCustomerCollectionsView";
 
 const mockUseCurrentUser = useCurrentUser as jest.MockedFunction<typeof useCurrentUser>;
 const mockUseBranchesOptions = useBranchesOptions as jest.MockedFunction<typeof useBranchesOptions>;
@@ -24,28 +24,14 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUseBranchesOptions.mockReturnValue({ options: [], isLoading: false });
   mockUseCustomerSearch.mockReturnValue({ items: [], total: 0, isLoading: false, error: null, refresh: jest.fn() });
+  mockUseCurrentUser.mockReturnValue({
+    userId: "u1", email: "admin@test.com", roles: ["admin"], branchId: null,
+    isLoading: false, can: () => true, refresh: jest.fn(),
+  });
 });
 
-describe("CustomerCollectionsPage", () => {
-  it("sin permiso muestra estado 'Sin acceso'", () => {
-    mockUseCurrentUser.mockReturnValue({
-      userId: "u1", email: "admin@test.com", roles: ["viewer"], branchId: null,
-      isLoading: false, can: () => false, refresh: jest.fn(),
-    });
-    mockUseCustomerCollectionsReport.mockReturnValue({
-      report: null, isLoading: false, error: null, isExportingPdf: false, isExportingXlsx: false,
-      exportPdf: jest.fn(), exportXlsx: jest.fn(),
-    });
-
-    render(<CustomerCollectionsPage />);
-    expect(screen.getByText("Sin acceso")).toBeInTheDocument();
-  });
-
+describe("ByCustomerCollectionsView", () => {
   it("con datos renderiza el total cobrado y la tabla por cliente (default)", () => {
-    mockUseCurrentUser.mockReturnValue({
-      userId: "u1", email: "admin@test.com", roles: ["admin"], branchId: null,
-      isLoading: false, can: () => true, refresh: jest.fn(),
-    });
     mockUseCustomerCollectionsReport.mockReturnValue({
       report: {
         generatedAt: "2026-08-08T00:00:00.000Z",
@@ -70,9 +56,31 @@ describe("CustomerCollectionsPage", () => {
       exportXlsx: jest.fn(),
     });
 
-    render(<CustomerCollectionsPage />);
-    expect(screen.getByText("Cobranza por Cliente")).toBeInTheDocument();
+    render(<ByCustomerCollectionsView />);
     expect(screen.getByText("Cliente Uno")).toBeInTheDocument();
     expect(screen.getByText("C001")).toBeInTheDocument();
+  });
+
+  it("sin abonos en el periodo muestra estado vacío", () => {
+    mockUseCustomerCollectionsReport.mockReturnValue({
+      report: {
+        generatedAt: "2026-08-08T00:00:00.000Z",
+        generatedBy: { userId: "u1", email: "admin@test.com" },
+        filters: { branchId: null, customerId: null, from: "2026-08-01", to: "2026-08-08" },
+        totals: { totalCollected: "0.0000" },
+        rows: [],
+        byCustomer: [],
+        byTicket: [],
+      },
+      isLoading: false,
+      error: null,
+      isExportingPdf: false,
+      isExportingXlsx: false,
+      exportPdf: jest.fn(),
+      exportXlsx: jest.fn(),
+    });
+
+    render(<ByCustomerCollectionsView />);
+    expect(screen.getByText("Sin cobranza")).toBeInTheDocument();
   });
 });

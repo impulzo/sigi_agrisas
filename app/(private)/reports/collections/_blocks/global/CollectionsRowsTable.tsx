@@ -1,7 +1,7 @@
 "use client";
 
-import { Table, THead, TBody, Tr, Th, Td } from "../../../../_components/molecules/DataTable";
-import type { CashCutRowDto } from "../_logic/types/api";
+import { Table, THead, TBody, Tr, Th, Td } from "../../../../../_components/molecules/DataTable";
+import type { CashCutRowDto } from "../../_logic/global/types/api";
 
 const MX = new Intl.NumberFormat("es-MX", {
   style: "currency",

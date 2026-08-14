@@ -7,7 +7,7 @@ Define el módulo de UI `app/(private)/reports/`: punto de entrada de reportes e
 ---
 ## Requirements
 ### Requirement: Reports module and navigation entry
-El sistema SHALL exponer el módulo de UI en `app/(private)/reports/`. La ruta `/reports` SHALL renderizar un **hub** con tarjetas hacia los reportes disponibles ("Estados de Cuenta" → `/reports/account-statements`, "Corte de Ventas" → `/reports/sales-cut`, "Corte de Caja (Cobranza)" → `/reports/cash-cut`, "Compras" → `/reports/purchases`, "Ventas por Producto" → `/reports/sales-by-product`, "Cobranza por Cliente" → `/reports/customer-collections`). Cada tarjeta (`CatalogHubCard`, componente compartido) SHALL renderizarse siempre — título, descripción e icono visibles independientemente del permiso — y gatear únicamente su acción: con el permiso correspondiente (`reports:account_statements_read`, `reports:sales_cut_read`, `reports:cash_cut_read`, `reports:purchases_read`, `reports:sales_by_product_read` o `reports:customer_collections_read`) muestra un link "Abrir" hacia la ruta del reporte; sin el permiso, muestra un badge deshabilitado "Sin acceso" en su lugar y la tarjeta queda con opacidad reducida. El `NavigationRail` SHALL conservar el item primario `reports` (`href:/reports`, icon `summarize`, `requires:reports:account_statements_read`), mostrándose optimistamente durante `"loading"` y ocultándose (ítem del rail, no las tarjetas del hub) cuando `can("reports:account_statements_read")` es `false`. Las páginas (`page.tsx`) SHALL ser Server Components que exportan `metadata`. (Traza: S4, S5.)
+El sistema SHALL exponer el módulo de UI en `app/(private)/reports/`. La ruta `/reports` SHALL renderizar un **hub** con tarjetas hacia los reportes disponibles ("Estados de Cuenta" → `/reports/account-statements`, "Corte de Ventas" → `/reports/sales-cut`, "Cobranza" → `/reports/collections`, "Compras" → `/reports/purchases`, "Ventas por Producto" → `/reports/sales-by-product`). Cada tarjeta (`CatalogHubCard`, componente compartido) SHALL renderizarse siempre — título, descripción e icono visibles independientemente del permiso — y gatear únicamente su acción: con el permiso correspondiente muestra un link "Abrir" hacia la ruta del reporte; sin el permiso, muestra un badge deshabilitado "Sin acceso" en su lugar y la tarjeta queda con opacidad reducida. La tarjeta "Cobranza" SHALL gatear su acción con la unión de permisos `can("reports:cash_cut_read") || can("reports:customer_collections_read")` (basta con uno de los dos para habilitar el link "Abrir"), a diferencia del resto de tarjetas que gatean con un único permiso. El `NavigationRail` SHALL conservar el item primario `reports` (`href:/reports`, icon `summarize`, `requires:reports:account_statements_read`), mostrándose optimistamente durante `"loading"` y ocultándose (ítem del rail, no las tarjetas del hub) cuando `can("reports:account_statements_read")` es `false`. Las páginas (`page.tsx`) SHALL ser Server Components que exportan `metadata`. (Traza: S4, S5.)
 
 #### Scenario: Item visible con permiso
 - **WHEN** un usuario con `reports:account_statements_read` abre el panel
@@ -21,9 +21,13 @@ El sistema SHALL exponer el módulo de UI en `app/(private)/reports/`. La ruta `
 - **WHEN** un usuario con `reports:sales_cut_read` abre `/reports`
 - **THEN** ve la tarjeta "Corte de Ventas" que navega a `/reports/sales-cut`
 
-#### Scenario: Tarjeta de cobranza por permiso
-- **WHEN** un usuario con `reports:cash_cut_read` abre `/reports`
-- **THEN** ve la tarjeta "Corte de Caja (Cobranza)" que navega a `/reports/cash-cut`
+#### Scenario: Tarjeta de Cobranza con al menos un permiso
+- **WHEN** un usuario tiene `reports:cash_cut_read`, `reports:customer_collections_read`, o ambos, y abre `/reports`
+- **THEN** ve una única tarjeta "Cobranza" (no dos) que navega a `/reports/collections`
+
+#### Scenario: Tarjeta de Cobranza sin ninguno de los dos permisos
+- **WHEN** un usuario no tiene `reports:cash_cut_read` ni `reports:customer_collections_read`
+- **THEN** la tarjeta "Cobranza" se muestra (título, descripción, icono) pero con badge "Sin acceso" en lugar del link "Abrir"
 
 #### Scenario: Tarjeta deshabilitada sin permiso
 - **WHEN** el usuario no tiene el permiso de un reporte
@@ -36,10 +40,6 @@ El sistema SHALL exponer el módulo de UI en `app/(private)/reports/`. La ruta `
 #### Scenario: Tarjeta de Ventas por Producto por permiso
 - **WHEN** un usuario con `reports:sales_by_product_read` abre `/reports`
 - **THEN** ve la tarjeta "Ventas por Producto" que navega a `/reports/sales-by-product`
-
-#### Scenario: Tarjeta de Cobranza por Cliente por permiso
-- **WHEN** un usuario con `reports:customer_collections_read` abre `/reports`
-- **THEN** ve la tarjeta "Cobranza por Cliente" que navega a `/reports/customer-collections`
 
 ---
 
@@ -140,28 +140,56 @@ La ruta `/reports/sales-cut` SHALL renderizar el corte de ventas: un toggle de p
 
 ---
 
-### Requirement: Cash cut (collections) view
-La ruta `/reports/cash-cut` SHALL renderizar el corte de caja (cobranza detallada): filtros de sucursal (visible solo con `can("branches:access_all")`, requerido para acotar el corte) y rango de fechas (`from`/`to`, obligatorios); tarjetas de totales (`totalCollected`, `totalIva`); una tabla de desglose dinámico por forma de pago; una tabla de filas de cobranza con las columnas `Cte, Docto, Factura, Nombre del cliente, Fec-Fact, Días, Importe, Fp, Referencia, F. Cobro, I.V.A., Tasa%` (scroll horizontal); y botones "Exportar PDF" y "Exportar Excel" que descargan el reporte con los filtros aplicados vía `authFetch` (Bearer) sin exponer el token. Los `_blocks` SHALL ser presentacionales (sin `fetch`); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. Sin abonos en el periodo SHALL mostrar un estado vacío. (Traza: S5.)
+### Requirement: Collections (cobranza) view
+La ruta `/reports/collections` SHALL renderizar una única pantalla "Cobranza" con dos tabs alternables mediante `SegmentedButton<View>` ("Global" | "Por Cliente"):
+- Tab "Global": filtros de sucursal (visible solo con `can("branches:access_all")`) y rango de fechas (`from`/`to`, obligatorios); tarjetas de totales (`totalCollected`, `totalIva`); tabla de desglose dinámico por forma de pago; tabla de filas de cobranza con columnas `Cte, Docto, Factura, Nombre del cliente, Fec-Fact, Días, Importe, Fp, Referencia, F. Cobro, I.V.A., Tasa%` (scroll horizontal); botones "Exportar PDF"/"Exportar Excel" que exportan únicamente los datos de esta tab.
+- Tab "Por Cliente": filtros de sucursal (visible solo con `can("branches:access_all")`), cliente y rango de fechas (obligatorio); un `SegmentedButton` interno "Por Cliente | Por Ticket" que alterna entre la tabla `byCustomer` y la tabla `byTicket` (ambas ya agregadas por el backend, sin cálculo en cliente); botones "Exportar PDF"/"Exportar Excel" que exportan únicamente los datos de esta tab.
 
-#### Scenario: Corte de caja con filtros
-- **WHEN** un usuario con permiso abre `/reports/cash-cut` y define sucursal + rango de fechas
-- **THEN** ve los totales, el desglose por forma de pago y la tabla de filas de cobranza del periodo
+Cada tab SHALL mantener su propio estado de filtros de forma independiente (cambiar de tab no reinicia ni comparte los filtros de la otra tab) y SHALL consultar su propio endpoint mediante su propio hook (`useCashCut` para Global, `useCustomerCollectionsReport` para Por Cliente), sin unificar sus DTOs ni sus cálculos.
+
+El acceso a cada tab SHALL depender de su propio permiso: `reports:cash_cut_read` para "Global", `reports:customer_collections_read` para "Por Cliente". Si el usuario resuelto (`can()`) tiene un solo permiso de los dos, la página SHALL forzar esa tab como única vista y SHALL NO renderizar el `SegmentedButton` de nivel superior. Si tiene ambos, el `SegmentedButton` SHALL mostrarse con "Global" seleccionada por defecto. Si no tiene ninguno, SHALL mostrar `EmptyState` "Sin acceso". Mientras `can()` esté en `"loading"`, la página SHALL tratarlo de forma optimista (sin parpadear a "Sin acceso" antes de resolver).
+
+Los `_blocks` SHALL ser presentacionales (sin `fetch`); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. Sin abonos en el periodo, cada tab SHALL mostrar su propio estado vacío de forma independiente.
+
+#### Scenario: Tarjeta en el hub
+- **WHEN** un usuario con `reports:cash_cut_read` o `reports:customer_collections_read` abre `/reports`
+- **THEN** ve la tarjeta "Cobranza" que navega a `/reports/collections`
+
+#### Scenario: Tab Global por defecto
+- **WHEN** un usuario con ambos permisos abre `/reports/collections`
+- **THEN** ve la tab "Global" activa con totales, desglose por forma de pago y tabla de filas de cobranza del periodo, y el `SegmentedButton` "Global | Por Cliente" visible
+
+#### Scenario: Tab Por Cliente con sub-vistas
+- **WHEN** el usuario cambia a la tab "Por Cliente"
+- **THEN** ve el `SegmentedButton` interno "Por Cliente | Por Ticket"; con "Por Cliente" seleccionado ve una fila por cliente con su total cobrado, y con "Por Ticket" ve una fila por venta abonada
+
+#### Scenario: Filtros independientes por tab
+- **WHEN** el usuario cambia el rango de fechas en la tab "Global" y luego cambia a la tab "Por Cliente"
+- **THEN** los filtros de la tab "Por Cliente" conservan su propio valor previo, sin heredar el rango de fechas modificado en "Global"
+
+#### Scenario: Exportar tab activa únicamente
+- **WHEN** el usuario pulsa "Exportar PDF" o "Exportar Excel" estando en una tab
+- **THEN** se descarga el archivo correspondiente solo con los datos de esa tab, autenticado vía `authFetch`, sin exponer el token
+
+#### Scenario: Solo permiso de Global
+- **WHEN** un usuario tiene `reports:cash_cut_read` pero no `reports:customer_collections_read` y abre `/reports/collections`
+- **THEN** ve únicamente el contenido de la tab "Global", sin el `SegmentedButton` de nivel superior
+
+#### Scenario: Solo permiso de Por Cliente
+- **WHEN** un usuario tiene `reports:customer_collections_read` pero no `reports:cash_cut_read` y abre `/reports/collections`
+- **THEN** ve únicamente el contenido de la tab "Por Cliente" (con su propio sub-`SegmentedButton` Por Cliente/Por Ticket), sin el `SegmentedButton` de nivel superior
+
+#### Scenario: Sin ningún permiso
+- **WHEN** un usuario sin `reports:cash_cut_read` ni `reports:customer_collections_read` abre `/reports/collections`
+- **THEN** ve `EmptyState` "Sin acceso" y ninguna tab se renderiza
 
 #### Scenario: Filtro sucursal restringido
 - **WHEN** el usuario no tiene `branches:access_all`
-- **THEN** el filtro de sucursal no se muestra y el corte se limita a su sucursal
+- **THEN** el filtro de sucursal no se muestra en ninguna tab y cada corte se limita a su sucursal
 
-#### Scenario: Exportar PDF
-- **WHEN** el usuario pulsa "Exportar PDF"
-- **THEN** se descarga el PDF con los mismos filtros aplicados, autenticado vía `authFetch`
-
-#### Scenario: Exportar Excel
-- **WHEN** el usuario pulsa "Exportar Excel"
-- **THEN** se descarga un archivo `.xlsx` con las mismas columnas y totales, autenticado vía `authFetch`
 #### Scenario: Periodo sin cobranza
-
-- **WHEN** el periodo no tiene abonos completados
-- **THEN** se muestra un estado vacío en lugar de las tablas
+- **WHEN** el periodo seleccionado no tiene abonos completados
+- **THEN** la tab activa muestra su propio estado vacío en lugar de sus tablas
 
 ---
 
@@ -235,35 +263,6 @@ La ruta `/reports/sales-by-product` SHALL renderizar filtros de sucursal (visibl
 
 ---
 
-### Requirement: Customer collections report view
-La ruta `/reports/customer-collections` SHALL renderizar el reporte de cobranza por cliente: filtros de sucursal (visible solo con `can("branches:access_all")`), cliente y rango de fechas (obligatorio); un `SegmentedButton` "Por Cliente \| Por Ticket" que alterna entre la tabla `byCustomer` y la tabla `byTicket` (ambas ya agregadas por el backend, sin cálculo en cliente); y botones "Exportar PDF"/"Exportar Excel". Los `_blocks` SHALL ser presentacionales; el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. Sin abonos en el periodo SHALL mostrar un estado vacío.
-
-#### Scenario: Tarjeta en el hub
-- **WHEN** un usuario con `reports:customer_collections_read` abre `/reports`
-- **THEN** ve la tarjeta "Cobranza por Cliente" que navega a `/reports/customer-collections`
-
-#### Scenario: Vista por cliente
-- **WHEN** el usuario abre la página con "Por Cliente" seleccionado
-- **THEN** ve una tabla con una fila por cliente y su total cobrado en el periodo
-
-#### Scenario: Vista por ticket
-- **WHEN** el usuario cambia a "Por Ticket"
-- **THEN** ve una tabla con una fila por venta abonada, agregando los abonos aplicados a esa venta
-
-#### Scenario: Exportar PDF
-- **WHEN** el usuario pulsa "Exportar PDF"
-- **THEN** se descarga el PDF con las filas agrupadas por cliente y sub-agrupadas por ticket, autenticado vía `authFetch`
-
-#### Scenario: Exportar Excel
-- **WHEN** el usuario pulsa "Exportar Excel"
-- **THEN** se descarga un `.xlsx` con hojas de detalle, por cliente y por ticket, autenticado vía `authFetch`
-
-#### Scenario: Periodo sin cobranza
-- **WHEN** el periodo no tiene abonos completados
-- **THEN** se muestra un estado vacío en lugar de las tablas
-
----
-
 ### Requirement: Inventory by department view
 
 El sistema SHALL exponer la vista de UI `app/(private)/reports/inventory-by-department/`: una tarjeta "Inventario por Departamento" en el hub `/reports` gated por `reports:inventory_read`, un selector de departamento, una tabla que agrupa los productos con sus listas de precio, y botones "Exportar PDF" y "Exportar Excel" que descargan los artefactos con los filtros aplicados vía `authFetch` (Bearer). Los `_blocks` SHALL ser presentacionales (sin `fetch`, navegación ni validación); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. (Traza: historia 2.)
@@ -312,7 +311,7 @@ El sistema SHALL exponer la vista de UI `app/(private)/reports/inventory-by-depa
 
 ### Requirement: Reports adopta el shell y la tabla estándar del design system
 
-Las 9 rutas del módulo de reportes (`/reports`, `/reports/account-statements`, `/reports/account-statements/[customerId]`, `/reports/sales-cut`, `/reports/cash-cut`, `/reports/purchases`, `/reports/sales-by-product`, `/reports/customer-collections`, `/reports/inventory-by-department`) SHALL renderizar su contenido dentro de `PageShell`, según la capability `design-system`.
+Las 8 rutas del módulo de reportes (`/reports`, `/reports/account-statements`, `/reports/account-statements/[customerId]`, `/reports/sales-cut`, `/reports/collections`, `/reports/purchases`, `/reports/sales-by-product`, `/reports/inventory-by-department`) SHALL renderizar su contenido dentro de `PageShell`, según la capability `design-system`.
 
 Ningún bloque de reportes SHALL declarar espaciado ni ancho propio. Quedan PROHIBIDOS a nivel de raíz de página: `px-4 py-6`, `mx-auto`, `space-y-4` y cualquier `max-w-*` (hoy conviven `max-w-5xl`, `max-w-6xl` y `max-w-7xl` dentro de la misma sección).
 
@@ -320,7 +319,7 @@ El enlace de retorno al hub SHALL expresarse con la prop `backHref="/reports"` d
 
 Los títulos de las páginas de reporte SHALL usar el mismo nivel que el resto de páginas de la aplicación, provisto por `PageShell` (`text-headline-lg`), y NO `text-headline-sm`.
 
-Todas las tablas de reportes SHALL usar las primitivas `DataTable` (`Table`, `THead`, `TBody`, `Tr`, `Th`, `Td`). Quedan ELIMINADAS las constantes locales de clases de celda (`th`, `td`, `thRight`, `tdRight`) hoy duplicadas en `purchases/_blocks/PurchasesTable.tsx`, `purchases/_blocks/ProviderPaymentsTable.tsx`, `cash-cut/_blocks/CollectionsRowsTable.tsx` y `_blocks/PriceListTable.tsx`, así como el padding de celda divergente `px-3 py-3`.
+Todas las tablas de reportes SHALL usar las primitivas `DataTable` (`Table`, `THead`, `TBody`, `Tr`, `Th`, `Td`). Quedan ELIMINADAS las constantes locales de clases de celda (`th`, `td`, `thRight`, `tdRight`) hoy duplicadas en `purchases/_blocks/PurchasesTable.tsx`, `purchases/_blocks/ProviderPaymentsTable.tsx`, `collections/_blocks/global/CollectionsRowsTable.tsx` y `_blocks/PriceListTable.tsx`, así como el padding de celda divergente `px-3 py-3`.
 
 Las tarjetas de totales/KPI SHALL usar la molécula `Card`. Los botones "Exportar PDF" y "Exportar Excel" SHALL usar el átomo `Button` (`variant="filled"` y `variant="outlined"` respectivamente, con `icon`), no `<button>` crudos con clases inline.
 
@@ -332,7 +331,7 @@ Las tarjetas de totales/KPI SHALL usar la molécula `Card`. Los botones "Exporta
 #### Scenario: Título de reporte al mismo nivel que el resto
 
 - **WHEN** se renderiza cualquier ruta de `/reports/*`
-- **THEN** su `h1` mide 32px, igual que el de `/sales` o `/inventory`
+- **THEN** el título usa `text-headline-lg` provisto por `PageShell`
 
 #### Scenario: Tabla de reporte con el dialecto estándar
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { CashCutPaymentMethodBreakdownDto } from "../_logic/types/api";
+import type { CashCutPaymentMethodBreakdownDto } from "../../_logic/global/types/api";
 
 const MX = new Intl.NumberFormat("es-MX", {
   style: "currency",

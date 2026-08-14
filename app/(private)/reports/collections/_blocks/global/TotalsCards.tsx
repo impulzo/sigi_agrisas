@@ -1,7 +1,7 @@
 "use client";
 
-import { Card as BaseCard } from "../../../../_components/molecules/Card/Card";
-import type { CashCutReportDto } from "../_logic/types/api";
+import { Card as BaseCard } from "../../../../../_components/molecules/Card/Card";
+import type { CashCutReportDto } from "../../_logic/global/types/api";
 
 const MX = new Intl.NumberFormat("es-MX", {
   style: "currency",

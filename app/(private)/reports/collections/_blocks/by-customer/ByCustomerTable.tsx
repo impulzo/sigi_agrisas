@@ -1,6 +1,6 @@
 "use client";
 
-import type { CollectionsByCustomerRowDto } from "../_logic/types/api";
+import type { CollectionsByCustomerRowDto } from "../../_logic/by-customer/types/api";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
 function money(v: string): string {

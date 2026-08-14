@@ -28,11 +28,11 @@ export function ReportsHubPage() {
         />
         <CatalogHubCard
           icon="payments"
-          title="Corte de Caja (Cobranza)"
-          description="Detalle de abonos cobrados por cliente/factura, con IVA prorrateado y export PDF/Excel."
-          href="/reports/cash-cut"
-          canAccess={can("reports:cash_cut_read")}
-          tooltip="Requiere permiso reports:cash_cut_read"
+          title="Cobranza"
+          description="Abonos cobrados: corte global con IVA prorrateado o agrupado por cliente/ticket, con export PDF/Excel."
+          href="/reports/collections"
+          canAccess={can("reports:cash_cut_read") || can("reports:customer_collections_read")}
+          tooltip="Requiere permiso reports:cash_cut_read o reports:customer_collections_read"
         />
         <CatalogHubCard
           icon="inventory_2"
@@ -57,14 +57,6 @@ export function ReportsHubPage() {
           href="/reports/sales-by-product"
           canAccess={can("reports:sales_by_product_read")}
           tooltip="Requiere permiso reports:sales_by_product_read"
-        />
-        <CatalogHubCard
-          icon="groups"
-          title="Cobranza por Cliente"
-          description="Cobranza agrupable por cliente y por ticket abonado."
-          href="/reports/customer-collections"
-          canAccess={can("reports:customer_collections_read")}
-          tooltip="Requiere permiso reports:customer_collections_read"
         />
       </div>
     </PageShell>

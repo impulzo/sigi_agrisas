@@ -1,6 +1,6 @@
 "use client";
 
-import { CustomerFilterCombobox } from "../../_blocks/CustomerFilterCombobox";
+import { CustomerFilterCombobox } from "../../../_blocks/CustomerFilterCombobox";
 
 interface Option {
   id: string;
