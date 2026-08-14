@@ -181,6 +181,7 @@ export interface ProductDto {
   id: string;
   code: string;
   name: string;
+  unit: string;
   ivaRate: number | null;
   iepsRate: number | null;
   isActive: boolean;

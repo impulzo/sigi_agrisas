@@ -1,15 +1,15 @@
 import { authFetch, NetworkError, ForbiddenError } from "../../../../_lib/authFetch";
 import type { ProductDto } from "../types/api";
 
-export async function searchProductsBySatCode(
-  satProductCode: string,
+export async function searchProductsByName(
+  name: string,
   fetchImpl = authFetch,
 ): Promise<ProductDto[]> {
   const params = new URLSearchParams({
     page: "1",
     pageSize: "100",
     includeInactive: "false",
-    satProductCode,
+    search: name,
   });
 
   let res: Response;
@@ -31,6 +31,7 @@ export async function searchProductsBySatCode(
     id: p.id as string,
     code: p.code as string,
     name: p.name as string,
+    unit: p.unit as string,
     ivaRate: p.ivaRate as number | null,
     iepsRate: p.iepsRate as number | null,
     isActive: p.isActive as boolean,

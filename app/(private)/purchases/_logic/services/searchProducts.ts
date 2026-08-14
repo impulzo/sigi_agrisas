@@ -31,6 +31,7 @@ export async function searchProducts(
     id: p.id as string,
     code: p.code as string,
     name: p.name as string,
+    unit: p.unit as string,
     ivaRate: p.ivaRate as number | null,
     iepsRate: p.iepsRate as number | null,
     isActive: p.isActive as boolean,

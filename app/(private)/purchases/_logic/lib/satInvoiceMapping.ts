@@ -3,7 +3,7 @@
 import type { ParsedSatInvoice, SatConcepto } from "./satXmlParser";
 import type { PaymentMethodOption } from "../../../../_hooks/usePaymentMethodsOptions";
 import type { NewProviderInput, ProductDto } from "../types/api";
-import { searchProductsBySatCode } from "../services/searchProductsBySatCode";
+import { searchProductsByName } from "../services/searchProductsByName";
 
 const FORMA_PAGO_KEYWORDS: Record<string, string[]> = {
   "01": ["efectivo"],
@@ -53,6 +53,38 @@ function round4(n: number): number {
   return Math.round((n + Number.EPSILON) * 10000) / 10000;
 }
 
+const DESCRIPCION_PREFIX_REGEX = /^\[.*?\]\s*/;
+
+export function extractProductNameFromDescripcion(descripcion: string): string {
+  return descripcion.replace(DESCRIPCION_PREFIX_REGEX, "").trim();
+}
+
+interface ConceptoResolution {
+  concepto: SatConcepto;
+  product: ProductDto | null;
+  ambiguous: boolean;
+}
+
+async function resolveConcepto(concepto: SatConcepto): Promise<ConceptoResolution> {
+  const name = extractProductNameFromDescripcion(concepto.descripcion);
+  if (name.length < 2) return { concepto, product: null, ambiguous: false };
+
+  let candidates: ProductDto[];
+  try {
+    candidates = await searchProductsByName(name);
+  } catch {
+    // best effort: sin permiso o error de red, simplemente no se auto-mapea
+    return { concepto, product: null, ambiguous: false };
+  }
+
+  if (candidates.length === 1) return { concepto, product: candidates[0], ambiguous: false };
+  if (candidates.length === 0) return { concepto, product: null, ambiguous: false };
+
+  const byUnit = candidates.filter((c) => c.unit === concepto.claveUnidad);
+  if (byUnit.length === 1) return { concepto, product: byUnit[0], ambiguous: false };
+  return { concepto, product: null, ambiguous: true };
+}
+
 export async function buildSatApplyResult(
   parsed: ParsedSatInvoice,
   paymentMethods: PaymentMethodOption[],
@@ -63,23 +95,15 @@ export async function buildSatApplyResult(
     warnings.push(`La factura está en ${parsed.moneda}; el sistema registra en MXN.`);
   }
 
-  const claves = Array.from(new Set(parsed.conceptos.map((c) => c.claveProdServ).filter(Boolean)));
-  const productsByClave = new Map<string, ProductDto>();
-  for (const clave of claves) {
-    try {
-      const items = await searchProductsBySatCode(clave);
-      if (items.length > 0) productsByClave.set(clave, items[0]);
-    } catch {
-      // best effort: sin permiso o error de red, simplemente no se auto-mapea
-    }
-  }
+  const resolutions = await Promise.all(parsed.conceptos.map(resolveConcepto));
 
   const grouped = new Map<string, { product: ProductDto; quantity: number; unitCost: number; conceptos: SatConcepto[] }>();
   const unmatched: SatConcepto[] = [];
+  let hasAmbiguous = false;
 
-  for (const concepto of parsed.conceptos) {
-    const product = productsByClave.get(concepto.claveProdServ);
+  for (const { concepto, product, ambiguous } of resolutions) {
     if (!product) {
+      if (ambiguous) hasAmbiguous = true;
       unmatched.push(concepto);
       continue;
     }
@@ -95,6 +119,12 @@ export async function buildSatApplyResult(
         conceptos: [concepto],
       });
     }
+  }
+
+  if (hasAmbiguous) {
+    warnings.push(
+      "Algunos conceptos coinciden con más de un producto del catálogo y no se pudieron desambiguar por unidad; revisa la lista de conceptos sin mapear."
+    );
   }
 
   for (const { product, conceptos } of grouped.values()) {
