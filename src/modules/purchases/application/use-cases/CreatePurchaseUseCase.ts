@@ -33,6 +33,8 @@ export class CreatePurchaseUseCase {
         quantity: item.quantity,
         unitCost: item.unitCost,
         discountPct: item.discountPct ?? null,
+        lotNumber: item.lotNumber ?? null,
+        expirationDate: item.expirationDate ?? null,
       })),
     };
 

@@ -218,6 +218,7 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
         isTaxable: boolean;
       }> = [];
       const snapshots: Array<{
+        id: string;
         productId: string;
         productCodeSnapshot: string;
         productNameSnapshot: string;
@@ -226,6 +227,8 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
         discountPct: number | null;
         ivaRate: number | null;
         iepsRate: number | null;
+        lotNumber: string | null;
+        expirationDate: Date | null;
       }> = [];
 
       for (const item of data.items) {
@@ -244,6 +247,7 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
           isTaxable: product.isTaxable,
         });
         snapshots.push({
+          id: randomUUID(),
           productId: product.id,
           productCodeSnapshot: product.code,
           productNameSnapshot: product.name,
@@ -252,6 +256,8 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
           discountPct: item.discountPct,
           ivaRate: product.isTaxable ? ivaRate : 0,
           iepsRate: product.isTaxable ? iepsRate : 0,
+          lotNumber: item.lotNumber ?? null,
+          expirationDate: item.expirationDate ?? null,
         });
       }
 
@@ -315,6 +321,7 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
           xmlFileName: data.xmlFileName ?? null,
           items: {
             create: snapshots.map((item, i) => ({
+              id: item.id,
               productId: item.productId,
               productCodeSnapshot: item.productCodeSnapshot,
               productNameSnapshot: item.productNameSnapshot,
@@ -330,6 +337,20 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
           },
         },
       });
+
+      const lotsToCreate = snapshots.filter((item) => item.lotNumber && item.expirationDate);
+      if (lotsToCreate.length > 0) {
+        await tx.inventoryLot.createMany({
+          data: lotsToCreate.map((item) => ({
+            branchId: data.branchId,
+            productId: item.productId,
+            purchaseItemId: item.id,
+            lotNumber: item.lotNumber as string,
+            expirationDate: item.expirationDate as Date,
+            quantity: new Prisma.Decimal(item.quantity),
+          })),
+        });
+      }
 
       const row = await tx.purchase.findUnique({ where: { id: purchaseId }, include: includeJoins });
       return toWithItems(row as PrismaPurchaseWithJoins);
@@ -354,6 +375,10 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
       if (activeProviderPayments.length > 0) {
         throw new PurchaseHasActiveProviderPaymentsError(activeProviderPayments.map((p) => p.id));
       }
+
+      await tx.inventoryLot.deleteMany({
+        where: { purchaseItemId: { in: current.items.map((item) => item.id) } },
+      });
 
       const cancelledAt = new Date();
       for (const item of current.items) {

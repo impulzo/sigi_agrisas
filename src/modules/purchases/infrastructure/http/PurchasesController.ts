@@ -41,12 +41,19 @@ const listQuerySchema = z.object({
   to: z.string().optional(),
 });
 
-const purchaseItemSchema = z.object({
-  productId: z.string().uuid(),
-  quantity: z.number().positive("quantity must be > 0"),
-  unitCost: z.number().min(0, "unitCost must be >= 0"),
-  discountPct: z.number().min(0).max(100).nullable().optional(),
-});
+const purchaseItemSchema = z
+  .object({
+    productId: z.string().uuid(),
+    quantity: z.number().positive("quantity must be > 0"),
+    unitCost: z.number().min(0, "unitCost must be >= 0"),
+    discountPct: z.number().min(0).max(100).nullable().optional(),
+    lotNumber: z.string().trim().min(1).max(64).nullable().optional(),
+    expirationDate: z.coerce.date().nullable().optional(),
+  })
+  .refine((item) => Boolean(item.lotNumber) === Boolean(item.expirationDate), {
+    message: "lotNumber and expirationDate must be provided together",
+    path: ["lotNumber"],
+  });
 
 const newProviderSchema = z
   .object({

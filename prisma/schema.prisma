@@ -945,10 +945,27 @@ model PurchaseItem {
 
   purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  inventoryLots InventoryLot[]
 
   @@index([purchaseId])
   @@index([productId])
   @@map("purchase_items")
+}
+
+model InventoryLot {
+  id             String   @id @default(uuid())
+  branchId       String   @map("branch_id")
+  productId      String   @map("product_id")
+  purchaseItemId String   @map("purchase_item_id")
+  lotNumber      String   @map("lot_number") @db.VarChar(64)
+  expirationDate DateTime @map("expiration_date") @db.Date
+  quantity       Decimal  @db.Decimal(14, 4)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  purchaseItem PurchaseItem @relation(fields: [purchaseItemId], references: [id], onDelete: Cascade)
+
+  @@index([branchId, productId, expirationDate])
+  @@map("inventory_lots")
 }
 
 model ProviderPayment {

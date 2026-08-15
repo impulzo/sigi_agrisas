@@ -8,4 +8,7 @@ export interface InventoryItem {
   reservedQuantity: number;
   reorderPoint: number;
   updatedAt: Date;
+  nearestExpirationDate: Date | null;
+  nearestExpirationLotNumber: string | null;
+  expiryStatus: "ok" | "warning" | "critical" | null;
 }

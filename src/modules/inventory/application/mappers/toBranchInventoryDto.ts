@@ -12,5 +12,8 @@ export function toBranchInventoryDto({ inventory, productCode, productName }: Br
     reservedQuantity: inventory.reservedQuantity,
     reorderPoint: inventory.reorderPoint,
     updatedAt: inventory.updatedAt.toISOString(),
+    nearestExpirationDate: null,
+    nearestExpirationLotNumber: null,
+    expiryStatus: null,
   };
 }

@@ -4,7 +4,7 @@ Define el comportamiento del backend para registrar compras que la empresa hace 
 ## Requirements
 ### Requirement: Registro de una compra a un proveedor
 
-El sistema SHALL permitir registrar una compra (`Purchase`) contra un proveedor activo, compuesta de una o más líneas (`PurchaseItem`). Al confirmarse, SHALL asignar un folio del catálogo con `code="CP"` y `scope="OPERATIONS"` (resuelto automáticamente por el backend, no seleccionable por el cliente), SHALL incrementar el inventario de la sucursal por cada línea, y SHALL snapshotear código, nombre y costo unitario del producto en el momento de la compra. Los totales (`subtotal`, `ivaTotal`, `iepsTotal`, `total`) SHALL calcularse con redondeo half-to-even a 4 decimales, misma fórmula que Sale/Quote/Return — incluyendo la extracción de impuesto descrita abajo.
+El sistema SHALL permitir registrar una compra (`Purchase`) contra un proveedor activo, compuesta de una o más líneas (`PurchaseItem`). Al confirmarse, SHALL asignar un folio del catálogo con `code="CP"` y `scope="OPERATIONS"` (resuelto automáticamente por el backend, no seleccionable por el cliente), SHALL incrementar el inventario de la sucursal por cada línea, y SHALL snapshotear código, nombre y costo unitario del producto en el momento de la compra. Los totales (`subtotal`, `ivaTotal`, `iepsTotal`, `total`) SHALL calcularse con redondeo half-to-even a 4 decimales, misma fórmula que Sale/Quote/Return — incluyendo la extracción de impuesto descrita abajo. Cada línea SHALL aceptar opcionalmente `lotNumber` y `expirationDate` (par completo o ninguno; ver capability `inventory-lots` para el detalle de captura y validación).
 
 #### Scenario: Compra de contado registrada exitosamente
 - **WHEN** un usuario con `purchases:create` envía una compra con proveedor activo, forma de pago sin crédito (`paymentMethod.isCredit=false`) y líneas válidas (producto activo, cantidad > 0, costo ≥ 0)
@@ -33,6 +33,10 @@ El sistema SHALL permitir registrar una compra (`Purchase`) contra un proveedor 
 #### Scenario: Inventario incrementado de forma atómica junto al folio
 - **WHEN** la compra se confirma exitosamente
 - **THEN** la asignación de folio, el incremento de inventario por línea, la actualización del saldo del proveedor (si aplica) y la inserción de la compra ocurren dentro de una única transacción; si cualquier paso falla, ninguno se aplica
+
+#### Scenario: Línea con lote y caducidad crea metadata de trazabilidad
+- **WHEN** una línea de la compra incluye `lotNumber` y `expirationDate` válidos
+- **THEN** la compra se crea normalmente y, dentro de la misma transacción, se registra el lote de esa línea (ver capability `inventory-lots`)
 
 ### Requirement: Carga de factura SAT (CFDI) al registrar compras
 
@@ -64,7 +68,7 @@ Los metadatos SHALL persistirse en la tabla `purchases`: `sat_uuid` (único, `TE
 
 ### Requirement: Cancelación de una compra
 
-El sistema SHALL permitir cancelar una compra en estado `completed`, revirtiendo el inventario incrementado y, si era a crédito, el saldo del proveedor en la proporción aún no pagada. La cancelación SHALL ser idempotente y SHALL rechazarse si la compra tiene abonos a proveedor activos.
+El sistema SHALL permitir cancelar una compra en estado `completed`, revirtiendo el inventario incrementado y, si era a crédito, el saldo del proveedor en la proporción aún no pagada. La cancelación SHALL ser idempotente y SHALL rechazarse si la compra tiene abonos a proveedor activos. Si alguna línea de la compra tenía lote/caducidad capturados, la cancelación SHALL eliminar los registros de trazabilidad asociados (ver capability `inventory-lots`) dentro de la misma transacción.
 
 #### Scenario: Cancelación exitosa revierte inventario
 - **WHEN** un usuario con `purchases:cancel` cancela una compra `completed` sin abonos activos

@@ -18,7 +18,7 @@ const LISTING_ROUTES = [
   "/catalogs/products",
   "/users",
   "/reports/purchases",
-  "/reports/cash-cut",
+  "/reports/collections",
   "/settings",
 ];
 

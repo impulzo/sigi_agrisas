@@ -165,7 +165,11 @@
       "Bash(mkdir -p /private/tmp/claude-501/-Users-kevdany17-Documents-Proyects-sigi-agrisas-agrisas-panel/eb1b8871-c86f-4ea7-86cd-c771f769ce75/scratchpad)",
       "Bash(cp /tmp/check_stale.mjs /Users/kevdany17/Documents/Proyects/sigi/agrisas/agrisas_panel/check_stale.mjs)",
       "Bash(rm -f check_stale.mjs)",
-      "mcp__playwright__browser_evaluate"
+      "mcp__playwright__browser_evaluate",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(mkdir -p tests/fixtures/sat-invoices)",
+      "Bash(git mv *)",
+      "Bash(mv \"788110F9-B247-5374-94D1-8E9FA34B8015.xml\" \"tests/fixtures/sat-invoices/788110F9-B247-5374-94D1-8E9FA34B8015.xml\")"
     ]
   },
   "enabledMcpjsonServers": [

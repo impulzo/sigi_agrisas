@@ -9,6 +9,7 @@ import { PrismaBranchRepository } from "@/modules/branches/infrastructure/reposi
 import { PrismaDepartmentRepository } from "@/modules/departments/infrastructure/repositories/PrismaDepartmentRepository";
 import { PrismaProductRepository } from "@/modules/products/infrastructure/repositories/PrismaProductRepository";
 import { PrismaBranchInventoryRepository } from "@/modules/inventory/infrastructure/repositories/PrismaBranchInventoryRepository";
+import { PrismaInventoryLotRepository } from "@/modules/inventory/infrastructure/repositories/PrismaInventoryLotRepository";
 import { PrismaAuthorizationService } from "@/modules/rbac/infrastructure/services/PrismaAuthorizationService";
 import { UserRolePrismaRepository } from "@/modules/rbac/infrastructure/repositories/UserRolePrismaRepository";
 import { CreateProductUseCase } from "@/modules/products/application/use-cases/CreateProductUseCase";
@@ -43,11 +44,12 @@ describe("Inventory — branch scoping (integration real DB)", () => {
   const deptRepo = new PrismaDepartmentRepository(prisma);
   const productRepo = new PrismaProductRepository(prisma);
   const inventoryRepo = new PrismaBranchInventoryRepository(prisma);
+  const inventoryLotRepo = new PrismaInventoryLotRepository(prisma);
   const authzService = new PrismaAuthorizationService(prisma, new UserRolePrismaRepository(prisma));
 
   const createProduct = new CreateProductUseCase(productRepo, deptRepo);
   const createInventory = new CreateBranchInventoryItemUseCase(inventoryRepo, branchRepo, productRepo);
-  const listInventory = new ListBranchInventoryUseCase(inventoryRepo, branchRepo);
+  const listInventory = new ListBranchInventoryUseCase(inventoryRepo, branchRepo, inventoryLotRepo);
 
   let branchAId: string;
   let branchBId: string;

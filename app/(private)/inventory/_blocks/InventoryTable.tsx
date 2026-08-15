@@ -4,6 +4,9 @@ import Link from "next/link";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import type { InventoryItem } from "../_logic/types/domain";
 import { useTableKeyboard } from "../../../_hooks/useTableKeyboard";
+import { ExpiryStatusBadge } from "./ExpiryStatusBadge";
+
+const DATE_FMT = new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
 
 interface InventoryTableProps {
   items: InventoryItem[];
@@ -31,6 +34,7 @@ export function InventoryTable({ items, canWrite, canViewKardex = false, onAdjus
             <th className="px-4 py-3 font-medium text-right">Reservado</th>
             <th className="px-4 py-3 font-medium text-right">Disponible</th>
             <th className="px-4 py-3 font-medium text-right">P. reorden</th>
+            <th className="px-4 py-3 font-medium">Caducidad</th>
             {showActions && <th className="px-4 py-3 font-medium">Acciones</th>}
           </tr>
         </thead>
@@ -55,6 +59,18 @@ export function InventoryTable({ items, canWrite, canViewKardex = false, onAdjus
                 <td className="px-4 py-3 text-right text-on-surface-variant">{item.reservedQuantity}</td>
                 <td className={`px-4 py-3 text-right font-medium ${available <= 0 ? "text-error" : ""}`}>{available}</td>
                 <td className="px-4 py-3 text-right text-on-surface-variant">{item.reorderPoint}</td>
+                <td className="px-4 py-3">
+                  {item.expiryStatus && (
+                    <div className="flex flex-col gap-0.5">
+                      <ExpiryStatusBadge status={item.expiryStatus} />
+                      {item.nearestExpirationDate && (
+                        <span className="text-label-sm text-on-surface-variant">
+                          {DATE_FMT.format(item.nearestExpirationDate)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </td>
                 {showActions && (
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

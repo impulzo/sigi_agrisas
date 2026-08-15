@@ -14,6 +14,9 @@ const ITEM: InventoryItem = {
   reservedQuantity: 10,
   reorderPoint: 20,
   updatedAt: new Date("2026-05-20"),
+  nearestExpirationDate: null,
+  nearestExpirationLotNumber: null,
+  expiryStatus: null,
 };
 
 beforeAll(() => {

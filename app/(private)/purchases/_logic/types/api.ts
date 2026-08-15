@@ -89,6 +89,8 @@ export interface CreatePurchaseItemRequest {
   quantity: number;
   unitCost: number;
   discountPct?: number | null;
+  lotNumber?: string | null;
+  expirationDate?: string | null;
 }
 
 export interface NewProviderInput {
@@ -179,6 +181,7 @@ export interface ProductDto {
   id: string;
   code: string;
   name: string;
+  unit: string;
   ivaRate: number | null;
   iepsRate: number | null;
   isActive: boolean;

@@ -4,6 +4,7 @@ import { PrismaBranchRepository } from "@/modules/branches/infrastructure/reposi
 import { PrismaProductRepository } from "@/modules/products/infrastructure/repositories/PrismaProductRepository";
 import { CreateProductUseCase } from "@/modules/products/application/use-cases/CreateProductUseCase";
 import { PrismaBranchInventoryRepository } from "@/modules/inventory/infrastructure/repositories/PrismaBranchInventoryRepository";
+import { PrismaInventoryLotRepository } from "@/modules/inventory/infrastructure/repositories/PrismaInventoryLotRepository";
 import { CreateBranchInventoryItemUseCase } from "@/modules/inventory/application/use-cases/CreateBranchInventoryItemUseCase";
 import { AdjustStockUseCase } from "@/modules/inventory/application/use-cases/AdjustStockUseCase";
 import { ListBranchInventoryUseCase } from "@/modules/inventory/application/use-cases/ListBranchInventoryUseCase";
@@ -30,11 +31,12 @@ describe("Inventory CRUD — integration (real DB)", () => {
   const branchRepo = new PrismaBranchRepository(prisma);
   const productRepo = new PrismaProductRepository(prisma);
   const inventoryRepo = new PrismaBranchInventoryRepository(prisma);
+  const inventoryLotRepo = new PrismaInventoryLotRepository(prisma);
 
   const createProduct = new CreateProductUseCase(productRepo, departmentRepo);
   const createInventory = new CreateBranchInventoryItemUseCase(inventoryRepo, branchRepo, productRepo);
   const adjustStock = new AdjustStockUseCase(inventoryRepo);
-  const listInventory = new ListBranchInventoryUseCase(inventoryRepo, branchRepo);
+  const listInventory = new ListBranchInventoryUseCase(inventoryRepo, branchRepo, inventoryLotRepo);
 
   let branchId: string;
   let productId: string;

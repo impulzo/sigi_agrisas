@@ -200,7 +200,7 @@ test.describe("Reportes — Compras, Ventas por Producto, Cobranza (con datos)",
     await expect(page.getByRole("heading", { name: "Reportes", level: 1 })).toBeVisible({ timeout: 8000 });
     await expect(page.getByRole("heading", { name: "Compras", level: 3 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Ventas por Producto", level: 3 })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Cobranza por Cliente", level: 3 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Cobranza", level: 3 })).toBeVisible();
   });
 
   // ─── Reporte de Compras ────────────────────────────────────────────────────
@@ -274,13 +274,16 @@ test.describe("Reportes — Compras, Ventas por Producto, Cobranza (con datos)",
     expect(xlsxDownload.suggestedFilename()).toMatch(/^sales-by-product-.*\.xlsx$/);
   });
 
-  // ─── Reporte de Cobranza por Cliente ───────────────────────────────────────
+  // ─── Reporte de Cobranza (tab Por Cliente) ─────────────────────────────────
 
-  test("R5 — /reports/customer-collections: vistas y export con datos reales", async ({ page }) => {
+  test("R5 — /reports/collections: tab Por Cliente y export con datos reales", async ({ page }) => {
     await loginUi(page, ADMIN_EMAIL);
-    await page.goto(`${BASE}/reports/customer-collections`);
+    await page.goto(`${BASE}/reports/collections`);
     await page.waitForLoadState("networkidle");
-    await expect(page.getByRole("heading", { name: "Cobranza por Cliente" })).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole("heading", { name: "Cobranza" })).toBeVisible({ timeout: 8000 });
+
+    await page.getByRole("tab", { name: "Por Cliente" }).click();
+    await page.waitForLoadState("networkidle");
     await expect(page.getByText("E2E Cliente Reportes")).toBeVisible({ timeout: 8000 });
 
     const [pdfDownload] = await Promise.all([

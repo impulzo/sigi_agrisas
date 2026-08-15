@@ -18,6 +18,8 @@ export interface PurchaseFormLine {
   quantity: number;
   unitCost: number;
   discountPct: number;
+  lotNumber: string;
+  expirationDate: string;
   lineSubtotal: number;
   lineTotal: number;
 }
@@ -49,6 +51,8 @@ interface UseCreatePurchaseFormResult {
   updateQuantity: (id: string, qty: number) => void;
   updateUnitCost: (id: string, cost: number) => void;
   updateDiscount: (id: string, pct: number) => void;
+  updateLot: (id: string, lotNumber: string) => void;
+  updateExpiration: (id: string, expirationDate: string) => void;
   removeLine: (id: string) => void;
   totals: PurchaseTotalsResult;
   satMetadata: SatMetadataState;
@@ -105,6 +109,8 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
           quantity: 1,
           unitCost: 0,
           discountPct: 0,
+          lotNumber: "",
+          expirationDate: "",
           lineSubtotal: 0,
           lineTotal: 0,
         },
@@ -124,6 +130,8 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
         quantity: l.quantity,
         unitCost: l.unitCost,
         discountPct: 0,
+        lotNumber: "",
+        expirationDate: "",
         lineSubtotal: 0,
         lineTotal: 0,
       }))
@@ -166,6 +174,14 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
 
   const updateDiscount = useCallback((id: string, pct: number) => {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, discountPct: pct } : l)));
+  }, []);
+
+  const updateLot = useCallback((id: string, lotNumber: string) => {
+    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, lotNumber } : l)));
+  }, []);
+
+  const updateExpiration = useCallback((id: string, expirationDate: string) => {
+    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, expirationDate } : l)));
   }, []);
 
   const removeLine = useCallback((id: string) => {
@@ -220,6 +236,8 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
           quantity: l.quantity,
           unitCost: l.unitCost,
           discountPct: l.discountPct || null,
+          lotNumber: l.lotNumber.trim() || null,
+          expirationDate: l.expirationDate || null,
         })),
       });
       router.push(`/purchases/${result.id}`);
@@ -251,6 +269,8 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
     updateQuantity,
     updateUnitCost,
     updateDiscount,
+    updateLot,
+    updateExpiration,
     removeLine,
     totals,
     satMetadata,
