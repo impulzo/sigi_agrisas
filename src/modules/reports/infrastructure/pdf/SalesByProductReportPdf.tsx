@@ -2,10 +2,7 @@ import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { SalesByProductReportResponseDto } from "../../application/dto/SalesByProductReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("es-MX", { timeZone: "UTC" });
-}
+import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
 
 export function SalesByProductReportPdf({ data }: { data: SalesByProductReportResponseDto }) {
   return (

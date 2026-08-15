@@ -1,3 +1,5 @@
+import { roundHalfToEven } from "@/shared/domain/services/roundHalfToEven";
+
 export interface QuoteLineInput {
   quantity: number;
   unitPrice: number;
@@ -20,27 +22,6 @@ export interface QuoteTotalsResult {
   subtotal: number;
   taxTotal: number;
   total: number;
-}
-
-// Half-to-even (banker's) rounding at `decimals` precision.
-// MUST stay identical to SaleTotalsCalculator.roundHalfToEven so that the
-// equivalence test in tests/unit/modules/quotes/.../QuoteTotalsCalculator.test.ts
-// continues to assert byte-for-byte equality with sale totals.
-function roundHalfToEven(value: number, decimals: number): number {
-  const factor = Math.pow(10, decimals);
-  const scaled = value * factor;
-  const floor = Math.floor(scaled);
-  const diff = scaled - floor;
-  const eps = 1e-9;
-  let rounded: number;
-  if (diff > 0.5 + eps) {
-    rounded = floor + 1;
-  } else if (diff < 0.5 - eps) {
-    rounded = floor;
-  } else {
-    rounded = floor % 2 === 0 ? floor : floor + 1;
-  }
-  return rounded / factor;
 }
 
 const SCALE = 4;

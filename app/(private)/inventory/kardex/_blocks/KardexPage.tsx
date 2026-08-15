@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useCurrentUser } from "../../../../_hooks/useCurrentUser";
-import { useBranchesOptions } from "../../_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../../_hooks/useBranchesOptions";
 import { useKardex } from "../_logic/hooks/useKardex";
 import { KardexFilters } from "./KardexFilters";
 import { KardexHeaderCards } from "./KardexHeaderCards";

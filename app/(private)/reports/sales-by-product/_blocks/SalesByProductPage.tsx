@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useCurrentUser } from "../../../../_hooks/useCurrentUser";
 import { useDepartmentsOptions } from "../../../../_hooks/useDepartmentsOptions";
-import { useBranchesOptions } from "../../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../../_hooks/useBranchesOptions";
 import { useSalesByProductReport } from "../_logic/hooks/useSalesByProductReport";
 import { SalesByProductFilters } from "./SalesByProductFilters";
 import { SalesByProductBreakdownCard, SalesByProductScope } from "./SalesByProductBreakdownCard";

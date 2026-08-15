@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useDebounce } from "../../../_hooks/useDebounce";
 import { useBranchInventory } from "../_logic/hooks/useBranchInventory";
-import { useBranchesOptions } from "../_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import { useInventoryMutations } from "../_logic/hooks/useInventoryMutations";
 import { InventoryTable } from "./InventoryTable";
 import { InventoryAssignModal } from "./InventoryAssignModal";

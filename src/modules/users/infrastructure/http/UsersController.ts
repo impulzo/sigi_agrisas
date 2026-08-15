@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
 import { ListUsersUseCase } from "@/modules/users/application/use-cases/ListUsersUseCase";
 import { GetUserUseCase } from "@/modules/users/application/use-cases/GetUserUseCase";
 import { CreateAdminUserUseCase } from "@/modules/users/application/use-cases/CreateAdminUserUseCase";
@@ -12,11 +13,6 @@ import { BranchNotFoundForUserError } from "@/modules/users/domain/errors/Branch
 import { RoleNotFoundError } from "@/modules/rbac/domain/errors/RoleNotFoundError";
 
 const uuidParamSchema = z.string().uuid("Invalid user ID format");
-
-const listUsersQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
-});
 
 const updateUserBodySchema = z
   .object({
@@ -71,12 +67,9 @@ export class UsersController {
 
   async listUsers(req: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(req.url);
-    const parsed = listUsersQuerySchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      pageSize: searchParams.get("pageSize") ?? undefined,
-    });
+    const parsed = parseListQuery(searchParams);
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
     const result = await this.listUsersUseCase.execute(parsed.data);
     return NextResponse.json(result);

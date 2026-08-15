@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
+import { entityCodeSchema } from "@/shared/infrastructure/http/validators";
 import { ListFoliosUseCase } from "@/modules/folios/application/use-cases/ListFoliosUseCase";
 import { GetFolioUseCase } from "@/modules/folios/application/use-cases/GetFolioUseCase";
 import { CreateFolioUseCase } from "@/modules/folios/application/use-cases/CreateFolioUseCase";
@@ -16,7 +17,7 @@ const uuidSchema = z.string().uuid("Invalid ID format");
 const scopeSchema = z.enum(FOLIO_SCOPES as unknown as [string, ...string[]]);
 
 const createBodySchema = z.object({
-  code: z.string().regex(/^[A-Z0-9_]{1,32}$/, "code must be uppercase letters, digits, or underscores (1–32 chars)"),
+  code: entityCodeSchema,
   name: z.string().min(1).max(100),
   prefix: z
     .string()

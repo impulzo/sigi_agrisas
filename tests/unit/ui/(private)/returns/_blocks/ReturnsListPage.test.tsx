@@ -17,7 +17,7 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("../../../../../../app/_hooks/useCurrentUser");
 jest.mock("../../../../../../app/(private)/returns/_logic/hooks/useReturnsList");
-jest.mock("../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions", () => ({
+jest.mock("../../../../../../app/_hooks/useBranchesOptions", () => ({
   useBranchesOptions: () => ({ options: [], isLoading: false }),
 }));
 

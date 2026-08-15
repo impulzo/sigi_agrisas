@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { parseSatInvoice, SatXmlParseError, ParsedSatInvoice } from "../_logic/lib/satXmlParser";
 
@@ -56,7 +57,7 @@ export function SatInvoiceUploader({ onParsed, disabled }: SatInvoiceUploaderPro
         {isReading ? (
           <Spinner size="sm" />
         ) : (
-          <span className="material-symbols-outlined text-on-surface-variant" aria-hidden>upload_file</span>
+          <Icon name="upload_file" className="text-on-surface-variant" />
         )}
         <span className="text-body-sm font-medium text-on-surface">
           {isReading ? "Leyendo factura..." : "Cargar XML de factura (CFDI)"}

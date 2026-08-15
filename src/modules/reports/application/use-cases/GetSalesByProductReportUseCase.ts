@@ -1,4 +1,4 @@
-import { Decimal } from "decimal.js";
+import { formatMoney as money } from "@/shared/domain/services/formatMoney";
 import { SalesByProductRepository } from "../ports/SalesByProductRepository";
 import { SalesByProductDetailRow } from "../../domain/value-objects/SalesByProductFilters";
 import {
@@ -29,9 +29,6 @@ function toDateStr(d: Date): string {
   return d.toISOString().split("T")[0];
 }
 
-function money(n: number): string {
-  return new Decimal(n).toFixed(4);
-}
 
 function rowDto(r: SalesByProductDetailRow): SalesByProductDetailRowDto {
   return {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
 import { ListPurchasesUseCase } from "../../application/use-cases/ListPurchasesUseCase";
 import { GetPurchaseUseCase } from "../../application/use-cases/GetPurchaseUseCase";
 import { CreatePurchaseUseCase } from "../../application/use-cases/CreatePurchaseUseCase";
@@ -31,9 +32,7 @@ const uuidSchema = z.string().uuid("Invalid ID format");
 
 const STATUS_VALUES: PurchaseStatus[] = ["completed", "cancelled"];
 
-const listQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
+const listQueryFiltersSchema = z.object({
   branchId: z.string().uuid().optional(),
   providerId: z.string().uuid().optional(),
   status: z.string().optional(),
@@ -112,24 +111,26 @@ export class PurchasesController {
 
   async list(req: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(req.url);
-    const parsed = listQuerySchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      pageSize: searchParams.get("pageSize") ?? undefined,
+    const parsed = parseListQuery(searchParams);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    const filtersParsed = listQueryFiltersSchema.safeParse({
       branchId: searchParams.get("branchId") ?? undefined,
       providerId: searchParams.get("providerId") ?? undefined,
       status: searchParams.get("status") ?? undefined,
       from: searchParams.get("from") ?? undefined,
       to: searchParams.get("to") ?? undefined,
     });
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    if (!filtersParsed.success) {
+      return NextResponse.json({ error: filtersParsed.error.errors[0].message }, { status: 400 });
     }
 
-    const scoped = await resolveScopedBranchId(req, parsed.data.branchId, this.authzService);
+    const scoped = await resolveScopedBranchId(req, filtersParsed.data.branchId, this.authzService);
     if (scoped instanceof NextResponse) return scoped;
 
-    const statuses = parsed.data.status
-      ? parsed.data.status
+    const statuses = filtersParsed.data.status
+      ? filtersParsed.data.status
           .split(",")
           .map((s) => s.trim())
           .filter((s): s is PurchaseStatus => (STATUS_VALUES as string[]).includes(s))
@@ -139,10 +140,10 @@ export class PurchasesController {
       page: parsed.data.page,
       pageSize: parsed.data.pageSize,
       branchId: scoped.branchId,
-      providerId: parsed.data.providerId,
+      providerId: filtersParsed.data.providerId,
       statuses,
-      from: parsed.data.from ? new Date(parsed.data.from) : undefined,
-      to: parsed.data.to ? new Date(parsed.data.to) : undefined,
+      from: filtersParsed.data.from ? new Date(filtersParsed.data.from) : undefined,
+      to: filtersParsed.data.to ? new Date(filtersParsed.data.to) : undefined,
     });
     return NextResponse.json(result);
   }

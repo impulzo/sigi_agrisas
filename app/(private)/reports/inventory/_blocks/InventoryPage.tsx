@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useCurrentUser } from "../../../../_hooks/useCurrentUser";
 import { useDepartmentsOptions } from "../../../../_hooks/useDepartmentsOptions";
-import { useBranchesOptions } from "../../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../../_hooks/useBranchesOptions";
 import { useInventoryReport } from "../_logic/hooks/useInventoryReport";
 import { DepartmentFilter } from "./DepartmentFilter";
 import { BranchFilter } from "../../_blocks/BranchFilter";

@@ -5,12 +5,12 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 
 jest.mock("../../../../../../../app/_hooks/useCurrentUser");
-jest.mock("../../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions");
+jest.mock("../../../../../../../app/_hooks/useBranchesOptions");
 jest.mock("../../../../../../../app/(private)/payments/_logic/hooks/useCustomerSearch");
 jest.mock("../../../../../../../app/(private)/reports/collections/_logic/by-customer/hooks/useCustomerCollectionsReport");
 
 import { useCurrentUser } from "../../../../../../../app/_hooks/useCurrentUser";
-import { useBranchesOptions } from "../../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../../../../../app/_hooks/useBranchesOptions";
 import { useCustomerSearch } from "../../../../../../../app/(private)/payments/_logic/hooks/useCustomerSearch";
 import { useCustomerCollectionsReport } from "../../../../../../../app/(private)/reports/collections/_logic/by-customer/hooks/useCustomerCollectionsReport";
 import { ByCustomerCollectionsView } from "../../../../../../../app/(private)/reports/collections/_blocks/by-customer/ByCustomerCollectionsView";

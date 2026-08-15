@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
+import { entityCodeSchema } from "@/shared/infrastructure/http/validators";
 import { ListPaymentMethodsUseCase } from "@/modules/payment-methods/application/use-cases/ListPaymentMethodsUseCase";
 import { GetPaymentMethodUseCase } from "@/modules/payment-methods/application/use-cases/GetPaymentMethodUseCase";
 import { CreatePaymentMethodUseCase } from "@/modules/payment-methods/application/use-cases/CreatePaymentMethodUseCase";
@@ -12,7 +13,7 @@ import { PaymentMethodCodeAlreadyInUseError } from "@/modules/payment-methods/do
 const uuidSchema = z.string().uuid("Invalid ID format");
 
 const createBodySchema = z.object({
-  code: z.string().regex(/^[A-Z0-9_]{1,32}$/, "code must be uppercase letters, digits, or underscores (1–32 chars)"),
+  code: entityCodeSchema,
   name: z.string().min(1).max(100),
   description: z.string().max(500).nullable().optional(),
   isCredit: z.boolean().optional(),

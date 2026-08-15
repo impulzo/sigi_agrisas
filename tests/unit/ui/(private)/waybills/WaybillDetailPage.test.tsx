@@ -24,7 +24,7 @@ jest.mock("../../../../../app/(private)/waybills/_logic/hooks/useWaybillMutation
     download: jest.fn(),
   }),
 }));
-jest.mock("../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions", () => ({
+jest.mock("../../../../../app/_hooks/useBranchesOptions", () => ({
   useBranchesOptions: () => ({ options: [], isLoading: false }),
 }));
 

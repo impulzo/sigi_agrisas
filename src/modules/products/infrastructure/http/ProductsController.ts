@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
 import { ListProductsUseCase } from "../../application/use-cases/ListProductsUseCase";
 import { GetProductUseCase } from "../../application/use-cases/GetProductUseCase";
 import { CreateProductUseCase } from "../../application/use-cases/CreateProductUseCase";
@@ -35,10 +36,7 @@ const imageUrlSchema = z
   .nullable()
   .optional();
 
-const listQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
-  includeInactive: z.string().optional().transform((v) => v === "true"),
+const listQueryFiltersSchema = z.object({
   search: z
     .string()
     .optional()
@@ -118,20 +116,21 @@ export class ProductsController {
 
   async list(req: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(req.url);
-    const parsed = listQuerySchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      pageSize: searchParams.get("pageSize") ?? undefined,
-      includeInactive: searchParams.get("includeInactive") ?? undefined,
+    const parsed = parseListQuery(searchParams);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    const filtersParsed = listQueryFiltersSchema.safeParse({
       search: searchParams.get("search") ?? undefined,
       departmentId: searchParams.get("departmentId") ?? undefined,
       providerId: searchParams.get("providerId") ?? undefined,
       branchId: searchParams.get("branchId") ?? undefined,
       satProductCode: searchParams.get("satProductCode") ?? undefined,
     });
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    if (!filtersParsed.success) {
+      return NextResponse.json({ error: filtersParsed.error.errors[0].message }, { status: 400 });
     }
-    const result = await this.listUseCase.execute(parsed.data);
+    const result = await this.listUseCase.execute({ ...parsed.data, ...filtersParsed.data });
     return NextResponse.json(result);
   }
 

@@ -3,10 +3,7 @@ import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { AccountStatementSummaryResponseDto } from "../../application/dto/AccountStatementSummaryResponseDto";
 import { AccountStatementLedgerResponseDto } from "../../application/dto/AccountStatementLedgerResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("es-MX", { timeZone: "UTC" });
-}
+import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
 
 const TYPE_LABEL: Record<string, string> = {
   sale_credit: "Venta crédito",

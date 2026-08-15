@@ -11,7 +11,7 @@ import { InvoicesTable } from "./InvoicesTable";
 import { BillingEmpty } from "./BillingEmpty";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
-import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import type { InvoiceStatus } from "../_logic/types/domain";
 
 export function BillingListPage() {

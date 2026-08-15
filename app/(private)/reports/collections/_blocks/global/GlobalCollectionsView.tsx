@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useCurrentUser } from "../../../../../_hooks/useCurrentUser";
-import { useBranchesOptions } from "../../../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../../../_hooks/useBranchesOptions";
 import { useCashCut } from "../../_logic/global/hooks/useCashCut";
 import { CashCutFilters } from "./CashCutFilters";
 import { TotalsCards } from "./TotalsCards";

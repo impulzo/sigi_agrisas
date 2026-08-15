@@ -24,7 +24,7 @@ jest.mock("../../../../../../app/_hooks/useDebounce", () => ({
 jest.mock("../../../../../../app/(private)/sales/_logic/hooks/useSalesList", () => ({
   useSalesList: () => ({ items: [], total: 0, isLoading: false, error: null }),
 }));
-jest.mock("../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions", () => ({
+jest.mock("../../../../../../app/_hooks/useBranchesOptions", () => ({
   useBranchesOptions: () => ({ options: [], isLoading: false }),
 }));
 jest.mock("../../../../../../app/_components/organisms/PageShell", () => ({

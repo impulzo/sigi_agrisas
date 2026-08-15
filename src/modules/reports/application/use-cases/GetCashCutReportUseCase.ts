@@ -1,4 +1,4 @@
-import { Decimal } from "decimal.js";
+import { formatMoney as money } from "@/shared/domain/services/formatMoney";
 import { CashCutRepository } from "../ports/CashCutRepository";
 import { CashCutAssembler, AssembledCashCutRow, CashCutPaymentMethodBreakdownRow } from "../../domain/services/CashCutAssembler";
 import {
@@ -20,9 +20,6 @@ function toDateStr(d: Date): string {
   return d.toISOString().split("T")[0];
 }
 
-function money(n: number): string {
-  return new Decimal(n).toFixed(4);
-}
 
 function rowDto(r: AssembledCashCutRow): CashCutRowDto {
   return {

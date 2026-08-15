@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useDebounce } from "../../../_hooks/useDebounce";
-import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import { useAccountStatementsSummary } from "../_logic/hooks/useAccountStatementsSummary";
 import { StatementToolbar } from "./StatementToolbar";
 import { SummaryTable } from "./SummaryTable";

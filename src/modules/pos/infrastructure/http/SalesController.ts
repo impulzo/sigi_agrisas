@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
 import { ListSalesUseCase } from "../../application/use-cases/ListSalesUseCase";
 import { GetSaleUseCase } from "../../application/use-cases/GetSaleUseCase";
 import { CreateSaleUseCase } from "../../application/use-cases/CreateSaleUseCase";
@@ -35,9 +36,7 @@ const uuidSchema = z.string().uuid("Invalid sale ID format");
 
 const STATUS_VALUES: SaleStatus[] = ["completed", "cancelled", "edited", "returned_total"];
 
-const listQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
+const listQueryFiltersSchema = z.object({
   branchId: z.string().uuid().optional(),
   customerId: z.string().uuid().optional(),
   status: z.string().optional(),
@@ -101,9 +100,11 @@ export class SalesController {
 
   async list(req: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(req.url);
-    const parsed = listQuerySchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      pageSize: searchParams.get("pageSize") ?? undefined,
+    const parsed = parseListQuery(searchParams);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    const filtersParsed = listQueryFiltersSchema.safeParse({
       branchId: searchParams.get("branchId") ?? undefined,
       customerId: searchParams.get("customerId") ?? undefined,
       status: searchParams.get("status") ?? undefined,
@@ -111,16 +112,16 @@ export class SalesController {
       to: searchParams.get("to") ?? undefined,
       search: searchParams.get("search") ?? undefined,
     });
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    if (!filtersParsed.success) {
+      return NextResponse.json({ error: filtersParsed.error.errors[0].message }, { status: 400 });
     }
 
     // Resolve branch scoping
-    const scoped = await resolveScopedBranchId(req, parsed.data.branchId, this.authzService);
+    const scoped = await resolveScopedBranchId(req, filtersParsed.data.branchId, this.authzService);
     if (scoped instanceof NextResponse) return scoped;
 
-    const statuses = parsed.data.status
-      ? parsed.data.status
+    const statuses = filtersParsed.data.status
+      ? filtersParsed.data.status
           .split(",")
           .map((s) => s.trim())
           .filter((s): s is SaleStatus => (STATUS_VALUES as string[]).includes(s))
@@ -130,11 +131,11 @@ export class SalesController {
       page: parsed.data.page,
       pageSize: parsed.data.pageSize,
       branchId: scoped.branchId,
-      customerId: parsed.data.customerId,
+      customerId: filtersParsed.data.customerId,
       statuses,
-      from: parsed.data.from ? new Date(parsed.data.from) : undefined,
-      to: parsed.data.to ? new Date(parsed.data.to) : undefined,
-      search: parsed.data.search,
+      from: filtersParsed.data.from ? new Date(filtersParsed.data.from) : undefined,
+      to: filtersParsed.data.to ? new Date(filtersParsed.data.to) : undefined,
+      search: filtersParsed.data.search,
     });
     return NextResponse.json(result);
   }

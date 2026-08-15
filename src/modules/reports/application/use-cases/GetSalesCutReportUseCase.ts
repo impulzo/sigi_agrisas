@@ -1,4 +1,4 @@
-import { Decimal } from "decimal.js";
+import { formatMoney as money } from "@/shared/domain/services/formatMoney";
 import { SalesCutRepository } from "../ports/SalesCutRepository";
 import { SalesCutAssembler } from "../../domain/services/SalesCutAssembler";
 import { BreakdownRow, ProductBreakdownRow, SaleListRow } from "../../domain/value-objects/SalesCutFilters";
@@ -22,9 +22,6 @@ function toDateStr(d: Date): string {
   return d.toISOString().split("T")[0];
 }
 
-function money(n: number): string {
-  return new Decimal(n).toFixed(4);
-}
 
 function rowDto(r: BreakdownRow): SalesCutBreakdownRowDto {
   return {

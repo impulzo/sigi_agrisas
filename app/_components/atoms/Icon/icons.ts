@@ -62,6 +62,10 @@ export const ICON_NAMES = [
   "groups",
   "mail",
   "credit_card",
+  "image_not_supported",
+  "verified",
+  "upload_file",
+  "image",
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];
