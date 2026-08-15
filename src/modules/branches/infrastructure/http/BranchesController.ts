@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
+import { entityCodeSchema } from "@/shared/infrastructure/http/validators";
 import { ListBranchesUseCase } from "@/modules/branches/application/use-cases/ListBranchesUseCase";
 import { GetBranchUseCase } from "@/modules/branches/application/use-cases/GetBranchUseCase";
 import { CreateBranchUseCase } from "@/modules/branches/application/use-cases/CreateBranchUseCase";
@@ -32,7 +33,7 @@ const addressFieldsSchema = {
 };
 
 const createBodySchema = z.object({
-  code: z.string().regex(/^[A-Z0-9_]{1,32}$/, "code must be uppercase letters, digits, or underscores (1–32 chars)"),
+  code: entityCodeSchema,
   name: z.string().min(1).max(100),
   address: z.string().max(300).nullable().optional(),
   phone: z.string().max(30).nullable().optional(),

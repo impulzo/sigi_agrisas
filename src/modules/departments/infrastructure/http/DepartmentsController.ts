@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
+import { entityCodeSchema } from "@/shared/infrastructure/http/validators";
 import { ListDepartmentsUseCase } from "@/modules/departments/application/use-cases/ListDepartmentsUseCase";
 import { GetDepartmentUseCase } from "@/modules/departments/application/use-cases/GetDepartmentUseCase";
 import { CreateDepartmentUseCase } from "@/modules/departments/application/use-cases/CreateDepartmentUseCase";
@@ -13,7 +14,7 @@ import { ProviderNotFoundOrInactiveError } from "@/modules/departments/domain/er
 const uuidSchema = z.string().uuid("Invalid ID format");
 
 const createBodySchema = z.object({
-  code: z.string().regex(/^[A-Z0-9_]{1,32}$/, "code must be uppercase letters, digits, or underscores (1–32 chars)"),
+  code: entityCodeSchema,
   name: z.string().min(1).max(100),
   description: z.string().max(500).nullable().optional(),
   providerId: z.string().uuid("providerId must be a valid UUID"),

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
+import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
 import { RegisterPaymentUseCase } from "../../application/use-cases/RegisterPaymentUseCase";
 import { CancelPaymentUseCase } from "../../application/use-cases/CancelPaymentUseCase";
 import { ListPaymentsUseCase } from "../../application/use-cases/ListPaymentsUseCase";
@@ -49,9 +50,7 @@ const cancelSchema = z.object({
   reason: z.string().max(500).nullable().optional(),
 });
 
-const listQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+const listQueryFiltersSchema = z.object({
   branchId: z.string().uuid().optional(),
   saleId: z.string().uuid().optional(),
   customerId: z.string().uuid().optional(),
@@ -207,9 +206,11 @@ export class PaymentsController {
     if (guard) return guard;
 
     const { searchParams } = new URL(req.url);
-    const parsed = listQuerySchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      pageSize: searchParams.get("pageSize") ?? undefined,
+    const parsed = parseListQuery(searchParams);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    const filtersParsed = listQueryFiltersSchema.safeParse({
       branchId: searchParams.get("branchId") ?? undefined,
       saleId: searchParams.get("saleId") ?? undefined,
       customerId: searchParams.get("customerId") ?? undefined,
@@ -219,27 +220,27 @@ export class PaymentsController {
       from: searchParams.get("from") ?? undefined,
       to: searchParams.get("to") ?? undefined,
     });
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    if (!filtersParsed.success) {
+      return NextResponse.json({ error: filtersParsed.error.errors[0].message }, { status: 400 });
     }
 
-    const scoped = await resolveScopedBranchId(req, parsed.data.branchId, this.authzService);
+    const scoped = await resolveScopedBranchId(req, filtersParsed.data.branchId, this.authzService);
     if (scoped instanceof NextResponse) return scoped;
 
-    const statuses = parsed.data.status
-      ? parsed.data.status.split(",").map((s) => s.trim()).filter(Boolean)
+    const statuses = filtersParsed.data.status
+      ? filtersParsed.data.status.split(",").map((s) => s.trim()).filter(Boolean)
       : undefined;
 
     const result = await this.listUseCase.execute(
       {
         branchId: scoped.branchId,
-        saleId: parsed.data.saleId,
-        customerId: parsed.data.customerId,
-        userId: parsed.data.userId,
-        paymentMethodId: parsed.data.paymentMethodId,
+        saleId: filtersParsed.data.saleId,
+        customerId: filtersParsed.data.customerId,
+        userId: filtersParsed.data.userId,
+        paymentMethodId: filtersParsed.data.paymentMethodId,
         statuses,
-        from: parsed.data.from ? new Date(parsed.data.from) : undefined,
-        to: parsed.data.to ? new Date(parsed.data.to) : undefined,
+        from: filtersParsed.data.from ? new Date(filtersParsed.data.from) : undefined,
+        to: filtersParsed.data.to ? new Date(filtersParsed.data.to) : undefined,
       },
       { page: parsed.data.page, pageSize: parsed.data.pageSize }
     );

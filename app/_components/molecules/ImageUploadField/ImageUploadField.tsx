@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ConfirmDialog } from "../ConfirmDialog/ConfirmDialog";
+import { Icon } from "../../atoms/Icon/Icon";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -93,13 +94,13 @@ export function ImageUploadField({
           />
         ) : (
           <div className="flex flex-col items-center gap-1 text-on-surface-variant text-center px-2">
-            <span className="material-symbols-outlined text-3xl" aria-hidden="true">image_not_supported</span>
+            <Icon name="image_not_supported" className="text-3xl" />
             {canWrite && <span className="text-label-sm">Arrastra o haz click</span>}
           </div>
         )}
         {isUploading && (
           <div className="absolute inset-0 flex items-center justify-center bg-surface/70 rounded-md">
-            <span className="material-symbols-outlined animate-spin">progress_activity</span>
+            <Icon name="progress_activity" className="animate-spin" />
           </div>
         )}
       </div>

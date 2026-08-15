@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useCurrentUser } from "../../../../../_hooks/useCurrentUser";
-import { useBranchesOptions } from "../../../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../../../_hooks/useBranchesOptions";
 import { useCustomerCollectionsReport } from "../../_logic/by-customer/hooks/useCustomerCollectionsReport";
 import { CollectionsFilters } from "./CollectionsFilters";
 import { ByCustomerTable } from "./ByCustomerTable";

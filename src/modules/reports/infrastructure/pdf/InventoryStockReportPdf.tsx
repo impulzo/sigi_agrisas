@@ -8,10 +8,7 @@ import {
 } from "@react-pdf/renderer";
 import { StockReportResponseDto, StockBranchDto, StockDepartmentDto } from "../../application/dto/StockReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("es-MX", { timeZone: "UTC" });
-}
+import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
 
 function DeptTable({ dept }: { dept: StockDepartmentDto }) {
   return (

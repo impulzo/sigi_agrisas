@@ -6,12 +6,12 @@ import { render, screen } from "@testing-library/react";
 
 jest.mock("../../../../../app/_hooks/useCurrentUser");
 jest.mock("../../../../../app/(private)/inventory/_logic/hooks/useBranchInventory");
-jest.mock("../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions");
+jest.mock("../../../../../app/_hooks/useBranchesOptions");
 jest.mock("../../../../../app/(private)/inventory/_logic/hooks/useInventoryMutations");
 
 import { useCurrentUser } from "../../../../../app/_hooks/useCurrentUser";
 import * as useBranchInventoryModule from "../../../../../app/(private)/inventory/_logic/hooks/useBranchInventory";
-import * as useBranchesOptionsModule from "../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions";
+import * as useBranchesOptionsModule from "../../../../../app/_hooks/useBranchesOptions";
 import * as useInventoryMutationsModule from "../../../../../app/(private)/inventory/_logic/hooks/useInventoryMutations";
 import { InventoryPage } from "../../../../../app/(private)/inventory/_blocks/InventoryPage";
 

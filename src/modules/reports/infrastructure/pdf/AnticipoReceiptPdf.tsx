@@ -2,10 +2,7 @@ import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { AnticipoReceiptResponseDto } from "../../application/dto/AnticipoReceiptResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("es-MX", { timeZone: "UTC" });
-}
+import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
 
 function money(v: string): string {
   return new Intl.NumberFormat("es-MX", {

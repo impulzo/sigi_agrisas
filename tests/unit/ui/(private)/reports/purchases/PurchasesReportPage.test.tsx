@@ -5,13 +5,13 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 
 jest.mock("../../../../../../app/_hooks/useCurrentUser");
-jest.mock("../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions");
+jest.mock("../../../../../../app/_hooks/useBranchesOptions");
 jest.mock("../../../../../../app/(private)/purchases/_logic/hooks/useProviderSearch");
 jest.mock("../../../../../../app/(private)/reports/purchases/_logic/hooks/usePurchasesReport");
 jest.mock("../../../../../../app/(private)/reports/purchases/_logic/hooks/useProviderPaymentsReport");
 
 import { useCurrentUser } from "../../../../../../app/_hooks/useCurrentUser";
-import { useBranchesOptions } from "../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../../../../app/_hooks/useBranchesOptions";
 import { useProviderSearch } from "../../../../../../app/(private)/purchases/_logic/hooks/useProviderSearch";
 import { usePurchasesReport } from "../../../../../../app/(private)/reports/purchases/_logic/hooks/usePurchasesReport";
 import { useProviderPaymentsReport } from "../../../../../../app/(private)/reports/purchases/_logic/hooks/useProviderPaymentsReport";

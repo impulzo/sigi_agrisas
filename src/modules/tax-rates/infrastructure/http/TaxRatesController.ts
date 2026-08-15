@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
+import { entityCodeSchema } from "@/shared/infrastructure/http/validators";
 import { ListTaxRatesUseCase } from "../../application/use-cases/ListTaxRatesUseCase";
 import { GetTaxRateUseCase } from "../../application/use-cases/GetTaxRateUseCase";
 import { CreateTaxRateUseCase } from "../../application/use-cases/CreateTaxRateUseCase";
@@ -22,7 +23,7 @@ const accountSchema = z.string().max(20).nullable().optional();
 
 const createBodySchema = z
   .object({
-    code: z.string().regex(/^[A-Z0-9_]{1,32}$/, "code must be uppercase letters, digits, or underscores (1–32 chars)"),
+    code: entityCodeSchema,
     name: z.string().min(1).max(100),
     description: z.string().max(1000).nullable().optional(),
     satTaxCode: satTaxCodeSchema,

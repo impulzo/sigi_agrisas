@@ -88,7 +88,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
         </Link>
         <ProductImage src={product.imageUrl ?? null} alt={product.name} size={96} />
         <div>
-          <h1 className="text-headline-lg font-semibold text-on-surface">{product.name}</h1>
+          <h1 className="text-headline-sm font-semibold text-on-surface">{product.name}</h1>
           <p className="text-label-lg font-mono text-on-surface-variant">{product.code}</p>
           <div className="flex flex-col gap-0.5 mt-0.5">
             <p className="text-body-md text-on-surface-variant">

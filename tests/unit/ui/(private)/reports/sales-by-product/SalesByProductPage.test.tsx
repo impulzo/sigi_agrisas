@@ -6,13 +6,13 @@ import { render, screen, fireEvent } from "@testing-library/react";
 
 jest.mock("../../../../../../app/_hooks/useCurrentUser");
 jest.mock("../../../../../../app/_hooks/useDepartmentsOptions");
-jest.mock("../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions");
+jest.mock("../../../../../../app/_hooks/useBranchesOptions");
 jest.mock("../../../../../../app/(private)/payments/_logic/hooks/useCustomerSearch");
 jest.mock("../../../../../../app/(private)/reports/sales-by-product/_logic/hooks/useSalesByProductReport");
 
 import { useCurrentUser } from "../../../../../../app/_hooks/useCurrentUser";
 import { useDepartmentsOptions } from "../../../../../../app/_hooks/useDepartmentsOptions";
-import { useBranchesOptions } from "../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../../../../app/_hooks/useBranchesOptions";
 import { useCustomerSearch } from "../../../../../../app/(private)/payments/_logic/hooks/useCustomerSearch";
 import { useSalesByProductReport } from "../../../../../../app/(private)/reports/sales-by-product/_logic/hooks/useSalesByProductReport";
 import { SalesByProductPage } from "../../../../../../app/(private)/reports/sales-by-product/_blocks/SalesByProductPage";

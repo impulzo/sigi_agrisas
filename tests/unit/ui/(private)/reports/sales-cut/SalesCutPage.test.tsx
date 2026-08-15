@@ -5,13 +5,13 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 
 jest.mock("../../../../../../app/_hooks/useCurrentUser");
-jest.mock("../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions");
+jest.mock("../../../../../../app/_hooks/useBranchesOptions");
 jest.mock("../../../../../../app/_hooks/usePaymentMethodsOptions");
 jest.mock("../../../../../../app/(private)/reports/sales-cut/_logic/hooks/useCashiersOptions");
 jest.mock("../../../../../../app/(private)/reports/sales-cut/_logic/hooks/useSalesCut");
 
 import { useCurrentUser } from "../../../../../../app/_hooks/useCurrentUser";
-import { useBranchesOptions } from "../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../../../../app/_hooks/useBranchesOptions";
 import { usePaymentMethodsOptions } from "../../../../../../app/_hooks/usePaymentMethodsOptions";
 import { useCashiersOptions } from "../../../../../../app/(private)/reports/sales-cut/_logic/hooks/useCashiersOptions";
 import { useSalesCut } from "../../../../../../app/(private)/reports/sales-cut/_logic/hooks/useSalesCut";

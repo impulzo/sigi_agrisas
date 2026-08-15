@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { usePaymentsHistory } from "../_logic/hooks/usePaymentsHistory";
-import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import { useCashiersOptions } from "../_logic/hooks/useCashiersOptions";
 import { usePaymentMethodsOptions } from "../../../_hooks/usePaymentMethodsOptions";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";

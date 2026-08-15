@@ -5,10 +5,7 @@ import {
   CollectionsRowDto,
 } from "../../application/dto/CollectionsReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("es-MX", { timeZone: "UTC" });
-}
+import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
 
 function groupByCustomer(rows: CollectionsRowDto[]): Map<string, CollectionsRowDto[]> {
   const map = new Map<string, CollectionsRowDto[]>();

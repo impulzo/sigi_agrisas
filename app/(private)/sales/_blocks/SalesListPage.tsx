@@ -12,7 +12,7 @@ import { SalesTable } from "./SalesTable";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import type { BranchOption } from "../../pos/_logic/types/api";
-import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 
 export function SalesListPage() {
   const router = useRouter();

@@ -14,7 +14,7 @@ import { CancelWaybillModal } from "./CancelWaybillModal";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
-import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import { WaybillNotFoundError, WaybillReadForbiddenError, WaybillScopingForbiddenError } from "../_logic/errors";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

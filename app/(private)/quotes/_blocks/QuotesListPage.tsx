@@ -11,7 +11,7 @@ import { QuotesTable } from "./QuotesTable";
 import { QuotesEmpty } from "./QuotesEmpty";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
-import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import type { QuoteListFilters } from "../_logic/types/domain";
 
 export function QuotesListPage() {

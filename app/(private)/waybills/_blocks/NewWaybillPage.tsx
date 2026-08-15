@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useCreateWaybillForm } from "../_logic/hooks/useCreateWaybillForm";
-import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import { BranchPairSelector } from "./BranchPairSelector";
 import { WaybillTypeToggle } from "./WaybillTypeToggle";
 import { SimpleTransferFields } from "./SimpleTransferFields";

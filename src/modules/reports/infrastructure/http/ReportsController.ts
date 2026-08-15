@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createElement } from "react";
+import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
 import { GetInventoryStockReportUseCase } from "../../application/use-cases/GetInventoryStockReportUseCase";
 import { GetPaymentHistoryReportUseCase } from "../../application/use-cases/GetPaymentHistoryReportUseCase";
 import { GetAccountStatementsSummaryUseCase } from "../../application/use-cases/GetAccountStatementsSummaryUseCase";
@@ -111,8 +112,6 @@ const summaryQuerySchema = z.object({
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid onlyWithBalance" });
       return z.NEVER;
     }),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
   format: cashCutFormatEnum,
 });
 
@@ -182,8 +181,6 @@ const purchasesQuerySchema = z.object({
   status: purchaseStatusEnum,
   from: dateOnly,
   to: dateOnly,
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
   format: cashCutFormatEnum,
 });
 
@@ -193,8 +190,6 @@ const providerPaymentsQuerySchema = z.object({
   status: purchaseStatusEnum,
   from: dateOnly,
   to: dateOnly,
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
   format: cashCutFormatEnum,
 });
 
@@ -204,8 +199,6 @@ const salesByProductQuerySchema = z.object({
   customerId: z.string().uuid("Invalid customerId").optional(),
   from: dateOnly,
   to: dateOnly,
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
   format: cashCutFormatEnum,
 });
 
@@ -335,13 +328,19 @@ export class ReportsController {
     const authError = await requirePermission(req, "reports:account_statements_read", this.authzService);
     if (authError) return authError;
 
-    const params = Object.fromEntries(new URL(req.url).searchParams.entries());
+    const { searchParams } = new URL(req.url);
+    const pageParsed = parseListQuery(searchParams);
+    if (!pageParsed.success) {
+      return NextResponse.json({ error: pageParsed.error }, { status: 400 });
+    }
+    const params = Object.fromEntries(searchParams.entries());
     const parsed = summaryQuerySchema.safeParse(params);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const { branchId, search, from, to, onlyWithBalance, page, pageSize, format } = parsed.data;
+    const { branchId, search, from, to, onlyWithBalance, format } = parsed.data;
+    const { page, pageSize } = pageParsed.data;
 
     const scopeResult = await resolveScopedBranchId(req, branchId, this.authzService);
     if (scopeResult instanceof NextResponse) return scopeResult;
@@ -722,13 +721,19 @@ export class ReportsController {
     const authError = await requirePermission(req, "reports:purchases_read", this.authzService);
     if (authError) return authError;
 
-    const params = Object.fromEntries(new URL(req.url).searchParams.entries());
+    const { searchParams } = new URL(req.url);
+    const pageParsed = parseListQuery(searchParams);
+    if (!pageParsed.success) {
+      return NextResponse.json({ error: pageParsed.error }, { status: 400 });
+    }
+    const params = Object.fromEntries(searchParams.entries());
     const parsed = purchasesQuerySchema.safeParse(params);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const { branchId, providerId, status, from, to, page, pageSize, format } = parsed.data;
+    const { branchId, providerId, status, from, to, format } = parsed.data;
+    const { page, pageSize } = pageParsed.data;
 
     const scopeResult = await resolveScopedBranchId(req, branchId, this.authzService);
     if (scopeResult instanceof NextResponse) return scopeResult;
@@ -789,13 +794,19 @@ export class ReportsController {
     const authError = await requirePermission(req, "reports:purchases_read", this.authzService);
     if (authError) return authError;
 
-    const params = Object.fromEntries(new URL(req.url).searchParams.entries());
+    const { searchParams } = new URL(req.url);
+    const pageParsed = parseListQuery(searchParams);
+    if (!pageParsed.success) {
+      return NextResponse.json({ error: pageParsed.error }, { status: 400 });
+    }
+    const params = Object.fromEntries(searchParams.entries());
     const parsed = providerPaymentsQuerySchema.safeParse(params);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const { branchId, providerId, status, from, to, page, pageSize, format } = parsed.data;
+    const { branchId, providerId, status, from, to, format } = parsed.data;
+    const { page, pageSize } = pageParsed.data;
 
     const scopeResult = await resolveScopedBranchId(req, branchId, this.authzService);
     if (scopeResult instanceof NextResponse) return scopeResult;
@@ -856,13 +867,19 @@ export class ReportsController {
     const authError = await requirePermission(req, "reports:sales_by_product_read", this.authzService);
     if (authError) return authError;
 
-    const params = Object.fromEntries(new URL(req.url).searchParams.entries());
+    const { searchParams } = new URL(req.url);
+    const pageParsed = parseListQuery(searchParams);
+    if (!pageParsed.success) {
+      return NextResponse.json({ error: pageParsed.error }, { status: 400 });
+    }
+    const params = Object.fromEntries(searchParams.entries());
     const parsed = salesByProductQuerySchema.safeParse(params);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const { branchId, departmentId, customerId, page, pageSize, format } = parsed.data;
+    const { branchId, departmentId, customerId, format } = parsed.data;
+    const { page, pageSize } = pageParsed.data;
 
     const todayStr = new Date().toISOString().split("T")[0];
     const from = parsed.data.from ?? new Date(`${todayStr}T00:00:00.000Z`);

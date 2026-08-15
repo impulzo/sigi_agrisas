@@ -20,7 +20,7 @@ jest.mock("next/link", () => {
 
 jest.mock("../../../../../../app/_hooks/useCurrentUser");
 jest.mock("../../../../../../app/(private)/payments/_logic/hooks/usePaymentsList");
-jest.mock("../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions", () => ({
+jest.mock("../../../../../../app/_hooks/useBranchesOptions", () => ({
   useBranchesOptions: () => ({ options: [] }),
 }));
 jest.mock("../../../../../../app/_components/organisms/PageShell", () => ({

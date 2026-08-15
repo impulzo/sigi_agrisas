@@ -1,4 +1,4 @@
-import { Decimal } from "decimal.js";
+import { formatMoney as money } from "@/shared/domain/services/formatMoney";
 import { PurchaseRepository, PurchaseSummary } from "@/modules/purchases/application/ports/PurchaseRepository";
 import { PurchasesReportResponseDto, PurchasesReportRowDto } from "../dto/PurchasesReportResponseDto";
 
@@ -21,9 +21,6 @@ export interface GetPurchasesReportResult {
   tooLarge: boolean;
 }
 
-function money(n: number): string {
-  return new Decimal(n).toFixed(4);
-}
 
 function toRowDto(row: PurchaseSummary): PurchasesReportRowDto {
   return {

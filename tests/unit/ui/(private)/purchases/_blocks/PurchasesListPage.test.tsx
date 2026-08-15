@@ -20,7 +20,7 @@ jest.mock("../../../../../../app/(private)/purchases/_logic/hooks/usePurchasesLi
 jest.mock("../../../../../../app/(private)/purchases/_logic/hooks/useProviderSearch", () => ({
   useProviderSearch: () => ({ items: [], total: 0, isLoading: false, error: null, refresh: jest.fn() }),
 }));
-jest.mock("../../../../../../app/(private)/inventory/_logic/hooks/useBranchesOptions", () => ({
+jest.mock("../../../../../../app/_hooks/useBranchesOptions", () => ({
   useBranchesOptions: () => ({ options: [], isLoading: false }),
 }));
 

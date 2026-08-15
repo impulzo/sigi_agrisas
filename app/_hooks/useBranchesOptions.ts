@@ -14,23 +14,23 @@ interface CacheEntry {
   promise?: Promise<BranchOption[]>;
 }
 
-const CACHE_TTL_MS = 60_000;
+const CACHE_TTL_MS = 5 * 60_000;
 let cache: CacheEntry | null = null;
 
-async function fetchBranchesOptions(): Promise<BranchOption[]> {
+async function fetchBranches(): Promise<BranchOption[]> {
   if (cache && Date.now() < cache.expiresAt) return cache.options;
   if (cache?.promise) return cache.promise;
 
-  const promise = authFetch("/api/v1/admin/branches?pageSize=100")
+  const promise = authFetch("/api/v1/admin/branches?pageSize=100&includeInactive=false")
     .then((res) => res.json())
-    .then((body: { items: { id: string; name: string; isActive: boolean }[] }) => {
-      const options = body.items.filter((b) => b.isActive).map((b) => ({ id: b.id, name: b.name }));
+    .then((body: { items: { id: string; name: string }[] }) => {
+      const options = body.items.map((b) => ({ id: b.id, name: b.name }));
       cache = { options, expiresAt: Date.now() + CACHE_TTL_MS };
       return options;
     })
     .catch(() => {
-      cache = null;
-      return [];
+      if (cache) delete cache.promise;
+      return [] as BranchOption[];
     });
 
   cache = { options: [], expiresAt: 0, promise };
@@ -44,15 +44,15 @@ interface UseBranchesOptionsResult {
 }
 
 export function useBranchesOptions(): UseBranchesOptionsResult {
-  const [options, setOptions] = useState<BranchOption[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [options, setOptions] = useState<BranchOption[]>(cache?.options ?? []);
+  const [isLoading, setIsLoading] = useState(!cache || !cache.expiresAt);
 
   const load = useCallback(() => {
     let cancelled = false;
     setIsLoading(true);
-    fetchBranchesOptions().then((result) => {
+    fetchBranches().then((opts) => {
       if (!cancelled) {
-        setOptions(result);
+        setOptions(opts);
         setIsLoading(false);
       }
     });

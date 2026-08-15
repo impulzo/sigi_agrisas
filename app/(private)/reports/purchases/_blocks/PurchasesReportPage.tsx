@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useCurrentUser } from "../../../../_hooks/useCurrentUser";
-import { useBranchesOptions } from "../../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../../_hooks/useBranchesOptions";
 import { usePurchasesReport } from "../_logic/hooks/usePurchasesReport";
 import { useProviderPaymentsReport } from "../_logic/hooks/useProviderPaymentsReport";
 import { PurchasesFilters } from "./PurchasesFilters";

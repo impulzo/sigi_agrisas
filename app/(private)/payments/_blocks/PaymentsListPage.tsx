@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { usePaymentsList } from "../_logic/hooks/usePaymentsList";
-import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import { PageShell } from "../../../_components/organisms/PageShell";
 import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
 import { PaymentsToolbar } from "./PaymentsToolbar";

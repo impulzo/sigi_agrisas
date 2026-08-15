@@ -6,10 +6,7 @@ import {
   DepartmentProductDto,
 } from "../../application/dto/DepartmentPriceListResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("es-MX", { timeZone: "UTC" });
-}
+import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
 
 function PriceRows({ product }: { product: DepartmentProductDto }) {
   return (

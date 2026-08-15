@@ -5,10 +5,7 @@ import {
   CashCutRowDto,
 } from "../../application/dto/CashCutReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("es-MX", { timeZone: "UTC" });
-}
+import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
 
 function formatDateOnly(iso: string): string {
   return iso;

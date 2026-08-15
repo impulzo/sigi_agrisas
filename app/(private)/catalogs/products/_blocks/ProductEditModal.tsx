@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Icon } from "../../../../_components/atoms/Icon/Icon";
 import { Switch } from "../../../../_components/atoms/Switch/Switch";
 import { createProductSchema, updateProductSchema } from "../_logic/schemas/product.schema";
 import { useTaxRatesOptions } from "../../../../_hooks/useTaxRatesOptions";
@@ -333,7 +334,7 @@ export function ProductEditModal({
                   <img src={imgPreview} alt="preview" className="w-16 h-16 object-cover rounded-md border border-outline-variant" />
                 ) : (
                   <div className="w-16 h-16 flex items-center justify-center rounded-md border border-dashed border-outline-variant bg-surface-container text-on-surface-variant">
-                    <span className="material-symbols-outlined text-xl" aria-hidden="true">image</span>
+                    <Icon name="image" className="text-xl" />
                   </div>
                 )}
                 <label className="cursor-pointer text-label-sm text-primary hover:underline">

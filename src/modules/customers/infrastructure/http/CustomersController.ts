@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
 import { ListCustomersUseCase } from "../../application/use-cases/ListCustomersUseCase";
 import { GetCustomerUseCase } from "../../application/use-cases/GetCustomerUseCase";
 import { CreateCustomerUseCase } from "../../application/use-cases/CreateCustomerUseCase";
@@ -8,19 +9,15 @@ import { SoftDeleteCustomerUseCase } from "../../application/use-cases/SoftDelet
 import { CustomerNotFoundError } from "../../domain/errors/CustomerNotFoundError";
 import { CustomerCodeAlreadyInUseError } from "../../domain/errors/CustomerCodeAlreadyInUseError";
 import { CustomerRfcAlreadyInUseError } from "../../domain/errors/CustomerRfcAlreadyInUseError";
+import { rfcSchema, taxRegimeSchema } from "@/shared/infrastructure/http/validators";
 
-const RFC_REGEX = /^([A-ZÑ&]{3,4})\d{6}([A-Z\d]{3})$/;
-const TAX_REGIME_REGEX = /^\d{3}$/;
 const CFDI_USE_REGEX = /^[A-Z]{1,2}\d{2}$/;
 const TAX_ZIP_CODE_REGEX = /^\d{5}$/;
 const CODE_REGEX = /^[A-Z0-9_]{1,32}$/;
 
 const uuidParamSchema = z.string().uuid("Invalid customer ID format");
 
-const listQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100, "pageSize must not exceed 100").default(20),
-  includeInactive: z.string().optional().transform((v) => v === "true"),
+const listQueryFiltersSchema = z.object({
   search: z
     .string()
     .optional()
@@ -36,17 +33,9 @@ const createBodySchema = z.object({
     .transform((v) => v.trim().toUpperCase())
     .pipe(z.string().regex(CODE_REGEX, "code must match ^[A-Z0-9_]{1,32}$")),
   name: z.string().min(1).max(120),
-  rfc: z
-    .string()
-    .min(1)
-    .transform((v) => v.trim().toUpperCase())
-    .pipe(z.string().regex(RFC_REGEX, "rfc must be a valid Mexican RFC")),
+  rfc: rfcSchema,
   legalName: z.string().max(200).nullable().optional(),
-  taxRegime: z
-    .string()
-    .regex(TAX_REGIME_REGEX, "taxRegime must be 3 digits")
-    .nullable()
-    .optional(),
+  taxRegime: taxRegimeSchema.nullable().optional(),
   cfdiUse: z
     .string()
     .regex(CFDI_USE_REGEX, "cfdiUse must match ^[A-Z]{1,2}\\d{2}$")
@@ -66,14 +55,9 @@ const createBodySchema = z.object({
 const updateBodySchema = z
   .object({
     name: z.string().min(1).max(120).optional(),
-    rfc: z
-      .string()
-      .min(1)
-      .transform((v) => v.trim().toUpperCase())
-      .pipe(z.string().regex(RFC_REGEX, "rfc must be a valid Mexican RFC"))
-      .optional(),
+    rfc: rfcSchema.optional(),
     legalName: z.string().max(200).nullable().optional(),
-    taxRegime: z.string().regex(TAX_REGIME_REGEX, "taxRegime must be 3 digits").nullable().optional(),
+    taxRegime: taxRegimeSchema.nullable().optional(),
     cfdiUse: z.string().regex(CFDI_USE_REGEX, "cfdiUse must match ^[A-Z]\\d{2}$").nullable().optional(),
     taxZipCode: z.string().regex(TAX_ZIP_CODE_REGEX, "taxZipCode must be 5 digits").nullable().optional(),
     email: z.string().email("invalid email").max(120).nullable().optional(),
@@ -115,16 +99,17 @@ export class CustomersController {
 
   async list(req: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(req.url);
-    const parsed = listQuerySchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      pageSize: searchParams.get("pageSize") ?? undefined,
-      includeInactive: searchParams.get("includeInactive") ?? undefined,
+    const parsed = parseListQuery(searchParams);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    const filtersParsed = listQueryFiltersSchema.safeParse({
       search: searchParams.get("search") ?? undefined,
     });
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    if (!filtersParsed.success) {
+      return NextResponse.json({ error: filtersParsed.error.errors[0].message }, { status: 400 });
     }
-    const result = await this.listUseCase.execute(parsed.data);
+    const result = await this.listUseCase.execute({ ...parsed.data, ...filtersParsed.data });
     return NextResponse.json(result);
   }
 

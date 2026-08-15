@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useDebounce } from "../../../_hooks/useDebounce";
 import { usePaymentMethodsOptions } from "../../../_hooks/usePaymentMethodsOptions";
-import { useBranchesOptions } from "../../inventory/_logic/hooks/useBranchesOptions";
+import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import { useProductSearch } from "../_logic/hooks/useProductSearch";
 import { useCreatePurchaseForm } from "../_logic/hooks/useCreatePurchaseForm";
 import { buildSatApplyResult } from "../_logic/lib/satInvoiceMapping";
@@ -120,7 +121,7 @@ export function CreatePurchasePage() {
         <div className="rounded-md border border-outline-variant bg-surface-container-low p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="material-symbols-outlined text-primary shrink-0" aria-hidden>verified</span>
+              <Icon name="verified" className="text-primary shrink-0" />
               <span className="text-body-sm font-medium text-on-surface truncate">Factura {form.satMetadata.xmlFileName}</span>
             </div>
             <button
