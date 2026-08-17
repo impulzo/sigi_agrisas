@@ -17,6 +17,25 @@ const CODE_REGEX = /^[A-Z0-9_]{1,32}$/;
 
 const uuidParamSchema = z.string().uuid("Invalid customer ID format");
 
+const addressFieldsSchema = {
+  addressStreet: z.string().max(150).nullable().optional(),
+  addressExteriorNumber: z.string().max(20).nullable().optional(),
+  addressInteriorNumber: z.string().max(20).nullable().optional(),
+  addressNeighborhood: z.string().max(100).nullable().optional(),
+  addressMunicipality: z.string().max(100).nullable().optional(),
+  addressState: z
+    .string()
+    .regex(/^[A-Z]{2,3}$/, "addressState must be a 2-3 uppercase letter SAT state key")
+    .nullable()
+    .optional(),
+  addressCountry: z.string().max(3).nullable().optional(),
+  addressZipCode: z
+    .string()
+    .regex(/^\d{5}$/, "addressZipCode must be a 5-digit code")
+    .nullable()
+    .optional(),
+};
+
 const listQueryFiltersSchema = z.object({
   search: z
     .string()
@@ -50,6 +69,7 @@ const createBodySchema = z.object({
   creditLimit: z.number().min(0).nullable().optional(),
   creditDays: z.coerce.number().int().min(0).default(30),
   isActive: z.boolean().optional(),
+  ...addressFieldsSchema,
 });
 
 const updateBodySchema = z
@@ -68,6 +88,7 @@ const updateBodySchema = z
     creditLimit: z.number().min(0).nullable().optional(),
     creditDays: z.coerce.number().int().min(0).optional(),
     isActive: z.boolean().optional(),
+    ...addressFieldsSchema,
   })
   .refine(
     (d) =>
@@ -84,7 +105,15 @@ const updateBodySchema = z
       d.notes !== undefined ||
       d.creditLimit !== undefined ||
       d.creditDays !== undefined ||
-      d.isActive !== undefined,
+      d.isActive !== undefined ||
+      d.addressStreet !== undefined ||
+      d.addressExteriorNumber !== undefined ||
+      d.addressInteriorNumber !== undefined ||
+      d.addressNeighborhood !== undefined ||
+      d.addressMunicipality !== undefined ||
+      d.addressState !== undefined ||
+      d.addressCountry !== undefined ||
+      d.addressZipCode !== undefined,
     { message: "At least one updatable field must be provided" }
   );
 

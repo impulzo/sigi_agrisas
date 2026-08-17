@@ -21,7 +21,12 @@ export interface WaybillProps {
   folioNumber: number;
   folioCode: string;
   originBranchId: string;
-  destinationBranchId: string;
+  destinationBranchId: string | null;
+  destinationCustomerId: string | null;
+  /** Denormalized for read convenience — populated by the repository when `destinationCustomerId` is set. */
+  destinationCustomerName: string | null;
+  destinationCustomerCode: string | null;
+  saleId: string | null;
   type: WaybillType;
   status: WaybillStatus;
   notes: string | null;
@@ -58,7 +63,11 @@ export class Waybill {
   readonly folioNumber!: number;
   readonly folioCode!: string;
   readonly originBranchId!: string;
-  readonly destinationBranchId!: string;
+  readonly destinationBranchId!: string | null;
+  readonly destinationCustomerId!: string | null;
+  readonly destinationCustomerName!: string | null;
+  readonly destinationCustomerCode!: string | null;
+  readonly saleId!: string | null;
   readonly type!: WaybillType;
   readonly status!: WaybillStatus;
   readonly notes!: string | null;

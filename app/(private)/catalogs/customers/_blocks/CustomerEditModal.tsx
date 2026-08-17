@@ -62,6 +62,14 @@ export function CustomerEditModal({
   const [creditLimit, setCreditLimit] = useState("");
   const [creditDays, setCreditDays] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [addressStreet, setAddressStreet] = useState("");
+  const [addressExteriorNumber, setAddressExteriorNumber] = useState("");
+  const [addressInteriorNumber, setAddressInteriorNumber] = useState("");
+  const [addressNeighborhood, setAddressNeighborhood] = useState("");
+  const [addressMunicipality, setAddressMunicipality] = useState("");
+  const [addressState, setAddressState] = useState("");
+  const [addressCountry, setAddressCountry] = useState("");
+  const [addressZipCode, setAddressZipCode] = useState("");
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -100,6 +108,14 @@ export function CustomerEditModal({
       setCreditLimit("");
       setCreditDays("");
       setIsActive(true);
+      setAddressStreet("");
+      setAddressExteriorNumber("");
+      setAddressInteriorNumber("");
+      setAddressNeighborhood("");
+      setAddressMunicipality("");
+      setAddressState("");
+      setAddressCountry("");
+      setAddressZipCode("");
     } else if (entity) {
       setCode(entity.code);
       setName(entity.name);
@@ -116,6 +132,14 @@ export function CustomerEditModal({
       setCreditLimit(entity.creditLimit !== null ? String(entity.creditLimit) : "");
       setCreditDays(String(entity.creditDays));
       setIsActive(entity.isActive);
+      setAddressStreet(entity.addressStreet ?? "");
+      setAddressExteriorNumber(entity.addressExteriorNumber ?? "");
+      setAddressInteriorNumber(entity.addressInteriorNumber ?? "");
+      setAddressNeighborhood(entity.addressNeighborhood ?? "");
+      setAddressMunicipality(entity.addressMunicipality ?? "");
+      setAddressState(entity.addressState ?? "");
+      setAddressCountry(entity.addressCountry ?? "");
+      setAddressZipCode(entity.addressZipCode ?? "");
     }
     setValidationErrors({});
   }, [open, mode, entity]);
@@ -138,6 +162,14 @@ export function CustomerEditModal({
       creditLimit: normalizeOptionalNumber(creditLimit),
       ...(trimmedCreditDays.length > 0 ? { creditDays: Number(trimmedCreditDays) } : {}),
       isActive,
+      addressStreet: normalizeOptional(addressStreet),
+      addressExteriorNumber: normalizeOptional(addressExteriorNumber),
+      addressInteriorNumber: normalizeOptional(addressInteriorNumber),
+      addressNeighborhood: normalizeOptional(addressNeighborhood),
+      addressMunicipality: normalizeOptional(addressMunicipality),
+      addressState: normalizeOptional(addressState),
+      addressCountry: normalizeOptional(addressCountry),
+      addressZipCode: normalizeOptional(addressZipCode),
     };
   }
 
@@ -170,6 +202,22 @@ export function CustomerEditModal({
     const cd = trimmedCreditDays.length > 0 ? Number(trimmedCreditDays) : entity.creditDays;
     if (cd !== entity.creditDays) diff.creditDays = cd;
     if (isActive !== entity.isActive) diff.isActive = isActive;
+    const st = normalizeOptional(addressStreet);
+    if (st !== entity.addressStreet) diff.addressStreet = st;
+    const ext = normalizeOptional(addressExteriorNumber);
+    if (ext !== entity.addressExteriorNumber) diff.addressExteriorNumber = ext;
+    const int = normalizeOptional(addressInteriorNumber);
+    if (int !== entity.addressInteriorNumber) diff.addressInteriorNumber = int;
+    const nb = normalizeOptional(addressNeighborhood);
+    if (nb !== entity.addressNeighborhood) diff.addressNeighborhood = nb;
+    const mu = normalizeOptional(addressMunicipality);
+    if (mu !== entity.addressMunicipality) diff.addressMunicipality = mu;
+    const st2 = normalizeOptional(addressState);
+    if (st2 !== entity.addressState) diff.addressState = st2;
+    const co = normalizeOptional(addressCountry);
+    if (co !== entity.addressCountry) diff.addressCountry = co;
+    const zc = normalizeOptional(addressZipCode);
+    if (zc !== entity.addressZipCode) diff.addressZipCode = zc;
     return diff;
   }
 
@@ -515,6 +563,161 @@ export function CustomerEditModal({
               />
               {validationErrors.creditDays && (
                 <p className="text-label-sm text-error mt-1">{validationErrors.creditDays}</p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Sección: Domicilio estructurado (Carta Porte) */}
+        <section className="space-y-4 pt-4 border-t border-outline-variant">
+          <h3 className="text-title-sm font-medium text-on-surface-variant uppercase tracking-wide">
+            Domicilio estructurado (Carta Porte)
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="customer-addressStreet">
+                Calle
+              </label>
+              <input
+                id="customer-addressStreet"
+                type="text"
+                value={addressStreet}
+                onChange={(e) => setAddressStreet(e.target.value)}
+                placeholder="Opcional"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {validationErrors.addressStreet && (
+                <p className="text-label-sm text-error mt-1">{validationErrors.addressStreet}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label
+                  className="block text-label-lg text-on-surface-variant mb-1"
+                  htmlFor="customer-addressExteriorNumber"
+                >
+                  Núm. exterior
+                </label>
+                <input
+                  id="customer-addressExteriorNumber"
+                  type="text"
+                  value={addressExteriorNumber}
+                  onChange={(e) => setAddressExteriorNumber(e.target.value)}
+                  placeholder="Opcional"
+                  className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                {validationErrors.addressExteriorNumber && (
+                  <p className="text-label-sm text-error mt-1">{validationErrors.addressExteriorNumber}</p>
+                )}
+              </div>
+              <div>
+                <label
+                  className="block text-label-lg text-on-surface-variant mb-1"
+                  htmlFor="customer-addressInteriorNumber"
+                >
+                  Núm. interior
+                </label>
+                <input
+                  id="customer-addressInteriorNumber"
+                  type="text"
+                  value={addressInteriorNumber}
+                  onChange={(e) => setAddressInteriorNumber(e.target.value)}
+                  placeholder="Opcional"
+                  className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                {validationErrors.addressInteriorNumber && (
+                  <p className="text-label-sm text-error mt-1">{validationErrors.addressInteriorNumber}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="customer-addressNeighborhood">
+                Colonia
+              </label>
+              <input
+                id="customer-addressNeighborhood"
+                type="text"
+                value={addressNeighborhood}
+                onChange={(e) => setAddressNeighborhood(e.target.value)}
+                placeholder="Opcional"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {validationErrors.addressNeighborhood && (
+                <p className="text-label-sm text-error mt-1">{validationErrors.addressNeighborhood}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="customer-addressMunicipality">
+                Municipio
+              </label>
+              <input
+                id="customer-addressMunicipality"
+                type="text"
+                value={addressMunicipality}
+                onChange={(e) => setAddressMunicipality(e.target.value)}
+                placeholder="Opcional"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {validationErrors.addressMunicipality && (
+                <p className="text-label-sm text-error mt-1">{validationErrors.addressMunicipality}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="customer-addressState">
+                Estado (clave SAT)
+              </label>
+              <input
+                id="customer-addressState"
+                type="text"
+                value={addressState}
+                onChange={(e) => setAddressState(e.target.value.toUpperCase())}
+                placeholder="SON"
+                maxLength={3}
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {validationErrors.addressState && (
+                <p className="text-label-sm text-error mt-1">{validationErrors.addressState}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="customer-addressCountry">
+                País
+              </label>
+              <input
+                id="customer-addressCountry"
+                type="text"
+                value={addressCountry}
+                onChange={(e) => setAddressCountry(e.target.value.toUpperCase())}
+                placeholder="MEX"
+                maxLength={3}
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {validationErrors.addressCountry && (
+                <p className="text-label-sm text-error mt-1">{validationErrors.addressCountry}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="customer-addressZipCode">
+                Código postal
+              </label>
+              <input
+                id="customer-addressZipCode"
+                type="text"
+                value={addressZipCode}
+                onChange={(e) => setAddressZipCode(e.target.value)}
+                placeholder="83000"
+                maxLength={5}
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {validationErrors.addressZipCode && (
+                <p className="text-label-sm text-error mt-1">{validationErrors.addressZipCode}</p>
               )}
             </div>
           </div>

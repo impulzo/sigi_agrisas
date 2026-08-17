@@ -16,7 +16,9 @@ export function CustomerFilterCombobox({ value, onChange }: Props) {
   const debounced = useDebounce(query, 300);
   const { items, isLoading } = useCustomerSearch({ search: debounced });
 
-  const options = items.map((c) => ({ value: c.id, label: `${c.name} · ${c.code}` }));
+  const options = query === ""
+    ? [{ value: "", label: "Todos los clientes" }, ...items.map((c) => ({ value: c.id, label: `${c.name} · ${c.code}` }))]
+    : items.map((c) => ({ value: c.id, label: `${c.name} · ${c.code}` }));
 
   return (
     <div>

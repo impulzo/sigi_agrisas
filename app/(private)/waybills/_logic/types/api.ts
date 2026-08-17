@@ -29,7 +29,11 @@ export interface WaybillDto {
   id: string;
   folioCode: string;
   originBranchId: string;
-  destinationBranchId: string;
+  destinationBranchId: string | null;
+  destinationCustomerId: string | null;
+  destinationCustomerName?: string;
+  destinationCustomerCode?: string;
+  saleId: string | null;
   type: WaybillType;
   status: WaybillStatus;
   notes: string | null;
@@ -64,7 +68,11 @@ export interface WaybillSummaryDto {
   id: string;
   folioCode: string;
   originBranchId: string;
-  destinationBranchId: string;
+  destinationBranchId: string | null;
+  destinationCustomerId: string | null;
+  destinationCustomerName?: string;
+  destinationCustomerCode?: string;
+  saleId: string | null;
   type: WaybillType;
   status: WaybillStatus;
   departureAt: string;
@@ -102,8 +110,7 @@ export interface CreateCartaPorteWaybillItemRequest {
 
 export interface CreateCartaPorteWaybillRequest {
   type: "carta_porte";
-  originBranchId: string;
-  destinationBranchId: string;
+  saleId: string;
   vehicle: {
     plate: string;
     config: string;

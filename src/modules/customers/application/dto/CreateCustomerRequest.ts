@@ -14,4 +14,12 @@ export interface CreateCustomerRequest {
   creditLimit?: number | null;
   creditDays?: number;
   isActive?: boolean;
+  addressStreet?: string | null;
+  addressExteriorNumber?: string | null;
+  addressInteriorNumber?: string | null;
+  addressNeighborhood?: string | null;
+  addressMunicipality?: string | null;
+  addressState?: string | null;
+  addressCountry?: string | null;
+  addressZipCode?: string | null;
 }

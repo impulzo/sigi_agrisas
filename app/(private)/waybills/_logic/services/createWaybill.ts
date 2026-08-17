@@ -11,6 +11,11 @@ import {
   WaybillWriteForbiddenError,
   WaybillStampForbiddenError,
   WaybillScopingForbiddenError,
+  WaybillSaleNotFoundError,
+  SaleNotCompletedError,
+  SaleHasNoCustomerError,
+  CustomerNotFoundForWaybillError,
+  CustomerAddressIncompleteError,
 } from "../errors";
 import { mapWaybillDetailDto } from "../_mappers";
 
@@ -49,10 +54,21 @@ export async function createWaybill(body: CreateWaybillRequest, fetchImpl = auth
     if (errBody.error === "ProductNotFound") {
       throw new ProductNotFoundForTransferError(errBody.productId);
     }
+    if (errBody.error === "CustomerAddressIncomplete") {
+      throw new CustomerAddressIncompleteError(errBody.customerId, errBody.missingFields ?? []);
+    }
     throw new InvalidBranchPairError();
+  }
+  if (res.status === 404) {
+    const errBody = await res.json().catch(() => ({}));
+    if (errBody.error === "SaleNotFound") throw new WaybillSaleNotFoundError();
+    if (errBody.error === "CustomerNotFound") throw new CustomerNotFoundForWaybillError();
+    throw new NetworkError();
   }
   if (res.status === 409) {
     const errBody = await res.json().catch(() => ({}));
+    if (errBody.error === "SaleNotCompleted") throw new SaleNotCompletedError();
+    if (errBody.error === "SaleHasNoCustomer") throw new SaleHasNoCustomerError();
     throw new InsufficientStockAtOriginError(errBody.productId);
   }
   if (res.status === 422) {

@@ -58,6 +58,10 @@ export class InMemoryWaybillRepository implements WaybillRepository {
         folioCode: w.folioCode,
         originBranchId: w.originBranchId,
         destinationBranchId: w.destinationBranchId,
+        destinationCustomerId: w.destinationCustomerId,
+        destinationCustomerName: w.destinationCustomerName,
+        destinationCustomerCode: w.destinationCustomerCode,
+        saleId: w.saleId,
         type: w.type,
         status: w.status,
         departureAt: w.departureAt,
@@ -75,22 +79,28 @@ export class InMemoryWaybillRepository implements WaybillRepository {
   async createCompleted(data: CreateWaybillData, stamp: StampCallback | null): Promise<Waybill> {
     const itemsWithProduct = data.items.filter((i) => i.productId !== null);
 
-    // Strict check at origin BEFORE any mutation (mirrors the atomic UPDATE ... WHERE >= 0 pattern).
-    for (const item of itemsWithProduct) {
-      const key = this.key(data.originBranchId, item.productId!);
-      const current = this.inventory.get(key) ?? 0;
-      if (current - item.quantity < 0) {
-        throw new InsufficientStockAtOriginError(item.productId!);
+    // Strict check at origin BEFORE any mutation (mirrors the atomic UPDATE ... WHERE >= 0
+    // pattern). Only for type='simple' — carta_porte never touches inventory (design.md D5).
+    if (data.type === "simple") {
+      for (const item of itemsWithProduct) {
+        const key = this.key(data.originBranchId, item.productId!);
+        const current = this.inventory.get(key) ?? 0;
+        if (current - item.quantity < 0) {
+          throw new InsufficientStockAtOriginError(item.productId!);
+        }
       }
     }
 
     const stampResult = stamp ? await stamp() : null;
 
-    for (const item of itemsWithProduct) {
-      const originKey = this.key(data.originBranchId, item.productId!);
-      this.inventory.set(originKey, (this.inventory.get(originKey) ?? 0) - item.quantity);
-      const destKey = this.key(data.destinationBranchId, item.productId!);
-      this.inventory.set(destKey, (this.inventory.get(destKey) ?? 0) + item.quantity);
+    // type='simple' moves inventory; type='carta_porte' does not (see design.md D5).
+    if (data.type === "simple") {
+      for (const item of itemsWithProduct) {
+        const originKey = this.key(data.originBranchId, item.productId!);
+        this.inventory.set(originKey, (this.inventory.get(originKey) ?? 0) - item.quantity);
+        const destKey = this.key(data.destinationBranchId!, item.productId!);
+        this.inventory.set(destKey, (this.inventory.get(destKey) ?? 0) + item.quantity);
+      }
     }
 
     const now = new Date();
@@ -101,6 +111,10 @@ export class InMemoryWaybillRepository implements WaybillRepository {
       folioCode: `${data.type === "simple" ? "TRI" : "TS"}-${String(this.waybills.size + 1).padStart(6, "0")}`,
       originBranchId: data.originBranchId,
       destinationBranchId: data.destinationBranchId,
+      destinationCustomerId: data.type === "carta_porte" ? data.destinationCustomerId : null,
+      destinationCustomerName: null,
+      destinationCustomerCode: null,
+      saleId: data.type === "carta_porte" ? data.saleId : null,
       type: data.type,
       status: "completed",
       notes: data.notes,
@@ -162,12 +176,15 @@ export class InMemoryWaybillRepository implements WaybillRepository {
       await cancelStamp();
     }
 
-    for (const item of existing.items) {
-      if (!item.productId) continue;
-      const originKey = this.key(existing.originBranchId, item.productId);
-      this.inventory.set(originKey, (this.inventory.get(originKey) ?? 0) + item.quantity);
-      const destKey = this.key(existing.destinationBranchId, item.productId);
-      this.inventory.set(destKey, (this.inventory.get(destKey) ?? 0) - item.quantity);
+    // type='simple' reverses inventory; type='carta_porte' never moved it (design.md D5).
+    if (existing.type === "simple") {
+      for (const item of existing.items) {
+        if (!item.productId) continue;
+        const originKey = this.key(existing.originBranchId, item.productId);
+        this.inventory.set(originKey, (this.inventory.get(originKey) ?? 0) + item.quantity);
+        const destKey = this.key(existing.destinationBranchId!, item.productId);
+        this.inventory.set(destKey, (this.inventory.get(destKey) ?? 0) - item.quantity);
+      }
     }
 
     const updated = Waybill.create({

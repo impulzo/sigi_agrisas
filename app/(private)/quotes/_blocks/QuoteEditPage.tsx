@@ -7,6 +7,7 @@ import { useQuoteDetail } from "../_logic/hooks/useQuoteDetail";
 import { useQuoteMutations } from "../_logic/hooks/useQuoteMutations";
 import { useCart } from "../../pos/_logic/hooks/useCart";
 import { useFoliosOptions } from "../../../_hooks/useFoliosOptions";
+import { usePricingSettingsOptions } from "../../../_hooks/usePricingSettingsOptions";
 import { getProductPrices } from "../../pos/_logic/services/getProductPrices";
 import { ProductCatalogPanel } from "../../pos/_blocks/ProductCatalogPanel";
 import { QuoteEmitPanel } from "./QuoteEmitPanel";
@@ -38,7 +39,8 @@ export function QuoteEditPage({ id }: QuoteEditPageProps) {
   const { quote, isLoading, error } = useQuoteDetail(id);
   const { isSaving, update } = useQuoteMutations();
   const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
-  const { lines, totals, addLine, updateQuantity, updateDiscountPct, changeTier, removeLine, clear } = useCart();
+  const { dosificationSurchargePct } = usePricingSettingsOptions();
+  const { lines, totals, addLine, updateQuantity, updateDiscountPct, changeTier, removeLine, clear } = useCart(dosificationSurchargePct);
 
   const [initialized, setInitialized] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");

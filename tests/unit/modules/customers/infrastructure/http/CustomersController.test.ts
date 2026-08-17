@@ -172,6 +172,37 @@ describe("CustomersController — POST create", () => {
     const res = await controller.create(postReq({ ...VALID_BODY, taxZipCode: "1234" }));
     expect(res.status).toBe(400);
   });
+
+  it("crea con dirección estructurada completa y default addressCountry=MEX si no se envía", async () => {
+    const { controller } = makeController();
+    const res = await controller.create(
+      postReq({
+        ...VALID_BODY,
+        addressStreet: "Av. Reforma",
+        addressExteriorNumber: "123",
+        addressNeighborhood: "Centro",
+        addressMunicipality: "Cuauhtémoc",
+        addressState: "CMX",
+        addressZipCode: "06000",
+      })
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.addressStreet).toBe("Av. Reforma");
+    expect(body.addressCountry).toBe("MEX");
+  });
+
+  it("addressState con formato incorrecto → 400", async () => {
+    const { controller } = makeController();
+    const res = await controller.create(postReq({ ...VALID_BODY, addressState: "cmx" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("addressZipCode con formato incorrecto → 400", async () => {
+    const { controller } = makeController();
+    const res = await controller.create(postReq({ ...VALID_BODY, addressZipCode: "123" }));
+    expect(res.status).toBe(400);
+  });
 });
 
 // ────────────────────────────────────────────────────────────
@@ -315,6 +346,34 @@ describe("CustomersController — PATCH update", () => {
     const createRes = await controller.create(postReq(VALID_BODY));
     const created = await createRes.json();
     const res = await controller.update(patchReq({ creditDays: -1 }), created.id);
+    expect(res.status).toBe(400);
+  });
+
+  it("addressZipCode como único campo actualiza y no falla por 'al menos un campo'", async () => {
+    const { controller } = makeController();
+    const createRes = await controller.create(postReq(VALID_BODY));
+    const created = await createRes.json();
+    const res = await controller.update(patchReq({ addressZipCode: "06000" }), created.id);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.addressZipCode).toBe("06000");
+  });
+
+  it("addressStreet nulo en update lo limpia", async () => {
+    const { controller } = makeController();
+    const createRes = await controller.create(postReq({ ...VALID_BODY, addressStreet: "Av. Reforma" }));
+    const created = await createRes.json();
+    const res = await controller.update(patchReq({ addressStreet: null }), created.id);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.addressStreet).toBeNull();
+  });
+
+  it("addressState con formato incorrecto en update → 400", async () => {
+    const { controller } = makeController();
+    const createRes = await controller.create(postReq(VALID_BODY));
+    const created = await createRes.json();
+    const res = await controller.update(patchReq({ addressState: "cmx" }), created.id);
     expect(res.status).toBe(400);
   });
 });

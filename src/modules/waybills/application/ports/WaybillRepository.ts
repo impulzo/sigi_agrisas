@@ -4,7 +4,11 @@ export interface WaybillSummary {
   id: string;
   folioCode: string;
   originBranchId: string;
-  destinationBranchId: string;
+  destinationBranchId: string | null;
+  destinationCustomerId: string | null;
+  destinationCustomerName: string | null;
+  destinationCustomerCode: string | null;
+  saleId: string | null;
   type: WaybillType;
   status: WaybillStatus;
   departureAt: Date;
@@ -45,7 +49,7 @@ export interface CreateWaybillBaseData {
   id: string;
   folioId: string;
   originBranchId: string;
-  destinationBranchId: string;
+  destinationBranchId: string | null;
   departureAt: Date;
   notes: string | null;
   creatorId: string;
@@ -53,6 +57,8 @@ export interface CreateWaybillBaseData {
 }
 
 export interface CartaPorteWaybillData {
+  destinationCustomerId: string;
+  saleId: string;
   originAddress: WaybillAddressSnapshot;
   destinationAddress: WaybillAddressSnapshot;
   vehiclePlate: string;
@@ -100,14 +106,17 @@ export interface WaybillRepository {
   list(options: ListWaybillsOptions): Promise<ListWaybillsResult>;
   findById(id: string): Promise<Waybill | null>;
   /**
-   * Validates sufficient stock at origin per line (throws InsufficientStockAtOriginError
-   * otherwise), allocates the folio, moves inventory (strict at origin, tolerant at
-   * destination), invokes `stamp` when non-null, and persists the waybill — all in
-   * one transaction.
+   * For `type: "simple"`: validates sufficient stock at origin per line (throws
+   * InsufficientStockAtOriginError otherwise) and moves inventory (strict at origin,
+   * tolerant at destination). For `type: "carta_porte"`: does NOT touch inventory —
+   * the linked sale already decremented origin stock when it completed. In both cases,
+   * allocates the folio, invokes `stamp` when non-null, and persists the waybill — all
+   * in one transaction.
    */
   createCompleted(data: CreateWaybillData, stamp: StampCallback | null): Promise<Waybill>;
   /**
-   * Reverses inventory (tolerant at both sides), invokes `cancelStamp` when the
+   * For `type: "simple"`: reverses inventory (tolerant at both sides). For
+   * `type: "carta_porte"`: does NOT touch inventory. Invokes `cancelStamp` when the
    * waybill was stamped, and marks the waybill cancelled — all in one transaction.
    */
   markCancelled(

@@ -1,5 +1,8 @@
 import * as XLSX from "xlsx";
-import { AccountStatementLedgerResponseDto } from "../../application/dto/AccountStatementLedgerResponseDto";
+import {
+  AccountStatementLedgerResponseDto,
+  AccountStatementMovementDto,
+} from "../../application/dto/AccountStatementLedgerResponseDto";
 
 const HEADER = [
   "Fecha",
@@ -15,23 +18,37 @@ const HEADER = [
   "Estado",
 ];
 
+function movementRow(m: AccountStatementMovementDto): (string | number)[] {
+  return [
+    m.date,
+    m.type,
+    m.serie,
+    m.factura,
+    m.dueDate ?? "",
+    m.reference ?? "",
+    m.paymentMethodCode ?? "",
+    m.debit,
+    m.credit,
+    m.runningBalance,
+    m.status,
+  ];
+}
+
 export function buildAccountStatementLedgerWorkbook(data: AccountStatementLedgerResponseDto): Buffer {
   const rows: (string | number)[][] = [HEADER];
 
-  for (const m of data.movements) {
-    rows.push([
-      m.date,
-      m.type,
-      m.serie,
-      m.factura,
-      m.dueDate ?? "",
-      m.reference ?? "",
-      m.paymentMethodCode ?? "",
-      m.debit,
-      m.credit,
-      m.runningBalance,
-      m.status,
-    ]);
+  for (const group of data.groups) {
+    if (group.sale) {
+      rows.push(movementRow(group.sale));
+    } else {
+      rows.push(["Abonos sin venta visible en el rango"]);
+    }
+    for (const payment of group.payments) {
+      rows.push(movementRow(payment));
+    }
+    if (group.sale) {
+      rows.push(["Saldo ticket", group.ticketBalance]);
+    }
   }
 
   rows.push([]);

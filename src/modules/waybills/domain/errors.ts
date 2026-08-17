@@ -97,3 +97,50 @@ export class CanonicalFolioMissingError extends Error {
     this.folioCode = folioCode;
   }
 }
+
+export class WaybillSaleNotFoundError extends Error {
+  readonly saleId: string;
+  constructor(saleId: string) {
+    super(`Sale not found: ${saleId}`);
+    this.name = "WaybillSaleNotFoundError";
+    this.saleId = saleId;
+  }
+}
+
+export class SaleNotCompletedError extends Error {
+  readonly saleId: string;
+  constructor(saleId: string) {
+    super(`Sale ${saleId} is not completed`);
+    this.name = "SaleNotCompletedError";
+    this.saleId = saleId;
+  }
+}
+
+export class SaleHasNoCustomerError extends Error {
+  readonly saleId: string;
+  constructor(saleId: string) {
+    super(`Sale ${saleId} has no customer`);
+    this.name = "SaleHasNoCustomerError";
+    this.saleId = saleId;
+  }
+}
+
+export class CustomerNotFoundForWaybillError extends Error {
+  readonly customerId: string;
+  constructor(customerId: string) {
+    super(`Customer not found or inactive: ${customerId}`);
+    this.name = "CustomerNotFoundForWaybillError";
+    this.customerId = customerId;
+  }
+}
+
+export class CustomerAddressIncompleteError extends Error {
+  readonly customerId: string;
+  readonly missingFields: string[];
+  constructor(customerId: string, missingFields: string[]) {
+    super(`Customer ${customerId} has incomplete address: ${missingFields.join(", ")}`);
+    this.name = "CustomerAddressIncompleteError";
+    this.customerId = customerId;
+    this.missingFields = missingFields;
+  }
+}

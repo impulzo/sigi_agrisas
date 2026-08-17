@@ -23,6 +23,12 @@ export interface AccountStatementMovementDto {
   status: string;
 }
 
+export interface AccountStatementLedgerGroupDto {
+  sale: AccountStatementMovementDto | null;
+  payments: AccountStatementMovementDto[];
+  ticketBalance: string;
+}
+
 export interface AccountStatementLedgerResponseDto {
   generatedAt: string;
   generatedBy: { userId: string; email: string };
@@ -45,6 +51,7 @@ export interface AccountStatementLedgerResponseDto {
   openingBalance: string;
   closingBalance: string;
   movements: AccountStatementMovementDto[];
+  groups: AccountStatementLedgerGroupDto[];
   totals: {
     movementCount: number;
     totalDebit: string;

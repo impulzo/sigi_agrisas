@@ -1,13 +1,24 @@
 import { randomUUID } from "crypto";
 import { WaybillRepository, CreateWaybillData, CreateWaybillItemData } from "../ports/WaybillRepository";
 import { WaybillFacturamaGateway, StampTrasladoInput } from "../ports/WaybillFacturamaGateway";
-import { WaybillLookupService, BranchForWaybill } from "../ports/WaybillLookupService";
+import {
+  WaybillLookupService,
+  BranchForWaybill,
+  CustomerForWaybill,
+  SaleForWaybill,
+  AddressSource,
+} from "../ports/WaybillLookupService";
 import {
   InvalidBranchPairError,
   BranchAddressIncompleteError,
   ProductRequiredForSimpleTransferError,
   ProductNotFoundForTransferError,
   CanonicalFolioMissingError,
+  WaybillSaleNotFoundError,
+  SaleNotCompletedError,
+  SaleHasNoCustomerError,
+  CustomerNotFoundForWaybillError,
+  CustomerAddressIncompleteError,
 } from "../../domain/errors";
 import { Waybill, WaybillAddressSnapshot } from "../../domain/entities/Waybill";
 import { CreateWaybillRequest, CreateSimpleWaybillRequest, CreateCartaPorteWaybillRequest } from "../dto/WaybillDto";
@@ -15,7 +26,7 @@ import { CreateWaybillRequest, CreateSimpleWaybillRequest, CreateCartaPorteWaybi
 const TS_FOLIO_CODE = "TS";
 const TRI_FOLIO_CODE = "TRI";
 
-const REQUIRED_ADDRESS_FIELDS: Array<{ key: keyof BranchForWaybill; label: string }> = [
+const REQUIRED_ADDRESS_FIELDS: Array<{ key: keyof AddressSource; label: string }> = [
   { key: "addressStreet", label: "addressStreet" },
   { key: "addressExteriorNumber", label: "addressExteriorNumber" },
   { key: "addressNeighborhood", label: "addressNeighborhood" },
@@ -25,22 +36,31 @@ const REQUIRED_ADDRESS_FIELDS: Array<{ key: keyof BranchForWaybill; label: strin
   { key: "addressZipCode", label: "addressZipCode" },
 ];
 
-function toAddressSnapshot(branch: BranchForWaybill): WaybillAddressSnapshot {
+function toAddressSnapshot(source: AddressSource): WaybillAddressSnapshot {
   return {
-    street: branch.addressStreet!,
-    exteriorNumber: branch.addressExteriorNumber!,
-    interiorNumber: branch.addressInteriorNumber,
-    neighborhood: branch.addressNeighborhood!,
-    municipality: branch.addressMunicipality!,
-    state: branch.addressState!,
-    country: branch.addressCountry!,
-    zipCode: branch.addressZipCode!,
+    street: source.addressStreet!,
+    exteriorNumber: source.addressExteriorNumber!,
+    interiorNumber: source.addressInteriorNumber,
+    neighborhood: source.addressNeighborhood!,
+    municipality: source.addressMunicipality!,
+    state: source.addressState!,
+    country: source.addressCountry!,
+    zipCode: source.addressZipCode!,
   };
 }
 
-function validateAddressComplete(branch: BranchForWaybill): void {
-  const missing = REQUIRED_ADDRESS_FIELDS.filter((f) => !branch[f.key]).map((f) => f.label);
+function missingAddressFields(source: AddressSource): string[] {
+  return REQUIRED_ADDRESS_FIELDS.filter((f) => !source[f.key]).map((f) => f.label);
+}
+
+function validateBranchAddressComplete(branch: BranchForWaybill): void {
+  const missing = missingAddressFields(branch);
   if (missing.length > 0) throw new BranchAddressIncompleteError(branch.id, missing);
+}
+
+function validateCustomerAddressComplete(customer: CustomerForWaybill): void {
+  const missing = missingAddressFields(customer);
+  if (missing.length > 0) throw new CustomerAddressIncompleteError(customer.id, missing);
 }
 
 export class CreateWaybillUseCase {
@@ -51,11 +71,9 @@ export class CreateWaybillUseCase {
   ) {}
 
   async execute(input: CreateWaybillRequest, creatorId: string): Promise<Waybill> {
-    const { origin, destination } = await this.resolveBranchPair(input.originBranchId, input.destinationBranchId);
-
     return input.type === "simple"
-      ? this.executeSimple(input, origin, destination, creatorId)
-      : this.executeCartaPorte(input, origin, destination, creatorId);
+      ? this.executeSimple(input, creatorId)
+      : this.executeCartaPorte(input, creatorId);
   }
 
   private async resolveBranchPair(
@@ -80,12 +98,9 @@ export class CreateWaybillUseCase {
     return { origin, destination };
   }
 
-  private async executeSimple(
-    input: CreateSimpleWaybillRequest,
-    origin: BranchForWaybill,
-    destination: BranchForWaybill,
-    creatorId: string
-  ): Promise<Waybill> {
+  private async executeSimple(input: CreateSimpleWaybillRequest, creatorId: string): Promise<Waybill> {
+    const { origin, destination } = await this.resolveBranchPair(input.originBranchId, input.destinationBranchId);
+
     const folio = await this.lookupService.findFolioByCode(TRI_FOLIO_CODE);
     if (!folio || !folio.isActive) {
       throw new CanonicalFolioMissingError(TRI_FOLIO_CODE);
@@ -130,14 +145,33 @@ export class CreateWaybillUseCase {
     return this.waybillRepo.createCompleted(data, null);
   }
 
-  private async executeCartaPorte(
-    input: CreateCartaPorteWaybillRequest,
-    origin: BranchForWaybill,
-    destination: BranchForWaybill,
-    creatorId: string
-  ): Promise<Waybill> {
-    validateAddressComplete(origin);
-    validateAddressComplete(destination);
+  private async resolveSaleContext(
+    saleId: string
+  ): Promise<{ sale: SaleForWaybill; origin: BranchForWaybill; customer: CustomerForWaybill }> {
+    const sale = await this.lookupService.findSale(saleId);
+    if (!sale) throw new WaybillSaleNotFoundError(saleId);
+    if (sale.status !== "completed") throw new SaleNotCompletedError(saleId);
+    if (!sale.customerId) throw new SaleHasNoCustomerError(saleId);
+
+    const [origin, customer] = await Promise.all([
+      this.lookupService.findBranch(sale.branchId),
+      this.lookupService.findCustomer(sale.customerId),
+    ]);
+    if (!origin || !origin.isActive) {
+      throw new InvalidBranchPairError(`origin branch ${sale.branchId} not found or inactive`);
+    }
+    if (!customer || !customer.isActive) {
+      throw new CustomerNotFoundForWaybillError(sale.customerId);
+    }
+
+    return { sale, origin, customer };
+  }
+
+  private async executeCartaPorte(input: CreateCartaPorteWaybillRequest, creatorId: string): Promise<Waybill> {
+    const { sale, origin, customer } = await this.resolveSaleContext(input.saleId);
+
+    validateBranchAddressComplete(origin);
+    validateCustomerAddressComplete(customer);
 
     const folio = await this.lookupService.findFolioByCode(TS_FOLIO_CODE);
     if (!folio || !folio.isActive) {
@@ -171,14 +205,16 @@ export class CreateWaybillUseCase {
     );
 
     const originAddress = toAddressSnapshot(origin);
-    const destinationAddress = toAddressSnapshot(destination);
+    const destinationAddress = toAddressSnapshot(customer);
 
     const data: CreateWaybillData = {
       type: "carta_porte",
       id: randomUUID(),
       folioId: folio.id,
       originBranchId: origin.id,
-      destinationBranchId: destination.id,
+      destinationBranchId: null,
+      destinationCustomerId: customer.id,
+      saleId: sale.id,
       originAddress,
       destinationAddress,
       vehiclePlate: input.vehicle.plate,

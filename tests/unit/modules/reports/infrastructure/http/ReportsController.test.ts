@@ -66,6 +66,7 @@ jest.mock("@/modules/rbac/infrastructure/di/container", () => ({
 
 import { NextRequest } from "next/server";
 import { Decimal } from "decimal.js";
+import * as XLSX from "xlsx";
 import { ReportsController } from "@/modules/reports/infrastructure/http/ReportsController";
 import { GetInventoryStockReportUseCase } from "@/modules/reports/application/use-cases/GetInventoryStockReportUseCase";
 import { GetPaymentHistoryReportUseCase } from "@/modules/reports/application/use-cases/GetPaymentHistoryReportUseCase";
@@ -371,7 +372,7 @@ describe("ReportsController - getInventoryStockReport", () => {
       req(`${BASE_URL}/inventory/stock?format=csv`, authHeaders())
     );
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Invalid format. Allowed: json, pdf" });
+    expect(await res.json()).toEqual({ error: "Invalid format. Allowed: json, pdf, xlsx" });
   });
 
   it("400 con ?includeZeroStock=maybe", async () => {
@@ -408,6 +409,32 @@ describe("ReportsController - getInventoryStockReport", () => {
     expect(disposition).toMatch(/^attachment; filename="stock-\d{4}-\d{2}-\d{2}\.pdf"$/);
     const buf = Buffer.from(await res.arrayBuffer());
     expect(buf.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  it("200 xlsx con Content-Type y Content-Disposition correctos", async () => {
+    const ctrl = makeStockController([makeStockRow()]);
+    const res = await ctrl.getInventoryStockReport(
+      req(`${BASE_URL}/inventory/stock?format=xlsx`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    expect(disposition).toMatch(/^attachment; filename="stock-\d{4}-\d{2}-\d{2}\.xlsx"$/);
+    const buf = Buffer.from(await res.arrayBuffer());
+    expect(buf.length).toBeGreaterThan(0);
+  });
+
+  it("200 xlsx sin datos no lanza error", async () => {
+    const ctrl = makeStockController([]);
+    const res = await ctrl.getInventoryStockReport(
+      req(`${BASE_URL}/inventory/stock?format=xlsx`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
   });
 
   it("403 branch scope cross-branch sin bypass", async () => {
@@ -463,6 +490,15 @@ describe("ReportsController - getPaymentHistoryReport", () => {
     expect(await res.json()).toEqual({ error: "Invalid startDate" });
   });
 
+  it("400 con ?format=csv", async () => {
+    const ctrl = makePaymentController();
+    const res = await ctrl.getPaymentHistoryReport(
+      req(`${BASE_URL}/payments/history?format=csv`, authHeaders())
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid format. Allowed: json, pdf, xlsx" });
+  });
+
   it("200 JSON con forma del DTO", async () => {
     const ctrl = makePaymentController([makePaymentRow()]);
     const res = await ctrl.getPaymentHistoryReport(
@@ -487,6 +523,32 @@ describe("ReportsController - getPaymentHistoryReport", () => {
     expect(disposition).toMatch(/^attachment; filename="payments-\d{4}-\d{2}-\d{2}\.pdf"$/);
     const buf = Buffer.from(await res.arrayBuffer());
     expect(buf.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  it("200 xlsx con Content-Type y Content-Disposition correctos", async () => {
+    const ctrl = makePaymentController([makePaymentRow()]);
+    const res = await ctrl.getPaymentHistoryReport(
+      req(`${BASE_URL}/payments/history?format=xlsx`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    expect(disposition).toMatch(/^attachment; filename="payments-\d{4}-\d{2}-\d{2}\.xlsx"$/);
+    const buf = Buffer.from(await res.arrayBuffer());
+    expect(buf.length).toBeGreaterThan(0);
+  });
+
+  it("200 xlsx sin datos no lanza error", async () => {
+    const ctrl = makePaymentController([]);
+    const res = await ctrl.getPaymentHistoryReport(
+      req(`${BASE_URL}/payments/history?format=xlsx`, authHeaders())
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
   });
 
   it("403 branch scope cross-branch sin bypass", async () => {
@@ -677,6 +739,117 @@ describe("ReportsController - getAccountStatementLedger", () => {
     expect(body.movements[0].runningBalance).toBe("500.0000");
     expect(body.movements[1].runningBalance).toBe("300.0000");
     expect(body.closingBalance).toBe("300.0000");
+  });
+
+  it("200 groups agrupa la venta con su abono y calcula ticketBalance", async () => {
+    const movements: InMemoryStatementMovement[] = [
+      accSaleMovement(),
+      {
+        id: "pay-1",
+        customerId: CUSTOMER_ID,
+        kind: "payment",
+        isCredit: false,
+        status: "completed",
+        amount: 200,
+        date: new Date("2026-06-15T10:00:00Z"),
+        folioCode: "RB",
+        folioNumber: 1,
+        branchId: BRANCH_ID,
+        dueDate: null,
+        reference: "TRANSF 200",
+        paymentMethodCode: "TR",
+        paymentStatus: null,
+        saleId: "sale-1",
+      },
+    ];
+    const ctrl = makeAccountController([accCustomer()], movements);
+    const res = await ctrl.getAccountStatementLedger(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}`, authHeaders()),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.groups).toHaveLength(1);
+    expect(body.groups[0].sale.id).toBe("sale-1");
+    expect(body.groups[0].payments).toHaveLength(1);
+    expect(body.groups[0].payments[0].id).toBe("pay-1");
+    expect(body.groups[0].ticketBalance).toBe("300.0000");
+    // movements[] plano no cambia con la introducción de groups[]
+    expect(body.movements).toHaveLength(2);
+    expect(body.closingBalance).toBe("300.0000");
+  });
+
+  it("200 groups: abono con venta fuera del rango va al grupo sale:null", async () => {
+    const movements: InMemoryStatementMovement[] = [
+      accSaleMovement({ date: new Date("2026-05-01T10:00:00Z") }),
+      {
+        id: "pay-1",
+        customerId: CUSTOMER_ID,
+        kind: "payment",
+        isCredit: false,
+        status: "completed",
+        amount: 200,
+        date: new Date("2026-06-15T10:00:00Z"),
+        folioCode: "RB",
+        folioNumber: 1,
+        branchId: BRANCH_ID,
+        dueDate: null,
+        reference: "TRANSF 200",
+        paymentMethodCode: "TR",
+        paymentStatus: null,
+        saleId: "sale-1",
+      },
+    ];
+    const ctrl = makeAccountController([accCustomer()], movements);
+    const res = await ctrl.getAccountStatementLedger(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}?from=2026-06-01`, authHeaders()),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.groups).toHaveLength(1);
+    expect(body.groups[0].sale).toBeNull();
+    expect(body.groups[0].payments).toHaveLength(1);
+    expect(body.groups[0].payments[0].id).toBe("pay-1");
+  });
+
+  it("200 xlsx agrupa venta + abono + saldo ticket en filas consecutivas", async () => {
+    const movements: InMemoryStatementMovement[] = [
+      accSaleMovement(),
+      {
+        id: "pay-1",
+        customerId: CUSTOMER_ID,
+        kind: "payment",
+        isCredit: false,
+        status: "completed",
+        amount: 200,
+        date: new Date("2026-06-15T10:00:00Z"),
+        folioCode: "RB",
+        folioNumber: 1,
+        branchId: BRANCH_ID,
+        dueDate: null,
+        reference: "TRANSF 200",
+        paymentMethodCode: "TR",
+        paymentStatus: null,
+        saleId: "sale-1",
+      },
+    ];
+    const ctrl = makeAccountController([accCustomer()], movements);
+    const res = await ctrl.getAccountStatementLedger(
+      req(`${BASE_URL}/account-statements/${CUSTOMER_ID}?format=xlsx`, authHeaders()),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(200);
+
+    const buf = Buffer.from(await res.arrayBuffer());
+    const workbook = XLSX.read(buf, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
+
+    const saleRowIdx = aoa.findIndex((r) => r[2] === "TK");
+    expect(saleRowIdx).toBeGreaterThan(0);
+    expect(aoa[saleRowIdx + 1][2]).toBe("RB");
+    expect(aoa[saleRowIdx + 2]).toEqual(["Saldo ticket", "300.0000"]);
   });
 
   it("400 con ?sort inválido", async () => {
@@ -1132,6 +1305,43 @@ describe("ReportsController - getDepartmentPriceListReport", () => {
     expect(disposition).toMatch(/^attachment; filename="inventory-by-department-\d{4}-\d{2}-\d{2}\.xlsx"$/);
     const buf = Buffer.from(await res.arrayBuffer());
     expect(buf.length).toBeGreaterThan(0);
+  });
+
+  it("200 xlsx pivotea precios como columnas (una fila por producto, no por precio)", async () => {
+    const menudeo = makePriceListRow();
+    const mayoreo: RawPriceListRow = {
+      ...menudeo,
+      priceId: "price-2",
+      priceName: "Mayoreo",
+      price: new Decimal("80.0000"),
+      isDefault: false,
+    };
+    const otherProduct: RawPriceListRow = {
+      ...menudeo,
+      productId: "prod-2",
+      code: "P002",
+      name: "Prod 2",
+      priceId: "price-3",
+      priceName: "Menudeo",
+      price: new Decimal("50.0000"),
+    };
+    const ctrl = makeDepartmentPriceListController([menudeo, mayoreo, otherProduct]);
+    const res = await ctrl.getDepartmentPriceListReport(req(`${URL}?format=xlsx`, authHeaders()));
+    expect(res.status).toBe(200);
+
+    const buf = Buffer.from(await res.arrayBuffer());
+    const workbook = XLSX.read(buf, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
+
+    const headerRow = aoa[0] as string[];
+    expect(headerRow).toEqual(["Departamento", "Código", "Producto", "Unidad", "Stock", "Mayoreo", "Menudeo"]);
+
+    const prod1Row = aoa.find((r) => r[1] === "P001") as unknown[];
+    expect(prod1Row).toEqual(["Dept 1", "P001", "Prod 1", "PZA", "10.0000", "80.0000", "100.0000"]);
+
+    const prod2Row = aoa.find((r) => r[1] === "P002") as unknown[];
+    expect(prod2Row).toEqual(["Dept 1", "P002", "Prod 2", "PZA", "10.0000", "—", "50.0000"]);
   });
 
   it("200 incluye stockQuantity por producto y totalStock", async () => {

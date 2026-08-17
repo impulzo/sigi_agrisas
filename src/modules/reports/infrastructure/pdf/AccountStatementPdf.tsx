@@ -1,7 +1,11 @@
 import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { AccountStatementSummaryResponseDto } from "../../application/dto/AccountStatementSummaryResponseDto";
-import { AccountStatementLedgerResponseDto } from "../../application/dto/AccountStatementLedgerResponseDto";
+import {
+  AccountStatementLedgerResponseDto,
+  AccountStatementLedgerGroupDto,
+  AccountStatementMovementDto,
+} from "../../application/dto/AccountStatementLedgerResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
 
@@ -88,6 +92,43 @@ export function AccountStatementSummaryPdf({
   );
 }
 
+function MovementRow({ m, i }: { m: AccountStatementMovementDto; i: number }) {
+  return (
+    <View style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+      <Text style={s.cell}>{formatDate(m.date)}</Text>
+      <Text style={s.cell}>{TYPE_LABEL[m.type] ?? m.type}</Text>
+      <Text style={s.cell}>{m.folio}</Text>
+      <Text style={s.cellNarrow}>{m.debit}</Text>
+      <Text style={s.cellNarrow}>{m.credit}</Text>
+      <Text style={s.cellNarrow}>{m.runningBalance}</Text>
+      <Text style={[s.cellNarrow, m.status === "cancelled" ? s.badge : {}]}>
+        {m.status === "cancelled" ? "Cancelado" : m.status}
+      </Text>
+    </View>
+  );
+}
+
+function GroupSection({ group }: { group: AccountStatementLedgerGroupDto }) {
+  return (
+    <View style={s.section}>
+      {group.sale ? (
+        <MovementRow m={group.sale} i={0} />
+      ) : (
+        <Text style={s.departmentTitle}>Abonos sin venta visible en el rango</Text>
+      )}
+      {group.payments.map((p, i) => (
+        <MovementRow key={p.id} m={p} i={i + 1} />
+      ))}
+      {group.sale && (
+        <View style={s.subtotal}>
+          <Text style={s.cellWide}>Saldo ticket</Text>
+          <Text style={s.cell}>{group.ticketBalance}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 /** Desglose (libro mayor) de un cliente. */
 export function AccountStatementLedgerPdf({
   data,
@@ -125,18 +166,8 @@ export function AccountStatementLedgerPdf({
               <Text style={s.cellNarrow}>Saldo</Text>
               <Text style={s.cellNarrow}>Estado</Text>
             </View>
-            {data.movements.map((m, i) => (
-              <View key={m.id} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
-                <Text style={s.cell}>{formatDate(m.date)}</Text>
-                <Text style={s.cell}>{TYPE_LABEL[m.type] ?? m.type}</Text>
-                <Text style={s.cell}>{m.folio}</Text>
-                <Text style={s.cellNarrow}>{m.debit}</Text>
-                <Text style={s.cellNarrow}>{m.credit}</Text>
-                <Text style={s.cellNarrow}>{m.runningBalance}</Text>
-                <Text style={[s.cellNarrow, m.status === "cancelled" ? s.badge : {}]}>
-                  {m.status === "cancelled" ? "Cancelado" : m.status}
-                </Text>
-              </View>
+            {data.groups.map((group) => (
+              <GroupSection key={group.sale?.id ?? "orphan"} group={group} />
             ))}
           </View>
         )}

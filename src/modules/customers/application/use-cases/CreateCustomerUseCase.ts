@@ -23,6 +23,14 @@ export class CreateCustomerUseCase {
       creditLimit: req.creditLimit ?? null,
       creditDays: req.creditDays ?? 30,
       isActive: req.isActive ?? true,
+      addressStreet: req.addressStreet ?? null,
+      addressExteriorNumber: req.addressExteriorNumber ?? null,
+      addressInteriorNumber: req.addressInteriorNumber ?? null,
+      addressNeighborhood: req.addressNeighborhood ?? null,
+      addressMunicipality: req.addressMunicipality ?? null,
+      addressState: req.addressState ?? null,
+      addressCountry: req.addressCountry ?? "MEX",
+      addressZipCode: req.addressZipCode ?? null,
     });
     return toCustomerDto(c);
   }

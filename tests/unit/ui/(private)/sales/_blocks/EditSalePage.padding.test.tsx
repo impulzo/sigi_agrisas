@@ -67,24 +67,28 @@ jest.mock("../../../../../../app/(private)/sales/_logic/hooks/useSaleDetail", ()
 jest.mock("../../../../../../app/(private)/sales/_logic/hooks/useSaleMutations", () => ({
   useSaleMutations: () => ({ isSaving: false, edit: jest.fn(), mutationError: null, clearError: jest.fn() }),
 }));
+const mockUseCart = jest.fn().mockReturnValue({
+  lines: [],
+  totals: { subtotal: 0, taxTotal: 0, total: 0 },
+  addLine: jest.fn(),
+  addLineFromDosification: jest.fn(),
+  updateQuantity: jest.fn(),
+  updateDiscountPct: jest.fn(),
+  changeTier: jest.fn(),
+  removeLine: jest.fn(),
+  clear: jest.fn(),
+});
 jest.mock("../../../../../../app/(private)/pos/_logic/hooks/useCart", () => ({
-  useCart: () => ({
-    lines: [],
-    totals: { subtotal: 0, taxTotal: 0, total: 0 },
-    addLine: jest.fn(),
-    addLineFromDosification: jest.fn(),
-    updateQuantity: jest.fn(),
-    updateDiscountPct: jest.fn(),
-    changeTier: jest.fn(),
-    removeLine: jest.fn(),
-    clear: jest.fn(),
-  }),
+  useCart: (...args: unknown[]) => mockUseCart(...args),
 }));
 jest.mock("../../../../../../app/_hooks/useFoliosOptions", () => ({
   useFoliosOptions: () => ({ options: [], isLoading: false }),
 }));
 jest.mock("../../../../../../app/_hooks/usePaymentMethodsOptions", () => ({
   usePaymentMethodsOptions: () => ({ options: [], isLoading: false }),
+}));
+jest.mock("../../../../../../app/_hooks/usePricingSettingsOptions", () => ({
+  usePricingSettingsOptions: () => ({ dosificationSurchargePct: 7, isLoading: false }),
 }));
 jest.mock("../../../../../../app/(private)/pos/_blocks/CartPanel", () => ({
   CartPanel: () => <div data-testid="cart-panel" />,
@@ -112,5 +116,12 @@ describe("EditSalePage — gutter global de 10px izq/top/der vía layout (sales-
     const { container } = render(<EditSalePage id="sale-1" />);
     expect(container.firstElementChild!.className).not.toContain("pt-2.5");
     expect(container.firstElementChild!.className).toContain("h-[calc(100vh-64px)]");
+  });
+});
+
+describe("EditSalePage — recargo de dosificación", () => {
+  it("pasa el dosificationSurchargePct vigente a useCart", () => {
+    render(<EditSalePage id="sale-1" />);
+    expect(mockUseCart).toHaveBeenCalledWith(7);
   });
 });

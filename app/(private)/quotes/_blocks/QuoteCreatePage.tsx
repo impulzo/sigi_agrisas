@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useCart } from "../../pos/_logic/hooks/useCart";
 import { useFoliosOptions } from "../../../_hooks/useFoliosOptions";
+import { usePricingSettingsOptions } from "../../../_hooks/usePricingSettingsOptions";
 import { useQuoteSubmission } from "../_logic/hooks/useQuoteSubmission";
 import { getProductPrices } from "../../pos/_logic/services/getProductPrices";
 import { ProductCatalogPanel } from "../../pos/_blocks/ProductCatalogPanel";
@@ -32,7 +33,8 @@ export function QuoteCreatePage() {
   const isBypass = can("branches:access_all");
 
   const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
-  const { lines, totals, addLine, updateQuantity, updateDiscountPct, changeTier, removeLine } = useCart();
+  const { dosificationSurchargePct } = usePricingSettingsOptions();
+  const { lines, totals, addLine, updateQuantity, updateDiscountPct, changeTier, removeLine } = useCart(dosificationSurchargePct);
   const { status, quote, error: submitError, submit, reset: resetSubmit } = useQuoteSubmission();
 
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);

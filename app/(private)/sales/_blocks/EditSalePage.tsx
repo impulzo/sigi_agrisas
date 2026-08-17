@@ -9,6 +9,7 @@ import { useSaleMutations } from "../_logic/hooks/useSaleMutations";
 import { useCart } from "../../pos/_logic/hooks/useCart";
 import { useFoliosOptions } from "../../../_hooks/useFoliosOptions";
 import { usePaymentMethodsOptions } from "../../../_hooks/usePaymentMethodsOptions";
+import { usePricingSettingsOptions } from "../../../_hooks/usePricingSettingsOptions";
 import { CartPanel } from "../../pos/_blocks/CartPanel";
 import { ProductCatalogPanel } from "../../pos/_blocks/ProductCatalogPanel";
 import { PriceTierPicker } from "../../pos/_blocks/PriceTierPicker";
@@ -47,6 +48,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
   const { isSaving, edit, mutationError } = useSaleMutations();
   const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
   const { options: paymentMethods, isLoading: pmLoading } = usePaymentMethodsOptions();
+  const { dosificationSurchargePct } = usePricingSettingsOptions();
 
   const {
     lines,
@@ -58,7 +60,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
     removeLine,
     clear,
     addLineFromDosification,
-  } = useCart();
+  } = useCart(dosificationSurchargePct);
 
   const [initialized, setInitialized] = useState(false);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string>("");

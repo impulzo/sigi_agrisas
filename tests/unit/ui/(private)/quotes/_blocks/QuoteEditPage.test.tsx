@@ -14,20 +14,24 @@ jest.mock("../../../../../../app/_hooks/useCurrentUser", () => ({
 }));
 jest.mock("../../../../../../app/(private)/quotes/_logic/hooks/useQuoteDetail");
 jest.mock("../../../../../../app/(private)/quotes/_logic/hooks/useQuoteMutations");
+const mockUseCart = jest.fn().mockReturnValue({
+  lines: [],
+  totals: { subtotal: 0, taxTotal: 0, total: 0 },
+  addLine: jest.fn(),
+  updateQuantity: jest.fn(),
+  updateDiscountPct: jest.fn(),
+  changeTier: jest.fn(),
+  removeLine: jest.fn(),
+  clear: jest.fn(),
+});
 jest.mock("../../../../../../app/(private)/pos/_logic/hooks/useCart", () => ({
-  useCart: () => ({
-    lines: [],
-    totals: { subtotal: 0, taxTotal: 0, total: 0 },
-    addLine: jest.fn(),
-    updateQuantity: jest.fn(),
-    updateDiscountPct: jest.fn(),
-    changeTier: jest.fn(),
-    removeLine: jest.fn(),
-    clear: jest.fn(),
-  }),
+  useCart: (...args: unknown[]) => mockUseCart(...args),
 }));
 jest.mock("../../../../../../app/_hooks/useFoliosOptions", () => ({
   useFoliosOptions: () => ({ options: [], isLoading: false }),
+}));
+jest.mock("../../../../../../app/_hooks/usePricingSettingsOptions", () => ({
+  usePricingSettingsOptions: () => ({ dosificationSurchargePct: 7, isLoading: false }),
 }));
 jest.mock("../../../../../../app/(private)/pos/_blocks/ProductCatalogPanel", () => ({
   ProductCatalogPanel: () => <div data-testid="catalog-panel" />,
@@ -131,6 +135,16 @@ describe("QuoteEditPage — redirect si status no es draft", () => {
     expect(screen.queryByText(/La cotización no puede editarse/i)).not.toBeInTheDocument();
     await act(async () => { jest.advanceTimersByTime(2000); });
     expect(mockPush).not.toHaveBeenCalled();
+  });
+});
+
+describe("QuoteEditPage — recargo de dosificación", () => {
+  it("pasa el dosificationSurchargePct vigente a useCart", () => {
+    mockUseQuoteDetail.mockReturnValue({
+      quote: draftQuote, isLoading: false, error: null, refresh: jest.fn(),
+    });
+    render(<QuoteEditPage id="q1" />);
+    expect(mockUseCart).toHaveBeenCalledWith(7);
   });
 });
 

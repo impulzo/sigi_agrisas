@@ -23,27 +23,16 @@ const DEST_ID = "22222222-2222-2222-2222-222222222222";
 
 function fillValidForm(result: { current: ReturnType<typeof useCreateWaybillForm> }) {
   act(() => {
-    result.current.setType("carta_porte");
     result.current.setOriginBranchId(ORIGIN_ID);
     result.current.setDestinationBranchId(DEST_ID);
-    result.current.setVehicleField("plate", "ABC1234");
-    result.current.setVehicleField("config", "C2");
-    result.current.setVehicleField("permitType", "TPAF01");
-    result.current.setVehicleField("permitNumber", "SCT-1");
-    result.current.setVehicleField("insuranceCompany", "Aseguradora SA");
-    result.current.setVehicleField("insurancePolicy", "POL-1");
-    result.current.setDriverField("name", "Juan Perez");
-    result.current.setDriverField("licenseNumber", "LIC-1");
-    result.current.setDistanceKm(50);
-    result.current.setDepartureAt("2026-08-01T08:00");
-    result.current.setArrivalAt("2026-08-01T12:00");
+    result.current.setTransferDate("2026-08-01T08:00");
     result.current.addLine({
       productId: PRODUCT_ID,
       description: "Fertilizante",
-      satBienesTranspCode: "10161500",
-      satUnitCode: "KGM",
+      satBienesTranspCode: "",
+      satUnitCode: "",
       quantity: 10,
-      weightKg: 100,
+      weightKg: 0,
       isHazardousMaterial: false,
       hazardousMaterialCode: "",
     });
@@ -83,7 +72,7 @@ describe("useCreateWaybillForm", () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it("submits successfully and redirects to detail", async () => {
+  it("submits successfully with type:'simple' and redirects to detail", async () => {
     mockCreate.mockResolvedValue({ id: "wb-1" } as Awaited<ReturnType<typeof mockCreate>>);
     const { result } = renderHook(() => useCreateWaybillForm());
     fillValidForm(result);
@@ -93,6 +82,7 @@ describe("useCreateWaybillForm", () => {
     });
 
     expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ type: "simple" }));
     expect(result.current.error).toBeNull();
   });
 
@@ -113,7 +103,7 @@ describe("useCreateWaybillForm", () => {
   });
 
   it("on generic error, preserves all form state for retry", async () => {
-    mockCreate.mockRejectedValue(new Error("Facturama rejected"));
+    mockCreate.mockRejectedValue(new Error("Rejected"));
     const { result } = renderHook(() => useCreateWaybillForm());
     fillValidForm(result);
 
@@ -124,81 +114,6 @@ describe("useCreateWaybillForm", () => {
     expect(result.current.error).toBeTruthy();
     expect(result.current.originBranchId).toBe(ORIGIN_ID);
     expect(result.current.destinationBranchId).toBe(DEST_ID);
-    expect(result.current.vehicle.plate).toBe("ABC1234");
     expect(result.current.lines).toHaveLength(1);
-  });
-
-  it("submits a simple transfer with type:'simple' by default", async () => {
-    mockCreate.mockResolvedValue({ id: "wb-2" } as Awaited<ReturnType<typeof mockCreate>>);
-    const { result } = renderHook(() => useCreateWaybillForm());
-
-    act(() => {
-      expect(result.current.type).toBe("simple");
-      result.current.setOriginBranchId(ORIGIN_ID);
-      result.current.setDestinationBranchId(DEST_ID);
-      result.current.setTransferDate("2026-08-01T08:00");
-      result.current.addLine({
-        productId: PRODUCT_ID,
-        description: "Fertilizante",
-        satBienesTranspCode: "",
-        satUnitCode: "",
-        quantity: 10,
-        weightKg: 0,
-        isHazardousMaterial: false,
-        hazardousMaterialCode: "",
-      });
-    });
-
-    await act(async () => {
-      await result.current.submit();
-    });
-
-    expect(mockCreate).toHaveBeenCalledTimes(1);
-    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ type: "simple" }));
-    expect(result.current.error).toBeNull();
-  });
-
-  it("blocks switching from carta_porte to simple when a free-text line is present", async () => {
-    const { result } = renderHook(() => useCreateWaybillForm());
-
-    act(() => {
-      result.current.setType("carta_porte");
-      result.current.addLine({
-        productId: null,
-        description: "Materia prima sin catálogo",
-        satBienesTranspCode: "10161500",
-        satUnitCode: "KGM",
-        quantity: 5,
-        weightKg: 20,
-        isHazardousMaterial: false,
-        hazardousMaterialCode: "",
-      });
-    });
-
-    act(() => {
-      result.current.setType("simple");
-    });
-
-    expect(result.current.type).toBe("carta_porte");
-    expect(result.current.error).toBeTruthy();
-    expect(result.current.lines).toHaveLength(1);
-  });
-
-  it("hazardous material line without code fails Zod validation", async () => {
-    const { result } = renderHook(() => useCreateWaybillForm());
-    fillValidForm(result);
-    act(() => {
-      result.current.updateLine(result.current.lines[0]._key, {
-        isHazardousMaterial: true,
-        hazardousMaterialCode: "",
-      });
-    });
-
-    await act(async () => {
-      await result.current.submit();
-    });
-
-    expect(result.current.error).toBeTruthy();
-    expect(mockCreate).not.toHaveBeenCalled();
   });
 });

@@ -10,21 +10,27 @@ import {
 import {
   WaybillLookupService,
   BranchForWaybill,
+  CustomerForWaybill,
   ProductForWaybill,
   FolioForWaybill,
+  SaleForWaybill,
 } from "../../../../src/modules/waybills/application/ports/WaybillLookupService";
 import {
-  InvalidBranchPairError,
   BranchAddressIncompleteError,
-  InsufficientStockAtOriginError,
+  CustomerAddressIncompleteError,
+  CustomerNotFoundForWaybillError,
   FacturamaStampError,
+  SaleHasNoCustomerError,
+  SaleNotCompletedError,
+  WaybillSaleNotFoundError,
 } from "../../../../src/modules/waybills/domain/errors";
 import { CreateWaybillRequest, CreateCartaPorteWaybillRequest } from "../../../../src/modules/waybills/application/dto/WaybillDto";
 
-const ORIGIN_ID = "11111111-1111-1111-1111-111111111111";
-const DEST_ID = "22222222-2222-2222-2222-222222222222";
+const BRANCH_ID = "11111111-1111-1111-1111-111111111111";
+const CUSTOMER_ID = "22222222-2222-2222-2222-222222222222";
 const PRODUCT_ID = "33333333-3333-3333-3333-333333333333";
 const CREATOR_ID = "44444444-4444-4444-4444-444444444444";
+const SALE_ID = "55555555-5555-5555-5555-555555555555";
 
 function completeBranch(id: string, name: string): BranchForWaybill {
   return {
@@ -42,8 +48,38 @@ function completeBranch(id: string, name: string): BranchForWaybill {
   };
 }
 
+function completeCustomer(id: string, name: string): CustomerForWaybill {
+  return {
+    id,
+    name,
+    code: "CUST01",
+    isActive: true,
+    addressStreet: "Calle 2",
+    addressExteriorNumber: "200",
+    addressInteriorNumber: null,
+    addressNeighborhood: "Centro",
+    addressMunicipality: "Hermosillo",
+    addressState: "SON",
+    addressCountry: "MEX",
+    addressZipCode: "83001",
+  };
+}
+
+function completedSale(overrides: Partial<SaleForWaybill> = {}): SaleForWaybill {
+  return {
+    id: SALE_ID,
+    branchId: BRANCH_ID,
+    customerId: CUSTOMER_ID,
+    status: "completed",
+    items: [{ productId: PRODUCT_ID, quantity: 10, productNameSnapshot: "Fertilizante" }],
+    ...overrides,
+  };
+}
+
 class FakeLookupService implements WaybillLookupService {
   branches = new Map<string, BranchForWaybill>();
+  customers = new Map<string, CustomerForWaybill>();
+  sales = new Map<string, SaleForWaybill>();
   products = new Map<string, ProductForWaybill>();
   folio: FolioForWaybill | null = { id: "folio-ts", isActive: true };
 
@@ -55,6 +91,12 @@ class FakeLookupService implements WaybillLookupService {
   }
   async findFolioByCode(_code: string): Promise<FolioForWaybill | null> {
     return this.folio;
+  }
+  async findSale(saleId: string): Promise<SaleForWaybill | null> {
+    return this.sales.get(saleId) ?? null;
+  }
+  async findCustomer(customerId: string): Promise<CustomerForWaybill | null> {
+    return this.customers.get(customerId) ?? null;
   }
 }
 
@@ -79,8 +121,7 @@ function baseRequest(
   overrides: Partial<Omit<CreateCartaPorteWaybillRequest, "type">> = {}
 ): CreateWaybillRequest {
   return {
-    originBranchId: ORIGIN_ID,
-    destinationBranchId: DEST_ID,
+    saleId: SALE_ID,
     vehicle: {
       plate: "ABC1234",
       config: "C2",
@@ -112,66 +153,86 @@ function setup() {
   const repo = new InMemoryWaybillRepository();
   const gateway = new FakeGateway();
   const lookup = new FakeLookupService();
-  lookup.branches.set(ORIGIN_ID, completeBranch(ORIGIN_ID, "Origen"));
-  lookup.branches.set(DEST_ID, completeBranch(DEST_ID, "Destino"));
+  lookup.branches.set(BRANCH_ID, completeBranch(BRANCH_ID, "Origen"));
+  lookup.customers.set(CUSTOMER_ID, completeCustomer(CUSTOMER_ID, "Cliente Uno"));
+  lookup.sales.set(SALE_ID, completedSale());
   lookup.products.set(PRODUCT_ID, { id: PRODUCT_ID, code: "FERT01", name: "Fertilizante", isActive: true });
   const useCase = new CreateWaybillUseCase(repo, gateway, lookup);
   return { repo, gateway, lookup, useCase };
 }
 
-describe("CreateWaybillUseCase", () => {
-  it("creates a completed waybill and moves inventory when stock is sufficient", async () => {
+describe("CreateWaybillUseCase — type: carta_porte (from sale)", () => {
+  it("creates a completed waybill linked to the sale/customer, without moving inventory", async () => {
     const { repo, useCase } = setup();
-    repo.setStock(ORIGIN_ID, PRODUCT_ID, 50);
+    repo.setStock(BRANCH_ID, PRODUCT_ID, 50);
 
     const waybill = await useCase.execute(baseRequest(), CREATOR_ID);
 
     expect(waybill.status).toBe("completed");
     expect(waybill.facturamaCfdiId).toBe("cfdi-1");
-    expect(repo.getStock(ORIGIN_ID, PRODUCT_ID)).toBe(40);
-    expect(repo.getStock(DEST_ID, PRODUCT_ID)).toBe(10);
+    expect(waybill.originBranchId).toBe(BRANCH_ID);
+    expect(waybill.destinationBranchId).toBeNull();
+    expect(waybill.destinationCustomerId).toBe(CUSTOMER_ID);
+    expect(waybill.saleId).toBe(SALE_ID);
+    // No inventory movement — the sale already decremented origin stock (design.md D5).
+    expect(repo.getStock(BRANCH_ID, PRODUCT_ID)).toBe(50);
   });
 
-  it("rejects with InsufficientStockAtOriginError and does not move inventory", async () => {
-    const { repo, useCase } = setup();
-    repo.setStock(ORIGIN_ID, PRODUCT_ID, 5);
-
-    await expect(useCase.execute(baseRequest(), CREATOR_ID)).rejects.toThrow(InsufficientStockAtOriginError);
-    expect(repo.getStock(ORIGIN_ID, PRODUCT_ID)).toBe(5);
-    expect(repo.getStock(DEST_ID, PRODUCT_ID)).toBe(0);
-  });
-
-  it("rejects same branch as origin and destination before touching inventory or Facturama", async () => {
-    const { repo, gateway, useCase } = setup();
-    repo.setStock(ORIGIN_ID, PRODUCT_ID, 50);
+  it("rejects when the sale does not exist", async () => {
+    const { useCase } = setup();
 
     await expect(
-      useCase.execute(baseRequest({ destinationBranchId: ORIGIN_ID }), CREATOR_ID)
-    ).rejects.toThrow(InvalidBranchPairError);
-    expect(gateway.calls).toHaveLength(0);
-    expect(repo.getStock(ORIGIN_ID, PRODUCT_ID)).toBe(50);
+      useCase.execute(baseRequest({ saleId: "99999999-9999-9999-9999-999999999999" }), CREATOR_ID)
+    ).rejects.toThrow(WaybillSaleNotFoundError);
   });
 
-  it("rejects when destination branch has incomplete address", async () => {
+  it("rejects when the sale is not completed", async () => {
     const { lookup, useCase } = setup();
-    lookup.branches.set(DEST_ID, { ...completeBranch(DEST_ID, "Destino"), addressZipCode: null });
+    lookup.sales.set(SALE_ID, completedSale({ status: "cancelled" }));
+
+    await expect(useCase.execute(baseRequest(), CREATOR_ID)).rejects.toThrow(SaleNotCompletedError);
+  });
+
+  it("rejects when the sale has no customer", async () => {
+    const { lookup, useCase } = setup();
+    lookup.sales.set(SALE_ID, completedSale({ customerId: null }));
+
+    await expect(useCase.execute(baseRequest(), CREATOR_ID)).rejects.toThrow(SaleHasNoCustomerError);
+  });
+
+  it("rejects when the customer is not found or inactive", async () => {
+    const { lookup, useCase } = setup();
+    lookup.customers.delete(CUSTOMER_ID);
+
+    await expect(useCase.execute(baseRequest(), CREATOR_ID)).rejects.toThrow(CustomerNotFoundForWaybillError);
+  });
+
+  it("rejects when the customer has an incomplete address", async () => {
+    const { lookup, useCase } = setup();
+    lookup.customers.set(CUSTOMER_ID, { ...completeCustomer(CUSTOMER_ID, "Cliente Uno"), addressZipCode: null });
+
+    await expect(useCase.execute(baseRequest(), CREATOR_ID)).rejects.toThrow(CustomerAddressIncompleteError);
+  });
+
+  it("rejects when the origin branch has an incomplete address", async () => {
+    const { lookup, useCase } = setup();
+    lookup.branches.set(BRANCH_ID, { ...completeBranch(BRANCH_ID, "Origen"), addressZipCode: null });
 
     await expect(useCase.execute(baseRequest(), CREATOR_ID)).rejects.toThrow(BranchAddressIncompleteError);
   });
 
   it("rolls back nothing already-committed when Facturama rejects the stamp", async () => {
     const { repo, gateway, useCase } = setup();
-    repo.setStock(ORIGIN_ID, PRODUCT_ID, 50);
+    repo.setStock(BRANCH_ID, PRODUCT_ID, 50);
     gateway.shouldFail = true;
 
     await expect(useCase.execute(baseRequest(), CREATOR_ID)).rejects.toThrow(FacturamaStampError);
-    expect(repo.getStock(ORIGIN_ID, PRODUCT_ID)).toBe(50);
-    expect(repo.getStock(DEST_ID, PRODUCT_ID)).toBe(0);
+    expect(repo.getStock(BRANCH_ID, PRODUCT_ID)).toBe(50);
   });
 
-  it("skips stock validation for lines without productId", async () => {
-    const { repo, useCase } = setup();
-    // No stock set for origin at all — a catalog-less free-text line must not be blocked.
+  it("skips stock validation for lines without productId (free-text)", async () => {
+    const { useCase } = setup();
+
     const waybill = await useCase.execute(
       baseRequest({
         items: [

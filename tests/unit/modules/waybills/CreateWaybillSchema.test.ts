@@ -3,6 +3,7 @@ import { createWaybillSchema } from "../../../../src/modules/waybills/infrastruc
 const ORIGIN_ID = "11111111-1111-1111-1111-111111111111";
 const DEST_ID = "22222222-2222-2222-2222-222222222222";
 const PRODUCT_ID = "33333333-3333-3333-3333-333333333333";
+const SALE_ID = "66666666-6666-6666-6666-666666666666";
 
 function simplePayload(overrides: Record<string, unknown> = {}) {
   return {
@@ -19,8 +20,7 @@ function simplePayload(overrides: Record<string, unknown> = {}) {
 function cartaPortePayload(overrides: Record<string, unknown> = {}) {
   return {
     type: "carta_porte",
-    originBranchId: ORIGIN_ID,
-    destinationBranchId: DEST_ID,
+    saleId: SALE_ID,
     vehicle: {
       plate: "ABC1234",
       config: "C2",

@@ -31,6 +31,8 @@ import { PurchasesReportPdf } from "../pdf/PurchasesReportPdf";
 import { ProviderPaymentsReportPdf } from "../pdf/ProviderPaymentsReportPdf";
 import { SalesByProductReportPdf } from "../pdf/SalesByProductReportPdf";
 import { CollectionsReportPdf } from "../pdf/CollectionsReportPdf";
+import { buildInventoryStockWorkbook } from "../xlsx/buildInventoryStockWorkbook";
+import { buildPaymentHistoryWorkbook } from "../xlsx/buildPaymentHistoryWorkbook";
 import { buildCashCutWorkbook } from "../xlsx/buildCashCutWorkbook";
 import { buildDepartmentPriceListWorkbook } from "../xlsx/buildDepartmentPriceListWorkbook";
 import { buildSalesCutWorkbook } from "../xlsx/buildSalesCutWorkbook";
@@ -46,8 +48,8 @@ import { AuthorizationService } from "@/modules/rbac/application/ports/Authoriza
 
 const LEDGER_PDF_MAX_ROWS = 10000;
 
-const formatEnum = z.enum(["json", "pdf"], {
-  errorMap: () => ({ message: "Invalid format. Allowed: json, pdf" }),
+const cashCutFormatEnum = z.enum(["json", "pdf", "xlsx"], {
+  errorMap: () => ({ message: "Invalid format. Allowed: json, pdf, xlsx" }),
 }).default("json");
 
 const stockQuerySchema = z.object({
@@ -63,7 +65,7 @@ const stockQuerySchema = z.object({
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid includeZeroStock" });
       return z.NEVER;
     }),
-  format: formatEnum,
+  format: cashCutFormatEnum,
 });
 
 const paymentQuerySchema = z.object({
@@ -79,7 +81,7 @@ const paymentQuerySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid endDate")
     .transform((v) => new Date(`${v}T00:00:00.000Z`))
     .optional(),
-  format: formatEnum,
+  format: cashCutFormatEnum,
 });
 
 const dateOnly = z
@@ -89,10 +91,6 @@ const dateOnly = z
   .optional();
 
 const uuidParamSchema = z.string().uuid("Invalid customerId");
-
-const cashCutFormatEnum = z.enum(["json", "pdf", "xlsx"], {
-  errorMap: () => ({ message: "Invalid format. Allowed: json, pdf, xlsx" }),
-}).default("json");
 
 const summaryQuerySchema = z.object({
   branchId: z.string().uuid("Invalid branchId").optional(),
@@ -268,6 +266,18 @@ export class ReportsController {
         });
       }
 
+      if (format === "xlsx") {
+        const buffer = buildInventoryStockWorkbook(dto);
+        const date = dto.generatedAt.split("T")[0];
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="stock-${date}.xlsx"`,
+          },
+        });
+      }
+
       return NextResponse.json(dto);
     } catch (err) {
       console.error("[ReportsController] getInventoryStockReport error", err);
@@ -313,6 +323,18 @@ export class ReportsController {
           headers: {
             "Content-Type": "application/pdf",
             "Content-Disposition": `attachment; filename="payments-${date}.pdf"`,
+          },
+        });
+      }
+
+      if (format === "xlsx") {
+        const buffer = buildPaymentHistoryWorkbook(dto);
+        const date = dto.generatedAt.split("T")[0];
+        return new NextResponse(buffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="payments-${date}.xlsx"`,
           },
         });
       }
