@@ -31,6 +31,9 @@ export interface RawAccountMovement {
 
 export type AccountMovementType = "sale_credit" | "sale_cash" | "payment";
 
+/** Orden de presentación del libro mayor: no altera `runningBalance` cronológico. */
+export type LedgerSort = "date" | "invoice" | "serie";
+
 /**
  * Movimiento enriquecido por `AccountLedgerBuilder`: clasificado por `type`,
  * con `debit`/`credit` (solo crédito y abonos completed mueven el saldo) y el

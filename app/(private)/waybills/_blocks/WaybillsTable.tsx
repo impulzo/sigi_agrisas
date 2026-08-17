@@ -70,7 +70,11 @@ export function WaybillsTable({ items, isLoading, branchNameById, onEnter }: Way
                 {branchNameById[w.originBranchId] ?? w.originBranchId.slice(0, 8)}
               </td>
               <td className="px-4 py-3 text-on-surface-variant truncate max-w-[140px]">
-                {branchNameById[w.destinationBranchId] ?? w.destinationBranchId.slice(0, 8)}
+                {w.type === "carta_porte"
+                  ? w.destinationCustomerName ?? "Cliente"
+                  : w.destinationBranchId
+                    ? branchNameById[w.destinationBranchId] ?? w.destinationBranchId.slice(0, 8)
+                    : "—"}
               </td>
               <td className="px-4 py-3">
                 <WaybillStatusBadge status={w.status} />

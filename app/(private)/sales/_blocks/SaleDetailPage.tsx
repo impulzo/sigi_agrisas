@@ -16,6 +16,7 @@ import { SaleItemsTable } from "./SaleItemsTable";
 import { CancelSaleModal } from "./CancelSaleModal";
 import { FullReturnModal } from "./FullReturnModal";
 import { SaleReturnsSection } from "./SaleReturnsSection";
+import { SaleWaybillSection } from "./SaleWaybillSection";
 import { SalePaymentsSection } from "./SalePaymentsSection";
 import { SaleInvoicesSection } from "../../billing/_blocks/SaleInvoicesSection";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
@@ -220,6 +221,13 @@ export function SaleDetailPage({ id }: SaleDetailPageProps) {
         saleId={sale.id}
         saleStatus={sale.status}
         saleFolioLabel={folioLabel}
+      />
+
+      {/* Waybill (Carta Porte) section */}
+      <SaleWaybillSection
+        saleId={sale.id}
+        saleStatus={sale.status}
+        customerId={sale.customerId}
       />
 
       {/* Payments section — only for credit sales */}

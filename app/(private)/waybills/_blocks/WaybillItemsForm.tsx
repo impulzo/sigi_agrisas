@@ -13,9 +13,17 @@ interface WaybillItemsFormProps {
   addLine: (line: Omit<WaybillLineState, "_key" | "error">) => void;
   updateLine: (key: string, patch: Partial<WaybillLineState>) => void;
   removeLine: (key: string) => void;
+  lockProductAndQuantity?: boolean;
 }
 
-export function WaybillItemsForm({ type, lines, addLine, updateLine, removeLine }: WaybillItemsFormProps) {
+export function WaybillItemsForm({
+  type,
+  lines,
+  addLine,
+  updateLine,
+  removeLine,
+  lockProductAndQuantity,
+}: WaybillItemsFormProps) {
   const [showCatalog, setShowCatalog] = useState(false);
   const isSimple = type === "simple";
 
@@ -52,27 +60,29 @@ export function WaybillItemsForm({ type, lines, addLine, updateLine, removeLine 
         <h3 className="text-label-md font-semibold text-on-surface">
           Mercancías <span className="text-error">*</span>
         </h3>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setShowCatalog((v) => !v)}
-            className="rounded-full border border-outline px-3 py-1 text-label-sm hover:bg-surface-container transition-colors"
-          >
-            + Catálogo
-          </button>
-          {!isSimple && (
+        {!lockProductAndQuantity && (
+          <div className="flex gap-2">
             <button
               type="button"
-              onClick={handleAddFreeLine}
+              onClick={() => setShowCatalog((v) => !v)}
               className="rounded-full border border-outline px-3 py-1 text-label-sm hover:bg-surface-container transition-colors"
             >
-              + Línea libre
+              + Catálogo
             </button>
-          )}
-        </div>
+            {!isSimple && (
+              <button
+                type="button"
+                onClick={handleAddFreeLine}
+                className="rounded-full border border-outline px-3 py-1 text-label-sm hover:bg-surface-container transition-colors"
+              >
+                + Línea libre
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {showCatalog && (
+      {showCatalog && !lockProductAndQuantity && (
         <div className="border border-outline-variant rounded-md overflow-hidden mb-4">
           <ProductCatalogPanel onAddProduct={handleAddProduct} />
         </div>
@@ -100,6 +110,7 @@ export function WaybillItemsForm({ type, lines, addLine, updateLine, removeLine 
                   line={line}
                   onUpdate={(patch) => updateLine(line._key, patch)}
                   onRemove={() => removeLine(line._key)}
+                  lockProductAndQuantity={lockProductAndQuantity}
                 />
               ))}
             </tbody>

@@ -132,7 +132,7 @@ export function LedgerPage({ customerId }: { customerId: string }) {
             />
           ) : (
             <LedgerTable
-              movements={ledger.movements}
+              groups={ledger.groups}
               totals={ledger.totals}
               closingBalance={ledger.closingBalance}
               onPrintAnticipo={handlePrintAnticipo}

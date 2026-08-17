@@ -66,6 +66,14 @@ export class InMemoryCustomerRepository implements CustomerRepository {
       currentBalance: 0,
       creditDays: data.creditDays ?? 30,
       isActive: data.isActive ?? true,
+      addressStreet: data.addressStreet ?? null,
+      addressExteriorNumber: data.addressExteriorNumber ?? null,
+      addressInteriorNumber: data.addressInteriorNumber ?? null,
+      addressNeighborhood: data.addressNeighborhood ?? null,
+      addressMunicipality: data.addressMunicipality ?? null,
+      addressState: data.addressState ?? null,
+      addressCountry: data.addressCountry ?? "MEX",
+      addressZipCode: data.addressZipCode ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -101,6 +109,18 @@ export class InMemoryCustomerRepository implements CustomerRepository {
       currentBalance: existing.currentBalance,
       creditDays: data.creditDays ?? existing.creditDays,
       isActive: data.isActive ?? existing.isActive,
+      addressStreet: "addressStreet" in data ? data.addressStreet ?? null : existing.addressStreet,
+      addressExteriorNumber:
+        "addressExteriorNumber" in data ? data.addressExteriorNumber ?? null : existing.addressExteriorNumber,
+      addressInteriorNumber:
+        "addressInteriorNumber" in data ? data.addressInteriorNumber ?? null : existing.addressInteriorNumber,
+      addressNeighborhood:
+        "addressNeighborhood" in data ? data.addressNeighborhood ?? null : existing.addressNeighborhood,
+      addressMunicipality:
+        "addressMunicipality" in data ? data.addressMunicipality ?? null : existing.addressMunicipality,
+      addressState: "addressState" in data ? data.addressState ?? null : existing.addressState,
+      addressCountry: "addressCountry" in data ? data.addressCountry ?? null : existing.addressCountry,
+      addressZipCode: "addressZipCode" in data ? data.addressZipCode ?? null : existing.addressZipCode,
       createdAt: existing.createdAt,
       updatedAt: new Date(),
     });

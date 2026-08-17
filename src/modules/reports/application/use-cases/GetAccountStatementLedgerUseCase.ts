@@ -1,17 +1,18 @@
 import { Decimal } from "decimal.js";
 import { AccountStatementRepository } from "../ports/AccountStatementRepository";
 import { AccountLedgerBuilder } from "../../domain/services/AccountLedgerBuilder";
+import { groupLedgerBySale } from "../../domain/services/LedgerGrouper";
 import {
   RawAccountMovement,
   AccountMovement,
+  LedgerSort,
 } from "../../domain/value-objects/AccountMovement";
 import { StatementCustomerNotFoundError } from "../../domain/errors/StatementCustomerNotFoundError";
 import {
   AccountStatementLedgerResponseDto,
   AccountStatementMovementDto,
+  AccountStatementLedgerGroupDto,
 } from "../dto/AccountStatementLedgerResponseDto";
-
-export type LedgerSort = "date" | "invoice" | "serie";
 
 export interface GetAccountStatementLedgerRequest {
   customerId: string;
@@ -67,6 +68,26 @@ function applySort(movements: AccountMovement[], sort: LedgerSort): AccountMovem
   return [...movements].sort(sort === "invoice" ? byInvoice : bySerie);
 }
 
+function toMovementDto(m: AccountMovement): AccountStatementMovementDto {
+  return {
+    id: m.id,
+    date: m.date.toISOString(),
+    type: m.type,
+    folioCode: m.folioCode,
+    folioNumber: m.folioNumber,
+    folio: `${m.folioCode}-${m.folioNumber}`,
+    serie: m.folioCode,
+    factura: m.folioNumber,
+    dueDate: m.dueDate ? m.dueDate.toISOString() : null,
+    reference: m.reference,
+    paymentMethodCode: m.paymentMethodCode,
+    debit: new Decimal(m.debit).toFixed(4),
+    credit: new Decimal(m.credit).toFixed(4),
+    runningBalance: new Decimal(m.runningBalance).toFixed(4),
+    status: m.status,
+  };
+}
+
 export class GetAccountStatementLedgerUseCase {
   constructor(private readonly repo: AccountStatementRepository) {}
 
@@ -112,24 +133,18 @@ export class GetAccountStatementLedgerUseCase {
     const movements: AccountStatementMovementDto[] = ordered.map((m) => {
       totalDebit = totalDebit.plus(m.debit);
       totalCredit = totalCredit.plus(m.credit);
-      return {
-        id: m.id,
-        date: m.date.toISOString(),
-        type: m.type,
-        folioCode: m.folioCode,
-        folioNumber: m.folioNumber,
-        folio: `${m.folioCode}-${m.folioNumber}`,
-        serie: m.folioCode,
-        factura: m.folioNumber,
-        dueDate: m.dueDate ? m.dueDate.toISOString() : null,
-        reference: m.reference,
-        paymentMethodCode: m.paymentMethodCode,
-        debit: new Decimal(m.debit).toFixed(4),
-        credit: new Decimal(m.credit).toFixed(4),
-        runningBalance: new Decimal(m.runningBalance).toFixed(4),
-        status: m.status,
-      };
+      return toMovementDto(m);
     });
+
+    const groups: AccountStatementLedgerGroupDto[] = groupLedgerBySale(visible, req.sort).map(
+      (g) => ({
+        sale: g.sale ? toMovementDto(g.sale) : null,
+        payments: g.payments.map(toMovementDto),
+        ticketBalance: new Decimal(g.sale?.debit ?? 0)
+          .minus(g.payments.reduce((sum, p) => sum.plus(p.credit), new Decimal(0)))
+          .toFixed(4),
+      })
+    );
 
     const creditLimit = data.customer.creditLimit;
     const availableCredit =
@@ -158,6 +173,7 @@ export class GetAccountStatementLedgerUseCase {
       openingBalance: new Decimal(openingBalance).toFixed(4),
       closingBalance: new Decimal(closingBalance).toFixed(4),
       movements,
+      groups,
       totals: {
         movementCount: movements.length,
         totalDebit: totalDebit.toFixed(4),

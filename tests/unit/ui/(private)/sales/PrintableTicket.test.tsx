@@ -113,6 +113,21 @@ describe("PrintableTicket", () => {
     expect(printStyle).toContain("margin: 0 auto 2.4px;");
   });
 
+  it("declares @page size matching the default 80mm paper width when ticketSettings is null", () => {
+    const { container } = render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    const printStyle = container.querySelector("style")?.textContent ?? "";
+    expect(printStyle).toContain("@page { size: 80mm 3276mm; margin: 0; }");
+  });
+
+  it("declares @page size matching the configured 58mm paper width", () => {
+    const settings: TicketSettingsDto = { ...defaultSettings, paperWidth: "58mm" };
+    const { container } = render(<PrintableTicket sale={sale} ticketSettings={settings} />);
+
+    const printStyle = container.querySelector("style")?.textContent ?? "";
+    expect(printStyle).toContain("@page { size: 58mm 3276mm; margin: 0; }");
+  });
+
   it("renders sale data correctly regardless of paperWidth", () => {
     const settings: TicketSettingsDto = { ...defaultSettings, paperWidth: "58mm" };
     render(<PrintableTicket sale={sale} ticketSettings={settings} />);

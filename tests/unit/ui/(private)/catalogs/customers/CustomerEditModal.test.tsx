@@ -36,6 +36,14 @@ const BASE_ENTITY: Customer = {
   currentBalance: 1000,
   creditDays: 30,
   isActive: true,
+  addressStreet: null,
+  addressExteriorNumber: null,
+  addressInteriorNumber: null,
+  addressNeighborhood: null,
+  addressMunicipality: null,
+  addressState: null,
+  addressCountry: null,
+  addressZipCode: null,
   createdAt: new Date("2026-05-25"),
   updatedAt: new Date("2026-05-25"),
 };
@@ -56,11 +64,12 @@ beforeEach(() => {
 });
 
 describe("CustomerEditModal — sections rendered", () => {
-  it("renders three section headings: Datos básicos, Datos fiscales, Contacto y crédito", () => {
+  it("renders four section headings: Datos básicos, Datos fiscales, Contacto y crédito, Domicilio estructurado", () => {
     render(<CustomerEditModal {...defaultProps} mode="create" entity={null} />);
     expect(screen.getByText(/datos básicos/i)).toBeInTheDocument();
     expect(screen.getByText(/datos fiscales/i)).toBeInTheDocument();
     expect(screen.getByText(/contacto y crédito/i)).toBeInTheDocument();
+    expect(screen.getByText(/domicilio estructurado/i)).toBeInTheDocument();
   });
 });
 
@@ -72,12 +81,12 @@ describe("CustomerEditModal — create mode", () => {
 
   it("code field is enabled in create mode", () => {
     render(<CustomerEditModal {...defaultProps} mode="create" entity={null} />);
-    expect(screen.getByLabelText(/código/i)).not.toBeDisabled();
+    expect(screen.getByLabelText(/^código \*/i)).not.toBeDisabled();
   });
 
   it("forces uppercase as user types code", async () => {
     render(<CustomerEditModal {...defaultProps} mode="create" entity={null} />);
-    const input = screen.getByLabelText(/código/i) as HTMLInputElement;
+    const input = screen.getByLabelText(/^código \*/i) as HTMLInputElement;
     await userEvent.setup().type(input, "cli_001");
     expect(input.value).toBe("CLI_001");
   });
@@ -86,7 +95,7 @@ describe("CustomerEditModal — create mode", () => {
     const onSave = jest.fn();
     render(<CustomerEditModal {...defaultProps} mode="create" entity={null} onSave={onSave} />);
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/código/i), "CLI_001");
+    await user.type(screen.getByLabelText(/^código \*/i), "CLI_001");
     await user.type(screen.getByLabelText(/^nombre/i), "Test");
     await user.type(screen.getByLabelText(/rfc/i), "ABC123");
     await user.click(screen.getByRole("button", { name: /guardar/i }));
@@ -98,7 +107,7 @@ describe("CustomerEditModal — create mode", () => {
     const onSave = jest.fn();
     render(<CustomerEditModal {...defaultProps} mode="create" entity={null} onSave={onSave} />);
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/código/i), "CLI_001");
+    await user.type(screen.getByLabelText(/^código \*/i), "CLI_001");
     await user.type(screen.getByLabelText(/^nombre/i), "Cliente ACME");
     await user.type(screen.getByLabelText(/rfc/i), "SAC120101A12");
     await user.click(screen.getByRole("button", { name: /guardar/i }));
@@ -117,12 +126,27 @@ describe("CustomerEditModal — create mode", () => {
     const onSave = jest.fn();
     render(<CustomerEditModal {...defaultProps} mode="create" entity={null} onSave={onSave} />);
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/código/i), "CLI_001");
+    await user.type(screen.getByLabelText(/^código \*/i), "CLI_001");
     await user.type(screen.getByLabelText(/^nombre/i), "Cliente ACME");
     await user.type(screen.getByLabelText(/rfc/i), "SAC120101A12");
     await user.type(screen.getByLabelText(/plazo de crédito/i), "45");
     await user.click(screen.getByRole("button", { name: /guardar/i }));
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ creditDays: 45 }));
+  });
+
+  it("submit with structured address fields includes them in the payload", async () => {
+    const onSave = jest.fn();
+    render(<CustomerEditModal {...defaultProps} mode="create" entity={null} onSave={onSave} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/^código \*/i), "CLI_001");
+    await user.type(screen.getByLabelText(/^nombre/i), "Cliente ACME");
+    await user.type(screen.getByLabelText(/rfc/i), "SAC120101A12");
+    await user.type(screen.getByLabelText(/calle/i), "Av. Reforma");
+    await user.type(screen.getByLabelText(/código postal$/i), "06000");
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ addressStreet: "Av. Reforma", addressZipCode: "06000" }),
+    );
   });
 
   it("codeError prop shows inline error under code field", () => {
@@ -162,7 +186,7 @@ describe("CustomerEditModal — create mode", () => {
     const onSave = jest.fn();
     render(<CustomerEditModal {...defaultProps} mode="create" entity={null} onSave={onSave} />);
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/código/i), "CLI_001");
+    await user.type(screen.getByLabelText(/^código \*/i), "CLI_001");
     await user.type(screen.getByLabelText(/^nombre/i), "Cliente ACME");
     await user.type(screen.getByLabelText(/rfc/i), "SAC120101A12");
     const regimeInput = screen.getByPlaceholderText("601");
@@ -181,7 +205,7 @@ describe("CustomerEditModal — edit mode", () => {
 
   it("code field is disabled in edit mode", () => {
     render(<CustomerEditModal {...defaultProps} mode="edit" entity={BASE_ENTITY} />);
-    expect(screen.getByLabelText(/código/i)).toBeDisabled();
+    expect(screen.getByLabelText(/^código \*/i)).toBeDisabled();
   });
 
   it("pre-fills creditLimit and creditDays with entity values", () => {
@@ -213,6 +237,36 @@ describe("CustomerEditModal — edit mode", () => {
     await user.clear(screen.getByLabelText(/límite de crédito/i));
     await user.click(screen.getByRole("button", { name: /guardar/i }));
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ creditLimit: null }));
+  });
+
+  it("pre-fills structured address fields from the entity", () => {
+    render(
+      <CustomerEditModal
+        {...defaultProps}
+        mode="edit"
+        entity={{ ...BASE_ENTITY, addressStreet: "Av. Reforma", addressZipCode: "06000" }}
+      />,
+    );
+    expect(screen.getByLabelText(/calle/i)).toHaveValue("Av. Reforma");
+    expect(screen.getByLabelText(/código postal$/i)).toHaveValue("06000");
+  });
+
+  it("changing only addressZipCode sends only that field in the diff", async () => {
+    const onSave = jest.fn();
+    render(
+      <CustomerEditModal
+        {...defaultProps}
+        mode="edit"
+        entity={{ ...BASE_ENTITY, addressZipCode: "06000" }}
+        onSave={onSave}
+      />,
+    );
+    const user = userEvent.setup();
+    const zipInput = screen.getByLabelText(/código postal$/i);
+    await user.clear(zipInput);
+    await user.type(zipInput, "06010");
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(onSave).toHaveBeenCalledWith({ addressZipCode: "06010" });
   });
 
   it("pre-fills taxRegime and cfdiUse from the entity", () => {

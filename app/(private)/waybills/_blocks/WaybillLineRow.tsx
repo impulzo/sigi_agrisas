@@ -9,6 +9,7 @@ interface WaybillLineRowProps {
   line: WaybillLineState;
   onUpdate: (patch: Partial<WaybillLineState>) => void;
   onRemove: () => void;
+  lockProductAndQuantity?: boolean;
 }
 
 function NumField({
@@ -37,7 +38,7 @@ function NumField({
   );
 }
 
-export function WaybillLineRow({ type, line, onUpdate, onRemove }: WaybillLineRowProps) {
+export function WaybillLineRow({ type, line, onUpdate, onRemove, lockProductAndQuantity }: WaybillLineRowProps) {
   const isSimple = type === "simple";
 
   return (
@@ -49,7 +50,7 @@ export function WaybillLineRow({ type, line, onUpdate, onRemove }: WaybillLineRo
             value={line.description}
             onChange={(e) => onUpdate({ description: e.target.value })}
             placeholder="Descripción *"
-            disabled={isSimple}
+            disabled={isSimple || lockProductAndQuantity}
             className="w-full rounded-sm border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary disabled:bg-surface-container-low disabled:text-on-surface-variant"
           />
           {line.error && <p className="text-label-sm text-error">{line.error}</p>}
@@ -78,7 +79,11 @@ export function WaybillLineRow({ type, line, onUpdate, onRemove }: WaybillLineRo
         </td>
       )}
       <td className="px-2 py-2 w-20">
-        <NumField value={line.quantity} onChange={(v) => onUpdate({ quantity: v })} min={0.001} step="0.001" placeholder="1" />
+        {lockProductAndQuantity ? (
+          <span className="text-body-sm text-on-surface tabular-nums">{line.quantity}</span>
+        ) : (
+          <NumField value={line.quantity} onChange={(v) => onUpdate({ quantity: v })} min={0.001} step="0.001" placeholder="1" />
+        )}
       </td>
       {!isSimple && (
         <td className="px-2 py-2 w-24">
@@ -107,14 +112,16 @@ export function WaybillLineRow({ type, line, onUpdate, onRemove }: WaybillLineRo
         </td>
       )}
       <td className="px-2 py-2">
-        <button
-          type="button"
-          onClick={onRemove}
-          title="Quitar línea"
-          className="text-error hover:text-error/70 text-label-sm transition-colors"
-        >
-          ×
-        </button>
+        {!lockProductAndQuantity && (
+          <button
+            type="button"
+            onClick={onRemove}
+            title="Quitar línea"
+            className="text-error hover:text-error/70 text-label-sm transition-colors"
+          >
+            ×
+          </button>
+        )}
       </td>
     </tr>
   );

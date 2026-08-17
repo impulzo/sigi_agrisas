@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { WaybillDetail, WaybillAddressDto } from "../_logic/types/domain";
 
 function fmtDate(d: Date) {
@@ -36,11 +37,23 @@ export function WaybillMetaPanel({ wb, branchNameById }: WaybillMetaPanelProps) 
         </div>
         <div>
           <p className="text-label-sm text-on-surface-variant">Destino</p>
-          <p className="text-body-sm text-on-surface font-medium">
-            {branchNameById[wb.destinationBranchId] ?? wb.destinationBranchId.slice(0, 8)}
-          </p>
+          {isCartaPorte ? (
+            <p className="text-body-sm text-on-surface font-medium">
+              {wb.destinationCustomerName ?? "Cliente"}
+              {wb.destinationCustomerCode ? ` (${wb.destinationCustomerCode})` : ""}
+            </p>
+          ) : (
+            <p className="text-body-sm text-on-surface font-medium">
+              {wb.destinationBranchId ? branchNameById[wb.destinationBranchId] ?? wb.destinationBranchId.slice(0, 8) : "—"}
+            </p>
+          )}
           {wb.destinationAddress && (
             <p className="text-label-sm text-on-surface-variant">{fmtAddress(wb.destinationAddress)}</p>
+          )}
+          {isCartaPorte && wb.saleId && (
+            <Link href={`/sales/${wb.saleId}`} className="text-label-sm text-primary underline">
+              Ver venta
+            </Link>
           )}
         </div>
 

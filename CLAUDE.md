@@ -163,6 +163,15 @@ npx prisma studio    # GUI de BD
 npx prisma generate  # Regenerar Prisma Client
 ```
 
+## Usuario de prueba (dev/QA)
+
+Para pruebas manuales locales (browser automation, QA exploratorio) usar:
+
+- Email: `admin@example.com`
+- Password: `admin1234`
+
+Nota: `CLAUDE.md` está versionado en git — este es un usuario admin sembrado solo para entornos locales de desarrollo, no una credencial de producción.
+
 ## Alias de rutas
 
 `@/*` → `src/*` (configurado en `tsconfig.json` y `jest.config.ts`).

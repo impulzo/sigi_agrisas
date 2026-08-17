@@ -80,3 +80,30 @@ export class WaybillStampForbiddenError extends Error {
 export class WaybillScopingForbiddenError extends Error {
   constructor() { super("Sin acceso a esa sucursal"); this.name = "WaybillScopingForbiddenError"; }
 }
+
+export class WaybillSaleNotFoundError extends Error {
+  constructor() { super("Venta no encontrada"); this.name = "WaybillSaleNotFoundError"; }
+}
+
+export class SaleNotCompletedError extends Error {
+  constructor() { super("Solo se puede generar Carta Porte de ventas completadas"); this.name = "SaleNotCompletedError"; }
+}
+
+export class SaleHasNoCustomerError extends Error {
+  constructor() { super("La venta no tiene cliente asociado"); this.name = "SaleHasNoCustomerError"; }
+}
+
+export class CustomerNotFoundForWaybillError extends Error {
+  constructor() { super("Cliente no encontrado"); this.name = "CustomerNotFoundForWaybillError"; }
+}
+
+export class CustomerAddressIncompleteError extends Error {
+  readonly customerId: string;
+  readonly missingFields: string[];
+  constructor(customerId: string, missingFields: string[]) {
+    super("El domicilio del cliente está incompleto");
+    this.name = "CustomerAddressIncompleteError";
+    this.customerId = customerId;
+    this.missingFields = missingFields;
+  }
+}

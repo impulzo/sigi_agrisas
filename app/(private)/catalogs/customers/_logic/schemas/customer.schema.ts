@@ -51,6 +51,17 @@ const optionalCreditDays = z
   .min(0, "El plazo de crédito no puede ser negativo.")
   .optional();
 
+const structuredAddressFields = {
+  addressStreet: z.string().max(150).nullable().optional(),
+  addressExteriorNumber: z.string().max(20).nullable().optional(),
+  addressInteriorNumber: z.string().max(20).nullable().optional(),
+  addressNeighborhood: z.string().max(100).nullable().optional(),
+  addressMunicipality: z.string().max(100).nullable().optional(),
+  addressState: z.string().regex(/^[A-Z]{2,3}$/, "Clave de estado inválida (2-3 letras mayúsculas)").nullable().optional(),
+  addressCountry: z.string().max(3).nullable().optional(),
+  addressZipCode: z.string().regex(/^\d{5}$/, "Código postal inválido (5 dígitos)").nullable().optional(),
+};
+
 export const createCustomerSchema = z.object({
   code: codeSchema,
   name: z.string().min(1, "El nombre es obligatorio.").max(120),
@@ -67,6 +78,7 @@ export const createCustomerSchema = z.object({
   creditLimit: optionalCreditLimit,
   creditDays: optionalCreditDays,
   isActive: z.boolean().optional(),
+  ...structuredAddressFields,
 });
 
 export const updateCustomerSchema = z
@@ -85,6 +97,7 @@ export const updateCustomerSchema = z
     creditLimit: optionalCreditLimit,
     creditDays: optionalCreditDays,
     isActive: z.boolean().optional(),
+    ...structuredAddressFields,
   })
   .refine(
     (d) =>
@@ -101,7 +114,15 @@ export const updateCustomerSchema = z
       d.notes !== undefined ||
       d.creditLimit !== undefined ||
       d.creditDays !== undefined ||
-      d.isActive !== undefined,
+      d.isActive !== undefined ||
+      d.addressStreet !== undefined ||
+      d.addressExteriorNumber !== undefined ||
+      d.addressInteriorNumber !== undefined ||
+      d.addressNeighborhood !== undefined ||
+      d.addressMunicipality !== undefined ||
+      d.addressState !== undefined ||
+      d.addressCountry !== undefined ||
+      d.addressZipCode !== undefined,
     { message: "Debes modificar al menos un campo." }
   );
 

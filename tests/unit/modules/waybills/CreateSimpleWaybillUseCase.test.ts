@@ -10,8 +10,10 @@ import {
 import {
   WaybillLookupService,
   BranchForWaybill,
+  CustomerForWaybill,
   ProductForWaybill,
   FolioForWaybill,
+  SaleForWaybill,
 } from "../../../../src/modules/waybills/application/ports/WaybillLookupService";
 import {
   InvalidBranchPairError,
@@ -19,7 +21,7 @@ import {
   ProductNotFoundForTransferError,
   InsufficientStockAtOriginError,
 } from "../../../../src/modules/waybills/domain/errors";
-import { CreateWaybillRequest, CreateSimpleWaybillItemRequest } from "../../../../src/modules/waybills/application/dto/WaybillDto";
+import { CreateSimpleWaybillRequest, CreateSimpleWaybillItemRequest } from "../../../../src/modules/waybills/application/dto/WaybillDto";
 
 const ORIGIN_ID = "11111111-1111-1111-1111-111111111111";
 const DEST_ID = "22222222-2222-2222-2222-222222222222";
@@ -57,6 +59,12 @@ class FakeLookupService implements WaybillLookupService {
   async findFolioByCode(_code: string): Promise<FolioForWaybill | null> {
     return this.folio;
   }
+  async findSale(_saleId: string): Promise<SaleForWaybill | null> {
+    return null;
+  }
+  async findCustomer(_customerId: string): Promise<CustomerForWaybill | null> {
+    return null;
+  }
 }
 
 class FakeGateway implements WaybillFacturamaGateway {
@@ -75,7 +83,7 @@ class FakeGateway implements WaybillFacturamaGateway {
 
 function baseRequest(
   items: CreateSimpleWaybillItemRequest[] = [{ productId: PRODUCT_ID, description: "Fertilizante", quantity: 10 }]
-): CreateWaybillRequest {
+): CreateSimpleWaybillRequest {
   return {
     type: "simple",
     originBranchId: ORIGIN_ID,

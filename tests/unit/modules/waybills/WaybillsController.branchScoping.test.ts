@@ -24,7 +24,14 @@ import {
   WaybillCancelResult,
   WaybillDownloadResult,
 } from "@/modules/waybills/application/ports/WaybillFacturamaGateway";
-import { WaybillLookupService, BranchForWaybill, ProductForWaybill, FolioForWaybill } from "@/modules/waybills/application/ports/WaybillLookupService";
+import {
+  WaybillLookupService,
+  BranchForWaybill,
+  CustomerForWaybill,
+  ProductForWaybill,
+  FolioForWaybill,
+  SaleForWaybill,
+} from "@/modules/waybills/application/ports/WaybillLookupService";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 
 const ORIGIN_BRANCH = "11111111-1111-1111-1111-111111111111";
@@ -64,7 +71,13 @@ class FakeLookupService implements WaybillLookupService {
     return this.products.get(productId) ?? null;
   }
   async findFolioByCode(): Promise<FolioForWaybill | null> {
-    return { id: "folio-ts", isActive: true };
+    return { id: "folio-tri", isActive: true };
+  }
+  async findSale(_saleId: string): Promise<SaleForWaybill | null> {
+    return null;
+  }
+  async findCustomer(_customerId: string): Promise<CustomerForWaybill | null> {
+    return null;
   }
 }
 
@@ -120,32 +133,15 @@ function req(method: string, url: string, body?: unknown, headers: Record<string
   });
 }
 
+// type='simple' — post-refactor, only this type still has a real destination branch
+// (carta_porte's destination is now a customer). This body exercises the same
+// origin/destination branch-scoping logic, on the type that still applies to.
 const createBody = {
-  type: "carta_porte",
+  type: "simple",
   originBranchId: ORIGIN_BRANCH,
   destinationBranchId: DEST_BRANCH,
-  vehicle: {
-    plate: "ABC1234",
-    config: "C2",
-    permitType: "TPAF01",
-    permitNumber: "SCT-123",
-    insuranceCompany: "Aseguradora SA",
-    insurancePolicy: "POL-1",
-  },
-  driver: { name: "Juan Perez", licenseNumber: "LIC-1" },
-  distanceKm: 50,
-  departureAt: "2026-08-01T08:00:00.000Z",
-  arrivalAt: "2026-08-01T12:00:00.000Z",
-  items: [
-    {
-      productId: PRODUCT_ID,
-      description: "Fertilizante",
-      satBienesTranspCode: "10161500",
-      satUnitCode: "KGM",
-      quantity: 10,
-      weightKg: 100,
-    },
-  ],
+  transferDate: "2026-08-01T08:00:00.000Z",
+  items: [{ productId: PRODUCT_ID, description: "Fertilizante", quantity: 10 }],
 };
 
 async function seedWaybill(controller: WaybillsController, repo: InMemoryWaybillRepository) {

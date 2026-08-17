@@ -24,13 +24,22 @@ import {
   WaybillCancelResult,
   WaybillDownloadResult,
 } from "@/modules/waybills/application/ports/WaybillFacturamaGateway";
-import { WaybillLookupService, BranchForWaybill, ProductForWaybill, FolioForWaybill } from "@/modules/waybills/application/ports/WaybillLookupService";
+import {
+  WaybillLookupService,
+  BranchForWaybill,
+  CustomerForWaybill,
+  ProductForWaybill,
+  FolioForWaybill,
+  SaleForWaybill,
+} from "@/modules/waybills/application/ports/WaybillLookupService";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 
 const ORIGIN_BRANCH = "11111111-1111-1111-1111-111111111111";
 const DEST_BRANCH = "22222222-2222-2222-2222-222222222222";
 const PRODUCT_ID = "33333333-3333-3333-3333-333333333333";
 const USER_ID = "00000000-0000-0000-0000-000000000001";
+const CUSTOMER_ID = "44444444-4444-4444-4444-444444444444";
+const SALE_ID = "55555555-5555-5555-5555-555555555555";
 
 function completeBranch(id: string): BranchForWaybill {
   return {
@@ -48,6 +57,23 @@ function completeBranch(id: string): BranchForWaybill {
   };
 }
 
+function completeCustomer(id: string): CustomerForWaybill {
+  return {
+    id,
+    name: "Cliente Uno",
+    code: "CUST01",
+    isActive: true,
+    addressStreet: "Calle 2",
+    addressExteriorNumber: "200",
+    addressInteriorNumber: null,
+    addressNeighborhood: "Centro",
+    addressMunicipality: "Hermosillo",
+    addressState: "SON",
+    addressCountry: "MEX",
+    addressZipCode: "83001",
+  };
+}
+
 class FakeLookupService implements WaybillLookupService {
   branches = new Map<string, BranchForWaybill>([
     [ORIGIN_BRANCH, completeBranch(ORIGIN_BRANCH)],
@@ -55,6 +81,19 @@ class FakeLookupService implements WaybillLookupService {
   ]);
   products = new Map<string, ProductForWaybill>([
     [PRODUCT_ID, { id: PRODUCT_ID, code: "FERT01", name: "Fertilizante", isActive: true }],
+  ]);
+  customers = new Map<string, CustomerForWaybill>([[CUSTOMER_ID, completeCustomer(CUSTOMER_ID)]]);
+  sales = new Map<string, SaleForWaybill>([
+    [
+      SALE_ID,
+      {
+        id: SALE_ID,
+        branchId: ORIGIN_BRANCH,
+        customerId: CUSTOMER_ID,
+        status: "completed",
+        items: [{ productId: PRODUCT_ID, quantity: 10, productNameSnapshot: "Fertilizante" }],
+      },
+    ],
   ]);
   async findBranch(branchId: string): Promise<BranchForWaybill | null> {
     return this.branches.get(branchId) ?? null;
@@ -64,6 +103,12 @@ class FakeLookupService implements WaybillLookupService {
   }
   async findFolioByCode(): Promise<FolioForWaybill | null> {
     return { id: "folio-1", isActive: true };
+  }
+  async findSale(saleId: string): Promise<SaleForWaybill | null> {
+    return this.sales.get(saleId) ?? null;
+  }
+  async findCustomer(customerId: string): Promise<CustomerForWaybill | null> {
+    return this.customers.get(customerId) ?? null;
   }
 }
 
@@ -113,8 +158,7 @@ function req(body: unknown): NextRequest {
 
 const cartaPorteBody = {
   type: "carta_porte",
-  originBranchId: ORIGIN_BRANCH,
-  destinationBranchId: DEST_BRANCH,
+  saleId: SALE_ID,
   vehicle: {
     plate: "ABC1234",
     config: "C2",

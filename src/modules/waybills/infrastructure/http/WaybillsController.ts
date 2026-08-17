@@ -18,6 +18,11 @@ import {
   ProductRequiredForSimpleTransferError,
   ProductNotFoundForTransferError,
   CanonicalFolioMissingError,
+  WaybillSaleNotFoundError,
+  SaleNotCompletedError,
+  SaleHasNoCustomerError,
+  CustomerNotFoundForWaybillError,
+  CustomerAddressIncompleteError,
 } from "../../domain/errors";
 import { WaybillStatus, isValidWaybillStatus } from "../../domain/value-objects/WaybillStatus";
 import { WaybillType, isValidWaybillType } from "../../domain/value-objects/WaybillType";
@@ -72,8 +77,7 @@ const createCartaPorteItemSchema = z
 
 const createCartaPorteWaybillSchema = z.object({
   type: z.literal("carta_porte"),
-  originBranchId: z.string().uuid(),
-  destinationBranchId: z.string().uuid(),
+  saleId: z.string().uuid(),
   vehicle: z.object({
     plate: z.string().min(1).max(20),
     config: z.string().min(1).max(10),
@@ -91,7 +95,7 @@ const createCartaPorteWaybillSchema = z.object({
   departureAt: z.string().refine((v) => !isNaN(Date.parse(v)), "departureAt must be a valid ISO 8601 date"),
   arrivalAt: z.string().refine((v) => !isNaN(Date.parse(v)), "arrivalAt must be a valid ISO 8601 date"),
   items: z.array(createCartaPorteItemSchema).min(1),
-});
+}).strict();
 
 export const createWaybillSchema = z
   .discriminatedUnion("type", [createSimpleWaybillSchema, createCartaPorteWaybillSchema])
@@ -109,10 +113,14 @@ const cancelSchema = z.object({
   reason: z.string().trim().min(3).max(500),
 });
 
+/**
+ * `destinationBranchId` is `null` for `type='carta_porte'` (destination is a customer,
+ * not a branch) — the scoping check then only compares against `originBranchId`.
+ */
 async function enforceEitherBranchScope(
   req: NextRequest,
   originBranchId: string,
-  destinationBranchId: string,
+  destinationBranchId: string | null,
   authz: AuthorizationService
 ): Promise<NextResponse | null> {
   const userId = req.headers.get("x-user-id") ?? "";
@@ -246,6 +254,24 @@ export class WaybillsController {
       }
       if (err instanceof CanonicalFolioMissingError) {
         return NextResponse.json({ error: "CanonicalFolioMissing", folioCode: err.folioCode }, { status: 500 });
+      }
+      if (err instanceof WaybillSaleNotFoundError) {
+        return NextResponse.json({ error: "SaleNotFound" }, { status: 404 });
+      }
+      if (err instanceof SaleNotCompletedError) {
+        return NextResponse.json({ error: "SaleNotCompleted" }, { status: 409 });
+      }
+      if (err instanceof SaleHasNoCustomerError) {
+        return NextResponse.json({ error: "SaleHasNoCustomer" }, { status: 409 });
+      }
+      if (err instanceof CustomerNotFoundForWaybillError) {
+        return NextResponse.json({ error: "CustomerNotFound" }, { status: 404 });
+      }
+      if (err instanceof CustomerAddressIncompleteError) {
+        return NextResponse.json(
+          { error: "CustomerAddressIncomplete", customerId: err.customerId, missingFields: err.missingFields },
+          { status: 400 }
+        );
       }
       throw err;
     }

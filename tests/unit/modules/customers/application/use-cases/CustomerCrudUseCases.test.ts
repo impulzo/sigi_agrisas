@@ -132,6 +132,69 @@ describe("Customers use cases", () => {
     expect(updated.creditDays).toBe(60);
   });
 
+  it("crea sin dirección estructurada y aplica default addressCountry=MEX", async () => {
+    const created = await new CreateCustomerUseCase(repo).execute({
+      code: "CLI_001",
+      name: "Acme",
+      rfc: "ACM010101AAA",
+    });
+    expect(created.addressStreet).toBeNull();
+    expect(created.addressZipCode).toBeNull();
+    expect(created.addressCountry).toBe("MEX");
+  });
+
+  it("crea con dirección estructurada completa y la persiste", async () => {
+    const created = await new CreateCustomerUseCase(repo).execute({
+      code: "CLI_001",
+      name: "Acme",
+      rfc: "ACM010101AAA",
+      addressStreet: "Av. Reforma",
+      addressExteriorNumber: "123",
+      addressInteriorNumber: "4B",
+      addressNeighborhood: "Centro",
+      addressMunicipality: "Cuauhtémoc",
+      addressState: "CMX",
+      addressCountry: "MEX",
+      addressZipCode: "06000",
+    });
+    expect(created.addressStreet).toBe("Av. Reforma");
+    expect(created.addressExteriorNumber).toBe("123");
+    expect(created.addressInteriorNumber).toBe("4B");
+    expect(created.addressNeighborhood).toBe("Centro");
+    expect(created.addressMunicipality).toBe("Cuauhtémoc");
+    expect(created.addressState).toBe("CMX");
+    expect(created.addressCountry).toBe("MEX");
+    expect(created.addressZipCode).toBe("06000");
+  });
+
+  it("update de un solo campo de dirección no toca los demás", async () => {
+    const created = await new CreateCustomerUseCase(repo).execute({
+      code: "CLI_001",
+      name: "Acme",
+      rfc: "ACM010101AAA",
+      addressStreet: "Av. Reforma",
+      addressZipCode: "06000",
+    });
+    const updated = await new UpdateCustomerUseCase(repo).execute(created.id, {
+      addressZipCode: "06010",
+    });
+    expect(updated.addressStreet).toBe("Av. Reforma");
+    expect(updated.addressZipCode).toBe("06010");
+  });
+
+  it("update con addressStreet nulo lo limpia", async () => {
+    const created = await new CreateCustomerUseCase(repo).execute({
+      code: "CLI_001",
+      name: "Acme",
+      rfc: "ACM010101AAA",
+      addressStreet: "Av. Reforma",
+    });
+    const updated = await new UpdateCustomerUseCase(repo).execute(created.id, {
+      addressStreet: null,
+    });
+    expect(updated.addressStreet).toBeNull();
+  });
+
   it("softDelete marca isActive=false", async () => {
     const created = await new CreateCustomerUseCase(repo).execute({
       code: "CLI_001",

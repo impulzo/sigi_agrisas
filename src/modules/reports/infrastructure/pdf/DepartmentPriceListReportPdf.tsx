@@ -5,52 +5,54 @@ import {
   DepartmentPriceListDepartmentDto,
   DepartmentProductDto,
 } from "../../application/dto/DepartmentPriceListResponseDto";
+import { priceColumnNames } from "../../domain/services/priceColumnNames";
 import { pdfStyles as s } from "./pdfStyles";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
 
-function PriceRows({ product }: { product: DepartmentProductDto }) {
+function ProductRow({ product, priceCols }: { product: DepartmentProductDto; priceCols: string[] }) {
   return (
-    <View style={s.section}>
-      <Text style={s.departmentTitle}>
-        {product.code} — {product.name} ({product.unitDescription ?? product.unit}) · Stock: {product.stockQuantity}
-      </Text>
-      {product.prices.length === 0 ? (
-        <View style={s.tableRow}>
-          <Text style={s.cellWide}>Sin listas de precio</Text>
-        </View>
-      ) : (
-        <>
-          <View style={s.tableHeader}>
-            <Text style={s.cellWide}>Lista</Text>
-            <Text style={s.cellNarrow}>Precio</Text>
-            <Text style={s.cellNarrow}>Cant. mín</Text>
-            <Text style={s.cellNarrow}>% Descto</Text>
-            <Text style={s.cellNarrow}>Default</Text>
-          </View>
-          {product.prices.map((p, i) => (
-            <View key={p.priceId} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
-              <Text style={s.cellWide}>{p.name}</Text>
-              <Text style={s.cellNarrow}>{p.price}</Text>
-              <Text style={s.cellNarrow}>{p.minQuantity}</Text>
-              <Text style={s.cellNarrow}>{p.discountPct ?? "—"}</Text>
-              <Text style={s.cellNarrow}>{p.isDefault ? "Sí" : "No"}</Text>
-            </View>
-          ))}
-        </>
-      )}
+    <View style={s.tableRow}>
+      <Text style={s.cell}>{product.code}</Text>
+      <Text style={s.cellWide}>{product.name}</Text>
+      <Text style={s.cellNarrow}>{product.unitDescription ?? product.unit}</Text>
+      <Text style={s.cellNarrow}>{product.stockQuantity}</Text>
+      {priceCols.map((name) => {
+        const price = product.prices.find((p) => p.name === name);
+        return (
+          <Text key={name} style={s.cell}>
+            {price ? price.price : "—"}
+          </Text>
+        );
+      })}
     </View>
   );
 }
 
 function DeptSection({ dept }: { dept: DepartmentPriceListDepartmentDto }) {
+  const priceCols = priceColumnNames([dept]);
   return (
     <View style={s.section}>
       <Text style={s.branchTitle}>
         {dept.departmentCode} — {dept.departmentName}
       </Text>
-      {dept.products.map((product) => (
-        <PriceRows key={product.productId} product={product} />
-      ))}
+      {dept.products.length === 0 ? (
+        <Text style={s.emptyMessage}>Sin productos</Text>
+      ) : (
+        <>
+          <View style={s.tableHeader}>
+            <Text style={s.cell}>Código</Text>
+            <Text style={s.cellWide}>Producto</Text>
+            <Text style={s.cellNarrow}>Unidad</Text>
+            <Text style={s.cellNarrow}>Stock</Text>
+            {priceCols.map((name) => (
+              <Text key={name} style={s.cell}>{name}</Text>
+            ))}
+          </View>
+          {dept.products.map((product) => (
+            <ProductRow key={product.productId} product={product} priceCols={priceCols} />
+          ))}
+        </>
+      )}
       <View style={s.subtotal}>
         <Text style={s.cellWide}>Subtotal depto.</Text>
         <Text style={s.cell}>{dept.subtotal.productCount} productos</Text>

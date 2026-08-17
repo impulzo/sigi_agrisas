@@ -405,25 +405,33 @@ model InventoryMovement {
 }
 
 model Customer {
-  id             String   @id @default(uuid())
-  code           String   @unique @db.VarChar(32)
-  name           String   @db.VarChar(120)
-  rfc            String   @unique @db.VarChar(13)
-  legalName      String?  @map("legal_name") @db.VarChar(200)
-  taxRegime      String?  @map("tax_regime") @db.VarChar(3)
-  cfdiUse        String?  @map("cfdi_use") @db.VarChar(4)
-  taxZipCode     String?  @map("tax_zip_code") @db.VarChar(5)
-  email          String?  @db.VarChar(120)
-  phone          String?  @db.VarChar(30)
-  address        String?  @db.VarChar(300)
-  contactName    String?  @map("contact_name") @db.VarChar(120)
-  notes          String?  @db.Text
-  creditLimit    Decimal? @map("credit_limit") @db.Decimal(12, 4)
-  currentBalance Decimal  @default(0) @map("current_balance") @db.Decimal(12, 4)
-  creditDays     Int      @default(30) @map("credit_days")
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default(uuid())
+  code                  String   @unique @db.VarChar(32)
+  name                  String   @db.VarChar(120)
+  rfc                   String   @unique @db.VarChar(13)
+  legalName             String?  @map("legal_name") @db.VarChar(200)
+  taxRegime             String?  @map("tax_regime") @db.VarChar(3)
+  cfdiUse               String?  @map("cfdi_use") @db.VarChar(4)
+  taxZipCode            String?  @map("tax_zip_code") @db.VarChar(5)
+  email                 String?  @db.VarChar(120)
+  phone                 String?  @db.VarChar(30)
+  address               String?  @db.VarChar(300)
+  contactName           String?  @map("contact_name") @db.VarChar(120)
+  notes                 String?  @db.Text
+  creditLimit           Decimal? @map("credit_limit") @db.Decimal(12, 4)
+  currentBalance        Decimal  @default(0) @map("current_balance") @db.Decimal(12, 4)
+  creditDays            Int      @default(30) @map("credit_days")
+  isActive              Boolean  @default(true) @map("is_active")
+  addressStreet         String?  @map("address_street") @db.VarChar(150)
+  addressExteriorNumber String?  @map("address_exterior_number") @db.VarChar(20)
+  addressInteriorNumber String?  @map("address_interior_number") @db.VarChar(20)
+  addressNeighborhood   String?  @map("address_neighborhood") @db.VarChar(100)
+  addressMunicipality   String?  @map("address_municipality") @db.VarChar(100)
+  addressState          String?  @map("address_state") @db.VarChar(3)
+  addressCountry        String?  @default("MEX") @map("address_country") @db.VarChar(3)
+  addressZipCode        String?  @map("address_zip_code") @db.VarChar(5)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   sales     Sale[]
   quotes    Quote[]
@@ -431,6 +439,7 @@ model Customer {
   payments  CustomerPayment[]
   invoices  Invoice[]
   movements InventoryMovement[]
+  waybills  Waybill[]
 
   @@index([code])
   @@index([rfc])
@@ -474,6 +483,7 @@ model Sale {
   returns             Return[]
   payments            CustomerPayment[]
   invoices            Invoice[]
+  waybills            Waybill[]
 
   @@unique([folioId, folioNumber])
   @@index([branchId])
@@ -770,15 +780,17 @@ model InvoiceItem {
 }
 
 model Waybill {
-  id                  String  @id @default(uuid())
-  folioId             String  @map("folio_id")
-  folioNumber         Int     @map("folio_number")
-  folioCode           String  @map("folio_code") @db.VarChar(40)
-  originBranchId      String  @map("origin_branch_id")
-  destinationBranchId String  @map("destination_branch_id")
-  type                String  @db.VarChar(20)
-  status              String  @db.VarChar(20)
-  notes               String? @db.VarChar(500)
+  id                    String  @id @default(uuid())
+  folioId               String  @map("folio_id")
+  folioNumber           Int     @map("folio_number")
+  folioCode             String  @map("folio_code") @db.VarChar(40)
+  originBranchId        String  @map("origin_branch_id")
+  destinationBranchId   String? @map("destination_branch_id")
+  destinationCustomerId String? @map("destination_customer_id")
+  saleId                String? @map("sale_id")
+  type                  String  @db.VarChar(20)
+  status                String  @db.VarChar(20)
+  notes                 String? @db.VarChar(500)
 
   originAddressStreet         String? @map("origin_address_street") @db.VarChar(150)
   originAddressExteriorNumber String? @map("origin_address_exterior_number") @db.VarChar(20)
@@ -826,14 +838,18 @@ model Waybill {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  folio       Folio         @relation(fields: [folioId], references: [id], onDelete: Restrict)
-  origin      Branch        @relation("WaybillOrigin", fields: [originBranchId], references: [id], onDelete: Restrict)
-  destination Branch        @relation("WaybillDestination", fields: [destinationBranchId], references: [id], onDelete: Restrict)
-  items       WaybillItem[]
+  folio               Folio         @relation(fields: [folioId], references: [id], onDelete: Restrict)
+  origin              Branch        @relation("WaybillOrigin", fields: [originBranchId], references: [id], onDelete: Restrict)
+  destination         Branch?       @relation("WaybillDestination", fields: [destinationBranchId], references: [id], onDelete: Restrict)
+  destinationCustomer Customer?     @relation(fields: [destinationCustomerId], references: [id], onDelete: Restrict)
+  sale                Sale?         @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  items               WaybillItem[]
 
   @@unique([folioId, folioNumber])
   @@index([originBranchId])
   @@index([destinationBranchId])
+  @@index([destinationCustomerId])
+  @@index([saleId])
   @@index([status])
   @@index([folioId])
   @@index([type])
@@ -877,40 +893,40 @@ model TicketSettings {
 }
 
 model PricingSettings {
-  id                        String   @id
-  dosificationSurchargePct  Decimal  @default(5.0) @map("dosification_surcharge_pct") @db.Decimal(5, 2)
-  createdAt                 DateTime @default(now()) @map("created_at")
-  updatedAt                 DateTime @updatedAt @map("updated_at")
+  id                       String   @id
+  dosificationSurchargePct Decimal  @default(5.0) @map("dosification_surcharge_pct") @db.Decimal(5, 2)
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
 
   @@map("pricing_settings")
 }
 
 model Purchase {
-  id                 String    @id @default(uuid())
-  providerId         String    @map("provider_id")
-  branchId           String    @map("branch_id")
-  folioId            String    @map("folio_id")
-  folioNumber        Int       @map("folio_number")
-  folioCode          String    @map("folio_code") @db.VarChar(40)
-  paymentMethodId    String    @map("payment_method_id")
-  creatorId          String    @map("creator_id") @db.Uuid
-  status             String    @default("completed") @db.VarChar(20)
-  subtotal           Decimal   @db.Decimal(14, 4)
-  taxTotal           Decimal   @map("tax_total") @db.Decimal(14, 4)
-  total              Decimal   @db.Decimal(14, 4)
-  paidAmount         Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 4)
-  paymentStatus      String    @default("paid") @map("payment_status") @db.VarChar(10)
-  notes              String?   @db.Text
-  purchasedAt        DateTime  @default(now()) @map("purchased_at")
-  satUuid            String?   @unique @map("sat_uuid") @db.VarChar(36)
-  supplierInvoiceNumber String? @map("supplier_invoice_number") @db.VarChar(60)
-  invoiceDate        DateTime? @map("invoice_date")
-  xmlFileName        String?   @map("xml_file_name") @db.VarChar(255)
-  cancelledAt        DateTime? @map("cancelled_at")
-  cancelledBy        String?   @map("cancelled_by") @db.Uuid
-  cancellationReason String?   @map("cancellation_reason") @db.Text
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  id                    String    @id @default(uuid())
+  providerId            String    @map("provider_id")
+  branchId              String    @map("branch_id")
+  folioId               String    @map("folio_id")
+  folioNumber           Int       @map("folio_number")
+  folioCode             String    @map("folio_code") @db.VarChar(40)
+  paymentMethodId       String    @map("payment_method_id")
+  creatorId             String    @map("creator_id") @db.Uuid
+  status                String    @default("completed") @db.VarChar(20)
+  subtotal              Decimal   @db.Decimal(14, 4)
+  taxTotal              Decimal   @map("tax_total") @db.Decimal(14, 4)
+  total                 Decimal   @db.Decimal(14, 4)
+  paidAmount            Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 4)
+  paymentStatus         String    @default("paid") @map("payment_status") @db.VarChar(10)
+  notes                 String?   @db.Text
+  purchasedAt           DateTime  @default(now()) @map("purchased_at")
+  satUuid               String?   @unique @map("sat_uuid") @db.VarChar(36)
+  supplierInvoiceNumber String?   @map("supplier_invoice_number") @db.VarChar(60)
+  invoiceDate           DateTime? @map("invoice_date")
+  xmlFileName           String?   @map("xml_file_name") @db.VarChar(255)
+  cancelledAt           DateTime? @map("cancelled_at")
+  cancelledBy           String?   @map("cancelled_by") @db.Uuid
+  cancellationReason    String?   @map("cancellation_reason") @db.Text
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   provider         Provider          @relation(fields: [providerId], references: [id], onDelete: Restrict)
   branch           Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
@@ -943,8 +959,8 @@ model PurchaseItem {
   lineTax             Decimal  @map("line_tax") @db.Decimal(14, 4)
   lineTotal           Decimal  @map("line_total") @db.Decimal(14, 4)
 
-  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  purchase      Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
   inventoryLots InventoryLot[]
 
   @@index([purchaseId])

@@ -14,7 +14,9 @@ import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
 
 type TxClient = Prisma.TransactionClient;
 
-type WaybillRow = Prisma.WaybillGetPayload<{ include: { items: true } }>;
+type WaybillRow = Prisma.WaybillGetPayload<{
+  include: { items: true; destinationCustomer: { select: { name: true; code: true } } };
+}>;
 
 function toNumber(v: Prisma.Decimal | number): number;
 function toNumber(v: Prisma.Decimal | number | null): number | null;
@@ -75,6 +77,10 @@ function mapWaybill(row: WaybillRow): Waybill {
     folioCode: row.folioCode,
     originBranchId: row.originBranchId,
     destinationBranchId: row.destinationBranchId,
+    destinationCustomerId: row.destinationCustomerId,
+    destinationCustomerName: row.destinationCustomer?.name ?? null,
+    destinationCustomerCode: row.destinationCustomer?.code ?? null,
+    saleId: row.saleId,
     type: row.type as WaybillType,
     status: row.status as WaybillStatus,
     notes: row.notes,
@@ -213,6 +219,7 @@ export class PrismaWaybillRepository implements WaybillRepository {
         skip,
         take: options.pageSize,
         orderBy: { createdAt: "desc" },
+        include: { destinationCustomer: { select: { name: true, code: true } } },
       }),
       this.prisma.waybill.count({ where }),
     ]);
@@ -223,6 +230,10 @@ export class PrismaWaybillRepository implements WaybillRepository {
         folioCode: row.folioCode,
         originBranchId: row.originBranchId,
         destinationBranchId: row.destinationBranchId,
+        destinationCustomerId: row.destinationCustomerId,
+        destinationCustomerName: row.destinationCustomer?.name ?? null,
+        destinationCustomerCode: row.destinationCustomer?.code ?? null,
+        saleId: row.saleId,
         type: row.type as WaybillType,
         status: row.status as WaybillStatus,
         departureAt: row.departureAt,
@@ -236,7 +247,7 @@ export class PrismaWaybillRepository implements WaybillRepository {
   async findById(id: string): Promise<Waybill | null> {
     const row = await this.prisma.waybill.findUnique({
       where: { id },
-      include: { items: true },
+      include: { items: true, destinationCustomer: { select: { name: true, code: true } } },
     });
     return row ? mapWaybill(row) : null;
   }
@@ -249,16 +260,21 @@ export class PrismaWaybillRepository implements WaybillRepository {
     const row = await this.prisma.$transaction(async (tx) => {
       const { folioNumber, folioCode } = await allocateFolio(tx, data.folioId);
 
-      await decrementOriginStrict(
-        tx,
-        data.originBranchId,
-        itemsWithProduct.map((i) => ({ productId: i.productId, quantity: i.quantity }))
-      );
-      await incrementTolerant(
-        tx,
-        data.destinationBranchId,
-        itemsWithProduct.map((i) => ({ productId: i.productId, quantity: i.quantity }))
-      );
+      // type='simple': moves branch_inventory (strict at origin, tolerant at destination).
+      // type='carta_porte': no inventory movement — the linked sale already decremented
+      // origin stock when it completed; the destination is a customer, not a branch.
+      if (data.type === "simple") {
+        await decrementOriginStrict(
+          tx,
+          data.originBranchId,
+          itemsWithProduct.map((i) => ({ productId: i.productId, quantity: i.quantity }))
+        );
+        await incrementTolerant(
+          tx,
+          data.destinationBranchId!,
+          itemsWithProduct.map((i) => ({ productId: i.productId, quantity: i.quantity }))
+        );
+      }
 
       const stampResult = stamp ? await stamp() : null;
 
@@ -275,6 +291,8 @@ export class PrismaWaybillRepository implements WaybillRepository {
           notes: data.notes,
           ...(data.type === "carta_porte"
             ? {
+                destinationCustomerId: data.destinationCustomerId,
+                saleId: data.saleId,
                 originAddressStreet: data.originAddress.street,
                 originAddressExteriorNumber: data.originAddress.exteriorNumber,
                 originAddressInteriorNumber: data.originAddress.interiorNumber,
@@ -325,7 +343,7 @@ export class PrismaWaybillRepository implements WaybillRepository {
             })),
           },
         },
-        include: { items: true },
+        include: { items: true, destinationCustomer: { select: { name: true, code: true } } },
       });
     });
 
@@ -348,16 +366,20 @@ export class PrismaWaybillRepository implements WaybillRepository {
     >;
 
     const row = await this.prisma.$transaction(async (tx) => {
-      await incrementOriginTolerant(
-        tx,
-        existing.originBranchId,
-        itemsWithProduct.map((i) => ({ productId: i.productId, quantity: toNumber(i.quantity) }))
-      );
-      await decrementTolerant(
-        tx,
-        existing.destinationBranchId,
-        itemsWithProduct.map((i) => ({ productId: i.productId, quantity: toNumber(i.quantity) }))
-      );
+      // type='simple': reverses the inventory movement. type='carta_porte': nothing to
+      // reverse — creation never moved inventory (see createCompleted).
+      if (existing.type === "simple") {
+        await incrementOriginTolerant(
+          tx,
+          existing.originBranchId,
+          itemsWithProduct.map((i) => ({ productId: i.productId, quantity: toNumber(i.quantity) }))
+        );
+        await decrementTolerant(
+          tx,
+          existing.destinationBranchId!,
+          itemsWithProduct.map((i) => ({ productId: i.productId, quantity: toNumber(i.quantity) }))
+        );
+      }
 
       if (cancelStamp) {
         await cancelStamp();
@@ -371,7 +393,7 @@ export class PrismaWaybillRepository implements WaybillRepository {
           cancelledBy,
           cancellationReason,
         },
-        include: { items: true },
+        include: { items: true, destinationCustomer: { select: { name: true, code: true } } },
       });
     });
 

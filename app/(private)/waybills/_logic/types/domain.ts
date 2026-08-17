@@ -7,7 +7,11 @@ export interface Waybill {
   id: string;
   folioCode: string;
   originBranchId: string;
-  destinationBranchId: string;
+  destinationBranchId: string | null;
+  destinationCustomerId: string | null;
+  destinationCustomerName?: string;
+  destinationCustomerCode?: string;
+  saleId: string | null;
   type: WaybillType;
   status: WaybillStatus;
   notes: string | null;
@@ -45,7 +49,11 @@ export interface WaybillSummary {
   id: string;
   folioCode: string;
   originBranchId: string;
-  destinationBranchId: string;
+  destinationBranchId: string | null;
+  destinationCustomerId: string | null;
+  destinationCustomerName?: string;
+  destinationCustomerCode?: string;
+  saleId: string | null;
   type: WaybillType;
   status: WaybillStatus;
   departureAt: Date;
