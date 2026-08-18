@@ -43,4 +43,5 @@ export const primaryItems: RailItem[] = [
 export const secondaryItems: RailItem[] = [
   { key: "support", href: "/support", icon: "contact_support", label: "Support" },
   { key: "account", href: "/account", icon: "account_circle", label: "Account" },
+  { key: "settings", href: "/settings", icon: "settings", label: "Configuración", requires: "settings:read" },
 ];

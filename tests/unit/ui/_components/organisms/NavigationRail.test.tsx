@@ -191,6 +191,50 @@ describe("NavigationRail — item Compras", () => {
   });
 });
 
+describe("NavigationRail — item Configuración (secondaryItems)", () => {
+  it("usuario con settings:read ve el item Configuración", () => {
+    renderRail("/dashboard", ["settings:read"]);
+    expect(screen.getByRole("link", { name: /Configuración/ })).toBeInTheDocument();
+  });
+
+  it("usuario sin settings:read NO ve el item Configuración", () => {
+    renderRail("/dashboard", ["sales:read"]);
+    expect(screen.queryByRole("link", { name: /Configuración/ })).not.toBeInTheDocument();
+  });
+
+  it('muestra Configuración optimistamente cuando can() devuelve "loading"', () => {
+    (usePathname as jest.Mock).mockReturnValue("/dashboard");
+    mockUseCurrentUser.mockReturnValue({
+      userId: "u1",
+      email: "test@test.com",
+      roles: [],
+      branchId: null,
+      isLoading: true,
+      can: () => "loading",
+      refresh: jest.fn(),
+    });
+    render(<NavigationRail />);
+    expect(screen.getByRole("link", { name: /Configuración/ })).toBeInTheDocument();
+  });
+
+  it("Configuración apunta a /settings", () => {
+    renderRail("/dashboard", ["settings:read"]);
+    expect(screen.getByRole("link", { name: /Configuración/ })).toHaveAttribute("href", "/settings");
+  });
+
+  it("Configuración activo cuando pathname empieza con /settings", () => {
+    renderRail("/settings", ["settings:read"]);
+    const link = screen.getByRole("link", { name: /Configuración/ });
+    expect(link.className).toContain("bg-primary-container");
+  });
+
+  it("Support y Account siguen visibles sin depender de can() (regresión del filtro nuevo)", () => {
+    renderRail("/dashboard", []);
+    expect(screen.getByRole("link", { name: /Support/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Account/ })).toBeInTheDocument();
+  });
+});
+
 describe("NavigationRail — scroll structure", () => {
   it("nav scrolleable tiene overflow-y-auto y scrollbar-thin", () => {
     renderRail("/dashboard", []);
