@@ -8,6 +8,23 @@ function fmtDate(d: Date) {
   return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" }).format(d);
 }
 
+// Constantes de altura estimada por sección del ticket (mm), a 10px monospace en ancho térmico.
+const BASE_HEIGHT_MM = 120; // logo + header de negocio + meta + totales + footer + leyenda + barcode
+const CUSTOMER_SECTION_HEIGHT_MM = 30;
+const CREDIT_LINE_HEIGHT_MM = 8;
+const PER_ITEM_HEIGHT_MM = 12;
+const SAFETY_MARGIN_MM = 20;
+
+function computeTicketPageHeightMm(sale: SaleDetail): number {
+  return (
+    BASE_HEIGHT_MM +
+    (sale.customerId ? CUSTOMER_SECTION_HEIGHT_MM : 0) +
+    (sale.customerCreditDays != null ? CREDIT_LINE_HEIGHT_MM : 0) +
+    sale.items.length * PER_ITEM_HEIGHT_MM +
+    SAFETY_MARGIN_MM
+  );
+}
+
 interface PrintableTicketProps {
   sale: SaleDetail;
   ticketSettings: TicketSettingsDto | null;
@@ -15,6 +32,7 @@ interface PrintableTicketProps {
 
 export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) {
   const paperWidth = ticketSettings?.paperWidth ?? "80mm";
+  const pageHeightMm = computeTicketPageHeightMm(sale);
   const folioLabel = sale.folioCode;
   const ivaTotal = sale.items.reduce((sum, item) => sum + item.lineIva, 0);
   const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
@@ -29,7 +47,7 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
   return (
     <div className="printable-ticket print-area hidden print:block">
       <style>{`
-        @page { size: ${paperWidth} 3276mm; margin: 0; }
+        @page { size: ${paperWidth} ${pageHeightMm}mm; margin: 0; }
         @media print {
           .printable-ticket { width: ${paperWidth}; font-family: monospace; font-size: 10px; }
           .printable-ticket img { width: 105px; height: 147px; object-fit: contain; display: block; margin: 0 auto 2.4px; }
