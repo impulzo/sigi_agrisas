@@ -38,6 +38,8 @@ export interface WaybillDto {
   notes: string | null;
   originAddress: WaybillAddressDto | null;
   destinationAddress: WaybillAddressDto | null;
+  vehicleId: string | null;
+  driverId: string | null;
   vehiclePlate: string | null;
   vehicleConfig: string | null;
   vehiclePermitType: string | null;
@@ -111,6 +113,7 @@ export interface CreateCartaPorteWaybillRequest {
   type: "carta_porte";
   saleId: string;
   vehicle: {
+    vehicleId?: string | null;
     plate: string;
     config: string;
     permitType: string;
@@ -119,6 +122,7 @@ export interface CreateCartaPorteWaybillRequest {
     insurancePolicy: string;
   };
   driver: {
+    driverId?: string | null;
     name: string;
     rfc?: string | null;
     licenseNumber: string;

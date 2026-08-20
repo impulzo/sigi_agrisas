@@ -17,6 +17,8 @@ export interface Waybill {
   notes: string | null;
   originAddress: WaybillAddressDto | null;
   destinationAddress: WaybillAddressDto | null;
+  vehicleId: string | null;
+  driverId: string | null;
   vehiclePlate: string | null;
   vehicleConfig: string | null;
   vehiclePermitType: string | null;
@@ -72,6 +74,7 @@ export interface WaybillFilters {
 }
 
 export interface VehicleInput {
+  vehicleId?: string | null;
   plate: string;
   config: string;
   permitType: string;
@@ -81,6 +84,7 @@ export interface VehicleInput {
 }
 
 export interface DriverInput {
+  driverId?: string | null;
   name: string;
   rfc: string;
   licenseNumber: string;

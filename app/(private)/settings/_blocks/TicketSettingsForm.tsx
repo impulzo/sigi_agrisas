@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ImageUploadField } from "../../../_components/molecules/ImageUploadField/ImageUploadField";
+import { SatCatalogCombobox } from "../../../_components/molecules/SatCatalogCombobox/SatCatalogCombobox";
 import { uploadTicketLogo } from "../_logic/services/uploadTicketLogo";
 import { deleteTicketLogo } from "../_logic/services/deleteTicketLogo";
 import { useTicketSettingsMutations } from "../_logic/hooks/useTicketSettingsMutations";
@@ -134,13 +135,15 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
           <label htmlFor="business-tax-regime" className="block text-label-md text-on-surface mb-1">
             Régimen Fiscal
           </label>
-          <input
+          <SatCatalogCombobox
+            catalog="regimen-fiscal"
             id="business-tax-regime"
-            type="text"
             value={businessTaxRegime}
-            onChange={(e) => setBusinessTaxRegime(e.target.value.slice(0, 120))}
+            onChange={(code, description) =>
+              setBusinessTaxRegime(description ? `${code} — ${description}`.slice(0, 120) : code.slice(0, 120))
+            }
             disabled={!canWrite}
-            placeholder="612 Personas Físicas con Actividad Empresarial"
+            placeholder="612 — Personas Físicas con Actividad Empresarial"
             className={inputCls}
           />
         </div>

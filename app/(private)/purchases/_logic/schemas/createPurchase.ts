@@ -8,6 +8,7 @@ export const purchaseItemSchema = z
     discountPct: z.number().min(0).max(100).nullable().optional(),
     lotNumber: z.string().trim().min(1).max(64).nullable().optional(),
     expirationDate: z.string().nullable().optional(),
+    manufactureDate: z.string().nullable().optional(),
   })
   .refine((item) => Boolean(item.lotNumber) === Boolean(item.expirationDate), {
     message: "El lote y la fecha de caducidad deben capturarse juntos",

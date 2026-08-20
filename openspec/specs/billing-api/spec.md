@@ -179,22 +179,38 @@ Returns HTTP 200 `{"sentTo": "<resolved-email>"}` on success.
 ---
 
 ### Requirement: Manage CSD (Certificado de Sello Digital)
-The system SHALL expose `POST /api/v1/admin/billing/csd` to upload or replace a CSD for an emitter RFC via Facturama, and `GET /api/v1/admin/billing/csd` to read its status. Requires `billing:manage_csd` (admin only). POST body: `{ rfc: string, certificateBase64: string, privateKeyBase64: string, privateKeyPassword: string }`. The CSD material is forwarded to Facturama and **never persisted in the local database**; secrets are redacted from logs. Returns HTTP 200 on success.
+The system SHALL expose `POST /api/v1/admin/billing/csd` to upload or replace a CSD for an emitter RFC via Facturama, and `GET /api/v1/admin/billing/csd` to read its status. Requires `billing:manage_csd` (admin only). POST body: `{ rfc: string, certificateBase64: string, privateKeyBase64: string, privateKeyPassword: string, legalName?: string (max 200), fiscalRegime?: string (regex ^\d{3}$, SAT c_RegimenFiscal key), zipCode?: string (regex ^\d{5}$) }`. The CSD cryptographic material (`certificateBase64`, `privateKeyBase64`, `privateKeyPassword`) is forwarded to Facturama and **never persisted in the local database**; secrets are redacted from logs. `rfc`/`legalName`/`fiscalRegime`/`zipCode` are NOT secrets and, on a successful CSD upload, ARE persisted to `EmitterFiscalSettings` (a singleton row) so `FacturamaRestGateway` (both `billing` and `waybills` modules) can resolve the CFDI `Emisor` node from the database instead of environment variables. Persistence happens ONLY after Facturama accepts the CSD (`gateway.uploadCsd` resolves) — if Facturama rejects it, neither the CSD nor the fiscal fields are persisted. Persistence is a partial upsert: omitted optional fields (`legalName`/`fiscalRegime`/`zipCode`) leave the previously stored values unchanged (same semantics as `PATCH /settings/ticket`), while a resend of `rfc` always updates it. Returns HTTP 200 on success.
 
-#### Scenario: Upload CSD
-- **WHEN** an admin posts a valid `.cer`/`.key` pair (base64) with the private key password
-- **THEN** the system forwards them to Facturama and returns HTTP 200 with the CSD status
+`GET /api/v1/admin/billing/csd` SHALL return the merge of Facturama's live CSD status (expiration, validity) and the currently persisted `legalName`/`fiscalRegime`/`zipCode` (all `null` if never captured), so the CSD manager UI can pre-fill the form.
 
-#### Scenario: Get CSD status
+#### Scenario: Upload CSD persists fiscal data on success
+- **WHEN** an admin posts a valid `.cer`/`.key` pair (base64) with the private key password, RFC, legal name, fiscal regime, and zip code
+- **THEN** the system forwards the CSD material to Facturama, and — only after Facturama accepts it — persists `rfc`/`legalName`/`fiscalRegime`/`zipCode` to `EmitterFiscalSettings`, returning HTTP 200 with the CSD status
+
+#### Scenario: Facturama rejects the CSD — nothing persisted
+- **WHEN** Facturama rejects the uploaded CSD (invalid certificate/password)
+- **THEN** the system returns the existing error response and does NOT write to `EmitterFiscalSettings`, leaving any previously persisted fiscal data unchanged
+
+#### Scenario: Re-upload without fiscal fields preserves previous values
+- **WHEN** an admin re-uploads the CSD (e.g., renewal) sending only `rfc`/`certificateBase64`/`privateKeyBase64`/`privateKeyPassword`, omitting `legalName`/`fiscalRegime`/`zipCode`
+- **THEN** the system updates the CSD and `rfc`, but leaves the previously persisted `legalName`/`fiscalRegime`/`zipCode` unchanged
+
+#### Scenario: Invalid fiscal regime or zip code format rejected
+- **WHEN** the request body includes `fiscalRegime` or `zipCode` not matching their required format
+- **THEN** the system returns HTTP 400 before calling Facturama or touching the database
+
+#### Scenario: Get CSD status includes persisted fiscal data
 - **WHEN** an admin calls `GET /api/v1/admin/billing/csd`
-- **THEN** the system returns HTTP 200 with the emitter's CSD status (e.g., expiration, RFC)
+- **THEN** the system returns HTTP 200 with the emitter's CSD status (e.g., expiration, RFC) merged with the currently persisted `legalName`/`fiscalRegime`/`zipCode` (`null` for any field never captured)
 
 #### Scenario: Non-admin forbidden
 - **WHEN** a user without `billing:manage_csd` calls either endpoint
 - **THEN** the system returns HTTP 403 `{"error":"Forbidden","required":"billing:manage_csd"}`
 
 ### Requirement: Facturama gateway abstraction with mock mode
-The system SHALL define a `FacturamaGateway` port with operations `stamp`, `cancel`, `download`, `uploadCsd`, `getCsdStatus`. The REST implementation `FacturamaRestGateway` SHALL authenticate with HTTP Basic Auth built from `FACTURAMA_USER`/`FACTURAMA_PASSWORD`, target `FACTURAMA_BASE_URL` (sandbox default), accept an injectable `fetchImpl` for tests, and normalize Facturama HTTP errors to typed domain errors. When `FACTURAMA_MOCK=true` (default) the DI container SHALL use `FakeFacturamaGateway`, which returns deterministic fake `uuid`/`facturamaCfdiId` and placeholder PDF/XML without network calls. `FacturamaRestGateway` SHALL fail fast at construction only when `FACTURAMA_MOCK=false` and credentials are missing.
+The system SHALL define a `FacturamaGateway` port with operations `stamp`, `cancel`, `download`, `uploadCsd`, `getCsdStatus`. The REST implementation `FacturamaRestGateway` SHALL authenticate with HTTP Basic Auth built from `FACTURAMA_USER`/`FACTURAMA_PASSWORD`, target `FACTURAMA_BASE_URL` (sandbox default), accept an injectable `fetchImpl` for tests, and normalize Facturama HTTP errors to typed domain errors. When `FACTURAMA_MOCK=true` (default) the DI container SHALL use `FakeFacturamaGateway`, which returns deterministic fake `uuid`/`facturamaCfdiId` and, for `download`, a realistic-looking CFDI document rendered from the same data passed to `stamp()` (see below) instead of a network call. `FacturamaRestGateway` SHALL fail fast at construction only when `FACTURAMA_MOCK=false` and credentials are missing.
+
+`FakeFacturamaGateway.stamp(input)` SHALL retain the received `input` (issuer/receiver/lines data) in an in-memory map keyed by the generated `cfdiId`, for the lifetime of the process. `FakeFacturamaGateway.download(format, cfdiId)` SHALL render that retained input through `InvoiceDocumentPdf` (for `format="pdf"`) — producing a document with issuer, receiver, a concepts table, tax breakdown, and totals, prominently watermarked "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL" — or an XML reflecting the same issuer/receiver/concepts data (for `format="xml"`), instead of the fixed placeholder strings used before this change. If `cfdiId` is not found in the map (e.g. process restarted between `stamp` and `download`), the system SHALL fall back to a minimal but still realistically laid-out placeholder document (not the prior single-line stub), still carrying the same watermark.
 
 #### Scenario: Mock mode by default
 - **WHEN** `FACTURAMA_MOCK` is unset or `true`
@@ -207,6 +223,26 @@ The system SHALL define a `FacturamaGateway` port with operations `stamp`, `canc
 #### Scenario: Basic Auth header
 - **WHEN** the REST gateway makes a request
 - **THEN** it sends `Authorization: Basic base64("<user>:<password>")`
+
+#### Scenario: Mock PDF renders the stamped data
+- **WHEN** `stamp()` is called with a given issuer/receiver/lines, then `download("pdf", cfdiId)` is called for that same `cfdiId`
+- **THEN** the returned PDF's visible content includes that receiver's name/RFC and the line items' descriptions — not a generic single sentence
+
+#### Scenario: Mock PDF clearly marked as non-fiscal
+- **WHEN** `download("pdf", cfdiId)` returns a mock document (whether from retained input or the fallback)
+- **THEN** the document prominently displays "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL"
+
+#### Scenario: Mock XML reflects issuer/receiver/concepts
+- **WHEN** `download("xml", cfdiId)` is called for a `cfdiId` with retained input
+- **THEN** the returned XML includes the receiver's RFC and at least one concept node derived from the stamped lines, not only the minimal `<cfdi:Comprobante Version="4.0" NoCertificado="FAKE"/>` stub
+
+#### Scenario: Unknown cfdiId still returns a realistic-looking fallback
+- **WHEN** `download(format, cfdiId)` is called for a `cfdiId` with no retained input
+- **THEN** the system returns a placeholder document that still follows the full CFDI layout and watermark, not the prior minimal stub
+
+#### Scenario: Real mode unaffected
+- **WHEN** `FACTURAMA_MOCK=false`
+- **THEN** `FacturamaRestGateway.download` behaves exactly as before this change, returning Facturama's actual file unmodified
 
 ### Requirement: Persist invoice with fiscal snapshot
 The system SHALL persist `invoices` and `invoice_items` such that each invoice retains a snapshot of receiver fiscal data (`receiverRfc`, `receiverName`, `receiverCfdiUse`, `receiverFiscalRegime`, `receiverTaxZipCode`), monetary totals (`subtotal`, `taxTotal`, `total` as `Decimal(14,4)`), and per-line snapshots (`productCodeSnapshot`, `productNameSnapshot`, `satProductCode`, `satUnitCode`, `unit`, `quantity`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`, `taxObject`, line totals). `saleId` is nullable with `ON DELETE SET NULL`. Snapshots SHALL survive subsequent changes or deletion of the source sale, customer or products.
@@ -229,4 +265,23 @@ The system SHALL register permissions `billing:read`, `billing:write`, `billing:
 #### Scenario: Viewer read-only
 - **WHEN** a `viewer` calls `POST /api/v1/admin/invoices`
 - **THEN** the system returns HTTP 403
+
+### Requirement: Invoice preview PDF endpoint
+The system SHALL expose `POST /api/v1/admin/invoices/preview/pdf`. Requires `billing:write`. The request body SHALL be the client-resolved preview data (mirroring `InvoicePreviewData`): `{ issuer: { name, branchName? }, receiver: { rfc, name, cfdiUse, fiscalRegime, taxZipCode }, lines: Array<{ description, productCode, satProductCode?, quantity, unitPrice, discountPct, ivaRate, iepsRate, lineSubtotal, lineTotal }>, paymentForm, paymentMethod, subtotal, taxTotal, total, currency }`. Zod SHALL validate the body's shape (types, required fields) but the system SHALL NOT re-derive totals from a `saleId`, re-validate business rules already enforced client-side (receiver fiscal completeness, price ≥ 0), or persist anything — it renders `InvoiceDocumentPdf` with the data as received and returns it watermarked "BORRADOR — no válido fiscalmente" and folio placeholder "PENDIENTE DE TIMBRAR". No Facturama call occurs. Returns HTTP 200 with `Content-Type: application/pdf` and `Content-Disposition: attachment; filename="factura-borrador.pdf"`.
+
+#### Scenario: Preview PDF generated from client-resolved data
+- **WHEN** an authenticated user with `billing:write` posts a well-formed preview payload
+- **THEN** the system returns HTTP 200 with `Content-Type: application/pdf`, the PDF shows the exact receiver/lines/totals from the body, the "BORRADOR — no válido fiscalmente" watermark, and "PENDIENTE DE TIMBRAR" as the folio
+
+#### Scenario: No persistence or Facturama call
+- **WHEN** the preview PDF endpoint is called
+- **THEN** no `Invoice` row is created or modified, and no request reaches `FacturamaGateway`
+
+#### Scenario: Malformed body rejected
+- **WHEN** the body is missing `receiver` or `lines`
+- **THEN** the system returns HTTP 400 with a validation error
+
+#### Scenario: Forbidden without billing:write
+- **WHEN** an authenticated user without `billing:write` calls the endpoint
+- **THEN** the system returns HTTP 403 `{"error":"Forbidden","required":"billing:write"}`
 

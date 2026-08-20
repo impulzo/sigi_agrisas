@@ -1,5 +1,6 @@
 import { GetPurchasesReportUseCase } from "@/modules/reports/application/use-cases/GetPurchasesReportUseCase";
 import { InMemoryPurchaseRepository } from "@/modules/purchases/infrastructure/repositories/InMemoryPurchaseRepository";
+import { formatMoney as money } from "@/shared/domain/services/formatMoney";
 
 const GEN = { userId: "u1", email: "op@test.com" };
 const PROVIDER_ID = "prov-1";
@@ -65,5 +66,59 @@ describe("GetPurchasesReportUseCase", () => {
     const { dto } = await new GetPurchasesReportUseCase(repo).execute(req({ providerId: "otro" }));
     expect(dto.rows).toHaveLength(0);
     expect(dto.totals.count).toBe(0);
+  });
+
+  it("compra de contado → balance 0.0000 (paidAmount === total)", async () => {
+    const repo = makeRepo();
+    await seedPurchase(repo);
+
+    const { dto } = await new GetPurchasesReportUseCase(repo).execute(req());
+
+    expect(dto.rows[0].paymentStatus).toBe("paid");
+    expect(dto.rows[0].balance).toBe("0.0000");
+  });
+
+  it("compra a crédito sin abonar → balance === total", async () => {
+    const repo = makeRepo();
+    repo.seedPaymentMethod({ id: "pm-credit", code: "CR", isCredit: true, isActive: true });
+    await repo.createCompleted({
+      providerId: PROVIDER_ID,
+      branchId: BRANCH_ID,
+      paymentMethodId: "pm-credit",
+      creatorId: "user-1",
+      notes: null,
+      items: [{ productId: PRODUCT_ID, quantity: 10, unitCost: 100, discountPct: null }],
+      purchasedAt: new Date("2026-06-10T00:00:00.000Z"),
+    });
+
+    const { dto } = await new GetPurchasesReportUseCase(repo).execute(req());
+
+    expect(dto.rows[0].paymentStatus).toBe("pending");
+    expect(dto.rows[0].total).toBe(dto.rows[0].balance);
+  });
+
+  it("compra parcialmente abonada → balance = total - paidAmount", async () => {
+    const repo = makeRepo();
+    repo.seedPaymentMethod({ id: "pm-credit", code: "CR", isCredit: true, isActive: true });
+    const created = await repo.createCompleted({
+      providerId: PROVIDER_ID,
+      branchId: BRANCH_ID,
+      paymentMethodId: "pm-credit",
+      creatorId: "user-1",
+      notes: null,
+      items: [{ productId: PRODUCT_ID, quantity: 10, unitCost: 100, discountPct: null }],
+      purchasedAt: new Date("2026-06-10T00:00:00.000Z"),
+    });
+    // Simula un abono parcial ya registrado sobre la compra (fuera del alcance de este use case).
+    const store = (repo as unknown as { purchases: Map<string, { paidAmount: number; paymentStatus: string }> }).purchases;
+    const stored = store.get(created.purchase.id)!;
+    stored.paidAmount = 400;
+    stored.paymentStatus = "partial";
+
+    const { dto } = await new GetPurchasesReportUseCase(repo).execute(req());
+
+    expect(dto.rows[0].paymentStatus).toBe("partial");
+    expect(dto.rows[0].paidAmount).toBe("400.0000");
+    expect(dto.rows[0].balance).toBe(money(Number(dto.rows[0].total) - 400));
   });
 });

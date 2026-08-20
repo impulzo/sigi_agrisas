@@ -97,6 +97,14 @@ export class CustomerNotFoundForWaybillError extends Error {
   constructor() { super("Cliente no encontrado"); this.name = "CustomerNotFoundForWaybillError"; }
 }
 
+export class VehicleNotFoundError extends Error {
+  constructor() { super("El vehículo seleccionado no existe o fue eliminado"); this.name = "VehicleNotFoundError"; }
+}
+
+export class DriverNotFoundError extends Error {
+  constructor() { super("El operador seleccionado no existe o fue eliminado"); this.name = "DriverNotFoundError"; }
+}
+
 export class CustomerAddressIncompleteError extends Error {
   readonly customerId: string;
   readonly missingFields: string[];

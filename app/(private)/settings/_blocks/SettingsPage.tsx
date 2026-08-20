@@ -3,8 +3,10 @@
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useTicketSettings } from "../_logic/hooks/useTicketSettings";
 import { usePricingSettings } from "../_logic/hooks/usePricingSettings";
+import { useInventoryNotificationSettings } from "../_logic/hooks/useInventoryNotificationSettings";
 import { TicketSettingsForm } from "./TicketSettingsForm";
 import { PricingSettingsForm } from "./PricingSettingsForm";
+import { InventoryNotificationSettingsForm } from "./InventoryNotificationSettingsForm";
 import { PageShell } from "../../../_components/organisms/PageShell";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { PageLoading } from "../../../_components/molecules/PageLoading/PageLoading";
@@ -17,6 +19,12 @@ export function SettingsPage() {
 
   const { settings, isLoading, error, refresh } = useTicketSettings();
   const { settings: pricingSettings, isLoading: isPricingLoading, error: pricingError, refresh: refreshPricing } = usePricingSettings();
+  const {
+    settings: inventoryNotificationSettings,
+    isLoading: isInventoryNotificationLoading,
+    error: inventoryNotificationError,
+    refresh: refreshInventoryNotification,
+  } = useInventoryNotificationSettings();
 
   if (canRead === "loading") {
     return <PageLoading />;
@@ -60,6 +68,24 @@ export function SettingsPage() {
             settings={pricingSettings}
             canWrite={canWrite === true}
             onChange={() => refreshPricing()}
+          />
+        )}
+      </section>
+
+      <section className="space-y-6">
+        <h2 className="text-title-md font-semibold text-on-surface">Notificaciones de inventario</h2>
+
+        {isInventoryNotificationLoading && <div className="flex h-32 items-center justify-center"><Spinner size="lg" /></div>}
+
+        {inventoryNotificationError && !isInventoryNotificationLoading && (
+          <EmptyState icon="warning" title="Error al cargar la configuración" description={inventoryNotificationError.message} />
+        )}
+
+        {inventoryNotificationSettings && !isInventoryNotificationLoading && (
+          <InventoryNotificationSettingsForm
+            settings={inventoryNotificationSettings}
+            canWrite={canWrite === true}
+            onChange={() => refreshInventoryNotification()}
           />
         )}
       </section>

@@ -5,9 +5,7 @@
 Expone endpoints de reportes de solo lectura sobre compras y pagos a proveedores, con filtros, branch scoping y export a PDF/Excel, sin acoplarse a los ports transaccionales del módulo `purchases`.
 
 ---
-
 ## Requirements
-
 ### Requirement: RBAC permission for purchases report
 El sistema SHALL definir el permiso `reports:purchases_read` en `prisma/seed.ts` y otorgarlo idempotentemente a los roles `admin`, `operator` y `viewer`. Ambos endpoints (`purchases` y `purchases/provider-payments`) SHALL exigirlo vía `requirePermission(req, "reports:purchases_read", authz)`, respondiendo `401` cuando falta `x-user-id` y `403` cuando `authz.userCan` devuelve `false`.
 
@@ -26,7 +24,7 @@ El sistema SHALL definir el permiso `reports:purchases_read` en `prisma/seed.ts`
 ---
 
 ### Requirement: Purchases report endpoint
-El sistema SHALL exponer `GET /api/v1/admin/reports/purchases` que devuelve un listado filtrado de compras (una fila por `Purchase`, no agregado). SHALL aceptar filtros opcionales `?branchId`, `?providerId` (UUID; `400` si inválidos), `?status` (`completed`\|`cancelled`) y `?from`/`?to` (`YYYY-MM-DD`, acotando `purchasedAt`). Cada fila SHALL incluir folio, proveedor, sucursal, subtotal, impuestos, total, `paidAmount`, `paymentStatus` y fecha. SHALL aceptar `?format=json|pdf|xlsx` (default `json`). Un dataset que exceda el límite de filas para export (mismo umbral que `payments/history`, 10 000 filas) con `format=pdf` o `format=xlsx` SHALL responder `409 {"error":"ReportTooLarge","limit":10000}`.
+El sistema SHALL exponer `GET /api/v1/admin/reports/purchases` que devuelve un listado filtrado de compras (una fila por `Purchase`, no agregado). SHALL aceptar filtros opcionales `?branchId`, `?providerId` (UUID; `400` si inválidos), `?status` (`completed`\|`cancelled`) y `?from`/`?to` (`YYYY-MM-DD`, acotando `purchasedAt`). Cada fila SHALL incluir folio, proveedor, sucursal, subtotal, impuestos, total, `paidAmount`, `balance` (derivado como `total - paidAmount`, nunca negativo, formateado igual que el resto de campos monetarios), `paymentStatus` y fecha. SHALL aceptar `?format=json|pdf|xlsx` (default `json`). Un dataset que exceda el límite de filas para export (mismo umbral que `payments/history`, 10 000 filas) con `format=pdf` o `format=xlsx` SHALL responder `409 {"error":"ReportTooLarge","limit":10000}`.
 
 #### Scenario: Listado con filtros
 - **WHEN** un usuario con permiso llama `GET /api/v1/admin/reports/purchases?providerId=<uuid>&from=2026-01-01&to=2026-01-31`
@@ -44,10 +42,16 @@ El sistema SHALL exponer `GET /api/v1/admin/reports/purchases` que devuelve un l
 - **WHEN** el filtro devuelve más de 10 000 compras y `format=pdf` o `format=xlsx`
 - **THEN** responde `409 {"error":"ReportTooLarge","limit":10000}`
 
----
+#### Scenario: Saldo pendiente de una compra a crédito parcialmente pagada
+- **WHEN** una compra tiene `total=1000`, `paidAmount=400`
+- **THEN** la fila incluye `balance` equivalente a `600`
+
+#### Scenario: Saldo cero en compra liquidada o de contado
+- **WHEN** una compra tiene `paymentStatus="paid"` (`total === paidAmount`, sea de contado o crédito ya liquidado)
+- **THEN** la fila incluye `balance` equivalente a `0`
 
 ### Requirement: Provider payments report endpoint
-El sistema SHALL exponer `GET /api/v1/admin/reports/purchases/provider-payments` que devuelve un listado filtrado de pagos a proveedores (una fila por `ProviderPayment`). SHALL aceptar filtros opcionales `?branchId`, `?providerId` (UUID; `400` si inválidos), `?status` (`completed`\|`cancelled`) y `?from`/`?to` (acotando `paidAt`). Cada fila SHALL incluir folio del pago, folio de la compra ligada, proveedor, sucursal, monto y fecha de pago. SHALL aceptar `?format=json|pdf|xlsx` (default `json`) con el mismo límite de 10 000 filas y respuesta `409 ReportTooLarge` que el endpoint de compras.
+El sistema SHALL exponer `GET /api/v1/admin/reports/purchases/provider-payments` que devuelve un listado filtrado de pagos a proveedores (una fila por `ProviderPayment`). SHALL aceptar filtros opcionales `?branchId`, `?providerId` (UUID; `400` si inválidos), `?status` (`completed`\|`cancelled`) y `?from`/`?to` (acotando `paidAt`). Cada fila SHALL incluir folio del pago, folio de la compra ligada, proveedor, sucursal, monto, fecha de pago, y el saldo del proveedor al momento de la consulta: `providerInitialBalance` y `providerCurrentBalance` (leídos de `providers.initial_balance` y `providers.current_balance`). SHALL aceptar `?format=json|pdf|xlsx` (default `json`) con el mismo límite de 10 000 filas y respuesta `409 ReportTooLarge` que el endpoint de compras.
 
 #### Scenario: Listado de pagos por proveedor
 - **WHEN** un usuario con permiso llama `GET /api/v1/admin/reports/purchases/provider-payments?providerId=<uuid>`
@@ -61,7 +65,9 @@ El sistema SHALL exponer `GET /api/v1/admin/reports/purchases/provider-payments`
 - **WHEN** el filtro no matchea ningún pago
 - **THEN** responde `200` con un array vacío
 
----
+#### Scenario: Saldo del proveedor en cada fila
+- **WHEN** un proveedor con `initialBalance = 2000` y `currentBalance = 4500` tiene pagos en el listado
+- **THEN** cada fila de ese proveedor incluye `providerInitialBalance: 2000` y `providerCurrentBalance: 4500`
 
 ### Requirement: Purchases report PDF and Excel artifacts
 Cuando `?format=pdf` en cualquiera de los dos endpoints, el sistema SHALL generar el PDF con `@react-pdf/renderer` incluyendo encabezado (título, periodo/filtros aplicados, `generatedBy`, fecha de emisión), la tabla de filas, totales agregados y numeración de página. Cuando `?format=xlsx`, SHALL devolver un workbook (`xlsx`/SheetJS) con una fila por registro y fila de totales al final, con `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment`. Un `format` distinto de `json`/`pdf`/`xlsx` SHALL responder `400 {"error":"Invalid format. Allowed: json, pdf, xlsx"}`.
@@ -90,3 +96,4 @@ Ambos endpoints SHALL aplicar `resolveScopedBranchId(req, filters.branchId, auth
 #### Scenario: Admin con bypass
 - **WHEN** un usuario con `branches:access_all` no envía `branchId`
 - **THEN** el listado incluye compras/pagos de todas las sucursales
+

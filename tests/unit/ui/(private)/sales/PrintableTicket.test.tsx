@@ -97,12 +97,12 @@ describe("PrintableTicket", () => {
     expect(screen.getByAltText("Logo")).toBeInTheDocument();
   });
 
-  it("sizes the logo to 75x105px in the print layout", () => {
+  it("sizes the logo to 105x147px (+40%) in the print layout", () => {
     const { container } = render(<PrintableTicket sale={sale} ticketSettings={null} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
     expect(printStyle).toContain(".printable-ticket img");
-    expect(printStyle).toContain("width: 75px; height: 105px;");
+    expect(printStyle).toContain("width: 105px; height: 147px;");
     expect(printStyle).toContain("object-fit: contain");
   });
 

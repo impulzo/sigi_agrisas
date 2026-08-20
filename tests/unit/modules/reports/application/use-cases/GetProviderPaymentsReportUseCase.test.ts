@@ -18,6 +18,8 @@ function payment(over: Partial<InMemProviderPayment> = {}): InMemProviderPayment
     paidAt: new Date("2026-06-10T00:00:00.000Z"),
     branchId: "b1",
     providerId: "prov1",
+    providerInitialBalance: null,
+    providerCurrentBalance: null,
     ...over,
   };
 }
@@ -61,5 +63,13 @@ describe("GetProviderPaymentsReportUseCase", () => {
   it("sin pagos en el periodo → array vacío", async () => {
     const { dto } = await base([]).execute(req());
     expect(dto.rows).toHaveLength(0);
+  });
+
+  it("fila incluye providerInitialBalance/providerCurrentBalance del proveedor", async () => {
+    const { dto } = await base([
+      payment({ providerInitialBalance: 1000, providerCurrentBalance: 1500 }),
+    ]).execute(req());
+    expect(dto.rows[0].providerInitialBalance).toBe("1000.0000");
+    expect(dto.rows[0].providerCurrentBalance).toBe("1500.0000");
   });
 });

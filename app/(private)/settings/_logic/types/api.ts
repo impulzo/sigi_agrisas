@@ -30,3 +30,11 @@ export interface PricingSettingsDto {
 export interface UpdatePricingSettingsBody {
   dosificationSurchargePct: number;
 }
+
+export interface InventoryNotificationSettingsDto {
+  expirationNotificationEmail: string | null;
+}
+
+export interface UpdateInventoryNotificationSettingsBody {
+  expirationNotificationEmail: string | null;
+}

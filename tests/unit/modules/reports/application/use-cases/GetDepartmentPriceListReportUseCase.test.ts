@@ -18,6 +18,7 @@ function makeRow(overrides: Partial<RawPriceListRow> & { productId: string }): R
     stockQuantity: overrides.stockQuantity ?? new Decimal("0.0000"),
     ivaRate: overrides.ivaRate !== undefined ? overrides.ivaRate : new Decimal("0.1600"),
     iepsRate: overrides.iepsRate !== undefined ? overrides.iepsRate : null,
+    acquisitionPrice: overrides.acquisitionPrice !== undefined ? overrides.acquisitionPrice : null,
     priceId: overrides.priceId !== undefined ? overrides.priceId : "price-1",
     priceName: overrides.priceName !== undefined ? overrides.priceName : "Menudeo",
     price: overrides.price !== undefined ? overrides.price : new Decimal("100.0000"),
@@ -134,6 +135,24 @@ describe("GetDepartmentPriceListReportUseCase", () => {
 
     expect(dto.departments[0].products[0].stockQuantity).toBe("42.0000");
     expect(dto.filters.branchId).toBe("branch-1");
+  });
+
+  it("serializa acquisitionPrice como string con 4 decimales", async () => {
+    const rows = [makeRow({ productId: "prod-1", acquisitionPrice: new Decimal("45.5") })];
+    const uc = new GetDepartmentPriceListReportUseCase(new InMemoryDepartmentPriceListRepository(rows));
+
+    const dto = await uc.execute({ departmentId: null, generatedBy: GENERATED_BY });
+
+    expect(dto.departments[0].products[0].acquisitionPrice).toBe("45.5000");
+  });
+
+  it("acquisitionPrice null se serializa como null", async () => {
+    const rows = [makeRow({ productId: "prod-1", acquisitionPrice: null })];
+    const uc = new GetDepartmentPriceListReportUseCase(new InMemoryDepartmentPriceListRepository(rows));
+
+    const dto = await uc.execute({ departmentId: null, generatedBy: GENERATED_BY });
+
+    expect(dto.departments[0].products[0].acquisitionPrice).toBeNull();
   });
 
   it("devuelve departments vacíos con totales en cero sin filas", async () => {

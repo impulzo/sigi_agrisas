@@ -5,11 +5,9 @@
 Pantalla de gestión de clientes bajo `/catalogs/customers` con datos fiscales mexicanos (RFC, régimen, CFDI) y datos de crédito (límite y plazo en días), búsqueda server-side debounced, modal con secciones agrupadas, soft delete con confirmación y reactivación directa. Conectada al CRUD existente en `/api/v1/admin/customers`.
 
 ---
-
 ## Requirements
-
 ### Requirement: Customers list screen with server-side search
-The system SHALL provide a screen at `/catalogs/customers` that lists customers in a paginated table. The screen SHALL require the `customers:read` permission (gated via `useCurrentUser().can("customers:read")`), rendered optimistically while the check is `"loading"`. The toolbar SHALL include: a search input that submits its value to the backend `?search=` query parameter (server-side search, minimum 2 characters) with a 300 ms debounce and a caption "Búsqueda en servidor · 2+ caracteres" below the input; a `Switch` "Mostrar inactivos" that toggles the `?includeInactive=true` query parameter; and a button "Nuevo cliente" that opens the create modal (gated by `customers:write`). The table SHALL show columns: `Código`, `Nombre` (with `legalName` as a smaller subtitle when present), `RFC` (monospace), `Límite de crédito` (formatted currency or `—` when `null`), `Saldo actual` (`currentBalance`, formatted currency), `Plazo (días)` (`creditDays`), `Estado` (badge Activo/Inactivo), `Acciones`. The actions column SHALL only render when the user has `customers:write`. Active rows SHALL show "Editar" and "Eliminar"; inactive rows SHALL show "Reactivar".
+The system SHALL provide a screen at `/catalogs/customers` that lists customers in a paginated table. The screen SHALL require the `customers:read` permission (gated via `useCurrentUser().can("customers:read")`), rendered optimistically while the check is `"loading"`. The toolbar SHALL include: a search input that submits its value to the backend `?search=` query parameter (server-side search, minimum 2 characters) with a 300 ms debounce and a caption "Búsqueda en servidor · 2+ caracteres" below the input; a `Switch` "Mostrar inactivos" that toggles the `?includeInactive=true` query parameter; and a button "Nuevo cliente" that opens the create modal (gated by `customers:write`). The table SHALL show columns: `Código`, `Nombre` (with `legalName` as a smaller subtitle when present), `RFC` (monospace, or `—` when `null`), `Límite de crédito` (formatted currency or `—` when `null`), `Saldo inicial` (`initialBalance`, formatted currency), `Saldo actual` (`currentBalance`, formatted currency), `Plazo (días)` (`creditDays`), `Estado` (badge Activo/Inactivo), `Acciones`. The actions column SHALL only render when the user has `customers:write`. Active rows SHALL show "Editar" and "Eliminar"; inactive rows SHALL show "Reactivar".
 
 #### Scenario: Admin opens the customers screen
 - **WHEN** an authenticated user with `customers:read` navigates to `/catalogs/customers`
@@ -47,14 +45,30 @@ The system SHALL provide a screen at `/catalogs/customers` that lists customers 
 - **WHEN** a user without `customers:read` navigates to `/catalogs/customers`
 - **THEN** the route guard prevents the table from rendering / dispatching the list request (page treats it as unauthorized, optimistic while `can()` resolves)
 
+#### Scenario: RFC column shows em-dash when null
+- **WHEN** a customer row has `rfc: null`
+- **THEN** the `RFC` column renders `—` instead of an empty cell
+
+#### Scenario: Saldo inicial column present
+- **WHEN** the table renders a customer with `initialBalance: 1200`
+- **THEN** the `Saldo inicial` column shows the formatted currency value `$1,200.00`
+
 ---
 
 ### Requirement: Customer create/edit modal with grouped sections including credit fields
-The system SHALL provide a single modal component `CustomerEditModal` handling both creation and edition via a `mode` prop (`"create" | "edit"`). Fields SHALL be grouped into three labelled sections: "Datos básicos" (`code`, `name`, `rfc`), "Datos fiscales" (`legalName`, `taxRegime`, `cfdiUse`, `taxZipCode`, collapsible/optional), "Contacto y crédito" (`email`, `phone`, `address`, `contactName`, `notes`, `creditLimit`, `creditDays`). The fields `code` and `rfc` SHALL be uppercase-forced as the user types. The field `code` SHALL be disabled in `edit` mode. The `taxRegime` and `cfdiUse` fields SHALL be rendered as comboboxes backed by the SAT reference catalogs (`GET /api/v1/admin/sat-codes/regimen-fiscal` and `GET /api/v1/admin/sat-codes/uso-cfdi`), using the shared molecule `SatCatalogCombobox` (located in `app/_components/molecules/SatCatalogCombobox/`): they SHALL load in BOTH `mode="create"` and `mode="edit"`; the user SHALL be able to filter options by name (description) or code; selecting an option SHALL store the `code` value in the field. Selection SHALL be enforced: a free-typed value that does not match an option of the catalog SHALL be reverted when the field loses focus, so only catalog codes can be saved. Client-side validation SHALL mirror the backend: `code` `^[A-Z0-9_]{1,32}$`, `rfc` `^([A-ZÑ&]{3,4})\d{6}([A-Z\d]{3})$`, `taxRegime` `^\d{3}$`, `cfdiUse` `^[A-Z]{1,2}\d{2}$`, `taxZipCode` `^\d{5}$`, `creditLimit` a non-negative number or empty (maps to `null`), `creditDays` a non-negative integer (left empty on create lets the backend apply its default of 30; left empty on edit is not sent as part of the diff unless explicitly cleared). In `create` mode the save button SHALL be enabled once `code`, `name`, `rfc` are filled and valid. In `edit` mode the save button SHALL be disabled while the diff against the loaded entity is empty.
+The system SHALL provide a single modal component `CustomerEditModal` handling both creation and edition via a `mode` prop (`"create" | "edit"`). Fields SHALL be grouped into three labelled sections: "Datos básicos" (`code`, `name`, `rfc`), "Datos fiscales" (`legalName`, `taxRegime`, `cfdiUse`, `taxZipCode`, collapsible/optional), "Contacto y crédito" (`email`, `phone`, `address`, `contactName`, `notes`, `creditLimit`, `creditDays`, `initialBalance`). The field `rfc` SHALL be optional and SHALL NOT be marked with the required-field indicator (`*`); the fields `code` (uppercase-forced) SHALL keep its own required marker. The field `code` SHALL be disabled in `edit` mode. The `taxRegime` and `cfdiUse` fields SHALL be rendered as comboboxes backed by the SAT reference catalogs (`GET /api/v1/admin/sat-codes/regimen-fiscal` and `GET /api/v1/admin/sat-codes/uso-cfdi`), using the shared molecule `SatCatalogCombobox` (located in `app/_components/molecules/SatCatalogCombobox/`): they SHALL load in BOTH `mode="create"` and `mode="edit"`; the user SHALL be able to filter options by name (description) or code; selecting an option SHALL store the `code` value in the field. Selection SHALL be enforced: a free-typed value that does not match an option of the catalog SHALL be reverted when the field loses focus, so only catalog codes can be saved. Client-side validation SHALL mirror the backend: `code` `^[A-Z0-9_]{1,32}$`, `rfc` `^([A-ZÑ&]{3,4})\d{6}([A-Z\d]{3})$` when non-empty (empty value maps to `null`, no format error shown), `taxRegime` `^\d{3}$`, `cfdiUse` `^[A-Z]{1,2}\d{2}$`, `taxZipCode` `^\d{5}$`, `creditLimit` a non-negative number or empty (maps to `null`), `creditDays` a non-negative integer (left empty on create lets the backend apply its default of 30; left empty on edit is not sent as part of the diff unless explicitly cleared), `initialBalance` a non-negative number or empty (maps to `0` on create, unchanged on edit unless modified). In `create` mode the save button SHALL be enabled once `code` and `name` are filled and valid (`rfc` is no longer required). In `edit` mode the save button SHALL be disabled while the diff against the loaded entity is empty.
 
 #### Scenario: Create mode renders all fields editable
 - **WHEN** the modal opens in `mode="create"`
 - **THEN** all fields across the three sections are editable and `code` is enabled
+
+#### Scenario: RFC is not marked required
+- **WHEN** the modal opens in `mode="create"` or `mode="edit"`
+- **THEN** the RFC field label does not show the required-field indicator (`*`)
+
+#### Scenario: Create without RFC succeeds
+- **WHEN** a user with `customers:write` fills only `code` and `name`, leaves `rfc` empty, and clicks "Guardar"
+- **THEN** the modal calls `POST /api/v1/admin/customers` without an `rfc` field (or with `rfc: null`); on HTTP 201 it closes and the table refreshes
 
 #### Scenario: Edit mode locks code
 - **WHEN** the modal opens in `mode="edit"` with an existing customer
@@ -77,7 +91,7 @@ The system SHALL provide a single modal component `CustomerEditModal` handling b
 - **THEN** the input reverts to the previous valid selection (or empty) and the arbitrary string is not saved
 
 #### Scenario: Successful creation
-- **WHEN** a user with `customers:write` fills `code`, `name`, `rfc` (required) and clicks "Guardar"
+- **WHEN** a user with `customers:write` fills `code`, `name` (required) and clicks "Guardar"
 - **THEN** the modal calls `POST /api/v1/admin/customers`; on HTTP 201 it closes and the table refreshes
 
 #### Scenario: Creation omitting creditDays lets backend apply default
@@ -108,7 +122,17 @@ The system SHALL provide a single modal component `CustomerEditModal` handling b
 - **WHEN** the user clears the `creditLimit` field in edit mode and submits
 - **THEN** the request sends `{ "creditLimit": null }`
 
----
+#### Scenario: Create with initial balance
+- **WHEN** the user enters `1200` in "Saldo inicial" during creation and submits
+- **THEN** the request body includes `{ "initialBalance": 1200 }`, and on success the table shows `1200` as both saldo inicial and saldo actual for the new customer
+
+#### Scenario: Edit initial balance shows inline note about the adjustment
+- **WHEN** the user changes "Saldo inicial" in `edit` mode from `1000` to `1300` and submits
+- **THEN** the modal calls `PATCH /api/v1/admin/customers/:id` with `{ "initialBalance": 1300 }`, and on success the refreshed table reflects the backend-adjusted `currentBalance`
+
+#### Scenario: Negative initial balance rejected client-side
+- **WHEN** the user types `-50` in "Saldo inicial" and tries to submit
+- **THEN** the modal shows an inline error and does not dispatch the request
 
 ### Requirement: Soft delete and reactivate customers from row actions
 The system SHALL allow soft-deleting active customers from the row's "Eliminar" action, showing a `ConfirmDialog` before calling `DELETE /api/v1/admin/customers/:id`. The system SHALL allow reactivating inactive customers from the row's "Reactivar" action without confirmation, calling `PATCH /api/v1/admin/customers/:id` with `{ "isActive": true }`. Both actions SHALL require `customers:write`. Deactivating a customer that has historical sales SHALL NOT be blocked by the UI (the backend already preserves FK references on soft delete).
@@ -199,3 +223,4 @@ The system SHALL reuse the shared `SatCatalogCombobox` molecule for the fiscal f
 #### Scenario: 4-character CFDI use accepted in quick-add
 - **WHEN** the user selects the `CP01` ("Pagos") option in the quick-add CFDI use combobox and submits
 - **THEN** the request payload carries `cfdiUse: "CP01"` and validation does not reject it
+

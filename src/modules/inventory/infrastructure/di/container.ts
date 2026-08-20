@@ -12,8 +12,11 @@ import { AdjustStockUseCase } from "@/modules/inventory/application/use-cases/Ad
 import { DeleteBranchInventoryItemUseCase } from "@/modules/inventory/application/use-cases/DeleteBranchInventoryItemUseCase";
 import { GetKardexReportUseCase } from "@/modules/inventory/application/use-cases/GetKardexReportUseCase";
 import { RebuildInventoryArticleUseCase } from "@/modules/inventory/application/use-cases/RebuildInventoryArticleUseCase";
+import { SendInventoryExpiryNotificationsUseCase } from "@/modules/inventory/application/use-cases/SendInventoryExpiryNotificationsUseCase";
 import { BranchInventoryController } from "@/modules/inventory/infrastructure/http/BranchInventoryController";
 import { InventoryMovementsController } from "@/modules/inventory/infrastructure/http/InventoryMovementsController";
+import { InventoryCronController } from "@/modules/inventory/infrastructure/http/InventoryCronController";
+import { PrismaInventoryNotificationSettingsAdapter } from "@/modules/inventory/infrastructure/services/PrismaInventoryNotificationSettingsAdapter";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
 import { adminNotificationService } from "@/shared/infrastructure/di/adminNotificationContainer";
 
@@ -22,6 +25,7 @@ const productRepo = new PrismaProductRepository(prisma);
 const inventoryRepo = new PrismaBranchInventoryRepository(prisma, adminNotificationService);
 const movementRepo = new PrismaInventoryMovementRepository(prisma);
 const inventoryLotRepo = new PrismaInventoryLotRepository(prisma);
+const inventoryNotificationSettingsPort = new PrismaInventoryNotificationSettingsAdapter(prisma);
 
 export const branchInventoryController = new BranchInventoryController(
   new ListBranchInventoryUseCase(inventoryRepo, branchRepo, inventoryLotRepo),
@@ -36,4 +40,8 @@ export const inventoryMovementsController = new InventoryMovementsController(
   new GetKardexReportUseCase(movementRepo, productRepo),
   new RebuildInventoryArticleUseCase(movementRepo),
   rbacContainer.authorizationService
+);
+
+export const inventoryCronController = new InventoryCronController(
+  new SendInventoryExpiryNotificationsUseCase(inventoryLotRepo, inventoryNotificationSettingsPort, adminNotificationService)
 );

@@ -14,6 +14,8 @@ export interface Product {
   ivaRate: number | null;
   iepsRate: number | null;
   imageUrl: string | null;
+  manufactureDate: string | null;
+  acquisitionPrice: number | null;
   isTaxable: boolean;
   isActive: boolean;
   createdAt: Date;

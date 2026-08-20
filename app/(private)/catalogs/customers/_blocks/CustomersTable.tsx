@@ -57,6 +57,7 @@ export function CustomersTable({
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Nombre</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">RFC</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Límite de crédito</th>
+            <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Saldo inicial</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Saldo actual</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Plazo (días)</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Estado</th>
@@ -81,10 +82,11 @@ export function CustomersTable({
                   </div>
                 )}
               </td>
-              <td className="px-4 py-3 font-mono text-on-surface-variant">{item.rfc}</td>
+              <td className="px-4 py-3 font-mono text-on-surface-variant">{item.rfc ?? "—"}</td>
               <td className="px-4 py-3 text-on-surface-variant">
                 {item.creditLimit !== null ? formatCurrency(item.creditLimit) : <span>—</span>}
               </td>
+              <td className="px-4 py-3 text-on-surface-variant">{formatCurrency(item.initialBalance)}</td>
               <td className="px-4 py-3 text-on-surface-variant">{formatCurrency(item.currentBalance)}</td>
               <td className="px-4 py-3 text-on-surface-variant">{item.creditDays}</td>
               <td className="px-4 py-3">

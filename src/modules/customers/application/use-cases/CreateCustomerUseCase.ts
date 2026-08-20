@@ -21,6 +21,7 @@ export class CreateCustomerUseCase {
       contactName: req.contactName ?? null,
       notes: req.notes ?? null,
       creditLimit: req.creditLimit ?? null,
+      initialBalance: req.initialBalance ?? 0,
       creditDays: req.creditDays ?? 30,
       isActive: req.isActive ?? true,
       addressStreet: req.addressStreet ?? null,

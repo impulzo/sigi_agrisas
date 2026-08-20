@@ -7,7 +7,7 @@ interface SatCatalogComboboxProps {
   catalog: SatCatalog;
   id: string;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, description?: string) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -57,10 +57,10 @@ export function SatCatalogCombobox({
     }
   }
 
-  function handleSelect(code: string) {
+  function handleSelect(code: string, description?: string) {
     setSelected(code);
     setQuery(code);
-    onChange(code);
+    onChange(code, description);
     setIsOpen(false);
   }
 
@@ -100,7 +100,7 @@ export function SatCatalogCombobox({
                     type="button"
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      handleSelect(opt.code);
+                      handleSelect(opt.code, opt.description);
                     }}
                     className="w-full text-left px-3 py-2 text-body-sm hover:bg-surface-container-low transition-colors"
                   >

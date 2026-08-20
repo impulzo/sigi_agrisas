@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { InvoiceRepository } from "../ports/InvoiceRepository";
-import { FacturamaGateway, FacturамаStampInput, FacturamaItemTaxInput } from "../ports/FacturamaGateway";
+import { FacturamaGateway, FacturamaStampInput, FacturamaItemTaxInput } from "../ports/FacturamaGateway";
 import { BillingLookupService, CustomerForBilling, BranchForBilling } from "../ports/BillingLookupService";
 import { InvoiceTotalsCalculator } from "../../domain/services/InvoiceTotalsCalculator";
 import {
@@ -115,14 +115,14 @@ export class StampInvoiceUseCase {
       };
     });
 
-    const stampPayload: FacturамаStampInput = {
+    const stampPayload: FacturamaStampInput = {
       currency: "MXN",
       paymentForm,
       paymentMethod,
       expeditionPlace,
       cfdiType: "I",
       receiver: {
-        rfc: customer!.rfc,
+        rfc: customer!.rfc!,
         name: receiverName,
         cfdiUse,
         fiscalRegime: customer!.taxRegime!,
@@ -170,7 +170,7 @@ export class StampInvoiceUseCase {
       cfdiUse,
       paymentForm,
       paymentMethod,
-      receiverRfc: customer!.rfc,
+      receiverRfc: customer!.rfc!,
       receiverName,
       receiverCfdiUse: cfdiUse,
       receiverFiscalRegime: customer!.taxRegime!,
@@ -243,7 +243,7 @@ export class StampInvoiceUseCase {
       };
     });
 
-    const stampPayload: FacturамаStampInput = {
+    const stampPayload: FacturamaStampInput = {
       currency: "MXN",
       paymentForm,
       paymentMethod,

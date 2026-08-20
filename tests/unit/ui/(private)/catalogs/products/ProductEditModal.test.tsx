@@ -58,6 +58,8 @@ const BASE_PRODUCT: Product = {
   ivaRate: null,
   iepsRate: null,
   imageUrl: null,
+  manufactureDate: null,
+  acquisitionPrice: null,
   isTaxable: false,
   isActive: true,
   createdAt: new Date("2026-01-01"),
@@ -349,5 +351,48 @@ describe("ProductEditModal — combobox Cód. SAT (catálogo real)", () => {
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0][0]).toEqual({ satProductCode: null });
+  });
+
+  it("captura precio de adquisición al crear", async () => {
+    const onSave = jest.fn();
+    const user = userEvent.setup();
+    render(<ProductEditModal {...DEFAULT_PROPS} onSave={onSave} mode="create" entity={null} />);
+
+    await user.type(screen.getAllByRole("textbox")[0], "PROD_99");
+    await user.type(screen.getAllByRole("textbox")[2], "Semilla");
+    await user.type(screen.getAllByRole("textbox")[1], "KGM");
+    await user.click(screen.getByRole("button", { name: /Kilogramo/ }));
+    await user.selectOptions(screen.getAllByRole("combobox")[0], DEPT_UUID_1);
+    await user.type(screen.getByLabelText(/precio de adquisición/i), "45.5");
+
+    await user.click(screen.getByRole("button", { name: /crear/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const [data] = onSave.mock.calls[0] as [CreateProductBody];
+    expect(data.acquisitionPrice).toBe(45.5);
+  });
+
+  it("limpiar el precio de adquisición en edit envía acquisitionPrice null en el diff", async () => {
+    const onSave = jest.fn();
+    const user = userEvent.setup();
+    render(
+      <ProductEditModal
+        {...DEFAULT_PROPS}
+        onSave={onSave}
+        mode="edit"
+        entity={{ ...BASE_PRODUCT, acquisitionPrice: 52.3 }}
+      />
+    );
+
+    const priceInput = screen.getByLabelText(/precio de adquisición/i);
+    expect(priceInput).toHaveValue(52.3);
+    await user.clear(priceInput);
+
+    const saveBtn = screen.getByRole("button", { name: /guardar/i });
+    expect(saveBtn).not.toBeDisabled();
+    await user.click(saveBtn);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0]).toEqual({ acquisitionPrice: null });
   });
 });

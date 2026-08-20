@@ -65,7 +65,7 @@ La ruta `/reports/account-statements` SHALL renderizar una tabla resumen paginad
 ---
 
 ### Requirement: Account statement ledger detail view
-La ruta `/reports/account-statements/[customerId]` SHALL renderizar el desglose de un cliente: encabezado (saldo inicial, actual, límite, disponible, dirección y última factura), tabla de movimientos con badge de estado, un selector de período `Completo | Rango` (SegmentedButton) que recalcula la tabla y el saldo inicial, y botones "Exportar PDF" y "Exportar Excel" que descargan el reporte con los filtros aplicados vía `authFetch` (Bearer) sin exponer el token. La tabla de movimientos SHALL incluir las columnas Serie, Factura, Vencimiento, Referencia y F.Pgo (forma de pago) además de Fecha, Tipo, Cargo, Abono, Saldo acumulado y Estado. La vista SHALL ofrecer un checkbox "Mostrar Histórico" (General = solo deudas activas / Histórico = todo) y un grupo de radios "Orden de Información" (3 modos) cableados al endpoint. Cada fila de abono SHALL ofrecer una acción "Imprimir Anticipo" que descarga el recibo PDF del abono vía `authFetch`. Se accede haciendo clic en una fila del resumen. Sin movimientos SHALL mostrar un estado vacío. Los `_blocks` SHALL ser presentacionales (sin `fetch`, navegación ni validación); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`.
+La ruta `/reports/account-statements/[customerId]` SHALL renderizar el desglose de un cliente: encabezado (saldo inicial, actual, límite, disponible, dirección y última factura), tabla de movimientos con badge de estado, un selector de período `Completo | Rango` (SegmentedButton) que recalcula la tabla y el saldo inicial, y botones "Exportar PDF" y "Exportar Excel" que descargan el reporte con los filtros aplicados vía `authFetch` (Bearer) sin exponer el token. La tabla SHALL renderizar `ledger.groups[]` en vez de la lista plana `ledger.movements[]`: por cada grupo, la fila de la venta (si `sale` no es `null`) seguida inmediatamente por las filas de sus abonos, visualmente diferenciadas (indentación o borde) para indicar que pertenecen a ese ticket; el grupo con `sale: null` (abonos sin venta visible en el rango) SHALL renderizarse precedido de una fila de encabezado de sección con el texto "Abonos sin venta visible en el rango". Cada fila (venta o abono) SHALL incluir las columnas Serie, Factura, Vencimiento, Referencia y F.Pgo (forma de pago) además de Fecha, Tipo, Cargo, Abono, Saldo acumulado y Estado — mismas columnas ya existentes, sin cambio. El pie de tabla (total de movimientos, cargos, abonos, saldo final) SHALL seguir viniendo de `ledger.totals`/`ledger.closingBalance`, sin cambio. La vista SHALL ofrecer un checkbox "Mostrar Histórico" (General = solo deudas activas / Histórico = todo) y un grupo de radios "Orden de Información" (3 modos) cableados al endpoint, cuyo criterio ahora reordena los grupos (ver capability `account-statements-api`). Cada fila de abono SHALL ofrecer una acción "Imprimir Anticipo" que descarga el recibo PDF del abono vía `authFetch`. Se accede haciendo clic en una fila del resumen. Sin movimientos SHALL mostrar un estado vacío. Los `_blocks` SHALL ser presentacionales (sin `fetch`, navegación ni validación); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`.
 
 #### Scenario: Navegación desde el resumen
 - **WHEN** el usuario hace clic en una fila de la tabla resumen
@@ -102,6 +102,14 @@ La ruta `/reports/account-statements/[customerId]` SHALL renderizar el desglose 
 #### Scenario: Imprimir Anticipo
 - **WHEN** el usuario pulsa "Imprimir Anticipo" en una fila de abono
 - **THEN** se descarga el recibo PDF de ese abono autenticado vía `authFetch`
+
+#### Scenario: Venta agrupada con sus abonos
+- **WHEN** el cliente tiene una venta a crédito con 2 abonos parciales
+- **THEN** la tabla muestra la fila de la venta seguida inmediatamente por las 2 filas de abono, visualmente indentadas o diferenciadas como pertenecientes a ese ticket
+
+#### Scenario: Sección de abonos sin venta visible
+- **WHEN** el desglose incluye un grupo con `sale: null`
+- **THEN** la tabla muestra una fila de encabezado de sección "Abonos sin venta visible en el rango" antes de sus filas de abono
 
 ### Requirement: Sales cut view
 La ruta `/reports/sales-cut` SHALL renderizar el corte de ventas: un toggle de periodo "Hoy | Rango" (SegmentedButton) donde "Hoy" precarga el día actual (envía `preset=today`) y "Rango" habilita `from/to`; filtros de sucursal (visible solo con `can("branches:access_all")`), cajero y método de pago; tarjetas de totales (ventas, tickets, subtotal, IVA, IEPS, canceladas), una tarjeta de neto de caja con sus componentes, tablas de los seis desgloses (método, día, cajero, sucursal, departamento, producto), una tabla adicional "Detalle de tickets" (columnas Ticket, Cliente, Importe, Forma de Pago — una fila por venta del periodo/filtros aplicados) debajo de los seis desgloses, y botones "Exportar PDF" y "Exportar Excel" que descargan el reporte (incluyendo el detalle de tickets) con los filtros aplicados vía `authFetch` (Bearer) sin exponer el token. La tabla "Por producto" SHALL incluir una columna adicional de piezas vendidas (`quantitySold`) que las demás tablas no tienen. Los `_blocks` SHALL ser presentacionales (sin `fetch`); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. Sin ventas SHALL mostrar un estado vacío (incluida la tabla de detalle de tickets). (Traza: S4.)
@@ -194,7 +202,7 @@ Los `_blocks` SHALL ser presentacionales (sin `fetch`); el HTTP vive en `_logic/
 ---
 
 ### Requirement: Purchases report view
-La ruta `/reports/purchases` SHALL renderizar el reporte de compras con dos secciones alternables vía `SegmentedButton` ("Compras" \| "Pagos a Proveedores"). La sección Compras SHALL ofrecer filtros de sucursal (visible solo con `can("branches:access_all")`), proveedor, estado y rango de fechas, tabla paginada (reusando `CatalogPagination`) y botones "Exportar PDF"/"Exportar Excel". La sección Pagos a Proveedores SHALL ofrecer los mismos tipos de filtro (proveedor, sucursal, estado, rango de fechas) y su propia tabla paginada con export PDF/Excel independiente. Los `_blocks` SHALL ser presentacionales; el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. Cada sección sin resultados SHALL mostrar un estado vacío.
+La ruta `/reports/purchases` SHALL renderizar el reporte de compras con dos secciones alternables vía `SegmentedButton` ("Compras" \| "Pagos a Proveedores"). La sección Compras SHALL ofrecer filtros de sucursal (visible solo con `can("branches:access_all")`), proveedor, estado y rango de fechas, tabla paginada (reusando `CatalogPagination`) y botones "Exportar PDF"/"Exportar Excel". La tabla de la sección Compras SHALL incluir una columna "Saldo" (`balance`, formateada como moneda) inmediatamente después de "Pagado", y SHALL renderizar `paymentStatus`/`status` con el componente `PurchaseStatusBadge` (reutilizado de `app/(private)/purchases/_blocks/`) en vez de texto crudo. La sección Pagos a Proveedores SHALL ofrecer los mismos tipos de filtro (proveedor, sucursal, estado, rango de fechas) y su propia tabla paginada con export PDF/Excel independiente. Los `_blocks` SHALL ser presentacionales; el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. Cada sección sin resultados SHALL mostrar un estado vacío.
 
 #### Scenario: Tarjeta en el hub
 - **WHEN** un usuario con `reports:purchases_read` abre `/reports`
@@ -220,7 +228,13 @@ La ruta `/reports/purchases` SHALL renderizar el reporte de compras con dos secc
 - **WHEN** ninguna sección tiene resultados con los filtros aplicados
 - **THEN** cada una muestra su propio estado vacío en lugar de la tabla
 
----
+#### Scenario: Columna de saldo en la tabla de compras
+- **WHEN** la sección Compras renderiza una fila con `total=1000` y `paidAmount=400`
+- **THEN** la columna "Saldo" muestra `$600.00`, ubicada entre "Pagado" y "Estado"
+
+#### Scenario: Estados renderizados con badge en español
+- **WHEN** la sección Compras renderiza una fila con `paymentStatus="pending"` y `status="completed"`
+- **THEN** ambos se muestran con `PurchaseStatusBadge` (etiquetas en español, ej. "Pendiente" / "Completada"), no como texto crudo en inglés
 
 ### Requirement: Sales-by-product report view
 La ruta `/reports/sales-by-product` SHALL renderizar filtros de sucursal (visible solo con `can("branches:access_all")`), departamento y rango de fechas, más una tarjeta de Total siempre visible. Debajo, un único `Card` SHALL agrupar: un `SegmentedButton` de alcance "Global \| Por Cliente"; si el alcance es "Por Cliente", un combobox de cliente (mismo componente compartido `CustomerFilterCombobox` que otros reportes) visible dentro de ese card; una tabla de detalle con columnas Departamento, Producto, Cliente, Cantidad y Monto (una fila por combinación única de esas tres dimensiones, ordenada por Monto desc); y paginación (`CatalogPagination`) debajo de la tabla. Botones "Exportar PDF"/"Exportar Excel" en la cabecera. Los `_blocks` SHALL ser presentacionales; el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. Sin ventas en el periodo SHALL mostrar un estado vacío.
@@ -265,7 +279,7 @@ La ruta `/reports/sales-by-product` SHALL renderizar filtros de sucursal (visibl
 
 ### Requirement: Inventory by department view
 
-El sistema SHALL exponer la vista de UI `app/(private)/reports/inventory-by-department/`: una tarjeta "Inventario por Departamento" en el hub `/reports` gated por `reports:inventory_read`, un selector de departamento, una tabla que agrupa los productos con sus listas de precio, y botones "Exportar PDF" y "Exportar Excel" que descargan los artefactos con los filtros aplicados vía `authFetch` (Bearer). Los `_blocks` SHALL ser presentacionales (sin `fetch`, navegación ni validación); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. (Traza: historia 2.)
+El sistema SHALL exponer la vista de UI `app/(private)/reports/inventory-by-department/`: una tarjeta "Inventario por Departamento" en el hub `/reports` gated por `reports:inventory_read`, un selector de departamento, una tabla que agrupa los productos con su costo de adquisición y sus listas de precio, y botones "Exportar PDF" y "Exportar Excel" que descargan los artefactos con los filtros aplicados vía `authFetch` (Bearer). Los `_blocks` SHALL ser presentacionales (sin `fetch`, navegación ni validación); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. La tabla SHALL mostrar una columna "Costo adq." (formateada como moneda MXN, o "—" si el producto no tiene costo capturado) inmediatamente después de la columna "Stock" y antes de las columnas dinámicas de nivel de precio. Las columnas de nivel de precio SHALL ordenarse: primero el/los nombre(s) de precio marcados `isDefault=true` en los datos, luego el resto por orden alfabético `es-MX` — no puramente alfabético. (Traza: historia 2.)
 
 #### Scenario: Tarjeta en el hub
 
@@ -290,7 +304,7 @@ El sistema SHALL exponer la vista de UI `app/(private)/reports/inventory-by-depa
 #### Scenario: Tabla agrupada por producto
 
 - **WHEN** el usuario selecciona un departamento con productos
-- **THEN** la tabla muestra cada producto con código, nombre y unidad, y debajo sus filas de precio (lista, precio, cantidad mínima, % descuento, default)
+- **THEN** la tabla muestra cada producto con código, nombre, unidad y costo de adquisición, y debajo sus filas de precio (lista, precio, cantidad mínima, % descuento, default)
 
 #### Scenario: Exportar PDF
 
@@ -307,7 +321,15 @@ El sistema SHALL exponer la vista de UI `app/(private)/reports/inventory-by-depa
 - **WHEN** el departamento seleccionado no tiene productos
 - **THEN** se muestra un estado vacío en lugar de la tabla
 
----
+#### Scenario: Columna de costo de adquisición sin valor
+
+- **WHEN** un producto listado no tiene `acquisitionPrice` capturado
+- **THEN** la celda de "Costo adq." muestra "—"
+
+#### Scenario: Orden de columnas de precio en la tabla web
+
+- **WHEN** el departamento seleccionado tiene productos con precios nombrados `"10"`, `"15"`, `"4"` y un precio marcado `isDefault: true` (p. ej. "Precio público")
+- **THEN** las columnas de la tabla se muestran en el orden `Precio público, 10, 15, 4`
 
 ### Requirement: Reports adopta el shell y la tabla estándar del design system
 
@@ -352,4 +374,24 @@ Las tarjetas de totales/KPI SHALL usar la molécula `Card`. Los botones "Exporta
 
 - **WHEN** se navega entre `/reports`, `/reports/account-statements/[customerId]` y `/reports/purchases`
 - **THEN** las tres comparten el mismo ancho máximo de contenido, provisto por `PageShell`
+
+### Requirement: CustomerFilterCombobox exposes an explicit "all customers" option
+
+The shared `CustomerFilterCombobox` component (used by the sales-by-product report's Por Cliente view and by the collections Por Cliente view) SHALL prepend a fixed option `{ value: "", label: "Todos los clientes" }` to its options list whenever there is no active text search (`query === ""`). Consumers that already initialize their `customerId` filter state as `""` SHALL therefore display "Todos los clientes" as the selected value by default, without any change to the consumer's own state initialization. Selecting this option SHALL behave identically to leaving the filter empty — the backend's existing optional `customerId` contract is unchanged.
+
+#### Scenario: Combobox opened with no search shows "Todos los clientes" first
+- **WHEN** the customer filter combobox is opened in `/reports/sales-by-product` (Por Cliente) or `/reports/collections` (Por Cliente) without typing a search query
+- **THEN** the first option listed is "Todos los clientes" with `value=""`
+
+#### Scenario: Default state renders the option as selected
+- **WHEN** the report page mounts with `customerId=""` (the existing default in both consumers)
+- **THEN** the combobox displays "Todos los clientes" as its current value, not an empty/unlabeled field
+
+#### Scenario: Selecting "Todos los clientes" behaves like the empty filter
+- **WHEN** the user explicitly selects "Todos los clientes" and applies the report filters
+- **THEN** the report request omits `customerId` (or sends it empty), returning data for all customers — identical to today's behavior when the field was left blank
+
+#### Scenario: Active text search does not mix in the sentinel option
+- **WHEN** the user types a search query (one or more characters) into the customer filter combobox
+- **THEN** the results shown are exclusively the matches returned by the customer search — "Todos los clientes" does not appear interleaved among search results
 

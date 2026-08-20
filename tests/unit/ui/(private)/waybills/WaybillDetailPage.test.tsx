@@ -81,6 +81,8 @@ function makeDetail(overrides = {}) {
     notes: null,
     originAddress: ADDRESS,
     destinationAddress: ADDRESS,
+    vehicleId: null,
+    driverId: null,
     vehiclePlate: "ABC1234",
     vehicleConfig: "C2",
     vehiclePermitType: "TPAF01",

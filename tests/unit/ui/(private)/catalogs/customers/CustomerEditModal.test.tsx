@@ -34,6 +34,7 @@ const BASE_ENTITY: Customer = {
   notes: null,
   creditLimit: 50000,
   currentBalance: 1000,
+  initialBalance: 0,
   creditDays: 30,
   isActive: true,
   addressStreet: null,
@@ -120,6 +121,30 @@ describe("CustomerEditModal — create mode", () => {
     );
     const payload = onSave.mock.calls[0][0];
     expect(payload.creditDays).toBeUndefined();
+  });
+
+  it("empty rfc does not block submit", async () => {
+    const onSave = jest.fn();
+    render(<CustomerEditModal {...defaultProps} mode="create" entity={null} onSave={onSave} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/^código \*/i), "CLI_001");
+    await user.type(screen.getByLabelText(/^nombre/i), "Cliente ACME");
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(onSave).toHaveBeenCalled();
+    expect(screen.queryByText(/rfc inválido/i)).not.toBeInTheDocument();
+  });
+
+  it("negative initialBalance blocks submit with inline error", async () => {
+    const onSave = jest.fn();
+    render(<CustomerEditModal {...defaultProps} mode="create" entity={null} onSave={onSave} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/^código \*/i), "CLI_001");
+    await user.type(screen.getByLabelText(/^nombre/i), "Cliente ACME");
+    await user.type(screen.getByLabelText(/rfc/i), "SAC120101A12");
+    await user.type(screen.getByLabelText(/saldo inicial/i), "-100");
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(screen.getByText(/no puede ser negativo/i)).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it("submit with a custom creditDays value includes it in the payload", async () => {

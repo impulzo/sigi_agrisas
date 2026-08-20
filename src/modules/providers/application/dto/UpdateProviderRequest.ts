@@ -1,6 +1,6 @@
 export interface UpdateProviderRequest {
   name?: string;
-  rfc?: string;
+  rfc?: string | null;
   legalName?: string | null;
   taxRegime?: string | null;
   cfdiUse?: string | null;
@@ -10,5 +10,8 @@ export interface UpdateProviderRequest {
   address?: string | null;
   contactName?: string | null;
   notes?: string | null;
+  creditLimit?: number | null;
+  initialBalance?: number;
+  creditDays?: number;
   isActive?: boolean;
 }

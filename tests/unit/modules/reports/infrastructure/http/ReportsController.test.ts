@@ -144,7 +144,7 @@ function makePriceListRow(): RawPriceListRow {
     departmentId: DEPT_ID, departmentCode: "D1", departmentName: "Dept 1",
     productId: "prod-1", code: "P001", name: "Prod 1", unit: "PZA", unitDescription: null,
     stockQuantity: new Decimal("10.0000"),
-    ivaRate: new Decimal("0.1600"), iepsRate: null,
+    ivaRate: new Decimal("0.1600"), iepsRate: null, acquisitionPrice: null,
     priceId: "price-1", priceName: "Menudeo", price: new Decimal("100.0000"),
     minQuantity: 1, discountPct: new Decimal("0.00"), isDefault: true,
   };
@@ -1335,13 +1335,13 @@ describe("ReportsController - getDepartmentPriceListReport", () => {
     const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
 
     const headerRow = aoa[0] as string[];
-    expect(headerRow).toEqual(["Departamento", "Código", "Producto", "Unidad", "Stock", "Mayoreo", "Menudeo"]);
+    expect(headerRow).toEqual(["Departamento", "Código", "Producto", "Unidad", "Stock", "Costo Adq.", "Menudeo", "Mayoreo"]);
 
     const prod1Row = aoa.find((r) => r[1] === "P001") as unknown[];
-    expect(prod1Row).toEqual(["Dept 1", "P001", "Prod 1", "PZA", "10.0000", "80.0000", "100.0000"]);
+    expect(prod1Row).toEqual(["Dept 1", "P001", "Prod 1", "PZA", "10.0000", "—", "$100.00", "$80.00"]);
 
     const prod2Row = aoa.find((r) => r[1] === "P002") as unknown[];
-    expect(prod2Row).toEqual(["Dept 1", "P002", "Prod 2", "PZA", "10.0000", "—", "50.0000"]);
+    expect(prod2Row).toEqual(["Dept 1", "P002", "Prod 2", "PZA", "10.0000", "—", "$50.00", "—"]);
   });
 
   it("200 incluye stockQuantity por producto y totalStock", async () => {
@@ -1446,6 +1446,8 @@ describe("ReportsController - getProviderPaymentsReport", () => {
       paidAt: new Date("2026-06-10T00:00:00.000Z"),
       branchId: BRANCH_ID,
       providerId: "prov1",
+      providerInitialBalance: null,
+      providerCurrentBalance: null,
       ...over,
     };
   }

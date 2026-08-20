@@ -14,12 +14,15 @@ jest.mock("../../../../../app/(public)/auth/_logic/hooks/useLogout", () => ({
   useLogout: jest.fn(() => ({ logout: jest.fn(), isLoading: false })),
 }));
 jest.mock("../../../../../app/_components/molecules/RailFlyout/RailFlyout", () => ({
-  RailFlyout: () => null,
+  RailFlyout: jest.fn(() => null),
 }));
 
 import { usePathname } from "next/navigation";
 import { useCurrentUser } from "../../../../../app/_hooks/useCurrentUser";
 import { NavigationRail } from "../../../../../app/_components/organisms/NavigationRail/NavigationRail";
+import { RailFlyout } from "../../../../../app/_components/molecules/RailFlyout/RailFlyout";
+
+const mockRailFlyout = RailFlyout as jest.MockedFunction<typeof RailFlyout>;
 
 const mockUseCurrentUser = useCurrentUser as jest.MockedFunction<typeof useCurrentUser>;
 
@@ -232,6 +235,35 @@ describe("NavigationRail — item Configuración (secondaryItems)", () => {
     renderRail("/dashboard", []);
     expect(screen.getByRole("link", { name: /Support/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Account/ })).toBeInTheDocument();
+  });
+});
+
+describe("NavigationRail — children Vehículos y Operadores bajo Catálogos", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("usuario con vehicles:read ve el botón Catálogos y 'vehicles' entre los children visibles", () => {
+    renderRail("/dashboard", ["vehicles:read"]);
+    expect(screen.getByRole("button", { name: /Catálogos/ })).toBeInTheDocument();
+    const lastCall = mockRailFlyout.mock.calls.at(-1)![0];
+    expect(lastCall.items.map((i: { key: string }) => i.key)).toContain("vehicles");
+    expect(lastCall.items.map((i: { key: string }) => i.key)).not.toContain("drivers");
+  });
+
+  it("usuario con drivers:read ve 'drivers' entre los children visibles", () => {
+    renderRail("/dashboard", ["drivers:read"]);
+    const lastCall = mockRailFlyout.mock.calls.at(-1)![0];
+    expect(lastCall.items.map((i: { key: string }) => i.key)).toContain("drivers");
+    expect(lastCall.items.map((i: { key: string }) => i.key)).not.toContain("vehicles");
+  });
+
+  it("usuario sin ningún permiso de catálogos NO ve el botón Catálogos", () => {
+    renderRail("/dashboard", ["sales:read"]);
+    expect(screen.queryByRole("button", { name: /Catálogos/ })).not.toBeInTheDocument();
+  });
+
+  it("usuario con SOLO vehicles:read igual ve el botón Catálogos (al menos un child visible)", () => {
+    renderRail("/dashboard", ["vehicles:read"]);
+    expect(screen.getByRole("button", { name: /Catálogos/ })).toBeInTheDocument();
   });
 });
 

@@ -150,4 +150,128 @@ describe("ProductsController — Zod validation", () => {
     const body = await patchRes.json();
     expect(body.isTaxable).toBe(true);
   });
+
+  it("persists manufactureDate on creation", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const res = await ctrl.create(
+      makeCreateReq({ code: "P3", name: "Fertilizante", unit: "kg", departmentId, manufactureDate: "2026-01-15" })
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.manufactureDate).toBe("2026-01-15");
+  });
+
+  it("defaults manufactureDate to null when omitted on creation", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const res = await ctrl.create(makeCreateReq({ code: "P4", name: "Fertilizante", unit: "kg", departmentId }));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.manufactureDate).toBeNull();
+  });
+
+  it("rejects an invalid manufactureDate format", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const res = await ctrl.create(
+      makeCreateReq({ code: "P5", name: "Fertilizante", unit: "kg", departmentId, manufactureDate: "15-01-2026" })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("sets and clears manufactureDate via PATCH", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const createRes = await ctrl.create(makeCreateReq({ code: "P6", name: "Fertilizante", unit: "kg", departmentId }));
+    const { id } = await createRes.json();
+
+    const setRes = await ctrl.update(
+      new NextRequest(`http://localhost/api/v1/admin/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ manufactureDate: "2026-02-01" }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      id,
+    );
+    expect(setRes.status).toBe(200);
+    expect((await setRes.json()).manufactureDate).toBe("2026-02-01");
+
+    const clearRes = await ctrl.update(
+      new NextRequest(`http://localhost/api/v1/admin/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ manufactureDate: null }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      id,
+    );
+    expect(clearRes.status).toBe(200);
+    expect((await clearRes.json()).manufactureDate).toBeNull();
+  });
+
+  it("accepts a valid acquisitionPrice on creation", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const res = await ctrl.create(
+      makeCreateReq({ code: "P7", name: "Semilla", unit: "kg", departmentId, acquisitionPrice: 45.5 })
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.acquisitionPrice).toBe(45.5);
+  });
+
+  it("defaults acquisitionPrice to null when omitted on creation", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const res = await ctrl.create(makeCreateReq({ code: "P8", name: "Semilla", unit: "kg", departmentId }));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.acquisitionPrice).toBeNull();
+  });
+
+  it("rejects a negative acquisitionPrice on creation", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const res = await ctrl.create(
+      makeCreateReq({ code: "P9", name: "Semilla", unit: "kg", departmentId, acquisitionPrice: -1 })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("sets and clears acquisitionPrice via PATCH", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const createRes = await ctrl.create(makeCreateReq({ code: "P10", name: "Semilla", unit: "kg", departmentId }));
+    const { id } = await createRes.json();
+
+    const setRes = await ctrl.update(
+      new NextRequest(`http://localhost/api/v1/admin/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ acquisitionPrice: 52.3 }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      id,
+    );
+    expect(setRes.status).toBe(200);
+    expect((await setRes.json()).acquisitionPrice).toBe(52.3);
+
+    const clearRes = await ctrl.update(
+      new NextRequest(`http://localhost/api/v1/admin/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ acquisitionPrice: null }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      id,
+    );
+    expect(clearRes.status).toBe(200);
+    expect((await clearRes.json()).acquisitionPrice).toBeNull();
+  });
+
+  it("rejects a negative acquisitionPrice on PATCH", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const createRes = await ctrl.create(makeCreateReq({ code: "P11", name: "Semilla", unit: "kg", departmentId }));
+    const { id } = await createRes.json();
+
+    const res = await ctrl.update(
+      new NextRequest(`http://localhost/api/v1/admin/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ acquisitionPrice: -5 }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      id,
+    );
+    expect(res.status).toBe(400);
+  });
 });

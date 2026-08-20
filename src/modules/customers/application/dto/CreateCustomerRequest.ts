@@ -1,7 +1,7 @@
 export interface CreateCustomerRequest {
   code: string;
   name: string;
-  rfc: string;
+  rfc?: string | null;
   legalName?: string | null;
   taxRegime?: string | null;
   cfdiUse?: string | null;
@@ -12,6 +12,7 @@ export interface CreateCustomerRequest {
   contactName?: string | null;
   notes?: string | null;
   creditLimit?: number | null;
+  initialBalance?: number;
   creditDays?: number;
   isActive?: boolean;
   addressStreet?: string | null;

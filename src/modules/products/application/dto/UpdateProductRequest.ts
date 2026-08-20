@@ -6,5 +6,7 @@ export interface UpdateProductRequest {
   taxRateId?: string | null;
   ivaRate?: number | null;
   iepsRate?: number | null;
+  manufactureDate?: string | null;
+  acquisitionPrice?: number | null;
   isActive?: boolean;
 }

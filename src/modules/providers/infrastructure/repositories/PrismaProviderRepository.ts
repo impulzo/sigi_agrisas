@@ -20,6 +20,10 @@ function toProvider(row: PrismaProvider): Provider {
     address: row.address,
     contactName: row.contactName,
     notes: row.notes,
+    creditLimit: row.creditLimit ? Number(row.creditLimit) : null,
+    currentBalance: Number(row.currentBalance),
+    initialBalance: Number(row.initialBalance),
+    creditDays: row.creditDays,
     isActive: row.isActive,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -75,18 +79,36 @@ export class PrismaProviderRepository implements ProviderRepository {
 
   async create(data: CreateProviderData): Promise<Provider> {
     try {
-      const row = await this.prisma.provider.create({ data });
+      const row = await this.prisma.provider.create({
+        data: {
+          ...data,
+          currentBalance: data.initialBalance ?? 0,
+          initialBalance: data.initialBalance ?? 0,
+        },
+      });
       return toProvider(row);
     } catch (err) {
       if (isPrismaUniqueError(err, "code")) throw new ProviderCodeAlreadyInUseError(data.code);
-      if (isPrismaUniqueError(err, "rfc")) throw new ProviderRfcAlreadyInUseError(data.rfc);
+      if (isPrismaUniqueError(err, "rfc")) throw new ProviderRfcAlreadyInUseError(data.rfc ?? "");
       throw err;
     }
   }
 
   async update(id: string, data: UpdateProviderData): Promise<Provider> {
+    let balanceDelta: number | null = null;
+    if (data.initialBalance !== undefined) {
+      const existing = await this.prisma.provider.findUnique({ where: { id }, select: { initialBalance: true } });
+      if (!existing) throw new ProviderNotFoundError(id);
+      balanceDelta = data.initialBalance - Number(existing.initialBalance);
+    }
     try {
-      const row = await this.prisma.provider.update({ where: { id }, data });
+      const row = await this.prisma.provider.update({
+        where: { id },
+        data: {
+          ...data,
+          ...(balanceDelta !== null ? { currentBalance: { increment: balanceDelta } } : {}),
+        },
+      });
       return toProvider(row);
     } catch (err) {
       if (isPrismaNotFoundError(err)) throw new ProviderNotFoundError(id);

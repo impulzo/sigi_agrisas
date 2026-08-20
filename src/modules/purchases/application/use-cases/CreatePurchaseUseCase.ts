@@ -35,6 +35,7 @@ export class CreatePurchaseUseCase {
         discountPct: item.discountPct ?? null,
         lotNumber: item.lotNumber ?? null,
         expirationDate: item.expirationDate ?? null,
+        manufactureDate: item.manufactureDate ?? null,
       })),
     };
 

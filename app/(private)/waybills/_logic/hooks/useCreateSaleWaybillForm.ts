@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createWaybill } from "../services";
 import { createSaleWaybillSchema } from "../schemas/createSaleWaybill";
-import { ProductNotFoundForTransferError } from "../errors";
+import { ProductNotFoundForTransferError, VehicleNotFoundError, DriverNotFoundError } from "../errors";
 import type { WaybillDetail, VehicleInput, DriverInput } from "../types/domain";
 import type { CreateCartaPorteWaybillItemRequest } from "../types/api";
 import type { WaybillLineState } from "./useCreateWaybillForm";
@@ -30,6 +30,7 @@ interface UseCreateSaleWaybillFormResult {
 }
 
 const EMPTY_VEHICLE: VehicleInput = {
+  vehicleId: null,
   plate: "",
   config: "",
   permitType: "",
@@ -37,7 +38,7 @@ const EMPTY_VEHICLE: VehicleInput = {
   insuranceCompany: "",
   insurancePolicy: "",
 };
-const EMPTY_DRIVER: DriverInput = { name: "", rfc: "", licenseNumber: "" };
+const EMPTY_DRIVER: DriverInput = { driverId: null, name: "", rfc: "", licenseNumber: "" };
 
 export function useCreateSaleWaybillForm(sale: SaleDetail): UseCreateSaleWaybillFormResult {
   const router = useRouter();
@@ -89,7 +90,12 @@ export function useCreateSaleWaybillForm(sale: SaleDetail): UseCreateSaleWaybill
       type: "carta_porte" as const,
       saleId: sale.id,
       vehicle,
-      driver: { name: driver.name, rfc: driver.rfc || null, licenseNumber: driver.licenseNumber },
+      driver: {
+        driverId: driver.driverId ?? null,
+        name: driver.name,
+        rfc: driver.rfc || null,
+        licenseNumber: driver.licenseNumber,
+      },
       distanceKm,
       departureAt,
       arrivalAt,
@@ -127,6 +133,12 @@ export function useCreateSaleWaybillForm(sale: SaleDetail): UseCreateSaleWaybill
             l.productId === offendingProductId ? { ...l, error: "Producto no encontrado en el catálogo" } : l
           )
         );
+      }
+      if (err instanceof VehicleNotFoundError) {
+        setVehicle((prev) => ({ ...prev, vehicleId: null }));
+      }
+      if (err instanceof DriverNotFoundError) {
+        setDriver((prev) => ({ ...prev, driverId: null }));
       }
       setError(err as Error);
       return null;

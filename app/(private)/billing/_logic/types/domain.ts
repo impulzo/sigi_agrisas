@@ -74,6 +74,8 @@ export interface PartialLine {
   unit: string;
   quantity: number;
   unitPrice: number;
+  priceId?: string | null;
+  priceName?: string | null;
   discountPct: number;
   ivaRate: number;
   iepsRate: number;

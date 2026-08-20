@@ -5,9 +5,7 @@
 Define el shell del panel privado de Agrisas: layout compartido con NavigationRail y TopAppBar, protección de rutas autenticadas, carga de Material Symbols Outlined, diseño fiel al design system Material 3 "Agro-Systemic" de Stitch, y las cuatro reglas fundamentales de acceso y navegación post-autenticación.
 
 ---
-
 ## Requirements
-
 ### Requirement: Implementación fiel del diseño frontend de Stitch (MCP)
 El panel privado SHALL implementar el design system Material 3 "Agro-Systemic" generado en el proyecto Stitch `5227157529282603342` (*Agrisas Admin & POS Dashboard*), accesible vía el servidor MCP de Stitch. Los tokens visuales (paleta semántica, escala tipográfica Inter, escala de spacing 8px, border-radius), la iconografía (Material Symbols Outlined) y la composición de pantallas (NavigationRail + TopAppBar + bento grid del Dashboard) SHALL coincidir con los artefactos exportados desde Stitch. NO MUST introducirse tokens, componentes visuales o icon sets ajenos al sistema durante este change.
 
@@ -187,15 +185,15 @@ Ningún `layout.tsx` de módulo bajo `(private)` SHALL declarar padding, centrad
 ---
 
 ### Requirement: NavigationRail organism con destinos primarios y secundarios
-`app/_components/organisms/NavigationRail/NavigationRail.tsx` SHALL renderizar una barra vertical fija de 80px de ancho, alto completo, con: logo Agrisas arriba, 4 destinos primarios (`Inicio`, `POS`, `Inventario`, `Facturación`) en el centro, 2 destinos secundarios (`Soporte`, `Cuenta`) abajo. Cada destino es un `<Link>` (Next.js) con icono Material Symbols + label `label-sm`. El active state SHALL aplicar `bg-primary-container text-on-primary-container rounded-xl scale-90` al destino cuya ruta coincida con `usePathname()`. Por usar `usePathname`, el componente SHALL ser client component (`"use client"`).
+`app/_components/organisms/NavigationRail/NavigationRail.tsx` SHALL renderizar una barra vertical fija de 80px de ancho, alto completo, con: logo Agrisas arriba, 4 destinos primarios (`Inicio`, `POS`, `Inventario`, `Facturación`) en el centro, hasta 3 destinos secundarios (`Soporte`, `Cuenta` siempre visibles; `Configuración` condicional a `settings:read`) abajo. Cada destino es un `<Link>` (Next.js) con icono Material Symbols + label `label-sm`. El active state SHALL aplicar `bg-primary-container text-on-primary-container rounded-xl scale-90` al destino cuya ruta coincida con `usePathname()`. Por usar `usePathname`, el componente SHALL ser client component (`"use client"`).
 
 #### Scenario: Destinos primarios renderizados
 - **WHEN** se inspecciona el HTML del NavigationRail
 - **THEN** contiene exactamente 4 enlaces con `href` `/dashboard`, `/pos`, `/inventory`, `/billing` y sus respectivos iconos `dashboard`, `point_of_sale`, `inventory_2`, `receipt_long`
 
-#### Scenario: Destinos secundarios en la parte inferior
-- **WHEN** se inspecciona el HTML del NavigationRail
-- **THEN** contiene enlaces a `/support` y `/account` con iconos `contact_support` y `account_circle` ubicados con `mt-auto`
+#### Scenario: Destinos secundarios en la parte inferior para usuario con settings:read
+- **WHEN** se inspecciona el HTML del NavigationRail y el usuario tiene `settings:read`
+- **THEN** contiene enlaces a `/support`, `/account` y `/settings` con iconos `contact_support`, `account_circle` y `settings` ubicados con `mt-auto`
 
 #### Scenario: Active state en la ruta actual
 - **WHEN** el usuario está en `/dashboard`
@@ -208,8 +206,6 @@ Ningún `layout.tsx` de módulo bajo `(private)` SHALL declarar padding, centrad
 #### Scenario: NavigationRail no hace fetch ni accede a storage
 - **WHEN** se inspecciona el archivo
 - **THEN** no importa `fetch`, `axios`, `localStorage`, `sessionStorage` ni `document`
-
----
 
 ### Requirement: TopAppBar organism con título, búsqueda, acciones y avatar
 `app/_components/organisms/TopAppBar/TopAppBar.tsx` SHALL renderizar una barra superior fija de 64px de alto, con `pl-24 pr-8`, conteniendo: título "Agrisas" (`text-headline-lg text-primary`), `SearchInput` (oculto en `<md`), `IconButton` de notificaciones, ayuda y settings, y un `Avatar` final. El componente acepta `userName: string`, `userEmail: string`, `avatarUrl?: string` como props y NO hace fetch.
@@ -233,7 +229,7 @@ Ningún `layout.tsx` de módulo bajo `(private)` SHALL declarar padding, centrad
 ---
 
 ### Requirement: Navigation rail item catalogue
-The shared private layout SHALL render a fixed `NavigationRail` (80px wide) on the left edge of the viewport with the agreed Material 3 visual language and the brand mark at the top. The rail SHALL be split into two groups: a primary group with the destinations of the panel and a secondary group at the bottom with support/account entries. Each destination is declared as a typed `RailItem` `{ key, href, icon, label, requires?, children? }` where `requires?` is an optional permission key string (`<resource>:<action>`) and `children?` is an optional array of nested `RailItem` (only one level of nesting). The primary group SHALL include the following items in this order:
+The shared private layout SHALL render a fixed `NavigationRail` (80px wide) on the left edge of the viewport with the agreed Material 3 visual language and the brand mark at the top. The rail SHALL be split into two groups: a primary group with the destinations of the panel and a secondary group at the bottom with support/account/settings entries. Each destination is declared as a typed `RailItem` `{ key, href, icon, label, requires?, children? }` where `requires?` is an optional permission key string (`<resource>:<action>`) and `children?` is an optional array of nested `RailItem` (only one level of nesting). The primary group SHALL include the following items in this order:
 
 1. `dashboard` (icon `dashboard`, href `/dashboard`, label `Inicio`, no `requires`).
 2. `pos` (icon `point_of_sale`, href `/pos`, label `POS`, declares `requires: "sales:create"`).
@@ -251,6 +247,14 @@ The shared private layout SHALL render a fixed `NavigationRail` (80px wide) on t
 14. `roles` (icon `shield_person`, href `/roles`, label `Roles`, declares `requires: "roles:read"`).
 
 (Nota: `billing`, `waybills` y `reports` ya existían en el código antes de este change y no estaban documentados en la versión previa de este requirement — se incluyen aquí para que la lista quede completa y verificable, cerrando esa deriva preexistente de paso.)
+
+The secondary group SHALL include the following items in this order:
+
+1. `support` (icon `contact_support`, href `/support`, label `Support`, no `requires`).
+2. `account` (icon `account_circle`, href `/account`, label `Account`, no `requires`).
+3. `settings` (icon `settings`, href `/settings`, label `Configuración`, declares `requires: "settings:read"`).
+
+Secondary items follow the same visibility rules as primary items: an item without `requires` (`support`, `account`) is always rendered for any authenticated user; an item with `requires` (`settings`) is rendered when `can(requires)` resolves to `true` or is still `"loading"` (optimistic), and hidden when it resolves to `false`.
 
 Below the secondary items, the rail SHALL render a standalone logout action button (icon `logout`, `title="Cerrar sesión"`) that invokes `useLogout` and is disabled while the logout is in flight.
 
@@ -412,7 +416,21 @@ When a `RailItem` has `children`, the rail SHALL render the parent item normally
 - **WHEN** the current pathname starts with `/catalogs/`
 - **THEN** the `catalogs` parent SHALL render with the active styling AND the matching child inside the flyout SHALL also be marked active when the flyout is open
 
----
+#### Scenario: Authorized user sees the settings item
+- **WHEN** the current user's effective permissions include `settings:read`
+- **THEN** the rail SHALL render the `settings` item (label "Configuración", href `/settings`, icon `settings`) in the secondary group, after `account`
+
+#### Scenario: Unauthorized user does not see the settings item
+- **WHEN** the current user's effective permissions do not include `settings:read` and the permission check has resolved
+- **THEN** the rail SHALL NOT render the `settings` item
+
+#### Scenario: Settings item permission still loading
+- **WHEN** the permission check for `settings:read` is still in flight
+- **THEN** the rail SHALL render the `settings` item optimistically to avoid layout shift; `SettingsPage`'s own `can("settings:read")` gate and the `settings:read`/`settings:write` guards on `app/api/v1/admin/settings/**` routes remain the authoritative enforcement if the check ultimately resolves to false
+
+#### Scenario: Support and account items are unaffected by the settings permission check
+- **WHEN** the current user's effective permissions do not include `settings:read`
+- **THEN** the rail SHALL still render `support` and `account` in the secondary group, since neither declares `requires`
 
 ### Requirement: NavigationRail con scroll vertical independiente
 `NavigationRail` SHALL estructurarse internamente en tres regiones flex verticales: (1) header fijo con el logo Agrisas (no scrolleable), (2) sección media scrolleable que contiene los items primarios y secundarios con `flex-1 overflow-y-auto`, y (3) footer fijo con el botón de logout (`flex-shrink-0`, no scrolleable). El rail SHALL ocupar `h-screen` y la sección media SHALL aplicar la utility `scrollbar-thin` para una scrollbar discreta acorde al design system Material 3 "Agro-Systemic".
@@ -497,3 +515,4 @@ El `app/layout.tsx` raíz SHALL declarar `metadata.icons` apuntando a `/logo.png
 #### Scenario: Favicon en la pestaña del navegador
 - **WHEN** un usuario (autenticado o no) navega a cualquier ruta de la aplicación
 - **THEN** la pestaña del navegador muestra `logo.png` como ícono, derivado de `metadata.icons` en `app/layout.tsx`
+

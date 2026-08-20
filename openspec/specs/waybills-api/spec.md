@@ -2,25 +2,28 @@
 
 ## Purpose
 
-Define the backend for inter-branch merchandise transfers (`Waybill` aggregate) under `/api/v1/admin/waybills`. Two types share the same aggregate: `simple` (internal same-city movement, no fiscal document, folio `TRI`) and `carta_porte` (cross-city, stamped as CFDI Traslado with Complemento Carta Porte 3.1 nacional via Facturama, folio `TS`).
+Define the backend for inter-branch merchandise transfers and sale-delivery Carta Porte documents (`Waybill` aggregate) under `/api/v1/admin/waybills`. Two types share the same aggregate: `simple` (internal same-city movement, no fiscal document, folio `TRI`) and `carta_porte` (documents the delivery of a completed sale to its customer, stamped as CFDI Traslado with Complemento Carta Porte 3.1 nacional via Facturama, folio `TS`).
 
 ---
-
 ## Requirements
-
 ### Requirement: Waybill aggregate model
-The system SHALL persist an inter-branch merchandise transfer as the aggregate `Waybill` (header) + `WaybillItem` (lines) with the following invariants:
+The system SHALL persist an inter-branch merchandise transfer, or a sale-delivery Carta Porte, as the aggregate `Waybill` (header) + `WaybillItem` (lines) with the following invariants:
 
 - `Waybill.type` is one of `simple`, `carta_porte`. Set at creation, never mutable afterward. Determines which of the fields below are required vs. `null`.
 - `Waybill.status` is one of `completed`, `cancelled`. There is no `draft` state — creation persists atomically (and, for `type='carta_porte'` only, stamps the CFDI Traslado atomically). Transitions:
   - `(created) → completed` (at `POST /waybills`, atomically; for `type='carta_porte'` the transaction commits ONLY if Facturama accepts the stamp).
   - `completed → cancelled` (via `POST /waybills/:id/cancel`). Terminal: no further transitions allowed.
-- `Waybill` references `originBranchId` and `destinationBranchId` (both FK `ON DELETE RESTRICT` to `branches`; MUST be distinct), `folioId` (FK `ON DELETE RESTRICT` — MUST resolve to the canonical folio `code='TS'`, `scope='INVENTORY'` when `type='carta_porte'`, or `code='TRI'`, `scope='INVENTORY'` when `type='simple'`), `creatorId` (FK `ON DELETE RESTRICT`), `cancelledBy` (nullable, FK `ON DELETE SET NULL`).
+- `Waybill.originBranchId` is ALWAYS a FK `ON DELETE RESTRICT` to `branches`, on both types. For `type='simple'` it is the transfer's origin branch (user-selected). For `type='carta_porte'` it is resolved server-side from `Sale.branchId` — the client MUST NOT be able to override it.
+- `Waybill.destinationBranchId` is a nullable FK `ON DELETE RESTRICT` to `branches` — REQUIRED (non-null) when `type='simple'`, and MUST be distinct from `originBranchId`; NULL when `type='carta_porte'`.
+- `Waybill.destinationCustomerId` is a nullable FK `ON DELETE RESTRICT` to `customers` — REQUIRED (non-null) when `type='carta_porte'`; NULL when `type='simple'`.
+- `Waybill.saleId` is a nullable FK `ON DELETE RESTRICT` to `sales` — REQUIRED (non-null) when `type='carta_porte'` (the sale this Carta Porte documents the delivery of); NULL when `type='simple'`. `saleId` is set once at creation and never mutated.
+- `Waybill` also references `folioId` (FK `ON DELETE RESTRICT` — MUST resolve to the canonical folio `code='TS'`, `scope='INVENTORY'` when `type='carta_porte'`, or `code='TRI'`, `scope='INVENTORY'` when `type='simple'`), `creatorId` (FK `ON DELETE RESTRICT`), `cancelledBy` (nullable, FK `ON DELETE SET NULL`).
+- `Waybill.vehicleId` is a nullable FK `ON DELETE SET NULL` to `vehicles`, and `Waybill.driverId` is a nullable FK `ON DELETE SET NULL` to `drivers` — both purely informational trace-back links to the `admin-vehicles`/`admin-drivers` catalogs, meaningful only when `type='carta_porte'` (always `null` for `type='simple'`). Neither field is authoritative for the CFDI: the 9 flat snapshot columns below (`vehiclePlate`, ..., `driverLicenseNumber`) remain the sole source of truth for stamping and for historical reads, and are populated the same way whether or not `vehicleId`/`driverId` were provided.
 - `Waybill.folioNumber` is an integer assigned atomically at creation via the shared `allocateFolio` helper against the folio resolved by `type`; `(folioId, folioNumber)` is UNIQUE.
 - `Waybill.notes` is a nullable free-text field (max 500 chars), settable on both types but primarily used by `type='simple'` to record the transfer's motive.
 - `departureAt` is a required timestamp on both types — for `carta_porte` it represents the estimated departure schedule; for `simple` it represents the transfer date (no separate schedule column exists).
 - The following fields are REQUIRED (non-null) when `type='carta_porte'` and NULL when `type='simple'`: origin/destination structured address snapshots, `vehiclePlate`, `vehicleConfig` (SAT `c_ConfigAutotransporte` key), `vehiclePermitType`, `vehiclePermitNumber`, `insuranceCompany`, `insurancePolicy`, `driverName`, `driverLicenseNumber`, `distanceKm`, `arrivalAt`. `driverRfc` remains nullable on both types (optional even for `carta_porte`).
-- Origin and destination address fields, when populated (`type='carta_porte'`), are SNAPSHOTTED onto `Waybill` at creation time from `Branch`'s structured address fields (see `admin-branches` spec) — NOT read live from `Branch` on subsequent reads. This preserves the historical Carta Porte record even if a branch's address is later edited.
+- Origin address (`type='carta_porte'`) is SNAPSHOTTED onto `Waybill` at creation time from the sale's branch's structured address fields (see `admin-branches` spec). Destination address (`type='carta_porte'`) is SNAPSHOTTED at creation time from the sale's customer's structured address fields (see `customers-api` spec). Neither is read live on subsequent reads — this preserves the historical Carta Porte record even if the branch's or customer's address is later edited.
 - `cfdiUuid`, `facturamaCfdiId`, `xmlUrl`, `pdfUrl` are nullable and remain `null` for the entire lifetime of a `type='simple'` waybill. For `type='carta_porte'`, they stay nullable until the stamp succeeds, and are always populated together with `status='completed'` (never persisted with only a subset).
 - `cancelledAt` and `cancellationReason` are populated only when the cancellation occurs, on both types.
 - Each `WaybillItem` references `waybillId` (FK `ON DELETE CASCADE`), `productId`. For `type='carta_porte'`, `productId` is nullable (FK `ON DELETE SET NULL` — same nullability pattern as `billing-api`'s `InvoiceItem`), allowing free-text lines. For `type='simple'`, `productId` is REQUIRED — every line MUST resolve to an existing, active catalog product.
@@ -31,30 +34,51 @@ The system SHALL persist an inter-branch merchandise transfer as the aggregate `
 - **WHEN** a `carta_porte` waybill is created with origin branch address `"Calle Reforma 100, Col. Centro"`, and the branch's address is later edited to a different street
 - **THEN** `GET /api/v1/admin/waybills/:id` for the prior waybill still returns the original snapshotted origin address
 
+#### Scenario: Snapshot survives customer address change
+- **WHEN** a `carta_porte` waybill is created with a customer destination address, and the customer's address is later edited
+- **THEN** `GET /api/v1/admin/waybills/:id` for the prior waybill still returns the original snapshotted destination address
+
 #### Scenario: Hazardous material without code rejected
 - **WHEN** a `carta_porte` line has `isHazardousMaterial: true` and no `hazardousMaterialCode`
 - **THEN** the system returns HTTP 400 before touching inventory or Facturama
 
 #### Scenario: Simple waybill persists with null Carta Porte fields
 - **WHEN** a `type='simple'` waybill is created successfully
-- **THEN** `vehiclePlate`, `driverName`, `distanceKm`, `arrivalAt`, origin/destination address snapshots, `cfdiUuid`, and `facturamaCfdiId` are all `null` in the persisted row
+- **THEN** `vehiclePlate`, `driverName`, `distanceKm`, `arrivalAt`, origin/destination address snapshots, `cfdiUuid`, `facturamaCfdiId`, `destinationCustomerId`, `saleId`, `vehicleId`, and `driverId` are all `null` in the persisted row, and `destinationBranchId` is populated
+
+#### Scenario: Carta Porte waybill persists with null destinationBranchId
+- **WHEN** a `type='carta_porte'` waybill is created successfully
+- **THEN** `destinationBranchId` is `null`, and `destinationCustomerId`/`saleId` are populated with the customer and sale the Carta Porte documents
+
+#### Scenario: Carta Porte snapshot survives catalog vehicle deletion
+- **WHEN** a `carta_porte` waybill was created with `vehicleId` pointing to a vehicle later soft-deleted (or, in a future data-cleanup scenario, hard-deleted, triggering `ON DELETE SET NULL`)
+- **THEN** the waybill's `vehiclePlate`/`vehicleConfig`/etc. snapshot columns remain unchanged; only `vehicleId` may become `null`
+
+#### Scenario: Carta Porte created without a catalog vehicle/driver
+- **WHEN** a `carta_porte` waybill is created via manual capture (no `vehicleId`/`driverId` selected from the catalog)
+- **THEN** `vehicleId` and `driverId` persist as `null`, and the snapshot columns are populated exactly as before this change (no regression for manual capture)
 
 ---
 
-### Requirement: Create waybill (simple or Carta Porte)
+### Requirement: Create waybill (simple or Carta Porte from a sale)
 The system SHALL expose `POST /api/v1/admin/waybills` accepting a discriminated union on `type: "simple" | "carta_porte"`. Requires `waybills:write` for both types; `type: "carta_porte"` additionally requires `waybills:stamp`, checked after body validation (the discriminant is only known once the body is parsed).
 
-**Common validation** (both types, in order, each step short-circuiting before any inventory call):
-1. Zod validation of the body against the schema for the given `type` (400 on shape errors, including an unrecognized or missing `type`).
-2. `originBranchId !== destinationBranchId`, both branches exist and `isActive=true` (400 `InvalidBranchPair` otherwise).
-3. `waybills:stamp` permission check (only for `type='carta_porte'`, after steps 1–2 succeed).
+**`type: "simple"`** request body and behavior: `{ type: "simple", originBranchId: string (uuid), destinationBranchId: string (uuid), transferDate: string (ISO), notes?: string | null, items: Array<{ productId: string (uuid), description: string, quantity: number }> }`. Validation order: Zod shape (400) → `originBranchId !== destinationBranchId`, both branches exist and active (400 `InvalidBranchPair`) → every line's `productId` resolves to an active product (400 `ProductNotFound`) → `branch_inventory.quantity` at origin `>= quantity` per line (409 `InsufficientStockAtOrigin`). On success: allocates folio `TRI`, decrements origin, increments destination, persists `Waybill` (`type='simple'`, `destinationBranchId` set, `destinationCustomerId`/`saleId`/`vehicleId`/`driverId` null).
 
-**`type: "simple"`** request body: `{ type: "simple", originBranchId: string (uuid), destinationBranchId: string (uuid), transferDate: string (ISO), notes?: string | null, items: Array<{ productId: string (uuid), description: string, quantity: number }> }`.
-- Every line's `productId` MUST resolve to an existing, active product (400 `ProductNotFound` otherwise) — free-text lines are NOT supported for this type.
-- For every line, `branch_inventory.quantity` at `originBranchId` for `productId` MUST be `>= quantity` (409 `InsufficientStockAtOrigin` otherwise).
-- On success, within a single transaction: aloca folio `TRI` (scope `INVENTORY`) via `allocateFolio`, decrements `branch_inventory` at origin using the atomic reject-if-negative pattern, increments `branch_inventory` at destination (creates the row if absent), persists `Waybill` (`type='simple'`, `status='completed'`, all Carta Porte fields `null`) + `WaybillItem[]`. No Facturama call is made.
+**`type: "carta_porte"`** request body: `{ type: "carta_porte", saleId: string (uuid), vehicle: {..., vehicleId?: string (uuid) | null }, driver: {..., driverId?: string (uuid) | null }, distanceKm: number, departureAt: string (ISO), arrivalAt: string (ISO), items: Array<{ productId?: string | null, description: string, satBienesTranspCode: string, satUnitCode: string, quantity: number, weightKg: number, isHazardousMaterial?: boolean, hazardousMaterialCode?: string | null }> }`. `vehicle.vehicleId` and `driver.driverId`, when present, MUST be a UUID resolving to an existing `Vehicle`/`Driver` (400 if not found) — they are OPTIONAL and purely for trace-back; they do NOT replace or auto-fill the flat snapshot fields (`vehicle.plate`, `vehicle.vehicleConfig`, etc. remain required in the body exactly as before, regardless of whether `vehicleId`/`driverId` are present — the client is responsible for populating them, typically by copying the selected catalog entry's values). The body SHALL NOT accept `originBranchId` or `destinationBranchId` (rejected as an unrecognized field, HTTP 400, if present — origin/destination are resolved server-side, never trusted from the client).
 
-**`type: "carta_porte"`** request body and behavior: unchanged from the original single-type implementation — `vehicle`, `driver`, `distanceKm`, `departureAt`/`arrivalAt`, `items` (where lines MAY omit `productId` and skip stock validation), structured-address completeness check on both branches (400 `BranchAddressIncomplete`), folio `TS`, atomic stamp-or-rollback via `WaybillFacturamaGateway.stampTraslado`.
+**`carta_porte` validation order** (each step short-circuiting before any Facturama call):
+1. Zod shape validation (400).
+2. `waybills:stamp` permission check.
+3. `sale = findSale(saleId)`; 404-equivalent `WaybillSaleNotFound` if it doesn't exist.
+4. `sale.status === 'completed'`; 409 `SaleNotCompleted` otherwise.
+5. `sale.customerId !== null`; 409 `SaleHasNoCustomer` otherwise (walk-in/cash sales without a customer cannot generate a Carta Porte).
+6. `origin = findBranch(sale.branchId)` — resolved server-side, never from the request body.
+7. `customer = findCustomer(sale.customerId)`; 404-equivalent `CustomerNotFoundForWaybill` if inactive/missing.
+8. Structured-address completeness check on `customer` (same 7 fields as the branch check: street, exterior number, neighborhood, municipality, state, country, zip code) — 400 `CustomerAddressIncomplete` listing missing fields, mirroring `BranchAddressIncomplete`.
+9. Structured-address completeness check on `origin` (unchanged from before — 400 `BranchAddressIncomplete`).
+10. If `vehicle.vehicleId` is present, it MUST resolve to an existing `Vehicle` — 400 `VehicleNotFound` otherwise. If `driver.driverId` is present, it MUST resolve to an existing `Driver` — 400 `DriverNotFound` otherwise. Neither check requires the referenced entity to be `isActive` (a soft-deleted vehicle/driver can still be referenced for consistency with historical selections, though the UI only offers active ones).
+11. On success, within a single transaction: allocates folio `TS`, persists `Waybill` (`type='carta_porte'`, `originBranchId=sale.branchId`, `destinationBranchId=null`, `destinationCustomerId=customer.id`, `saleId=sale.id`, `vehicleId`/`driverId` from the body (or `null`), address snapshots from `origin`/`customer`) + `WaybillItem[]`, calls `WaybillFacturamaGateway.stampTraslado` atomically (rolls back on Facturama rejection) — **no `branch_inventory` movement occurs for this type** (the sale already decremented origin stock when it completed; there is no destination branch inventory to increment).
 
 Returns HTTP 201 with `WaybillDto` on success for both types.
 
@@ -66,60 +90,68 @@ Returns HTTP 201 with `WaybillDto` on success for both types.
 - **WHEN** `type: "simple"` and a line's `productId` does not resolve to an active product
 - **THEN** the system returns HTTP 400 `{"error":"ProductNotFound","productId":"..."}` and does NOT move inventory or allocate a folio
 
-#### Scenario: Successful Carta Porte transfer with catalog products
-- **WHEN** origin has sufficient stock for every line, both branches have complete addresses, `type: "carta_porte"`, and Facturama accepts the stamp
-- **THEN** the system allocates folio `TS`, decrements origin, increments destination, persists `Waybill` with `status='completed'` and the CFDI data, and returns HTTP 201
+#### Scenario: Insufficient stock at origin (simple only)
+- **WHEN** a `type: "simple"` line requests `quantity=50` but origin only has `30` in `branch_inventory`
+- **THEN** the system returns HTTP 409 `{"error":"InsufficientStockAtOrigin","productId":"..."}` and does NOT move inventory or allocate a folio
 
-#### Scenario: Insufficient stock at origin (either type)
-- **WHEN** a line requests `quantity=50` but origin only has `30` in `branch_inventory`, for either `type`
-- **THEN** the system returns HTTP 409 `{"error":"InsufficientStockAtOrigin","productId":"..."}` and does NOT move inventory, allocate a folio, or (for `carta_porte`) call Facturama
+#### Scenario: Same branch as origin and destination (simple only)
+- **WHEN** `type: "simple"` and `originBranchId === destinationBranchId`
+- **THEN** the system returns HTTP 400 `{"error":"InvalidBranchPair"}` before any other validation
 
-#### Scenario: Same branch as origin and destination (either type)
-- **WHEN** `originBranchId === destinationBranchId`
-- **THEN** the system returns HTTP 400 `{"error":"InvalidBranchPair"}` before any other validation, regardless of `type`
+#### Scenario: Successful Carta Porte from a completed sale
+- **WHEN** `type: "carta_porte"`, `saleId` resolves to a `completed` sale with a customer whose structured address is complete, and Facturama accepts the stamp
+- **THEN** the system resolves `originBranchId` from `sale.branchId`, allocates folio `TS`, persists `Waybill` with `destinationCustomerId`/`saleId` set and the CFDI data, does NOT move `branch_inventory`, and returns HTTP 201
 
-#### Scenario: Origin or destination missing structured address (Carta Porte only)
-- **WHEN** `type: "carta_porte"` and the destination branch has no `addressZipCode` set
+#### Scenario: Carta Porte rejects a sale that isn't completed
+- **WHEN** `type: "carta_porte"` and `saleId` resolves to a sale with `status` other than `completed`
+- **THEN** the system returns HTTP 409 `{"error":"SaleNotCompleted"}` before resolving the customer or calling Facturama
+
+#### Scenario: Carta Porte rejects a sale without a customer
+- **WHEN** `type: "carta_porte"` and `saleId` resolves to a `completed` sale with `customerId: null`
+- **THEN** the system returns HTTP 409 `{"error":"SaleHasNoCustomer"}`
+
+#### Scenario: Carta Porte rejects a customer with incomplete address
+- **WHEN** `type: "carta_porte"`, the sale's customer has no `addressZipCode` set
+- **THEN** the system returns HTTP 400 `{"error":"CustomerAddressIncomplete","customerId":"...","missingFields":["addressZipCode", ...]}`
+
+#### Scenario: Carta Porte ignores a client-supplied originBranchId
+- **WHEN** `type: "carta_porte"` and the request body includes an `originBranchId` field
+- **THEN** the system returns HTTP 400 (unrecognized field) — origin is always resolved from `sale.branchId`, never accepted from the client
+
+#### Scenario: Origin branch missing structured address (Carta Porte only)
+- **WHEN** `type: "carta_porte"` and the sale's origin branch has no `addressZipCode` set
 - **THEN** the system returns HTTP 400 `{"error":"BranchAddressIncomplete","branchId":"...","missingFields":["addressZipCode", ...]}`
 
 #### Scenario: Facturama rejects the stamp (Carta Porte only)
 - **WHEN** `type: "carta_porte"` and Facturama returns a validation error for the Carta Porte payload
-- **THEN** the system returns HTTP 422 with the Facturama error detail, and neither inventory nor the folio counter were affected (verified via a rollback test)
+- **THEN** the system returns HTTP 422 with the Facturama error detail, and neither the folio counter nor the `Waybill` row were persisted (verified via a rollback test)
 
 #### Scenario: Free-text line skips stock validation (Carta Porte only)
 - **WHEN** `type: "carta_porte"` and a line has no `productId` (goods not in the product catalog)
-- **THEN** the system does not check or modify `branch_inventory` for that line, but still includes it in the Carta Porte `Mercancias` node
+- **THEN** the system does not check or modify `branch_inventory` for that line (Carta Porte never moves inventory), but still includes it in the Carta Porte `Mercancias` node
 
 #### Scenario: Missing type is rejected
 - **WHEN** the request body omits `type`
 - **THEN** the system returns HTTP 400 with a validation error before any other check
 
----
+#### Scenario: Carta Porte with catalog vehicle and driver persists the trace-back IDs
+- **WHEN** `type: "carta_porte"` and the body includes `vehicle: { vehicleId: "<uuid>", plate: "...", ... }` and `driver: { driverId: "<uuid>", name: "...", ... }`, both resolving to existing catalog entries
+- **THEN** the created `Waybill` persists `vehicleId` and `driverId` alongside the full flat snapshot (unchanged behavior for the snapshot itself)
 
-### Requirement: Cancel waybill
-The system SHALL expose `POST /api/v1/admin/waybills/:id/cancel` that reverses the inventory movement and cancels the CFDI (if stamped) in a single transaction. Requires `waybills:cancel`. Body: `{ reason: string (3-500 chars) }`.
+#### Scenario: Carta Porte rejects an unknown vehicleId
+- **WHEN** `type: "carta_porte"` and `vehicle.vehicleId` does not resolve to any `Vehicle`
+- **THEN** the system returns HTTP 400 `{"error":"VehicleNotFound"}` before calling Facturama
 
-- Only `status='completed'` waybills can be cancelled. A `cancelled` waybill returns HTTP 409 `{"error":"WaybillAlreadyCancelled"}` on a second cancellation attempt (NOT idempotent, same as `returns-api` and `payments-api`).
-- Reverses inventory: increments origin (tolerant, always succeeds, creates the row if absent), decrements destination using the TOLERANT pattern (`returns-api`'s `decrementInventory` — MAY leave destination negative if the transferred stock was already re-consumed downstream, mirroring `CancelSaleUseCase`/`CancelReturnUseCase`).
-- If `facturamaCfdiId` is set, calls `WaybillFacturamaGateway.cancel(cfdiId, motive)` before committing; if Facturama rejects the cancellation, the transaction rolls back (inventory NOT reversed) and returns HTTP 422.
-- Sets `status='cancelled'`, `cancelledAt`, `cancelledBy`, `cancellationReason`.
+#### Scenario: Carta Porte rejects an unknown driverId
+- **WHEN** `type: "carta_porte"` and `driver.driverId` does not resolve to any `Driver`
+- **THEN** the system returns HTTP 400 `{"error":"DriverNotFound"}` before calling Facturama
 
-#### Scenario: Cancel a stamped waybill
-- **WHEN** a `completed` waybill with a `facturamaCfdiId` is cancelled
-- **THEN** the system reverses inventory, cancels the CFDI via Facturama, sets `status='cancelled'`, and returns HTTP 200
-
-#### Scenario: Double cancellation rejected
-- **WHEN** a `cancelled` waybill is cancelled again
-- **THEN** the system returns HTTP 409 `{"error":"WaybillAlreadyCancelled"}`
-
-#### Scenario: Destination goes negative on cancel
-- **WHEN** the destination branch already sold/moved part of the transferred stock before the waybill is cancelled
-- **THEN** the system still reverses the movement, allowing `branch_inventory.quantity` at destination to go negative
-
----
+#### Scenario: Carta Porte without vehicleId/driverId behaves exactly as before this change
+- **WHEN** `type: "carta_porte"` and the body omits `vehicle.vehicleId` and `driver.driverId` entirely
+- **THEN** the system creates the waybill exactly as it did before this change, with `vehicleId`/`driverId` persisted as `null`
 
 ### Requirement: List waybills
-The system SHALL expose `GET /api/v1/admin/waybills` that returns a paginated list. Requires `waybills:read`. Query parameters: `page` (default 1), `pageSize` (default 20, max 100), `branchId` (optional UUID — matches EITHER `originBranchId` OR `destinationBranchId`), `status` (optional, comma-separated), `type` (optional, comma-separated — `simple`, `carta_porte`), `from`/`to` (optional ISO date bounds on `createdAt`).
+The system SHALL expose `GET /api/v1/admin/waybills` that returns a paginated list. Requires `waybills:read`. Query parameters: `page` (default 1), `pageSize` (default 20, max 100), `branchId` (optional UUID — matches EITHER `originBranchId` OR `destinationBranchId`; for `type='carta_porte'` rows `destinationBranchId` is `null` so this effectively becomes an origin-only match for those rows), `status` (optional, comma-separated), `type` (optional, comma-separated — `simple`, `carta_porte`), `from`/`to` (optional ISO date bounds on `createdAt`).
 
 **Branch scoping** (two-sided variant of the standard pattern): callers without `branches:access_all`:
 - If `?branchId=` absent → implicit filter `originBranchId = x-user-branch-id OR destinationBranchId = x-user-branch-id`.
@@ -129,7 +161,7 @@ Callers with `branches:access_all` see all waybills, optionally filtered by `?br
 
 #### Scenario: Operator sees waybills where their branch is origin or destination
 - **WHEN** an `operator` with `x-user-branch-id: B1` calls `GET /api/v1/admin/waybills`
-- **THEN** the response includes waybills where `B1` is either origin or destination, and excludes all others
+- **THEN** the response includes `simple` waybills where `B1` is either origin or destination, and `carta_porte` waybills where `B1` is the origin, and excludes all others
 
 #### Scenario: Operator requests another branch
 - **WHEN** an `operator` with `x-user-branch-id: B1` calls `GET /api/v1/admin/waybills?branchId=B2`
@@ -142,16 +174,20 @@ Callers with `branches:access_all` see all waybills, optionally filtered by `?br
 ---
 
 ### Requirement: Get waybill detail and download CFDI
-The system SHALL expose `GET /api/v1/admin/waybills/:id` (full detail including items, and — for `type='carta_porte'` — vehicle, driver, snapshotted addresses) and `GET /api/v1/admin/waybills/:id/download?format=pdf|xml` (proxy stream from Facturama by `facturamaCfdiId`). Both require `waybills:read` and enforce branch scoping against EITHER `originBranchId` OR `destinationBranchId` (the caller's branch must match at least one, unless `branches:access_all`).
+The system SHALL expose `GET /api/v1/admin/waybills/:id` (full detail including items, and — for `type='carta_porte'` — vehicle, driver, snapshotted addresses, and the linked `saleId`) and `GET /api/v1/admin/waybills/:id/download?format=pdf|xml` (proxy stream from Facturama by `facturamaCfdiId`). Both require `waybills:read` and enforce branch scoping against `originBranchId` — for `type='simple'`, ALSO against `destinationBranchId` (either match is sufficient); for `type='carta_porte'`, `destinationBranchId` is `null` so only `originBranchId` is compared. The caller's branch must match, unless `branches:access_all`.
 
 Download SHALL reject with HTTP 409 `WaybillNotStamped` whenever `facturamaCfdiId` is `null`, whether because the waybill is `type='simple'` (which is never stamped) or because a `type='carta_porte'` waybill defensively lacks it.
 
-#### Scenario: Get detail within scope
-- **WHEN** a user whose branch is the destination of the waybill requests the detail
+#### Scenario: Get detail within scope (simple)
+- **WHEN** a user whose branch is the destination of a `type='simple'` waybill requests the detail
 - **THEN** the system returns HTTP 200 with the full `WaybillDto`
 
+#### Scenario: Get detail within scope (Carta Porte)
+- **WHEN** a user whose branch is the origin of a `type='carta_porte'` waybill requests the detail
+- **THEN** the system returns HTTP 200 with the full `WaybillDto`, including `saleId` and the customer destination fields
+
 #### Scenario: Download outside scope
-- **WHEN** a user whose branch is neither origin nor destination requests `/download`
+- **WHEN** a user whose branch is neither origin nor destination (or, for `carta_porte`, not the origin) requests `/download`
 - **THEN** the system returns HTTP 403
 
 #### Scenario: Download unstamped waybill
@@ -160,16 +196,62 @@ Download SHALL reject with HTTP 409 `WaybillNotStamped` whenever `facturamaCfdiI
 
 ---
 
+### Requirement: Cancel waybill
+The system SHALL expose `POST /api/v1/admin/waybills/:id/cancel` that reverses the inventory movement (for `type='simple'` only) and cancels the CFDI (if stamped) in a single transaction. Requires `waybills:cancel`. Body: `{ reason: string (3-500 chars) }`.
+
+- Only `status='completed'` waybills can be cancelled. A `cancelled` waybill returns HTTP 409 `{"error":"WaybillAlreadyCancelled"}` on a second cancellation attempt (NOT idempotent, same as `returns-api` and `payments-api`).
+- For `type='simple'`: reverses inventory — increments origin (tolerant, always succeeds, creates the row if absent), decrements destination using the TOLERANT pattern (`returns-api`'s `decrementInventory` — MAY leave destination negative if the transferred stock was already re-consumed downstream, mirroring `CancelSaleUseCase`/`CancelReturnUseCase`).
+- For `type='carta_porte'`: does NOT touch `branch_inventory` (see "Sale-linked Carta Porte does not move inventory") — there is nothing to reverse; the linked sale's inventory is managed independently by `sales-api`.
+- If `facturamaCfdiId` is set, calls `WaybillFacturamaGateway.cancel(cfdiId, motive)` before committing; if Facturama rejects the cancellation, the transaction rolls back (inventory NOT reversed) and returns HTTP 422.
+- Sets `status='cancelled'`, `cancelledAt`, `cancelledBy`, `cancellationReason`.
+
+#### Scenario: Cancel a stamped waybill
+- **WHEN** a `completed` waybill with a `facturamaCfdiId` is cancelled
+- **THEN** the system cancels the CFDI via Facturama, sets `status='cancelled'`, reverses inventory if `type='simple'` (no inventory effect if `type='carta_porte'`), and returns HTTP 200
+
+#### Scenario: Double cancellation rejected
+- **WHEN** a `cancelled` waybill is cancelled again
+- **THEN** the system returns HTTP 409 `{"error":"WaybillAlreadyCancelled"}`
+
+#### Scenario: Destination goes negative on cancel (simple only)
+- **WHEN** a `type='simple'` waybill's destination branch already sold/moved part of the transferred stock before the waybill is cancelled
+- **THEN** the system still reverses the movement, allowing `branch_inventory.quantity` at destination to go negative
+
+---
+
+### Requirement: Sale-linked Carta Porte does not move inventory
+When `type='carta_porte'`, `POST /api/v1/admin/waybills` SHALL NOT read or modify `branch_inventory` for any line, and SHALL NOT enforce `InsufficientStockAtOrigin` — the sale already decremented origin stock atomically when it completed (see `pos-api`), and the destination is a customer with no `branch_inventory` row to receive stock. This applies regardless of whether a line has a `productId` or is free-text.
+
+#### Scenario: Carta Porte creation leaves branch_inventory untouched
+- **WHEN** a `type='carta_porte'` waybill is created successfully for a sale whose origin branch has a given `branch_inventory.quantity` for the sold products
+- **THEN** `branch_inventory.quantity` for those products at that branch is identical before and after the Carta Porte is created
+
+#### Scenario: Cancelling a sale-linked Carta Porte does not reverse inventory
+- **WHEN** a `type='carta_porte'` waybill is cancelled via `POST /api/v1/admin/waybills/:id/cancel`
+- **THEN** the system cancels the CFDI (if stamped) and sets `status='cancelled'` without touching `branch_inventory` — reversing the sale's own inventory decrement (if desired) is a `sales-api` concern (`CancelSaleUseCase`), not a `waybills-api` concern
+
+---
+
 ### Requirement: WaybillFacturamaGateway port (module-local, decoupled from billing)
 The system SHALL define an application port `WaybillFacturamaGateway` in `src/modules/waybills/application/ports/` with methods `stampTraslado(payload): Promise<{cfdiId, uuid, xmlUrl?, pdfUrl?}>`, `cancel(cfdiId, motive): Promise<{success, acuseBase64?}>`, `download(format, cfdiId): Promise<{contentBase64, contentType}>`. Infrastructure implementations `FacturamaRestGateway` and `FakeFacturamaGateway` SHALL live under `src/modules/waybills/infrastructure/services/` — they SHALL NOT be imported from or re-export `src/modules/billing/`'s `FacturamaGateway`, keeping the two modules decoupled (a waybill is not an invoice). The DI container SHALL select the real vs fake implementation via the `FACTURAMA_MOCK` env var, the same mechanism `billing-api` uses.
 
+`FacturamaRestGateway` SHALL authenticate with HTTP Basic Auth built from `FACTURAMA_USER`/`FACTURAMA_PASSWORD` and fail fast at construction only when `FACTURAMA_MOCK=false` and those credentials are missing. The emitter's fiscal identity used to build the CFDI `Emisor` node in `stampTraslado`'s payload (RFC, legal name, fiscal regime, zip code) is NO LONGER read from `process.env.FACTURAMA_EMITTER_*` nor validated at construction; it is resolved from the shared `EmitterFiscalSettings` store (`src/shared/infrastructure/emitter/`, populated via `billing-api`'s CSD upload flow) on each `stampTraslado` call. If that data is incomplete or absent at stamp time (and `FACTURAMA_MOCK=false`), the gateway SHALL throw `EmitterFiscalDataIncompleteError` before calling Facturama. `FakeFacturamaGateway` (used when `FACTURAMA_MOCK=true`, the default) does NOT require `EmitterFiscalSettings` to be populated.
+
 #### Scenario: Mock mode used in tests and default env
 - **WHEN** `FACTURAMA_MOCK` is unset or `"true"`
-- **THEN** the DI container wires `FakeFacturamaGateway`, producing deterministic UUIDs without network calls
+- **THEN** the DI container wires `FakeFacturamaGateway`, producing deterministic UUIDs without network calls, regardless of whether `EmitterFiscalSettings` is populated
 
 #### Scenario: No cross-module import
 - **WHEN** static analysis inspects `src/modules/waybills/`
 - **THEN** no file imports from `src/modules/billing/`
+
+#### Scenario: Stamping Carta Porte with incomplete emitter fiscal data
+- **WHEN** `FACTURAMA_MOCK=false`, Facturama credentials are present, and `EmitterFiscalSettings` has any of `rfc`/`legalName`/`fiscalRegime`/`zipCode` missing
+- **THEN** `stampTraslado` throws `EmitterFiscalDataIncompleteError` before making any Facturama HTTP request, and `POST /api/v1/admin/waybills` (type `carta_porte`) maps it to HTTP 409 `{"error":"EmitterFiscalDataIncomplete"}`
+
+#### Scenario: Real mode requires Facturama credentials
+- **WHEN** `FACTURAMA_MOCK=false` and `FACTURAMA_USER`/`FACTURAMA_PASSWORD` are missing
+- **THEN** the gateway construction throws a startup error
 
 ---
 
@@ -193,3 +275,4 @@ The system SHALL define four permissions: `waybills:read`, `waybills:write`, `wa
 #### Scenario: waybills:stamp required for Carta Porte
 - **WHEN** a user with `waybills:write` but WITHOUT `waybills:stamp` calls `POST /api/v1/admin/waybills` with `type: "carta_porte"`
 - **THEN** the system returns HTTP 403 `{"error":"Forbidden","required":"waybills:stamp"}`
+

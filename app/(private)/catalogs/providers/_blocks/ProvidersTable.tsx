@@ -24,6 +24,16 @@ function truncate(value: string, max: number): string {
   return value.length > max ? value.slice(0, max) + "…" : value;
 }
 
+const MX_CURRENCY = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  minimumFractionDigits: 2,
+});
+
+function formatCurrency(value: number): string {
+  return MX_CURRENCY.format(value);
+}
+
 export function ProvidersTable({
   items,
   canWrite,
@@ -56,6 +66,8 @@ export function ProvidersTable({
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">RFC</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Régimen</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Contacto</th>
+            <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Saldo inicial</th>
+            <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Saldo actual</th>
             <th className="text-left px-4 py-3 text-label-lg text-on-surface-variant font-medium">Estado</th>
             {canWrite && (
               <th className="text-right px-4 py-3 text-label-lg text-on-surface-variant font-medium">Acciones</th>
@@ -80,7 +92,7 @@ export function ProvidersTable({
                     </div>
                   )}
                 </td>
-                <td className="px-4 py-3 font-mono text-on-surface-variant">{item.rfc}</td>
+                <td className="px-4 py-3 font-mono text-on-surface-variant">{item.rfc ?? "—"}</td>
                 <td className="px-4 py-3 text-on-surface-variant">
                   {item.taxRegime ?? <span>—</span>}
                 </td>
@@ -91,6 +103,8 @@ export function ProvidersTable({
                     <span>—</span>
                   )}
                 </td>
+                <td className="px-4 py-3 text-on-surface-variant">{formatCurrency(item.initialBalance)}</td>
+                <td className="px-4 py-3 text-on-surface-variant">{formatCurrency(item.currentBalance)}</td>
                 <td className="px-4 py-3">
                   <CatalogStatusBadge isActive={item.isActive} />
                 </td>

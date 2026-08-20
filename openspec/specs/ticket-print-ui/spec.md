@@ -61,27 +61,23 @@ The system SHALL render the "Imprimir Ticket" action on `/sales/:id/ticket` (la 
 - **WHEN** `GET /settings/ticket` returns `paperWidth: "58mm"`
 - **THEN** the printable view's `@media print` CSS sets the content width to `58mm` (not the `80mm` default)
 
+#### Scenario: Page size matches the configured paper width
+- **WHEN** the print view renders with `paperWidth: "80mm"` (default) or `paperWidth: "58mm"`
+- **THEN** the injected CSS also declares `@page { size: <paperWidth> 3276mm; margin: 0; }` using the same `paperWidth` value that sets the content width — the browser's print dialog uses that page size instead of falling back to Letter/A4, so a thermal printer prints one continuous strip instead of paginating
+
+#### Scenario: Long ticket does not split across pages
+- **WHEN** a ticket has enough item lines to exceed a standard Letter/A4 page height
+- **THEN** it still prints as a single continuous page (page height `3276mm`), not split across multiple physical pages
+
 #### Scenario: Print view hidden outside of printing
 - **WHEN** the page is viewed normally on screen (not printing)
 - **THEN** the printable ticket component is not visible and does not affect the normal page layout
 
 #### Scenario: Settings fetch failure degrades gracefully
 - **WHEN** `GET /settings/ticket` fails (network error, missing `settings:read`, etc.)
-- **THEN** the print view still renders with the sale data, omitting logo/footer/business (name, RFC, address, phone, tax regime)/legend (falling back to `80mm` width) rather than blocking the print action entirely
+- **THEN** the print view still renders with the sale data, omitting logo/footer/business (name, RFC, address, phone, tax regime)/legend (falling back to `80mm` width, and `@page` sized to that fallback width) rather than blocking the print action entirely
 
 #### Scenario: Logo rendered at 75x105px
 - **WHEN** the printed ticket renders its logo (either `logoUrl` from settings or the `/logo.png` fallback)
 - **THEN** the `img` is sized to 75px wide × 105px tall with `object-fit: contain` so the aspect ratio is preserved (no distortion)
-
-#### Scenario: Logo bottom margin reduced 40%
-- **WHEN** the printed ticket renders its logo above the business info section
-- **THEN** the bottom margin separating the logo from the content below it is `2.4px` (a 40% reduction from the prior `4px`)
-
-#### Scenario: Folio rendered below the decorative barcode
-- **WHEN** the printed ticket renders the folio as a decorative barcode-style element near the footer
-- **THEN** the folio label is rendered as plain text immediately below the barcode-style bars — never above it, never omitted
-
-#### Scenario: Folio shown in full with its folio code
-- **WHEN** the printed ticket renders the folio (header line and below the decorative barcode)
-- **THEN** it shows `sale.folioCode` — the fully formatted folio (with the folio's prefix, e.g. `TK000042`) — never the bare `folioNumber`
 

@@ -88,6 +88,7 @@ export interface CreatePurchaseItemRequest {
   discountPct?: number | null;
   lotNumber?: string | null;
   expirationDate?: Date | null;
+  manufactureDate?: Date | null;
 }
 
 export interface CreatePurchaseRequest {

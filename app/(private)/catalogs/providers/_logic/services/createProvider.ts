@@ -11,7 +11,7 @@ export async function createProvider(
   const normalized: CreateProviderBody = {
     ...body,
     code: body.code.trim().toUpperCase(),
-    rfc: body.rfc.trim().toUpperCase(),
+    rfc: body.rfc ? body.rfc.trim().toUpperCase() : body.rfc,
   };
 
   let res: Response;

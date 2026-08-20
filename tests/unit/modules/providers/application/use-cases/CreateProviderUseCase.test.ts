@@ -56,4 +56,22 @@ describe("CreateProviderUseCase", () => {
       ProviderRfcAlreadyInUseError
     );
   });
+
+  it("creates without rfc, and a second provider without rfc coexists", async () => {
+    const a = await useCase.execute({ code: "PROV001", name: "A" });
+    const b = await useCase.execute({ code: "PROV002", name: "B" });
+    expect(a.rfc).toBeNull();
+    expect(b.rfc).toBeNull();
+  });
+
+  it("creates with initialBalance and sets currentBalance to the same value", async () => {
+    const result = await useCase.execute({
+      code: "PROV001",
+      name: "Proveedor",
+      rfc: "XAXX010101000",
+      initialBalance: 1000,
+    });
+    expect(result.initialBalance).toBe(1000);
+    expect(result.currentBalance).toBe(1000);
+  });
 });

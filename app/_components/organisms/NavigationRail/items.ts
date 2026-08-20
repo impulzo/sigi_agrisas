@@ -34,6 +34,8 @@ export const primaryItems: RailItem[] = [
       { key: "providers", href: "/catalogs/providers", icon: "local_shipping", label: "Proveedores", requires: "providers:read" },
       { key: "products", href: "/catalogs/products", icon: "inventory_2", label: "Productos", requires: "products:read" },
       { key: "customers", href: "/catalogs/customers", icon: "groups", label: "Clientes", requires: "customers:read" },
+      { key: "vehicles", href: "/catalogs/vehicles", icon: "local_shipping", label: "Vehículos", requires: "vehicles:read" },
+      { key: "drivers", href: "/catalogs/drivers", icon: "badge", label: "Operadores", requires: "drivers:read" },
     ],
   },
   { key: "users", href: "/users", icon: "group", label: "Usuarios", requires: "users:read" },

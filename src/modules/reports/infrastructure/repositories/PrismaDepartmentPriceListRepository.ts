@@ -49,6 +49,7 @@ export class PrismaDepartmentPriceListRepository implements DepartmentPriceListR
         stockQuantity: (stockMap.get(product.id) ?? new Decimal(0)) as unknown as Decimal,
         ivaRate: product.ivaRate as unknown as Decimal | null,
         iepsRate: product.iepsRate as unknown as Decimal | null,
+        acquisitionPrice: product.acquisitionPrice as unknown as Decimal | null,
       };
 
       if (product.prices.length === 0) {

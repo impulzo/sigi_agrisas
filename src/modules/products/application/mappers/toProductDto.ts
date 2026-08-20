@@ -19,6 +19,8 @@ export function toProductDto({ product, departmentName, taxRateCode, taxRate, pr
     ivaRate: product.ivaRate,
     iepsRate: product.iepsRate,
     imageUrl: product.imageUrl,
+    manufactureDate: product.manufactureDate ? product.manufactureDate.toISOString().slice(0, 10) : null,
+    acquisitionPrice: product.acquisitionPrice,
     isTaxable: product.isTaxable,
     isActive: product.isActive,
     createdAt: product.createdAt.toISOString(),

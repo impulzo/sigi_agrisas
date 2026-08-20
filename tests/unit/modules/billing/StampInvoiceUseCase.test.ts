@@ -1,3 +1,17 @@
+// @react-pdf/renderer is a server-only ESM lib; mock it for the node test env
+jest.mock("@react-pdf/renderer", () => ({
+  renderToBuffer: jest.fn().mockResolvedValue(Buffer.from("%PDF-1.4 mock")),
+  Document: "Document",
+  Page: "Page",
+  Text: "Text",
+  View: "View",
+  StyleSheet: { create: (s: unknown) => s },
+}));
+
+jest.mock("@/modules/billing/infrastructure/pdf/InvoiceDocumentPdf", () => ({
+  InvoiceDocumentPdf: () => null,
+}));
+
 import { StampInvoiceUseCase } from "../../../../src/modules/billing/application/use-cases/StampInvoiceUseCase";
 import { InMemoryInvoiceRepository } from "../../../../src/modules/billing/infrastructure/repositories/InMemoryInvoiceRepository";
 import { FakeFacturamaGateway } from "../../../../src/modules/billing/infrastructure/services/FakeFacturamaGateway";

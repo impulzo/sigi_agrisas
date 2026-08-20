@@ -14,6 +14,29 @@ const rfcSchema = z
   .string()
   .regex(rfcRegex, "RFC inválido. Formato esperado: 3-4 letras + 6 dígitos + 3 alfanuméricos.");
 
+const optionalRfc = z
+  .string()
+  .regex(rfcRegex, "RFC inválido. Formato esperado: 3-4 letras + 6 dígitos + 3 alfanuméricos.")
+  .nullable()
+  .optional();
+
+const optionalCreditLimit = z
+  .number()
+  .min(0, "El límite de crédito no puede ser negativo.")
+  .nullable()
+  .optional();
+
+const optionalInitialBalance = z
+  .number()
+  .min(0, "El saldo inicial no puede ser negativo.")
+  .optional();
+
+const optionalCreditDays = z
+  .number()
+  .int("El plazo de crédito debe ser un número entero de días.")
+  .min(0, "El plazo de crédito no puede ser negativo.")
+  .optional();
+
 const optionalTaxRegime = z
   .string()
   .regex(taxRegimeRegex, "El régimen fiscal debe ser de 3 dígitos (ej. 601).")
@@ -42,7 +65,7 @@ const optionalEmail = z
 export const createProviderSchema = z.object({
   code: codeSchema,
   name: z.string().min(1, "El nombre es obligatorio.").max(120),
-  rfc: rfcSchema,
+  rfc: optionalRfc,
   legalName: z.string().max(200).nullable().optional(),
   taxRegime: optionalTaxRegime,
   cfdiUse: optionalCfdiUse,
@@ -52,13 +75,16 @@ export const createProviderSchema = z.object({
   address: z.string().max(300).nullable().optional(),
   contactName: z.string().max(120).nullable().optional(),
   notes: z.string().nullable().optional(),
+  creditLimit: optionalCreditLimit,
+  initialBalance: optionalInitialBalance,
+  creditDays: optionalCreditDays,
   isActive: z.boolean().optional(),
 });
 
 export const updateProviderSchema = z
   .object({
     name: z.string().min(1).max(120).optional(),
-    rfc: rfcSchema.optional(),
+    rfc: optionalRfc,
     legalName: z.string().max(200).nullable().optional(),
     taxRegime: optionalTaxRegime,
     cfdiUse: optionalCfdiUse,
@@ -68,6 +94,9 @@ export const updateProviderSchema = z
     address: z.string().max(300).nullable().optional(),
     contactName: z.string().max(120).nullable().optional(),
     notes: z.string().nullable().optional(),
+    creditLimit: optionalCreditLimit,
+    initialBalance: optionalInitialBalance,
+    creditDays: optionalCreditDays,
     isActive: z.boolean().optional(),
   })
   .refine(
@@ -83,6 +112,9 @@ export const updateProviderSchema = z
       d.address !== undefined ||
       d.contactName !== undefined ||
       d.notes !== undefined ||
+      d.creditLimit !== undefined ||
+      d.initialBalance !== undefined ||
+      d.creditDays !== undefined ||
       d.isActive !== undefined,
     { message: "Debes modificar al menos un campo." }
   );

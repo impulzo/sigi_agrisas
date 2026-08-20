@@ -3,6 +3,8 @@ import { PrismaWaybillRepository } from "../repositories/PrismaWaybillRepository
 import { PrismaWaybillLookupService } from "../services/PrismaWaybillLookupService";
 import { FacturamaRestGateway } from "../services/FacturamaRestGateway";
 import { FakeFacturamaGateway } from "../services/FakeFacturamaGateway";
+import { PrismaVehicleRepository } from "@/modules/vehicles/infrastructure/repositories/PrismaVehicleRepository";
+import { PrismaDriverRepository } from "@/modules/drivers/infrastructure/repositories/PrismaDriverRepository";
 import { CreateWaybillUseCase } from "../../application/use-cases/CreateWaybillUseCase";
 import { CancelWaybillUseCase } from "../../application/use-cases/CancelWaybillUseCase";
 import { ListWaybillsUseCase } from "../../application/use-cases/ListWaybillsUseCase";
@@ -17,8 +19,10 @@ const gateway: WaybillFacturamaGateway = isMock ? new FakeFacturamaGateway() : n
 
 const waybillRepo = new PrismaWaybillRepository(prisma);
 const lookupService = new PrismaWaybillLookupService(prisma);
+const vehicleRepo = new PrismaVehicleRepository(prisma);
+const driverRepo = new PrismaDriverRepository(prisma);
 
-const createUseCase = new CreateWaybillUseCase(waybillRepo, gateway, lookupService);
+const createUseCase = new CreateWaybillUseCase(waybillRepo, gateway, lookupService, vehicleRepo, driverRepo);
 const cancelUseCase = new CancelWaybillUseCase(waybillRepo, gateway);
 const listUseCase = new ListWaybillsUseCase(waybillRepo);
 const getUseCase = new GetWaybillUseCase(waybillRepo);

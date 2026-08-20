@@ -60,6 +60,7 @@ export function CustomerEditModal({
   const [contactName, setContactName] = useState("");
   const [notes, setNotes] = useState("");
   const [creditLimit, setCreditLimit] = useState("");
+  const [initialBalance, setInitialBalance] = useState("");
   const [creditDays, setCreditDays] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [addressStreet, setAddressStreet] = useState("");
@@ -106,6 +107,7 @@ export function CustomerEditModal({
       setContactName("");
       setNotes("");
       setCreditLimit("");
+      setInitialBalance("");
       setCreditDays("");
       setIsActive(true);
       setAddressStreet("");
@@ -119,7 +121,7 @@ export function CustomerEditModal({
     } else if (entity) {
       setCode(entity.code);
       setName(entity.name);
-      setRfc(entity.rfc);
+      setRfc(entity.rfc ?? "");
       setLegalName(entity.legalName ?? "");
       setTaxRegime(entity.taxRegime ?? "");
       setCfdiUse(entity.cfdiUse ?? "");
@@ -130,6 +132,7 @@ export function CustomerEditModal({
       setContactName(entity.contactName ?? "");
       setNotes(entity.notes ?? "");
       setCreditLimit(entity.creditLimit !== null ? String(entity.creditLimit) : "");
+      setInitialBalance(String(entity.initialBalance));
       setCreditDays(String(entity.creditDays));
       setIsActive(entity.isActive);
       setAddressStreet(entity.addressStreet ?? "");
@@ -149,7 +152,7 @@ export function CustomerEditModal({
     return {
       code,
       name: name.trim(),
-      rfc,
+      rfc: normalizeOptional(rfc),
       legalName: normalizeOptional(legalName),
       taxRegime: normalizeOptional(taxRegime),
       cfdiUse: normalizeOptional(cfdiUse),
@@ -160,6 +163,7 @@ export function CustomerEditModal({
       contactName: normalizeOptional(contactName),
       notes: normalizeOptional(notes),
       creditLimit: normalizeOptionalNumber(creditLimit),
+      ...(initialBalance.trim().length > 0 ? { initialBalance: Number(initialBalance.trim()) } : {}),
       ...(trimmedCreditDays.length > 0 ? { creditDays: Number(trimmedCreditDays) } : {}),
       isActive,
       addressStreet: normalizeOptional(addressStreet),
@@ -177,7 +181,8 @@ export function CustomerEditModal({
     if (!entity) return {};
     const diff: UpdateCustomerBody = {};
     if (name.trim() !== entity.name) diff.name = name.trim();
-    if (rfc !== entity.rfc) diff.rfc = rfc;
+    const rfcNorm = normalizeOptional(rfc);
+    if (rfcNorm !== entity.rfc) diff.rfc = rfcNorm;
     const ln = normalizeOptional(legalName);
     if (ln !== entity.legalName) diff.legalName = ln;
     const tr = normalizeOptional(taxRegime);
@@ -198,6 +203,9 @@ export function CustomerEditModal({
     if (nt !== entity.notes) diff.notes = nt;
     const cl = normalizeOptionalNumber(creditLimit);
     if (cl !== entity.creditLimit) diff.creditLimit = cl;
+    const trimmedInitialBalance = initialBalance.trim();
+    const ib = trimmedInitialBalance.length > 0 ? Number(trimmedInitialBalance) : entity.initialBalance;
+    if (ib !== entity.initialBalance) diff.initialBalance = ib;
     const trimmedCreditDays = creditDays.trim();
     const cd = trimmedCreditDays.length > 0 ? Number(trimmedCreditDays) : entity.creditDays;
     if (cd !== entity.creditDays) diff.creditDays = cd;
@@ -328,7 +336,7 @@ export function CustomerEditModal({
 
           <div>
             <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="customer-rfc">
-              RFC <span className="text-error">*</span>
+              RFC
             </label>
             <input
               id="customer-rfc"
@@ -565,6 +573,25 @@ export function CustomerEditModal({
                 <p className="text-label-sm text-error mt-1">{validationErrors.creditDays}</p>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="customer-initialBalance">
+              Saldo inicial (deuda inicial)
+            </label>
+            <input
+              id="customer-initialBalance"
+              type="number"
+              min={0}
+              step="0.01"
+              value={initialBalance}
+              onChange={(e) => setInitialBalance(e.target.value)}
+              placeholder="0.00"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {validationErrors.initialBalance && (
+              <p className="text-label-sm text-error mt-1">{validationErrors.initialBalance}</p>
+            )}
           </div>
         </section>
 

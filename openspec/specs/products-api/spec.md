@@ -91,15 +91,16 @@ Optional fields:
 - `satProductCode: string | null` matching `^\d{8}$`
 - `ivaRate: number | null` (decimal 0–1; e.g. `0.16` for 16% — controller accepts also `16` and normalizes to `0.16`)
 - `iepsRate: number | null` (same semantics as `ivaRate`)
+- `acquisitionPrice: number | null` (decimal ≥ 0, precio de adquisición/costo del producto; default `null`)
 - `imageUrl: string | null` (URL https válida, ≤2048 chars; default `null`)
 - `isActive: boolean` (default `true`)
 - `isTaxable: boolean` (default `false`)
 
-The controller SHALL trim and uppercase `code` before persisting. The controller SHALL validate `isTaxable` as a boolean (non-boolean value → HTTP 400). The controller SHALL validate `unit` against the SAT unit-of-measure code format — this is a format check only (no FK to the catalog table), consistent with `satProductCode`: a full catalog re-seed cannot orphan an existing product's `unit`. Returns HTTP 201 with the new `ProductDto` including `isTaxable`. Duplicate `code` returns HTTP 409. `departmentId` not found returns HTTP 400 (or 422 — implementer's choice, must be documented). When `imageUrl` is provided in `POST` it MUST be a URL pointing to the configured Supabase Storage public bucket (`product-images`); URLs from other origins SHALL be rejected with HTTP 400.
+The controller SHALL trim and uppercase `code` before persisting. The controller SHALL validate `isTaxable` as a boolean (non-boolean value → HTTP 400). The controller SHALL validate `unit` against the SAT unit-of-measure code format — this is a format check only (no FK to the catalog table), consistent with `satProductCode`: a full catalog re-seed cannot orphan an existing product's `unit`. Returns HTTP 201 with the new `ProductDto` including `isTaxable` and `acquisitionPrice`. Duplicate `code` returns HTTP 409. `departmentId` not found returns HTTP 400 (or 422 — implementer's choice, must be documented). When `imageUrl` is provided in `POST` it MUST be a URL pointing to the configured Supabase Storage public bucket (`product-images`); URLs from other origins SHALL be rejected with HTTP 400.
 
 #### Scenario: Minimal creation
 - **WHEN** the body is `{ "code": "ARROZ_001", "name": "Arroz", "unit": "KGM", "departmentId": "<uuid>" }` with an existing department
-- **THEN** the system returns HTTP 201 with `satProductCode`, `ivaRate`, `iepsRate`, `imageUrl` all `null` and `isActive: true`
+- **THEN** the system returns HTTP 201 with `satProductCode`, `ivaRate`, `iepsRate`, `acquisitionPrice`, `imageUrl` all `null` and `isActive: true`
 
 #### Scenario: Minimal creation defaults isTaxable to false
 - **WHEN** the body omits `isTaxable`
@@ -116,6 +117,14 @@ The controller SHALL trim and uppercase `code` before persisting. The controller
 #### Scenario: Full fiscal creation
 - **WHEN** the body includes valid `satProductCode`, `ivaRate: 16`, `iepsRate: 0`
 - **THEN** the system persists `iva_rate = 0.16` and `ieps_rate = 0` and returns the product in HTTP 201
+
+#### Scenario: Creation with acquisitionPrice
+- **WHEN** the body includes `acquisitionPrice: 45.5`
+- **THEN** the system persists `acquisition_price = 45.5000` and returns it in HTTP 201
+
+#### Scenario: Negative acquisitionPrice rejected
+- **WHEN** the body includes `acquisitionPrice: -1`
+- **THEN** the system returns HTTP 400
 
 #### Scenario: Duplicate code
 - **WHEN** the body contains a `code` already in use
@@ -144,7 +153,7 @@ The controller SHALL trim and uppercase `code` before persisting. The controller
 ---
 
 ### Requirement: Update product
-The system SHALL expose `PATCH /api/v1/admin/products/:id`. Requires `products:write`. The body MAY include any of `name`, `unit`, `satProductCode`, `departmentId`, `ivaRate`, `iepsRate`, `imageUrl`, `isActive`, `isTaxable`. The field `code` MUST NOT be updatable; if present it SHALL be ignored silently. `unit`, when present, MUST match the SAT unit code format `^[A-Za-z0-9]{2,3}$` (same rule as creation). `isTaxable` MAY be included and SHALL be validated as boolean. Body MUST contain at least one updatable field, else HTTP 400. Optional fields set to `null` clear the value. Setting `imageUrl: null` clears the persisted URL but does NOT delete the underlying object in Supabase Storage (use `DELETE /products/:id/image` for that). Setting `imageUrl` to a non-bucket URL SHALL return HTTP 400. Returns HTTP 200 with updated `ProductDto` including `isTaxable`.
+The system SHALL expose `PATCH /api/v1/admin/products/:id`. Requires `products:write`. The body MAY include any of `name`, `unit`, `satProductCode`, `departmentId`, `ivaRate`, `iepsRate`, `acquisitionPrice`, `imageUrl`, `isActive`, `isTaxable`. The field `code` MUST NOT be updatable; if present it SHALL be ignored silently. `unit`, when present, MUST match the SAT unit code format `^[A-Za-z0-9]{2,3}$` (same rule as creation). `isTaxable` MAY be included and SHALL be validated as boolean. `acquisitionPrice`, when present, MUST be a number ≥ 0 or `null`. Body MUST contain at least one updatable field, else HTTP 400. Optional fields set to `null` clear the value. Setting `imageUrl: null` clears the persisted URL but does NOT delete the underlying object in Supabase Storage (use `DELETE /products/:id/image` for that). Setting `imageUrl` to a non-bucket URL SHALL return HTTP 400. Returns HTTP 200 with updated `ProductDto` including `isTaxable` and `acquisitionPrice`.
 
 #### Scenario: Update name and tax
 - **WHEN** the body is `{ "name": "Arroz Integral", "ivaRate": 0 }`
@@ -162,6 +171,14 @@ The system SHALL expose `PATCH /api/v1/admin/products/:id`. Requires `products:w
 - **WHEN** the body is `{ "satProductCode": null }`
 - **THEN** the system stores `null` in `sat_product_code` and returns HTTP 200
 
+#### Scenario: Update acquisitionPrice
+- **WHEN** the body is `{ "acquisitionPrice": 52.3 }` on an existing product
+- **THEN** the system stores `acquisition_price = 52.3000` and returns HTTP 200 with the updated value
+
+#### Scenario: Clear acquisitionPrice
+- **WHEN** the body is `{ "acquisitionPrice": null }`
+- **THEN** the system stores `null` in `acquisition_price` and returns HTTP 200
+
 #### Scenario: Clear imageUrl preserves storage object
 - **WHEN** the body is `{ "imageUrl": null }`
 - **THEN** the system stores `null` in `image_url`, returns HTTP 200, and does NOT delete the object from Supabase Storage
@@ -177,16 +194,6 @@ The system SHALL expose `PATCH /api/v1/admin/products/:id`. Requires `products:w
 #### Scenario: Product not found
 - **WHEN** the `:id` does not match any product
 - **THEN** the system returns HTTP 404
-
-#### Scenario: Update to invalid unit format rejected
-- **WHEN** the body is `{ "unit": "saco 25kg" }` (free text, does not match the SAT unit code format)
-- **THEN** the system returns HTTP 400
-
-#### Scenario: Update to valid SAT unit code accepted
-- **WHEN** the body is `{ "unit": "LTR" }` on an existing product
-- **THEN** the system returns HTTP 200 with `unit: "LTR"`
-
----
 
 ### Requirement: Soft delete product
 The system SHALL expose `DELETE /api/v1/admin/products/:id` that marks the product as `isActive=false` without removing the row. Requires `products:write`. Returns HTTP 204. Sub-resources (`product_prices`, `product_dosifications`, `branch_inventory`) are NOT cascade-removed by the soft delete (they remain accessible for historical reference).

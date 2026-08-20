@@ -16,6 +16,7 @@ interface PurchaseLineRowProps {
   onUpdateDiscount: (id: string, pct: number) => void;
   onUpdateLot: (id: string, lotNumber: string) => void;
   onUpdateExpiration: (id: string, expirationDate: string) => void;
+  onUpdateManufactureDate: (id: string, manufactureDate: string) => void;
   onRemove: (id: string) => void;
 }
 
@@ -26,6 +27,7 @@ export function PurchaseLineRow({
   onUpdateDiscount,
   onUpdateLot,
   onUpdateExpiration,
+  onUpdateManufactureDate,
   onRemove,
 }: PurchaseLineRowProps) {
   const [quantityDraft, setQuantityDraft] = useState(String(line.quantity));
@@ -138,6 +140,16 @@ export function PurchaseLineRow({
             type="date"
             value={line.expirationDate}
             onChange={(e) => onUpdateExpiration(line.id, e.target.value)}
+            className="rounded-sm border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+
+        <div className="flex items-center gap-1">
+          <label className="text-label-sm text-on-surface-variant">Elaboración</label>
+          <input
+            type="date"
+            value={line.manufactureDate}
+            onChange={(e) => onUpdateManufactureDate(line.id, e.target.value)}
             className="rounded-sm border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>

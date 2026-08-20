@@ -15,6 +15,8 @@ export interface ProviderPaymentsReportRow {
   amount: number;
   status: string;
   paidAt: Date;
+  providerInitialBalance: number | null;
+  providerCurrentBalance: number | null;
 }
 
 export interface ProviderPaymentReportRepository {

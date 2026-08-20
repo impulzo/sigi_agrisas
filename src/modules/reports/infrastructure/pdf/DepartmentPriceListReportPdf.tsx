@@ -9,6 +9,14 @@ import { priceColumnNames } from "../../domain/services/priceColumnNames";
 import { pdfStyles as s } from "./pdfStyles";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
 
+function money(v: string): string {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    minimumFractionDigits: 2,
+  }).format(Number(v));
+}
+
 function ProductRow({ product, priceCols }: { product: DepartmentProductDto; priceCols: string[] }) {
   return (
     <View style={s.tableRow}>
@@ -16,11 +24,12 @@ function ProductRow({ product, priceCols }: { product: DepartmentProductDto; pri
       <Text style={s.cellWide}>{product.name}</Text>
       <Text style={s.cellNarrow}>{product.unitDescription ?? product.unit}</Text>
       <Text style={s.cellNarrow}>{product.stockQuantity}</Text>
+      <Text style={s.cellNarrow}>{product.acquisitionPrice ? money(product.acquisitionPrice) : "—"}</Text>
       {priceCols.map((name) => {
         const price = product.prices.find((p) => p.name === name);
         return (
           <Text key={name} style={s.cell}>
-            {price ? price.price : "—"}
+            {price ? money(price.price) : "—"}
           </Text>
         );
       })}
@@ -44,6 +53,7 @@ function DeptSection({ dept }: { dept: DepartmentPriceListDepartmentDto }) {
             <Text style={s.cellWide}>Producto</Text>
             <Text style={s.cellNarrow}>Unidad</Text>
             <Text style={s.cellNarrow}>Stock</Text>
+            <Text style={s.cellNarrow}>Costo Adq.</Text>
             {priceCols.map((name) => (
               <Text key={name} style={s.cell}>{name}</Text>
             ))}

@@ -102,6 +102,9 @@ export interface UploadCsdRequest {
   certificateBase64: string;
   privateKeyBase64: string;
   privateKeyPassword: string;
+  legalName?: string;
+  fiscalRegime?: string;
+  zipCode?: string;
 }
 
 export interface CsdStatusDto {
@@ -110,6 +113,9 @@ export interface CsdStatusDto {
   issuedAt?: string;
   expiresAt?: string;
   status?: string;
+  legalName?: string | null;
+  fiscalRegime?: string | null;
+  zipCode?: string | null;
   [key: string]: unknown;
 }
 

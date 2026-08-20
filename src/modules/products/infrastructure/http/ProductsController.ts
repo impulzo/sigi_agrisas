@@ -67,6 +67,8 @@ const createBodySchema = z.object({
   ivaRate: taxRateSchema,
   iepsRate: taxRateSchema,
   imageUrl: imageUrlSchema,
+  manufactureDate: z.string().date().nullable().optional(),
+  acquisitionPrice: z.number().min(0).nullable().optional(),
   isTaxable: z.boolean().optional().default(false),
   isActive: z.boolean().optional(),
 });
@@ -85,6 +87,8 @@ const updateBodySchema = z
     ivaRate: taxRateSchema,
     iepsRate: taxRateSchema,
     imageUrl: imageUrlSchema,
+    manufactureDate: z.string().date().nullable().optional(),
+    acquisitionPrice: z.number().min(0).nullable().optional(),
     isTaxable: z.boolean().optional(),
     isActive: z.boolean().optional(),
   })
@@ -98,6 +102,8 @@ const updateBodySchema = z
       d.ivaRate !== undefined ||
       d.iepsRate !== undefined ||
       d.imageUrl !== undefined ||
+      d.manufactureDate !== undefined ||
+      d.acquisitionPrice !== undefined ||
       d.isTaxable !== undefined ||
       d.isActive !== undefined,
     { message: "At least one field must be provided" }

@@ -9,6 +9,8 @@ export interface ProductProps {
   ivaRate: number | null;
   iepsRate: number | null;
   imageUrl: string | null;
+  manufactureDate: Date | null;
+  acquisitionPrice: number | null;
   isTaxable: boolean;
   isActive: boolean;
   createdAt: Date;
@@ -26,6 +28,8 @@ export class Product {
   readonly ivaRate: number | null;
   readonly iepsRate: number | null;
   readonly imageUrl: string | null;
+  readonly manufactureDate: Date | null;
+  readonly acquisitionPrice: number | null;
   readonly isTaxable: boolean;
   readonly isActive: boolean;
   readonly createdAt: Date;
@@ -42,6 +46,8 @@ export class Product {
     this.ivaRate = props.ivaRate;
     this.iepsRate = props.iepsRate;
     this.imageUrl = props.imageUrl;
+    this.manufactureDate = props.manufactureDate;
+    this.acquisitionPrice = props.acquisitionPrice;
     this.isTaxable = props.isTaxable;
     this.isActive = props.isActive;
     this.createdAt = props.createdAt;

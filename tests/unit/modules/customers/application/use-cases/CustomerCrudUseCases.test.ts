@@ -195,6 +195,42 @@ describe("Customers use cases", () => {
     expect(updated.addressStreet).toBeNull();
   });
 
+  it("crea sin rfc y permite un segundo cliente sin rfc", async () => {
+    const a = await new CreateCustomerUseCase(repo).execute({ code: "CLI_001", name: "A" });
+    const b = await new CreateCustomerUseCase(repo).execute({ code: "CLI_002", name: "B" });
+    expect(a.rfc).toBeNull();
+    expect(b.rfc).toBeNull();
+  });
+
+  it("crea con initialBalance y fija currentBalance al mismo valor", async () => {
+    const created = await new CreateCustomerUseCase(repo).execute({
+      code: "CLI_001",
+      name: "Acme",
+      rfc: "ACM010101AAA",
+      initialBalance: 1000,
+    });
+    expect(created.initialBalance).toBe(1000);
+    expect(created.currentBalance).toBe(1000);
+  });
+
+  it("update de initialBalance ajusta currentBalance por delta, sin resetearlo", async () => {
+    const created = await new CreateCustomerUseCase(repo).execute({
+      code: "CLI_001",
+      name: "Acme",
+      rfc: "ACM010101AAA",
+      initialBalance: 1000,
+    });
+    // Simula que currentBalance ya divergió de initialBalance (p. ej. por un abono de 300).
+    (repo as unknown as { store: { currentBalance: number }[] }).store[0].currentBalance = 700;
+
+    const updated = await new UpdateCustomerUseCase(repo).execute(created.id, {
+      initialBalance: 1300,
+    });
+    expect(updated.initialBalance).toBe(1300);
+    // delta = 1300 - 1000 = 300 → currentBalance = 700 + 300 = 1000 (no se resetea a 1300)
+    expect(updated.currentBalance).toBe(1000);
+  });
+
   it("softDelete marca isActive=false", async () => {
     const created = await new CreateCustomerUseCase(repo).execute({
       code: "CLI_001",

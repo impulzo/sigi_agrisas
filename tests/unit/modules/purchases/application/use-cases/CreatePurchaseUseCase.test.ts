@@ -1,4 +1,5 @@
 import { CreatePurchaseUseCase } from "@/modules/purchases/application/use-cases/CreatePurchaseUseCase";
+import { CancelPurchaseUseCase } from "@/modules/purchases/application/use-cases/CancelPurchaseUseCase";
 import { InMemoryPurchaseRepository } from "@/modules/purchases/infrastructure/repositories/InMemoryPurchaseRepository";
 import { PurchaseItemsEmptyError } from "@/modules/purchases/domain/errors/PurchaseItemsEmptyError";
 import { ProviderNotFoundOrInactiveError } from "@/modules/purchases/domain/errors/ProviderNotFoundOrInactiveError";
@@ -158,6 +159,57 @@ describe("CreatePurchaseUseCase", () => {
     expect(result.dto.purchasedAt).toBe(new Date(purchasedAt).toISOString());
   });
 
+  it("persists manufactureDate on the inventory lot when lotNumber+expirationDate are also provided", async () => {
+    await useCase.execute({
+      providerId: PROVIDER,
+      branchId: BRANCH,
+      paymentMethodId: CASH_PM,
+      creatorId: CREATOR,
+      items: [
+        {
+          productId: PRODUCT,
+          quantity: 1,
+          unitCost: 100,
+          lotNumber: "LOT-1",
+          expirationDate: new Date("2027-01-01"),
+          manufactureDate: new Date("2026-01-01"),
+        },
+      ],
+    });
+
+    const lots = Array.from(repo.inventoryLots.values());
+    expect(lots).toHaveLength(1);
+    expect(lots[0].manufactureDate).toEqual(new Date("2026-01-01"));
+  });
+
+  it("does not create an inventory lot when only manufactureDate is provided (no lotNumber/expirationDate)", async () => {
+    await useCase.execute({
+      providerId: PROVIDER,
+      branchId: BRANCH,
+      paymentMethodId: CASH_PM,
+      creatorId: CREATOR,
+      items: [{ productId: PRODUCT, quantity: 1, unitCost: 100, manufactureDate: new Date("2026-01-01") }],
+    });
+
+    expect(repo.inventoryLots.size).toBe(0);
+  });
+
+  it("persists manufactureDate as null when a complete lot is captured without it", async () => {
+    await useCase.execute({
+      providerId: PROVIDER,
+      branchId: BRANCH,
+      paymentMethodId: CASH_PM,
+      creatorId: CREATOR,
+      items: [
+        { productId: PRODUCT, quantity: 1, unitCost: 100, lotNumber: "LOT-2", expirationDate: new Date("2027-01-01") },
+      ],
+    });
+
+    const lots = Array.from(repo.inventoryLots.values());
+    expect(lots).toHaveLength(1);
+    expect(lots[0].manufactureDate).toBeNull();
+  });
+
   it("throws SatUuidAlreadyExistsError when satUuid is duplicated", async () => {
     const base = {
       providerId: PROVIDER,
@@ -169,5 +221,47 @@ describe("CreatePurchaseUseCase", () => {
     };
     await useCase.execute(base);
     await expect(useCase.execute(base)).rejects.toBeInstanceOf(SatUuidAlreadyExistsError);
+  });
+
+  it("updates the product's acquisitionPrice to the line's unitCost on completion", async () => {
+    await useCase.execute({
+      providerId: PROVIDER,
+      branchId: BRANCH,
+      paymentMethodId: CASH_PM,
+      creatorId: CREATOR,
+      items: [{ productId: PRODUCT, quantity: 1, unitCost: 52.3 }],
+    });
+
+    expect(repo.products.get(PRODUCT)!.acquisitionPrice).toBe(52.3);
+  });
+
+  it("last processed line wins when a purchase repeats the same product", async () => {
+    await useCase.execute({
+      providerId: PROVIDER,
+      branchId: BRANCH,
+      paymentMethodId: CASH_PM,
+      creatorId: CREATOR,
+      items: [
+        { productId: PRODUCT, quantity: 1, unitCost: 40 },
+        { productId: PRODUCT, quantity: 1, unitCost: 45 },
+      ],
+    });
+
+    expect(repo.products.get(PRODUCT)!.acquisitionPrice).toBe(45);
+  });
+
+  it("cancelling a purchase does not revert the product's acquisitionPrice", async () => {
+    const result = await useCase.execute({
+      providerId: PROVIDER,
+      branchId: BRANCH,
+      paymentMethodId: CASH_PM,
+      creatorId: CREATOR,
+      items: [{ productId: PRODUCT, quantity: 1, unitCost: 52.3 }],
+    });
+
+    const cancelUseCase = new CancelPurchaseUseCase(repo);
+    await cancelUseCase.execute({ id: result.dto.id, cancelledBy: CREATOR, cancellationReason: "test" });
+
+    expect(repo.products.get(PRODUCT)!.acquisitionPrice).toBe(52.3);
   });
 });

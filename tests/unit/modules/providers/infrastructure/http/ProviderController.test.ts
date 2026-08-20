@@ -66,6 +66,41 @@ describe("ProviderController — Zod validation", () => {
     expect(body.code).toBe("PROV001");
   });
 
+  it("creates without rfc → 201 with rfc: null", async () => {
+    const ctrl = buildController();
+    const res = await ctrl.create(makeCreateReq({ code: "P001", name: "Test" }));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.rfc).toBeNull();
+  });
+
+  it("two providers without rfc coexist without 409", async () => {
+    const ctrl = buildController();
+    const res1 = await ctrl.create(makeCreateReq({ code: "P001", name: "A" }));
+    const res2 = await ctrl.create(makeCreateReq({ code: "P002", name: "B" }));
+    expect(res1.status).toBe(201);
+    expect(res2.status).toBe(201);
+  });
+
+  it("rejects negative initialBalance → 400", async () => {
+    const ctrl = buildController();
+    const res = await ctrl.create(
+      makeCreateReq({ code: "P001", name: "Test", rfc: "XAXX010101000", initialBalance: -100 })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("creates with initialBalance and sets currentBalance to the same value", async () => {
+    const ctrl = buildController();
+    const res = await ctrl.create(
+      makeCreateReq({ code: "P001", name: "Test", rfc: "XAXX010101000", initialBalance: 1000 })
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.initialBalance).toBe(1000);
+    expect(body.currentBalance).toBe(1000);
+  });
+
   it("rejects invalid code format (lowercase letters)", async () => {
     const ctrl = buildController();
     const res = await ctrl.create(makeCreateReq({ code: "prov 001!", name: "Test", rfc: "XAXX010101000" }));
@@ -116,5 +151,16 @@ describe("ProviderController — Zod validation", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/at least one field/i);
+  });
+
+  it("accepts PATCH with only initialBalance (no 'at least one field' rejection)", async () => {
+    const ctrl = buildController();
+    const res = await ctrl.update(
+      makeUpdateReq({ initialBalance: 1300 }),
+      "00000000-0000-0000-0000-000000000001"
+    );
+    // 404 (not found) proves the body passed Zod validation instead of being rejected
+    // by the "at least one field" refine — the bug this test guards against.
+    expect(res.status).toBe(404);
   });
 });

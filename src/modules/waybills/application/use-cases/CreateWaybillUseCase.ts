@@ -19,9 +19,13 @@ import {
   SaleHasNoCustomerError,
   CustomerNotFoundForWaybillError,
   CustomerAddressIncompleteError,
+  VehicleNotFoundForWaybillError,
+  DriverNotFoundForWaybillError,
 } from "../../domain/errors";
 import { Waybill, WaybillAddressSnapshot } from "../../domain/entities/Waybill";
 import { CreateWaybillRequest, CreateSimpleWaybillRequest, CreateCartaPorteWaybillRequest } from "../dto/WaybillDto";
+import type { VehicleRepository } from "@/modules/vehicles/application/ports/VehicleRepository";
+import type { DriverRepository } from "@/modules/drivers/application/ports/DriverRepository";
 
 const TS_FOLIO_CODE = "TS";
 const TRI_FOLIO_CODE = "TRI";
@@ -67,7 +71,9 @@ export class CreateWaybillUseCase {
   constructor(
     private readonly waybillRepo: WaybillRepository,
     private readonly gateway: WaybillFacturamaGateway,
-    private readonly lookupService: WaybillLookupService
+    private readonly lookupService: WaybillLookupService,
+    private readonly vehicleRepo: VehicleRepository,
+    private readonly driverRepo: DriverRepository
   ) {}
 
   async execute(input: CreateWaybillRequest, creatorId: string): Promise<Waybill> {
@@ -173,6 +179,20 @@ export class CreateWaybillUseCase {
     validateBranchAddressComplete(origin);
     validateCustomerAddressComplete(customer);
 
+    let vehicleId: string | null = null;
+    if (input.vehicle.vehicleId) {
+      const vehicle = await this.vehicleRepo.findById(input.vehicle.vehicleId);
+      if (!vehicle) throw new VehicleNotFoundForWaybillError(input.vehicle.vehicleId);
+      vehicleId = vehicle.id;
+    }
+
+    let driverId: string | null = null;
+    if (input.driver.driverId) {
+      const driver = await this.driverRepo.findById(input.driver.driverId);
+      if (!driver) throw new DriverNotFoundForWaybillError(input.driver.driverId);
+      driverId = driver.id;
+    }
+
     const folio = await this.lookupService.findFolioByCode(TS_FOLIO_CODE);
     if (!folio || !folio.isActive) {
       throw new CanonicalFolioMissingError(TS_FOLIO_CODE);
@@ -217,6 +237,8 @@ export class CreateWaybillUseCase {
       saleId: sale.id,
       originAddress,
       destinationAddress,
+      vehicleId,
+      driverId,
       vehiclePlate: input.vehicle.plate,
       vehicleConfig: input.vehicle.config,
       vehiclePermitType: input.vehicle.permitType,

@@ -92,7 +92,7 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
             <img
               src={ticketSettings?.logoUrl ?? "/logo.png"}
               alt="Logo"
-              className="h-[105px] w-[75px] object-contain mb-[4.8px]"
+              className="h-[147px] w-[105px] object-contain mb-[4.8px]"
             />
             {(ticketSettings?.businessName || ticketSettings?.businessRfc || ticketSettings?.businessAddress || ticketSettings?.businessPhone || ticketSettings?.businessTaxRegime) && (
               <div className="text-body-sm text-on-surface-variant whitespace-pre-wrap">
@@ -183,14 +183,9 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
             <div className="text-body-sm text-on-surface-variant flex items-center justify-center bg-surface-container-low px-4 py-2 rounded-sm">
               {sale.paymentMethodName ?? "—"}
             </div>
-            {ticketSettings?.footerText ? (
+            {ticketSettings?.footerText && (
               <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded-sm whitespace-pre-wrap">
                 {ticketSettings.footerText}
-              </p>
-            ) : (
-              <p className="text-label-lg text-primary bg-primary/10 px-4 py-2 rounded-sm">
-                ¡Gracias por su compra! <br />
-                <span className="font-medium">Agricultura Sana &amp; Sustentable.</span>
               </p>
             )}
             {ticketSettings?.legendText && (

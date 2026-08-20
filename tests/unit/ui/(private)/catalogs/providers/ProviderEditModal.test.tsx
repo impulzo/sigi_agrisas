@@ -27,6 +27,10 @@ const BASE_ENTITY: Provider = {
   address: "Av. Reforma 123",
   contactName: "Juan Pérez",
   notes: null,
+  creditLimit: null,
+  currentBalance: 0,
+  initialBalance: 0,
+  creditDays: 30,
   isActive: true,
   createdAt: new Date("2026-05-25"),
   updatedAt: new Date("2026-05-25"),
@@ -47,11 +51,11 @@ beforeEach(() => {
 });
 
 describe("ProviderEditModal — sections rendered", () => {
-  it("renders three section headings: Datos básicos, Datos fiscales, Contacto", () => {
+  it("renders three section headings: Datos básicos, Datos fiscales, Contacto y crédito", () => {
     render(<ProviderEditModal {...defaultProps} mode="create" entity={null} />);
     expect(screen.getByText(/datos básicos/i)).toBeInTheDocument();
     expect(screen.getByText(/datos fiscales/i)).toBeInTheDocument();
-    expect(screen.getByText(/^contacto$/i)).toBeInTheDocument();
+    expect(screen.getByText(/contacto y crédito/i)).toBeInTheDocument();
   });
 });
 
@@ -132,6 +136,30 @@ describe("ProviderEditModal — create mode", () => {
         rfc: "SAC120101A12",
       }),
     );
+  });
+
+  it("empty rfc does not block submit", async () => {
+    const onSave = jest.fn();
+    render(<ProviderEditModal {...defaultProps} mode="create" entity={null} onSave={onSave} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/código/i), "PROV_001");
+    await user.type(screen.getByLabelText(/nombre/i), "Semillas Acme");
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(onSave).toHaveBeenCalled();
+    expect(screen.queryByText(/rfc inválido/i)).not.toBeInTheDocument();
+  });
+
+  it("negative initialBalance blocks submit with inline error", async () => {
+    const onSave = jest.fn();
+    render(<ProviderEditModal {...defaultProps} mode="create" entity={null} onSave={onSave} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/código/i), "PROV_001");
+    await user.type(screen.getByLabelText(/nombre/i), "Semillas Acme");
+    await user.type(screen.getByLabelText(/rfc/i), "SAC120101A12");
+    await user.type(screen.getByLabelText(/saldo inicial/i), "-100");
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(screen.getByText(/no puede ser negativo/i)).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it("codeError prop shows inline error under code field", () => {

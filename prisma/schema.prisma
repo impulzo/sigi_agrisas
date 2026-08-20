@@ -183,11 +183,48 @@ model Branch {
   @@map("branches")
 }
 
+model Vehicle {
+  id                String   @id @default(uuid())
+  code              String   @unique @db.VarChar(32)
+  plate             String   @db.VarChar(20)
+  vehicleConfig     String   @map("vehicle_config") @db.VarChar(10)
+  permitType        String   @map("permit_type") @db.VarChar(10)
+  permitNumber      String   @map("permit_number") @db.VarChar(50)
+  insuranceCompany  String   @map("insurance_company") @db.VarChar(150)
+  insurancePolicy   String   @map("insurance_policy") @db.VarChar(50)
+  notes             String?  @db.Text
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  waybills Waybill[]
+
+  @@index([code])
+  @@map("vehicles")
+}
+
+model Driver {
+  id            String   @id @default(uuid())
+  code          String   @unique @db.VarChar(32)
+  name          String   @db.VarChar(150)
+  rfc           String?  @db.VarChar(13)
+  licenseNumber String   @map("license_number") @db.VarChar(50)
+  notes         String?  @db.Text
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  waybills Waybill[]
+
+  @@index([code])
+  @@map("drivers")
+}
+
 model Provider {
   id             String   @id @default(uuid())
   code           String   @unique @db.VarChar(32)
   name           String   @db.VarChar(120)
-  rfc            String   @unique @db.VarChar(13)
+  rfc            String?  @db.VarChar(13)
   legalName      String?  @map("legal_name") @db.VarChar(200)
   taxRegime      String?  @map("tax_regime") @db.VarChar(3)
   cfdiUse        String?  @map("cfdi_use") @db.VarChar(3)
@@ -199,6 +236,7 @@ model Provider {
   notes          String?  @db.Text
   creditLimit    Decimal? @map("credit_limit") @db.Decimal(12, 4)
   currentBalance Decimal  @default(0) @map("current_balance") @db.Decimal(12, 4)
+  initialBalance Decimal  @default(0) @map("initial_balance") @db.Decimal(12, 4)
   creditDays     Int      @default(30) @map("credit_days")
   isActive       Boolean  @default(true) @map("is_active")
   createdAt      DateTime @default(now()) @map("created_at")
@@ -239,20 +277,22 @@ model TaxRate {
 }
 
 model Product {
-  id             String   @id @default(uuid())
-  code           String   @unique @db.VarChar(32)
-  name           String   @db.VarChar(200)
-  unit           String   @db.VarChar(32)
-  satProductCode String?  @map("sat_product_code") @db.VarChar(16)
-  departmentId   String   @map("department_id")
-  taxRateId      String?  @map("tax_rate_id")
-  ivaRate        Decimal? @map("iva_rate") @db.Decimal(5, 4)
-  iepsRate       Decimal? @map("ieps_rate") @db.Decimal(5, 4)
-  imageUrl       String?  @map("image_url") @db.Text
-  isTaxable      Boolean  @default(false) @map("is_taxable")
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(uuid())
+  code            String    @unique @db.VarChar(32)
+  name            String    @db.VarChar(200)
+  unit            String    @db.VarChar(32)
+  satProductCode  String?   @map("sat_product_code") @db.VarChar(16)
+  departmentId    String    @map("department_id")
+  taxRateId       String?   @map("tax_rate_id")
+  ivaRate         Decimal?  @map("iva_rate") @db.Decimal(5, 4)
+  iepsRate        Decimal?  @map("ieps_rate") @db.Decimal(5, 4)
+  imageUrl        String?   @map("image_url") @db.Text
+  manufactureDate DateTime? @map("manufacture_date") @db.Date
+  acquisitionPrice Decimal? @map("acquisition_price") @db.Decimal(12, 4)
+  isTaxable       Boolean   @default(false) @map("is_taxable")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   department    Department            @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   taxRate       TaxRate?              @relation(fields: [taxRateId], references: [id], onDelete: SetNull)
@@ -408,7 +448,7 @@ model Customer {
   id                    String   @id @default(uuid())
   code                  String   @unique @db.VarChar(32)
   name                  String   @db.VarChar(120)
-  rfc                   String   @unique @db.VarChar(13)
+  rfc                   String?  @db.VarChar(13)
   legalName             String?  @map("legal_name") @db.VarChar(200)
   taxRegime             String?  @map("tax_regime") @db.VarChar(3)
   cfdiUse               String?  @map("cfdi_use") @db.VarChar(4)
@@ -420,6 +460,7 @@ model Customer {
   notes                 String?  @db.Text
   creditLimit           Decimal? @map("credit_limit") @db.Decimal(12, 4)
   currentBalance        Decimal  @default(0) @map("current_balance") @db.Decimal(12, 4)
+  initialBalance        Decimal  @default(0) @map("initial_balance") @db.Decimal(12, 4)
   creditDays            Int      @default(30) @map("credit_days")
   isActive              Boolean  @default(true) @map("is_active")
   addressStreet         String?  @map("address_street") @db.VarChar(150)
@@ -821,6 +862,9 @@ model Waybill {
   driverRfc           String? @map("driver_rfc") @db.VarChar(13)
   driverLicenseNumber String? @map("driver_license_number") @db.VarChar(50)
 
+  vehicleId String? @map("vehicle_id")
+  driverId  String? @map("driver_id")
+
   distanceKm  Decimal?  @map("distance_km") @db.Decimal(10, 2)
   departureAt DateTime  @map("departure_at")
   arrivalAt   DateTime? @map("arrival_at")
@@ -844,6 +888,8 @@ model Waybill {
   destinationCustomer Customer?     @relation(fields: [destinationCustomerId], references: [id], onDelete: Restrict)
   sale                Sale?         @relation(fields: [saleId], references: [id], onDelete: Restrict)
   items               WaybillItem[]
+  vehicle             Vehicle?      @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  driver              Driver?       @relation(fields: [driverId], references: [id], onDelete: SetNull)
 
   @@unique([folioId, folioNumber])
   @@index([originBranchId])
@@ -853,6 +899,8 @@ model Waybill {
   @@index([status])
   @@index([folioId])
   @@index([type])
+  @@index([vehicleId])
+  @@index([driverId])
   @@map("waybills")
 }
 
@@ -892,6 +940,18 @@ model TicketSettings {
   @@map("ticket_settings")
 }
 
+model EmitterFiscalSettings {
+  id           String   @id
+  rfc          String?  @db.VarChar(13)
+  legalName    String?  @map("legal_name") @db.VarChar(200)
+  fiscalRegime String?  @map("fiscal_regime") @db.VarChar(3)
+  zipCode      String?  @map("zip_code") @db.VarChar(5)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("emitter_fiscal_settings")
+}
+
 model PricingSettings {
   id                       String   @id
   dosificationSurchargePct Decimal  @default(5.0) @map("dosification_surcharge_pct") @db.Decimal(5, 2)
@@ -899,6 +959,15 @@ model PricingSettings {
   updatedAt                DateTime @updatedAt @map("updated_at")
 
   @@map("pricing_settings")
+}
+
+model InventoryNotificationSettings {
+  id                          String   @id
+  expirationNotificationEmail String?  @map("expiration_notification_email")
+  createdAt                   DateTime @default(now()) @map("created_at")
+  updatedAt                   DateTime @updatedAt @map("updated_at")
+
+  @@map("inventory_notification_settings")
 }
 
 model Purchase {
@@ -969,14 +1038,18 @@ model PurchaseItem {
 }
 
 model InventoryLot {
-  id             String   @id @default(uuid())
-  branchId       String   @map("branch_id")
-  productId      String   @map("product_id")
-  purchaseItemId String   @map("purchase_item_id")
-  lotNumber      String   @map("lot_number") @db.VarChar(64)
-  expirationDate DateTime @map("expiration_date") @db.Date
-  quantity       Decimal  @db.Decimal(14, 4)
-  createdAt      DateTime @default(now()) @map("created_at")
+  id                    String    @id @default(uuid())
+  branchId              String    @map("branch_id")
+  productId             String    @map("product_id")
+  purchaseItemId        String    @map("purchase_item_id")
+  lotNumber             String    @map("lot_number") @db.VarChar(64)
+  expirationDate        DateTime  @map("expiration_date") @db.Date
+  manufactureDate       DateTime? @map("manufacture_date") @db.Date
+  quantity              Decimal   @db.Decimal(14, 4)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  notifiedSixMonthsAt   DateTime? @map("notified_six_months_at")
+  notifiedThreeMonthsAt DateTime? @map("notified_three_months_at")
+  notifiedDayOfAt       DateTime? @map("notified_day_of_at")
 
   purchaseItem PurchaseItem @relation(fields: [purchaseItemId], references: [id], onDelete: Cascade)
 

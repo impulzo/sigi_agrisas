@@ -48,6 +48,7 @@ const purchaseItemSchema = z
     discountPct: z.number().min(0).max(100).nullable().optional(),
     lotNumber: z.string().trim().min(1).max(64).nullable().optional(),
     expirationDate: z.coerce.date().nullable().optional(),
+    manufactureDate: z.coerce.date().nullable().optional(),
   })
   .refine((item) => Boolean(item.lotNumber) === Boolean(item.expirationDate), {
     message: "lotNumber and expirationDate must be provided together",

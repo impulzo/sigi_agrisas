@@ -20,6 +20,7 @@ export interface PurchaseFormLine {
   discountPct: number;
   lotNumber: string;
   expirationDate: string;
+  manufactureDate: string;
   lineSubtotal: number;
   lineTotal: number;
 }
@@ -53,6 +54,7 @@ interface UseCreatePurchaseFormResult {
   updateDiscount: (id: string, pct: number) => void;
   updateLot: (id: string, lotNumber: string) => void;
   updateExpiration: (id: string, expirationDate: string) => void;
+  updateManufactureDate: (id: string, manufactureDate: string) => void;
   removeLine: (id: string) => void;
   totals: PurchaseTotalsResult;
   satMetadata: SatMetadataState;
@@ -111,6 +113,7 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
           discountPct: 0,
           lotNumber: "",
           expirationDate: "",
+          manufactureDate: "",
           lineSubtotal: 0,
           lineTotal: 0,
         },
@@ -132,6 +135,7 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
         discountPct: 0,
         lotNumber: "",
         expirationDate: "",
+        manufactureDate: "",
         lineSubtotal: 0,
         lineTotal: 0,
       }))
@@ -182,6 +186,10 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
 
   const updateExpiration = useCallback((id: string, expirationDate: string) => {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, expirationDate } : l)));
+  }, []);
+
+  const updateManufactureDate = useCallback((id: string, manufactureDate: string) => {
+    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, manufactureDate } : l)));
   }, []);
 
   const removeLine = useCallback((id: string) => {
@@ -238,6 +246,7 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
           discountPct: l.discountPct || null,
           lotNumber: l.lotNumber.trim() || null,
           expirationDate: l.expirationDate || null,
+          manufactureDate: l.manufactureDate || null,
         })),
       });
       router.push(`/purchases/${result.id}`);
@@ -271,6 +280,7 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
     updateDiscount,
     updateLot,
     updateExpiration,
+    updateManufactureDate,
     removeLine,
     totals,
     satMetadata,

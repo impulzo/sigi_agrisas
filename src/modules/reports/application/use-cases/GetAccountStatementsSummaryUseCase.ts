@@ -58,6 +58,7 @@ export class GetAccountStatementsSummaryUseCase {
         totalCharged: charged.toFixed(4),
         totalPaid: paid.toFixed(4),
         currentBalance: balance.toFixed(4),
+        initialBalance: new Decimal(row.initialBalance).toFixed(4),
         creditLimit: row.creditLimit === null ? null : new Decimal(row.creditLimit).toFixed(4),
         availableCredit,
       };

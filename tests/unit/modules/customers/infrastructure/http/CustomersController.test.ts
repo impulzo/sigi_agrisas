@@ -143,6 +143,37 @@ describe("CustomersController — POST create", () => {
     expect(body.error).toMatch(/rfc/i);
   });
 
+  it("crea sin rfc → 201 con rfc: null", async () => {
+    const { controller } = makeController();
+    const res = await controller.create(postReq({ code: "CLI001", name: "Acme S.A." }));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.rfc).toBeNull();
+  });
+
+  it("dos clientes sin rfc coexisten sin conflicto 409", async () => {
+    const { controller } = makeController();
+    const res1 = await controller.create(postReq({ code: "CLI001", name: "A" }));
+    const res2 = await controller.create(postReq({ code: "CLI002", name: "B" }));
+    expect(res1.status).toBe(201);
+    expect(res2.status).toBe(201);
+  });
+
+  it("rechaza initialBalance negativo → 400", async () => {
+    const { controller } = makeController();
+    const res = await controller.create(postReq({ ...VALID_BODY, initialBalance: -100 }));
+    expect(res.status).toBe(400);
+  });
+
+  it("crea con initialBalance y fija currentBalance al mismo valor", async () => {
+    const { controller } = makeController();
+    const res = await controller.create(postReq({ ...VALID_BODY, initialBalance: 1000 }));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.initialBalance).toBe(1000);
+    expect(body.currentBalance).toBe(1000);
+  });
+
   it("body vacío → 400", async () => {
     const { controller } = makeController();
     const res = await controller.create(postReq({}));
@@ -339,6 +370,25 @@ describe("CustomersController — PATCH update", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.creditDays).toBe(60);
+  });
+
+  it("initialBalance como único campo en update ajusta currentBalance por delta", async () => {
+    const { controller } = makeController();
+    const createRes = await controller.create(postReq({ ...VALID_BODY, initialBalance: 1000 }));
+    const created = await createRes.json();
+    const res = await controller.update(patchReq({ initialBalance: 1300 }), created.id);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.initialBalance).toBe(1300);
+    expect(body.currentBalance).toBe(1300);
+  });
+
+  it("initialBalance negativo en update → 400", async () => {
+    const { controller } = makeController();
+    const createRes = await controller.create(postReq(VALID_BODY));
+    const created = await createRes.json();
+    const res = await controller.update(patchReq({ initialBalance: -100 }), created.id);
+    expect(res.status).toBe(400);
   });
 
   it("creditDays negativo en update → 400", async () => {

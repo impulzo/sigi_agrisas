@@ -3,12 +3,10 @@
 ## Purpose
 
 Registra, como metadata de trazabilidad (no como stock por lote), el lote y la fecha de caducidad capturados opcionalmente al completar una compra, y calcula un estado de vencimiento (semáforo) a partir del lote más próximo a vencer para cada producto en cada sucursal.
-
 ## Requirements
-
 ### Requirement: Captura de lote y caducidad al completar una compra
 
-El sistema SHALL permitir que cada línea de una compra (`PurchaseItem`) incluya opcionalmente `lotNumber` (texto, 1-64 caracteres) y `expirationDate` (fecha). Ambos campos SHALL ser opcionales por línea, pero si se envía uno, el otro SHALL ser obligatorio (par completo o ninguno) — de lo contrario la API responde HTTP 400 y no se crea la compra. Cuando una línea incluye el par completo, el sistema SHALL crear un registro en `inventory_lots` (`branchId`, `productId`, `purchaseItemId`, `lotNumber`, `expirationDate`, `quantity` igual a la cantidad comprada) dentro de la misma transacción que crea la compra e incrementa el inventario. Este registro es metadata de trazabilidad append-only: NO particiona `branch_inventory.quantity` por lote ni afecta cómo ventas, devoluciones o ajustes descuentan inventario (siguen operando sobre el agregado por `(branch, product)`).
+El sistema SHALL permitir que cada línea de una compra (`PurchaseItem`) incluya opcionalmente `lotNumber` (texto, 1-64 caracteres) y `expirationDate` (fecha). Ambos campos SHALL ser opcionales por línea, pero si se envía uno, el otro SHALL ser obligatorio (par completo o ninguno) — de lo contrario la API responde HTTP 400 y no se crea la compra. Cada línea SHALL aceptar además, de forma independiente al par anterior, `manufactureDate` (fecha de elaboración, opcional, sin regla de "todo o nada" con `lotNumber`/`expirationDate` — puede enviarse sola, junto con el par, o ninguna). Cuando una línea incluye el par completo `lotNumber`+`expirationDate`, el sistema SHALL crear un registro en `inventory_lots` (`branchId`, `productId`, `purchaseItemId`, `lotNumber`, `expirationDate`, `quantity` igual a la cantidad comprada, y `manufactureDate` si fue enviada en esa línea, o `null` en caso contrario) dentro de la misma transacción que crea la compra e incrementa el inventario. Cuando una línea incluye `manufactureDate` pero NO el par completo `lotNumber`+`expirationDate`, el sistema NO SHALL crear ningún registro en `inventory_lots` para esa línea, y el valor de `manufactureDate` de esa línea NO se persiste (mismo comportamiento que hoy tiene un `lotNumber` o `expirationDate` enviado en solitario). Este registro es metadata de trazabilidad append-only: NO particiona `branch_inventory.quantity` por lote ni afecta cómo ventas, devoluciones o ajustes descuentan inventario (siguen operando sobre el agregado por `(branch, product)`).
 
 #### Scenario: Línea de compra sin lote ni caducidad se comporta igual que hoy
 - **WHEN** una línea de compra no incluye `lotNumber` ni `expirationDate`
@@ -21,6 +19,18 @@ El sistema SHALL permitir que cada línea de una compra (`PurchaseItem`) incluya
 #### Scenario: Sólo uno de los dos campos enviado es rechazado
 - **WHEN** una línea de compra incluye `lotNumber` sin `expirationDate` (o viceversa)
 - **THEN** la API responde HTTP 400 y no se crea la compra
+
+#### Scenario: Lote completo con fecha de elaboración persiste el dato
+- **WHEN** una línea de compra incluye `lotNumber`, `expirationDate` y `manufactureDate` válidos
+- **THEN** al completarse la compra se crea un registro en `inventory_lots` que incluye el `manufactureDate` capturado
+
+#### Scenario: Fecha de elaboración sin lote ni caducidad no crea registro ni se persiste
+- **WHEN** una línea de compra incluye `manufactureDate` pero no incluye `lotNumber` ni `expirationDate`
+- **THEN** la compra se crea normalmente, la API no responde error por ese campo, no se crea ningún registro en `inventory_lots` para esa línea, y el `manufactureDate` de esa línea no se persiste en ningún lado
+
+#### Scenario: Lote completo sin fecha de elaboración persiste el campo como null
+- **WHEN** una línea de compra incluye `lotNumber` y `expirationDate` válidos pero no incluye `manufactureDate`
+- **THEN** el registro creado en `inventory_lots` tiene `manufactureDate: null`
 
 ### Requirement: Limpieza de lotes al cancelar una compra
 
@@ -53,3 +63,15 @@ El sistema SHALL calcular, para cada producto en cada sucursal, un `expiryStatus
 #### Scenario: Múltiples lotes usan el más próximo a vencer
 - **WHEN** un producto tiene dos registros en `inventory_lots` con caducidades a 45 y 10 días respectivamente
 - **THEN** `expiryStatus` se calcula sobre el lote a 10 días (`"warning"`), ignorando el más lejano
+
+### Requirement: Estado de notificación de caducidad por lote
+Cada `InventoryLot` SHALL persistir 3 columnas independientes, todas nullable y sin valor por defecto (`NULL` al crearse el lote): `notifiedSixMonthsAt`, `notifiedThreeMonthsAt`, `notifiedDayOfAt`. Estas columnas SHALL representar únicamente si `inventory-expiry-notifications` ya envió el aviso correspondiente a ese umbral para ese lote — no afectan ni son afectadas por la captura de lote/caducidad al completar una compra, ni por el cálculo del semáforo `expiryStatus` (30/7 días, sin relación con estos umbrales de 6/3 meses).
+
+#### Scenario: Lote nuevo se crea sin ningún umbral notificado
+- **WHEN** se crea un `InventoryLot` como parte de completar una compra con `lotNumber`+`expirationDate`
+- **THEN** las 3 columnas `notifiedSixMonthsAt`, `notifiedThreeMonthsAt`, `notifiedDayOfAt` del nuevo registro son `NULL`
+
+#### Scenario: Cancelar la compra elimina también el estado de notificación
+- **WHEN** se cancela una compra y sus `inventory_lots` asociados se eliminan (comportamiento existente de `inventory-lots`)
+- **THEN** el estado de notificación de esos lotes desaparece junto con el registro, sin dejar rastro huérfano
+

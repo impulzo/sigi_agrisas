@@ -33,6 +33,7 @@ export function PurchasesReportPdf({ data }: { data: PurchasesReportResponseDto 
               <Text style={s.cellNarrow}>Impuestos</Text>
               <Text style={s.cellNarrow}>Total</Text>
               <Text style={s.cellNarrow}>Pagado</Text>
+              <Text style={s.cellNarrow}>Saldo</Text>
               <Text style={s.cell}>Estado pago</Text>
               <Text style={s.cell}>Estado</Text>
               <Text style={s.cell}>Fecha</Text>
@@ -46,6 +47,7 @@ export function PurchasesReportPdf({ data }: { data: PurchasesReportResponseDto 
                 <Text style={s.cellNarrow}>{r.taxTotal}</Text>
                 <Text style={s.cellNarrow}>{r.total}</Text>
                 <Text style={s.cellNarrow}>{r.paidAmount}</Text>
+                <Text style={s.cellNarrow}>{r.balance}</Text>
                 <Text style={[s.cell, r.paymentStatus === "pending" ? s.badge : {}]}>{r.paymentStatus}</Text>
                 <Text style={[s.cell, r.status === "cancelled" ? s.badge : {}]}>{r.status}</Text>
                 <Text style={s.cell}>{formatDate(r.purchasedAt)}</Text>

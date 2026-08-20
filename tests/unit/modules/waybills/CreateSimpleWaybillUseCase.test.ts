@@ -1,5 +1,7 @@
 import { CreateWaybillUseCase } from "../../../../src/modules/waybills/application/use-cases/CreateWaybillUseCase";
 import { InMemoryWaybillRepository } from "../../../../src/modules/waybills/infrastructure/repositories/InMemoryWaybillRepository";
+import { InMemoryVehicleRepository } from "../../../../src/modules/vehicles/infrastructure/repositories/InMemoryVehicleRepository";
+import { InMemoryDriverRepository } from "../../../../src/modules/drivers/infrastructure/repositories/InMemoryDriverRepository";
 import {
   WaybillFacturamaGateway,
   StampTrasladoInput,
@@ -101,7 +103,7 @@ function setup() {
   lookup.branches.set(ORIGIN_ID, incompleteBranch(ORIGIN_ID, "Origen"));
   lookup.branches.set(DEST_ID, incompleteBranch(DEST_ID, "Destino"));
   lookup.products.set(PRODUCT_ID, { id: PRODUCT_ID, code: "FERT01", name: "Fertilizante", isActive: true });
-  const useCase = new CreateWaybillUseCase(repo, gateway, lookup);
+  const useCase = new CreateWaybillUseCase(repo, gateway, lookup, new InMemoryVehicleRepository(), new InMemoryDriverRepository());
   return { repo, gateway, lookup, useCase };
 }
 

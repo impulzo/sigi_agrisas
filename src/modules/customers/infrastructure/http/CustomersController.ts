@@ -9,7 +9,7 @@ import { SoftDeleteCustomerUseCase } from "../../application/use-cases/SoftDelet
 import { CustomerNotFoundError } from "../../domain/errors/CustomerNotFoundError";
 import { CustomerCodeAlreadyInUseError } from "../../domain/errors/CustomerCodeAlreadyInUseError";
 import { CustomerRfcAlreadyInUseError } from "../../domain/errors/CustomerRfcAlreadyInUseError";
-import { rfcSchema, taxRegimeSchema } from "@/shared/infrastructure/http/validators";
+import { optionalRfcSchema, taxRegimeSchema } from "@/shared/infrastructure/http/validators";
 
 const CFDI_USE_REGEX = /^[A-Z]{1,2}\d{2}$/;
 const TAX_ZIP_CODE_REGEX = /^\d{5}$/;
@@ -52,7 +52,7 @@ const createBodySchema = z.object({
     .transform((v) => v.trim().toUpperCase())
     .pipe(z.string().regex(CODE_REGEX, "code must match ^[A-Z0-9_]{1,32}$")),
   name: z.string().min(1).max(120),
-  rfc: rfcSchema,
+  rfc: optionalRfcSchema,
   legalName: z.string().max(200).nullable().optional(),
   taxRegime: taxRegimeSchema.nullable().optional(),
   cfdiUse: z
@@ -67,6 +67,7 @@ const createBodySchema = z.object({
   contactName: z.string().max(120).nullable().optional(),
   notes: z.string().nullable().optional(),
   creditLimit: z.number().min(0).nullable().optional(),
+  initialBalance: z.number().min(0).optional(),
   creditDays: z.coerce.number().int().min(0).default(30),
   isActive: z.boolean().optional(),
   ...addressFieldsSchema,
@@ -75,7 +76,7 @@ const createBodySchema = z.object({
 const updateBodySchema = z
   .object({
     name: z.string().min(1).max(120).optional(),
-    rfc: rfcSchema.optional(),
+    rfc: optionalRfcSchema,
     legalName: z.string().max(200).nullable().optional(),
     taxRegime: taxRegimeSchema.nullable().optional(),
     cfdiUse: z.string().regex(CFDI_USE_REGEX, "cfdiUse must match ^[A-Z]\\d{2}$").nullable().optional(),
@@ -86,6 +87,7 @@ const updateBodySchema = z
     contactName: z.string().max(120).nullable().optional(),
     notes: z.string().nullable().optional(),
     creditLimit: z.number().min(0).nullable().optional(),
+    initialBalance: z.number().min(0).optional(),
     creditDays: z.coerce.number().int().min(0).optional(),
     isActive: z.boolean().optional(),
     ...addressFieldsSchema,
@@ -104,6 +106,7 @@ const updateBodySchema = z
       d.contactName !== undefined ||
       d.notes !== undefined ||
       d.creditLimit !== undefined ||
+      d.initialBalance !== undefined ||
       d.creditDays !== undefined ||
       d.isActive !== undefined ||
       d.addressStreet !== undefined ||

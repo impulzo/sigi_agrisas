@@ -6,6 +6,8 @@ import { UploadTicketLogoUseCase } from "../../application/use-cases/UploadTicke
 import { DeleteTicketLogoUseCase } from "../../application/use-cases/DeleteTicketLogoUseCase";
 import { GetPricingSettingsUseCase } from "../../application/use-cases/GetPricingSettingsUseCase";
 import { UpdatePricingSettingsUseCase } from "../../application/use-cases/UpdatePricingSettingsUseCase";
+import { GetInventoryNotificationSettingsUseCase } from "../../application/use-cases/GetInventoryNotificationSettingsUseCase";
+import { UpdateInventoryNotificationSettingsUseCase } from "../../application/use-cases/UpdateInventoryNotificationSettingsUseCase";
 import { InvalidImageFormatError } from "../../domain/errors/InvalidImageFormatError";
 import { ImageTooLargeError } from "../../domain/errors/ImageTooLargeError";
 
@@ -24,6 +26,10 @@ const updatePricingSchema = z.object({
   dosificationSurchargePct: z.number().finite().min(0),
 });
 
+const updateInventoryNotificationsSchema = z.object({
+  expirationNotificationEmail: z.string().email("Invalid email format").max(120).nullable().optional(),
+});
+
 export class SettingsController {
   constructor(
     private readonly getTicketUseCase: GetTicketSettingsUseCase,
@@ -31,7 +37,9 @@ export class SettingsController {
     private readonly uploadLogoUseCase: UploadTicketLogoUseCase,
     private readonly deleteLogoUseCase: DeleteTicketLogoUseCase,
     private readonly getPricingUseCase: GetPricingSettingsUseCase,
-    private readonly updatePricingUseCase: UpdatePricingSettingsUseCase
+    private readonly updatePricingUseCase: UpdatePricingSettingsUseCase,
+    private readonly getInventoryNotificationsUseCase: GetInventoryNotificationSettingsUseCase,
+    private readonly updateInventoryNotificationsUseCase: UpdateInventoryNotificationSettingsUseCase
   ) {}
 
   async getTicket(): Promise<NextResponse> {
@@ -110,5 +118,30 @@ export class SettingsController {
     }
     const settings = await this.updatePricingUseCase.execute(parsed.data);
     return NextResponse.json(settings);
+  }
+
+  async getInventoryNotifications(): Promise<NextResponse> {
+    const settings = await this.getInventoryNotificationsUseCase.execute();
+    return NextResponse.json(settings);
+  }
+
+  async updateInventoryNotifications(req: NextRequest): Promise<NextResponse> {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+    const parsed = updateInventoryNotificationsSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+    try {
+      const settings = await this.updateInventoryNotificationsUseCase.execute(parsed.data);
+      return NextResponse.json(settings);
+    } catch (err) {
+      if (err instanceof EmptyUpdateError) return NextResponse.json({ error: err.message }, { status: 400 });
+      throw err;
+    }
   }
 }

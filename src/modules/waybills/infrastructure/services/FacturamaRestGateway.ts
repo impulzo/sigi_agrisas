@@ -7,7 +7,11 @@ import {
   WaybillLocationInput,
   WaybillMerchandiseInput,
 } from "../../application/ports/WaybillFacturamaGateway";
-import { FacturamaStampError, FacturamaCancelError } from "../../domain/errors";
+import { FacturamaStampError, FacturamaCancelError, EmitterFiscalDataIncompleteError } from "../../domain/errors";
+import {
+  getEmitterFiscalSettings,
+  isEmitterFiscalDataComplete,
+} from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
 
 function buildBasicAuth(user: string, password: string): string {
   return "Basic " + Buffer.from(`${user}:${password}`).toString("base64");
@@ -42,20 +46,12 @@ export class FacturamaRestGateway implements WaybillFacturamaGateway {
   private readonly baseUrl: string;
   private readonly authHeader: string;
   private readonly fetchImpl: typeof fetch;
-  private readonly emitterRfc: string;
-  private readonly emitterName: string;
-  private readonly emitterFiscalRegime: string;
-  private readonly emitterZipCode: string;
 
   constructor(
     opts: {
       baseUrl?: string;
       user?: string;
       password?: string;
-      emitterRfc?: string;
-      emitterName?: string;
-      emitterFiscalRegime?: string;
-      emitterZipCode?: string;
       fetchImpl?: typeof fetch;
     } = {}
   ) {
@@ -66,18 +62,9 @@ export class FacturamaRestGateway implements WaybillFacturamaGateway {
       ""
     );
     this.fetchImpl = opts.fetchImpl ?? fetch;
-    this.emitterRfc = opts.emitterRfc ?? process.env.FACTURAMA_EMITTER_RFC ?? "";
-    this.emitterName = opts.emitterName ?? process.env.FACTURAMA_EMITTER_NAME ?? "";
-    this.emitterFiscalRegime = opts.emitterFiscalRegime ?? process.env.FACTURAMA_EMITTER_FISCAL_REGIME ?? "";
-    this.emitterZipCode = opts.emitterZipCode ?? process.env.FACTURAMA_EMITTER_ZIP_CODE ?? "";
 
     if (!user || !password) {
       throw new Error("FACTURAMA_USER and FACTURAMA_PASSWORD are required when FACTURAMA_MOCK is false");
-    }
-    if (!this.emitterRfc || !this.emitterFiscalRegime || !this.emitterZipCode) {
-      throw new Error(
-        "FACTURAMA_EMITTER_RFC, FACTURAMA_EMITTER_FISCAL_REGIME and FACTURAMA_EMITTER_ZIP_CODE are required when FACTURAMA_MOCK is false"
-      );
     }
     this.authHeader = buildBasicAuth(user, password);
   }
@@ -107,17 +94,22 @@ export class FacturamaRestGateway implements WaybillFacturamaGateway {
   }
 
   async stampTraslado(input: StampTrasladoInput): Promise<StampTrasladoResult> {
+    const emitter = await getEmitterFiscalSettings();
+    if (!isEmitterFiscalDataComplete(emitter)) {
+      throw new EmitterFiscalDataIncompleteError();
+    }
+
     const payload = {
       CfdiType: "T",
       Currency: "XXX",
       Total: 0,
-      ExpeditionPlace: this.emitterZipCode,
+      ExpeditionPlace: emitter.zipCode,
       Receiver: {
-        Rfc: this.emitterRfc,
-        Name: this.emitterName || this.emitterRfc,
+        Rfc: emitter.rfc,
+        Name: emitter.legalName,
         CfdiUse: "S01",
-        FiscalRegime: this.emitterFiscalRegime,
-        TaxZipCode: this.emitterZipCode,
+        FiscalRegime: emitter.fiscalRegime,
+        TaxZipCode: emitter.zipCode,
       },
       Complemento: {
         CartaPorte: {

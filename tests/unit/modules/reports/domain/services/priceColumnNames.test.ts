@@ -1,5 +1,5 @@
 import { priceColumnNames } from "@/modules/reports/domain/services/priceColumnNames";
-import { DepartmentPriceListDepartmentDto } from "@/modules/reports/application/dto/DepartmentPriceListResponseDto";
+import { DepartmentPriceListDepartmentDto, DepartmentProductDto } from "@/modules/reports/application/dto/DepartmentPriceListResponseDto";
 
 function dept(overrides: Partial<DepartmentPriceListDepartmentDto> = {}): DepartmentPriceListDepartmentDto {
   return {
@@ -12,8 +12,24 @@ function dept(overrides: Partial<DepartmentPriceListDepartmentDto> = {}): Depart
   };
 }
 
-function price(name: string) {
-  return { priceId: `${name}-id`, name, price: "10.00", minQuantity: 1, discountPct: null, isDefault: false };
+function product(overrides: Partial<DepartmentProductDto> = {}): DepartmentProductDto {
+  return {
+    productId: "p1",
+    code: "P1",
+    name: "Producto 1",
+    unit: "PZA",
+    unitDescription: null,
+    stockQuantity: "5",
+    ivaRate: null,
+    iepsRate: null,
+    acquisitionPrice: null,
+    prices: [],
+    ...overrides,
+  };
+}
+
+function price(name: string, isDefault = false) {
+  return { priceId: `${name}-id`, name, price: "10.00", minQuantity: 1, discountPct: null, isDefault };
 }
 
 describe("priceColumnNames", () => {
@@ -25,19 +41,19 @@ describe("priceColumnNames", () => {
     const departments = [
       dept({
         products: [
-          { productId: "p1", code: "P1", name: "Producto 1", unit: "PZA", unitDescription: null, stockQuantity: "5", ivaRate: null, iepsRate: null, prices: [price("Público"), price("Mayoreo")] },
-          { productId: "p2", code: "P2", name: "Producto 2", unit: "PZA", unitDescription: null, stockQuantity: "3", ivaRate: null, iepsRate: null, prices: [price("Público")] },
+          product({ prices: [price("Público"), price("Mayoreo")] }),
+          product({ productId: "p2", code: "P2", prices: [price("Público")] }),
         ],
       }),
     ];
     expect(priceColumnNames(departments)).toEqual(["Mayoreo", "Público"]);
   });
 
-  it("ordena alfabéticamente es-MX sin importar el orden de aparición", () => {
+  it("ordena alfabéticamente es-MX sin importar el orden de aparición cuando ninguno es default", () => {
     const departments = [
       dept({
         products: [
-          { productId: "p1", code: "P1", name: "Producto 1", unit: "PZA", unitDescription: null, stockQuantity: "5", ivaRate: null, iepsRate: null, prices: [price("Zebra"), price("Ábaco"), price("Melón")] },
+          product({ prices: [price("Zebra"), price("Ábaco"), price("Melón")] }),
         ],
       }),
     ];
@@ -45,13 +61,32 @@ describe("priceColumnNames", () => {
   });
 
   it("producto sin precios no aporta columnas", () => {
+    const departments = [dept({ products: [product({ prices: [] })] })];
+    expect(priceColumnNames(departments)).toEqual([]);
+  });
+
+  it("el precio marcado isDefault va primero, resto alfabético (caso público, 10, 15, 4)", () => {
     const departments = [
       dept({
         products: [
-          { productId: "p1", code: "P1", name: "Producto 1", unit: "PZA", unitDescription: null, stockQuantity: "5", ivaRate: null, iepsRate: null, prices: [] },
+          product({
+            prices: [price("10"), price("15"), price("4"), price("Precio público", true)],
+          }),
         ],
       }),
     ];
-    expect(priceColumnNames(departments)).toEqual([]);
+    expect(priceColumnNames(departments)).toEqual(["Precio público", "10", "15", "4"]);
+  });
+
+  it("un nombre marcado isDefault en cualquier producto se considera default en toda la columna", () => {
+    const departments = [
+      dept({
+        products: [
+          product({ prices: [price("Mayoreo", false)] }),
+          product({ productId: "p2", code: "P2", prices: [price("Mayoreo", true), price("Público", false)] }),
+        ],
+      }),
+    ];
+    expect(priceColumnNames(departments)).toEqual(["Mayoreo", "Público"]);
   });
 });

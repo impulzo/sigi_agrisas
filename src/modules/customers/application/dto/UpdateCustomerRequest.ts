@@ -1,6 +1,6 @@
 export interface UpdateCustomerRequest {
   name?: string;
-  rfc?: string;
+  rfc?: string | null;
   legalName?: string | null;
   taxRegime?: string | null;
   cfdiUse?: string | null;
@@ -11,6 +11,7 @@ export interface UpdateCustomerRequest {
   contactName?: string | null;
   notes?: string | null;
   creditLimit?: number | null;
+  initialBalance?: number;
   creditDays?: number;
   isActive?: boolean;
   addressStreet?: string | null;

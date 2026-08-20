@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   "/api/v1/auth/refresh",
   "/api/v1/auth/logout",
   "/api/v1/health",
+  "/api/v1/admin/cron/inventory-expiry-notifications",
   "/auth/login",
   "/auth/register",
   "/favicon.ico",

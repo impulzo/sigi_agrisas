@@ -116,7 +116,9 @@ export class GetAccountStatementLedgerUseCase {
       inRange.push(m);
     }
 
-    const openingBalance = req.from ? AccountLedgerBuilder.closingBalance(before, 0) : 0;
+    const openingBalance = req.from
+      ? AccountLedgerBuilder.closingBalance(before, data.customer.initialBalance)
+      : data.customer.initialBalance;
     // Saldo corrido cronológico (universo completo del rango). No lo altera history/sort.
     const built = AccountLedgerBuilder.build(inRange, openingBalance);
 

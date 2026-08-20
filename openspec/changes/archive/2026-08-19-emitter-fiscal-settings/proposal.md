@@ -1,0 +1,43 @@
+## Historia de Usuario
+
+| # | Rol | Tarea | Motivo | Criterios de Aceptación | Criterios de Seguridad |
+|---|---|---|---|---|---|
+| 1 | Administrador con permiso `billing:manage_csd` | Como Administrador, quiero capturar razón social, régimen fiscal y código postal del emisor en la misma pantalla donde subo el CSD (`/billing` → `CsdManagerPage`), para que estos datos fiscales queden persistidos en BD y disponibles sin necesidad de un redeploy que edite `.env` | - Given la pantalla de gestión de CSD, When subo el CSD junto con RFC (ya solicitado hoy) + razón social + régimen fiscal (clave SAT `c_RegimenFiscal`) + código postal, Then el sistema persiste estos 4 campos en una tabla `EmitterFiscalSettings` (singleton, patrón `TicketSettings`) tras confirmar que el CSD fue aceptado por Facturama (`uploadCsd` exitoso) — no se persiste si Facturama rechaza el CSD.<br>- Given datos de emisor ya guardados previamente, When abro `/billing` (CSD manager), Then el formulario se prellena con los valores actuales (RFC, razón social, régimen fiscal, CP), permitiendo editarlos sin volver a subir el CSD (edición de datos fiscales y re-subida de CSD son acciones independientes).<br>- Given régimen fiscal o código postal con formato inválido (regex `^\d{3}$` para régimen, `^\d{5}$` para CP, mismo patrón ya usado en `taxRegime`/`taxZipCode` de `customers`/`providers`), When intento guardar, Then el sistema rechaza con 400 antes de tocar Facturama o la BD.<br>- Given los 4 campos aún no capturados (estado inicial, antes de esta migración), When el sistema intenta timbrar (waybill Carta Porte o factura), Then falla con un error explícito de "datos de emisor incompletos" (mismo patrón que `BranchAddressIncompleteError`/`CustomerAddressIncompleteError`) en vez de un error genérico de Facturama. | - Mismo permiso ya existente `billing:manage_csd` (sin permiso nuevo) — sólo admin lo tiene hoy (verificado en `prisma/seed.ts:113`).<br>- El RFC/razón social/régimen/CP NO son secretos (a diferencia de `certificateBase64`/`privateKeyBase64`/`privateKeyPassword`, que siguen sin persistirse localmente, sólo reenviados a Facturama) — persistirlos en BD es intencional y no expone información sensible.<br>- La escritura de estos 4 campos debe ser atómica junto con la validación de éxito del CSD upload — no dejar el settings en un estado a medias si Facturama rechaza el certificado. |
+| 2 | Sistema (ambos gateways: `billing` y `waybills`) | Como el gateway de timbrado (`FacturamaRestGateway` en `billing` y en `waybills`), quiero leer RFC/razón social/régimen fiscal/CP del emisor desde `EmitterFiscalSettings` en BD en vez de `process.env.FACTURAMA_EMITTER_*`, para que un cambio de datos fiscales del emisor no requiera modificar `.env` y redeployar | - Given `EmitterFiscalSettings` con los 4 campos poblados, When se arma el nodo `Emisor`/`Rfc` para timbrar una factura o una Carta Porte, Then los valores usados provienen de BD, no de variables de entorno — `FACTURAMA_EMITTER_RFC`/`_NAME`/`_FISCAL_REGIME`/`_ZIP_CODE` dejan de leerse en `FacturamaRestGateway.ts` (ambos módulos).<br>- Given `EmitterFiscalSettings` sin poblar (fila no existe o campos `null`) y `FACTURAMA_MOCK="false"`, When se intenta timbrar, Then el sistema rechaza ANTES de llamar a Facturama con un error claro (no el genérico `"FACTURAMA_EMITTER_RFC... are required"` que hoy tira en el constructor del gateway al boot).<br>- Given `FACTURAMA_MOCK="true"` (modo mock, sin red), When se timbra, Then el flujo no requiere `EmitterFiscalSettings` poblado — el mock sigue funcionando igual que hoy, sin depender de esta migración. | - Los datos de emisor se leen server-side únicamente (use case → repository), nunca expuestos directamente a un endpoint público sin `billing:manage_csd` o el permiso correspondiente al lector (`billing:*`/`waybills:stamp`).<br>- `FACTURAMA_USER`/`FACTURAMA_PASSWORD`/`FACTURAMA_BASE_URL` (credenciales de la API de Facturama, no del emisor) permanecen en env vars — no forman parte de este cambio, distinción explícita entre "credenciales de la integración" y "datos fiscales del emisor". |
+
+_Nota: se dividió en 2 historias porque son independientes en el tiempo (#1 es UI+persistencia, #2 es que los gateways consuman esa fuente), aunque ambas se implementan en el mismo change — no tiene sentido desplegar #2 sin #1, pero son trazables a tareas separadas en `tasks.md`._
+
+## Why
+
+Hoy `FacturamaRestGateway` (tanto en `billing` como en `waybills`) construye el nodo `Emisor` del CFDI leyendo `FACTURAMA_EMITTER_RFC`/`_NAME`/`_FISCAL_REGIME`/`_ZIP_CODE` directamente de `process.env`, constantes fijadas en `.env` al desplegar. Al mismo tiempo, ya existe un flujo de administración de CSD (`CsdManagerPage.tsx` → `POST /api/v1/admin/billing/csd`) donde el operador sube certificado + llave + password + RFC — es el punto natural donde ya se captura la identidad fiscal del emisor, pero hoy ese endpoint sólo reenvía el material a Facturama sin persistir nada localmente, y el RFC capturado ahí nunca llega a ser el que usan los gateways para timbrar (quedan desincronizados: el RFC del CSD subido podría no coincidir con `FACTURAMA_EMITTER_RFC` del `.env`, sin que el sistema lo detecte).
+
+Consolidar ambos flujos evita ese desacople y elimina la necesidad de un redeploy para cambiar datos fiscales del emisor (p. ej. si cambia el régimen fiscal o se corrige el CP registrado).
+
+## What Changes
+
+- **BREAKING** (interno, config): `FACTURAMA_EMITTER_RFC`/`_NAME`/`_FISCAL_REGIME`/`_ZIP_CODE` dejan de leerse de `process.env` en ambos `FacturamaRestGateway` (`billing` y `waybills`) — se leen de una tabla nueva `EmitterFiscalSettings` en BD. Las env vars quedan documentadas como deprecadas en `.env.example` (no se eliminan del `.env` de nadie automáticamente; simplemente dejan de tener efecto).
+- Migración: tabla `EmitterFiscalSettings` (singleton, mismo patrón que `TicketSettings`/`PricingSettings`) con `rfc`, `legalName`, `fiscalRegime`, `zipCode`, todas nullable hasta la primera captura.
+- `POST /api/v1/admin/billing/csd`: el body gana 3 campos opcionales nuevos (`legalName`, `fiscalRegime`, `zipCode`) además del `rfc` ya existente; al subir CSD exitosamente, persiste los 4 en `EmitterFiscalSettings` dentro de la misma operación (no se persiste si Facturama rechaza el CSD).
+- `GET /api/v1/admin/billing/csd`: la respuesta gana los 4 campos persistidos actuales (además del status ya existente de Facturama), para prellenar el formulario en edición.
+- `CsdManagerPage.tsx`: formulario gana los 3 campos nuevos, prellenados desde `GET /csd` en carga.
+- `FacturamaRestGateway` (billing y waybills): en vez de leer `process.env.FACTURAMA_EMITTER_*` en el constructor, reciben un `EmitterFiscalSettingsRepository`/lookup inyectado y resuelven el emisor en cada llamada de timbrado; si falta algún campo, error explícito de dominio (nuevo, mismo patrón que `BranchAddressIncompleteError`) antes de llamar a Facturama.
+
+## Capabilities
+
+### New Capabilities
+
+(ninguna)
+
+### Modified Capabilities
+
+- `billing-api`: requirement "Manage CSD" (`POST`/`GET /billing/csd`) gana los 3 campos fiscales adicionales y la persistencia de los 4 en `EmitterFiscalSettings`. **Corrección post-implementación**: el requirement "Facturama gateway abstraction with mock mode" de `billing-api` NO cambia — se confirmó en código que `billing`'s `FacturamaRestGateway.stamp()` nunca leyó `FACTURAMA_EMITTER_*` ni construye un nodo `Emisor` (Facturama lo infiere del CSD ya cargado en la cuenta para CFDI Ingreso); sólo `waybills`' gateway construye `Emisor` explícito para el Traslado.
+- `waybills-api`: requirement "WaybillFacturamaGateway port" — `FacturamaRestGateway` deja de leer `FACTURAMA_EMITTER_*` de env, resuelve el emisor desde `EmitterFiscalSettings` en cada `stampTraslado`, lanza `EmitterFiscalDataIncompleteError` (nuevo, 409) si incompleto.
+
+## Impact
+
+- `prisma/schema.prisma` (tabla nueva `EmitterFiscalSettings`)
+- `src/modules/billing/` (domain/errors, application/{dto,ports,use-cases}, infrastructure/{repositories,http,services/FacturamaRestGateway.ts})
+- `src/modules/waybills/infrastructure/services/FacturamaRestGateway.ts` (deja de leer env, recibe emisor inyectado)
+- `app/(private)/billing/_blocks/CsdManagerPage.tsx`, `app/(private)/billing/_logic/` (types/api, hooks/useCsdManager, services)
+- `.env.example` (documentar deprecación de las 4 vars `FACTURAMA_EMITTER_*`)
+- Sin cambios en `WaybillFacturamaGateway`/`FacturamaGateway` ports más allá de cómo se construye el gateway (inyección de dependencia adicional, no cambio de firma de métodos públicos existentes)

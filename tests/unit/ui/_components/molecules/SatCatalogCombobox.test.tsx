@@ -63,7 +63,10 @@ describe("SatCatalogCombobox", () => {
     fireEvent.focus(input);
     fireEvent.mouseDown(screen.getByText(/Personas Físicas/));
 
-    expect(onChange).toHaveBeenCalledWith("612");
+    expect(onChange).toHaveBeenCalledWith(
+      "612",
+      "Personas Físicas con Actividades Empresariales y Profesionales"
+    );
     expect(screen.getByText(/Personas Físicas/)).toBeInTheDocument();
   });
 
@@ -103,6 +106,6 @@ describe("SatCatalogCombobox", () => {
     fireEvent.focus(input);
     fireEvent.mouseDown(screen.getByText(/Pagos/));
 
-    expect(onChange).toHaveBeenCalledWith("CP01");
+    expect(onChange).toHaveBeenCalledWith("CP01", "Pagos");
   });
 });

@@ -5,6 +5,7 @@ export interface AccountStatementSummaryRowDto {
   totalCharged: string;
   totalPaid: string;
   currentBalance: string;
+  initialBalance: string;
   creditLimit: string | null;
   /** `null` = crédito ilimitado (creditLimit null). */
   availableCredit: string | null;

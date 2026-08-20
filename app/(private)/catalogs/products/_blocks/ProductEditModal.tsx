@@ -46,6 +46,19 @@ function parseTaxInput(val: string): number | null {
   return n;
 }
 
+function priceToDisplay(price: number | null): string {
+  if (price === null) return "";
+  return String(price);
+}
+
+function parsePriceInput(val: string): number | null {
+  const trimmed = val.trim();
+  if (trimmed === "") return null;
+  const n = parseFloat(trimmed);
+  if (isNaN(n)) return null;
+  return n;
+}
+
 export function ProductEditModal({
   open,
   mode,
@@ -69,6 +82,8 @@ export function ProductEditModal({
   const [satProductCode, setSatProductCode] = useState("");
   const [ivaRate, setIvaRate] = useState("");
   const [iepsRate, setIepsRate] = useState("");
+  const [manufactureDate, setManufactureDate] = useState("");
+  const [acquisitionPrice, setAcquisitionPrice] = useState("");
   const [isTaxable, setIsTaxable] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const { options: taxRateOptions } = useTaxRatesOptions();
@@ -96,7 +111,7 @@ export function ProductEditModal({
     if (!open) return;
     if (mode === "create") {
       setCode(""); setName(""); setUnit(""); setDepartmentId(""); setTaxRateId(null);
-      setSatProductCode(""); setIvaRate(""); setIepsRate(""); setIsTaxable(false); setIsActive(true);
+      setSatProductCode(""); setIvaRate(""); setIepsRate(""); setManufactureDate(""); setAcquisitionPrice(""); setIsTaxable(false); setIsActive(true);
       setStagedImage(null); setImgPreview(null); setImgError(null);
     } else if (entity) {
       setCode(entity.code);
@@ -107,6 +122,8 @@ export function ProductEditModal({
       setSatProductCode(entity.satProductCode ?? "");
       setIvaRate(taxRateToDisplay(entity.ivaRate));
       setIepsRate(taxRateToDisplay(entity.iepsRate));
+      setManufactureDate(entity.manufactureDate ?? "");
+      setAcquisitionPrice(priceToDisplay(entity.acquisitionPrice));
       setIsTaxable(entity.isTaxable);
       setIsActive(entity.isActive);
     }
@@ -127,10 +144,14 @@ export function ProductEditModal({
     if (parsedIva !== entity.ivaRate) diff.ivaRate = parsedIva;
     const parsedIeps = parseTaxInput(iepsRate);
     if (parsedIeps !== entity.iepsRate) diff.iepsRate = parsedIeps;
+    const parsedManufactureDate = manufactureDate.trim() === "" ? null : manufactureDate.trim();
+    if (parsedManufactureDate !== entity.manufactureDate) diff.manufactureDate = parsedManufactureDate;
+    const parsedAcquisitionPrice = parsePriceInput(acquisitionPrice);
+    if (parsedAcquisitionPrice !== entity.acquisitionPrice) diff.acquisitionPrice = parsedAcquisitionPrice;
     if (isTaxable !== entity.isTaxable) diff.isTaxable = isTaxable;
     if (isActive !== entity.isActive) diff.isActive = isActive;
     return diff;
-  }, [entity, name, unit, departmentId, taxRateId, satProductCode, ivaRate, iepsRate, isTaxable, isActive]);
+  }, [entity, name, unit, departmentId, taxRateId, satProductCode, ivaRate, iepsRate, manufactureDate, acquisitionPrice, isTaxable, isActive]);
 
   const isDiffEmpty = mode === "edit" && Object.keys(buildDiff()).length === 0;
 
@@ -147,6 +168,8 @@ export function ProductEditModal({
       satProductCode: satProductCode.trim() || null,
       ivaRate: parseTaxInput(ivaRate),
       iepsRate: parseTaxInput(iepsRate),
+      manufactureDate: manufactureDate.trim() || null,
+      acquisitionPrice: parsePriceInput(acquisitionPrice),
       isTaxable,
       isActive,
     };
@@ -269,6 +292,37 @@ export function ProductEditModal({
             />
             {validationErrors.satProductCode && (
               <p className="text-label-sm text-error mt-1">{validationErrors.satProductCode}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="product-manufacture-date">Fecha de elaboración</label>
+            <input
+              type="date"
+              id="product-manufacture-date"
+              value={manufactureDate}
+              onChange={(e) => setManufactureDate(e.target.value)}
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {validationErrors.manufactureDate && (
+              <p className="text-label-sm text-error mt-1">{validationErrors.manufactureDate}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="product-acquisition-price">Precio de adquisición</label>
+            <input
+              type="number"
+              id="product-acquisition-price"
+              value={acquisitionPrice}
+              onChange={(e) => setAcquisitionPrice(e.target.value)}
+              min={0}
+              step="any"
+              placeholder="Ej. 45.50"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {validationErrors.acquisitionPrice && (
+              <p className="text-label-sm text-error mt-1">{validationErrors.acquisitionPrice}</p>
             )}
           </div>
 

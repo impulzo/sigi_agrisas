@@ -14,6 +14,17 @@ const rfcSchema = z
   .string()
   .regex(rfcRegex, "RFC inválido. Formato esperado: 3-4 letras + 6 dígitos + 3 alfanuméricos.");
 
+const optionalRfc = z
+  .string()
+  .regex(rfcRegex, "RFC inválido. Formato esperado: 3-4 letras + 6 dígitos + 3 alfanuméricos.")
+  .nullable()
+  .optional();
+
+const optionalInitialBalance = z
+  .number()
+  .min(0, "El saldo inicial no puede ser negativo.")
+  .optional();
+
 const optionalTaxRegime = z
   .string()
   .regex(taxRegimeRegex, "El régimen fiscal debe ser de 3 dígitos (ej. 601).")
@@ -65,7 +76,7 @@ const structuredAddressFields = {
 export const createCustomerSchema = z.object({
   code: codeSchema,
   name: z.string().min(1, "El nombre es obligatorio.").max(120),
-  rfc: rfcSchema,
+  rfc: optionalRfc,
   legalName: z.string().max(200).nullable().optional(),
   taxRegime: optionalTaxRegime,
   cfdiUse: optionalCfdiUse,
@@ -76,6 +87,7 @@ export const createCustomerSchema = z.object({
   contactName: z.string().max(120).nullable().optional(),
   notes: z.string().nullable().optional(),
   creditLimit: optionalCreditLimit,
+  initialBalance: optionalInitialBalance,
   creditDays: optionalCreditDays,
   isActive: z.boolean().optional(),
   ...structuredAddressFields,
@@ -84,7 +96,7 @@ export const createCustomerSchema = z.object({
 export const updateCustomerSchema = z
   .object({
     name: z.string().min(1).max(120).optional(),
-    rfc: rfcSchema.optional(),
+    rfc: optionalRfc,
     legalName: z.string().max(200).nullable().optional(),
     taxRegime: optionalTaxRegime,
     cfdiUse: optionalCfdiUse,
@@ -95,6 +107,7 @@ export const updateCustomerSchema = z
     contactName: z.string().max(120).nullable().optional(),
     notes: z.string().nullable().optional(),
     creditLimit: optionalCreditLimit,
+    initialBalance: optionalInitialBalance,
     creditDays: optionalCreditDays,
     isActive: z.boolean().optional(),
     ...structuredAddressFields,
@@ -113,6 +126,7 @@ export const updateCustomerSchema = z
       d.contactName !== undefined ||
       d.notes !== undefined ||
       d.creditLimit !== undefined ||
+      d.initialBalance !== undefined ||
       d.creditDays !== undefined ||
       d.isActive !== undefined ||
       d.addressStreet !== undefined ||

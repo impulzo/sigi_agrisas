@@ -29,7 +29,7 @@ export interface FacturamaItemInput {
   total: number;
 }
 
-export interface FacturамаStampInput {
+export interface FacturamaStampInput {
   series?: string;
   currency: string;
   paymentForm: string;
@@ -72,7 +72,7 @@ export interface FacturamaCsdStatus {
 }
 
 export interface FacturamaGateway {
-  stamp(input: FacturамаStampInput): Promise<FacturamaStampResult>;
+  stamp(input: FacturamaStampInput): Promise<FacturamaStampResult>;
   cancel(cfdiId: string, motive: string, uuidReplacement?: string | null): Promise<FacturamaCancelResult>;
   download(format: "pdf" | "xml", cfdiId: string): Promise<FacturamaDownloadResult>;
   uploadCsd(input: FacturamaCsdInput): Promise<FacturamaCsdStatus>;
