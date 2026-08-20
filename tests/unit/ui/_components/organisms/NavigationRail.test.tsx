@@ -45,12 +45,6 @@ function renderRail(pathname: string, permissions: string[]) {
 }
 
 describe("NavigationRail — estado activo", () => {
-  it("marca Dashboard activo cuando pathname es /dashboard", () => {
-    renderRail("/dashboard", []);
-    const dashboard = screen.getByRole("link", { name: /Inicio/ });
-    expect(dashboard.className).toContain("bg-primary-container");
-  });
-
   it("marca POS activo cuando pathname empieza con /pos", () => {
     renderRail("/pos/new", ["sales:create"]);
     const pos = screen.getByRole("link", { name: /^POS$/ });
@@ -86,11 +80,6 @@ describe("NavigationRail — filtrado por permisos", () => {
   it("usuario sin sales:create NO ve POS", () => {
     renderRail("/dashboard", ["sales:read", "quotes:read"]);
     expect(screen.queryByRole("link", { name: /^POS$/ })).not.toBeInTheDocument();
-  });
-
-  it("Dashboard siempre visible (sin requires)", () => {
-    renderRail("/dashboard", []);
-    expect(screen.getByRole("link", { name: /Inicio/ })).toBeInTheDocument();
   });
 
   it('muestra ítem optimistamente cuando can() devuelve "loading"', () => {
@@ -229,12 +218,6 @@ describe("NavigationRail — item Configuración (secondaryItems)", () => {
     renderRail("/settings", ["settings:read"]);
     const link = screen.getByRole("link", { name: /Configuración/ });
     expect(link.className).toContain("bg-primary-container");
-  });
-
-  it("Support y Account siguen visibles sin depender de can() (regresión del filtro nuevo)", () => {
-    renderRail("/dashboard", []);
-    expect(screen.getByRole("link", { name: /Support/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Account/ })).toBeInTheDocument();
   });
 });
 

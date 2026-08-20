@@ -21,7 +21,6 @@ export function TopAppBar({ userName, userEmail, avatarUrl }: TopAppBarProps) {
         <SearchInput placeholder="Search data..." className="hidden md:flex" />
       </div>
       <div className="flex items-center gap-sm">
-        <IconButton icon="notifications" ariaLabel="Notificaciones" />
         <IconButton icon="help_outline" ariaLabel="Ayuda" />
         <IconButton icon="settings" ariaLabel="Ajustes" />
         <Avatar

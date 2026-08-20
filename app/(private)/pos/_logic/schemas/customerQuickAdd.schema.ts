@@ -13,7 +13,8 @@ export const customerQuickAddSchema = z.object({
     .regex(
       /^([A-ZÑ&]{3,4})\d{6}([A-Z\d]{3})$/,
       "RFC inválido (ej. XAXX010101000)"
-    ),
+    )
+    .optional(),
   legalName: z.string().max(200).optional(),
   taxRegime: z
     .string()
