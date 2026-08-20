@@ -2,7 +2,7 @@ export interface CustomerDto {
   id: string;
   code: string;
   name: string;
-  rfc: string;
+  rfc: string | null;
   legalName: string | null;
   taxRegime: string | null;
   cfdiUse: string | null;
@@ -14,6 +14,7 @@ export interface CustomerDto {
   notes: string | null;
   creditLimit: number | null;
   currentBalance: number;
+  initialBalance: number;
   creditDays: number;
   isActive: boolean;
   addressStreet: string | null;
@@ -45,7 +46,7 @@ export interface ListCustomersParams {
 export interface CreateCustomerBody {
   code: string;
   name: string;
-  rfc: string;
+  rfc?: string | null;
   legalName?: string | null;
   taxRegime?: string | null;
   cfdiUse?: string | null;
@@ -56,6 +57,7 @@ export interface CreateCustomerBody {
   contactName?: string | null;
   notes?: string | null;
   creditLimit?: number | null;
+  initialBalance?: number;
   creditDays?: number;
   isActive?: boolean;
   addressStreet?: string | null;
@@ -70,7 +72,7 @@ export interface CreateCustomerBody {
 
 export interface UpdateCustomerBody {
   name?: string;
-  rfc?: string;
+  rfc?: string | null;
   legalName?: string | null;
   taxRegime?: string | null;
   cfdiUse?: string | null;
@@ -81,6 +83,7 @@ export interface UpdateCustomerBody {
   contactName?: string | null;
   notes?: string | null;
   creditLimit?: number | null;
+  initialBalance?: number;
   creditDays?: number;
   isActive?: boolean;
   addressStreet?: string | null;

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { createElement } from "react";
+import { renderToBuffer } from "@react-pdf/renderer";
+import { InvoiceDocumentPdf } from "../pdf/InvoiceDocumentPdf";
 import { StampInvoiceUseCase } from "../../application/use-cases/StampInvoiceUseCase";
 import { CancelInvoiceUseCase } from "../../application/use-cases/CancelInvoiceUseCase";
 import { DownloadInvoiceFileUseCase } from "../../application/use-cases/DownloadInvoiceFileUseCase";
@@ -90,11 +93,48 @@ const cancelSchema = z.object({
   uuidReplacement: z.string().max(40).nullable().optional(),
 });
 
+const previewLineSchema = z.object({
+  description: z.string().min(1),
+  productCode: z.string().min(1),
+  satProductCode: z.string().nullable().optional(),
+  quantity: z.number(),
+  unitPrice: z.number(),
+  discountPct: z.number(),
+  ivaRate: z.number(),
+  iepsRate: z.number(),
+  lineSubtotal: z.number(),
+  lineTotal: z.number(),
+});
+
+const previewPdfSchema = z.object({
+  issuer: z.object({
+    name: z.string().min(1),
+    branchName: z.string().nullable().optional(),
+  }),
+  receiver: z.object({
+    rfc: z.string().min(1),
+    name: z.string().min(1),
+    cfdiUse: z.string(),
+    fiscalRegime: z.string(),
+    taxZipCode: z.string(),
+  }),
+  lines: z.array(previewLineSchema).min(1),
+  paymentForm: z.string(),
+  paymentMethod: z.string(),
+  subtotal: z.number(),
+  taxTotal: z.number(),
+  total: z.number(),
+  currency: z.string(),
+});
+
 const csdSchema = z.object({
   rfc: z.string().min(12).max(13),
   certificateBase64: z.string().min(1),
   privateKeyBase64: z.string().min(1),
   privateKeyPassword: z.string().min(1),
+  legalName: z.string().max(200).optional(),
+  fiscalRegime: z.string().regex(/^\d{3}$/, "Invalid fiscal regime format").optional(),
+  zipCode: z.string().regex(/^\d{5}$/, "Invalid zip code format").optional(),
 });
 
 export class BillingController {
@@ -398,6 +438,40 @@ export class BillingController {
 
     const invoices = await this.listBySaleUseCase.execute(saleId);
     return NextResponse.json({ items: invoices.map(toInvoiceDto) });
+  }
+
+  async previewPdf(req: NextRequest): Promise<NextResponse> {
+    const authError = await requirePermission(req, "billing:write", this.authz);
+    if (authError) return authError;
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const parsed = previewPdfSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const rendered = await renderToBuffer(
+      createElement(InvoiceDocumentPdf, {
+        data: parsed.data,
+        watermark: "BORRADOR — no válido fiscalmente",
+        folioLabel: "PENDIENTE DE TIMBRAR",
+      }) as never
+    );
+    const buffer = Buffer.from(rendered);
+
+    return new NextResponse(buffer, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="factura-borrador.pdf"`,
+        "Content-Length": String(buffer.length),
+      },
+    });
   }
 
   async uploadCsd(req: NextRequest): Promise<NextResponse> {

@@ -129,6 +129,7 @@ describe("CustomersPage", () => {
       notes: null,
       creditLimit: null,
       currentBalance: 0,
+      initialBalance: 0,
       creditDays: 30,
       isActive: true,
       addressStreet: null,

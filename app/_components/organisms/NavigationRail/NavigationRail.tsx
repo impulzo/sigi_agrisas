@@ -134,6 +134,13 @@ export function NavigationRail() {
     return allowed === true;
   });
 
+  const visibleSecondaryItems = secondaryItems.filter((item) => {
+    if (!item.requires) return true;
+    const allowed = can(item.requires);
+    if (allowed === "loading") return true;
+    return allowed === true;
+  });
+
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -178,7 +185,7 @@ export function NavigationRail() {
           )
         )}
         <div className="mt-auto pt-4 flex flex-col gap-md items-center">
-          {secondaryItems.map((item) => (
+          {visibleSecondaryItems.map((item) => (
             <RailLink key={item.key} item={item} active={isActive(pathname, item.href)} />
           ))}
         </div>

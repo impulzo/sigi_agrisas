@@ -52,7 +52,7 @@ The system SHALL provide a screen at `/catalogs/products` that lists products in
 ---
 
 ### Requirement: Product create/edit modal
-The system SHALL provide a single modal component `ProductEditModal` that handles both creation and edition based on a `mode` prop (`"create" | "edit"`). The modal SHALL render the editable fields: `code`, `name`, `departmentId` (a `<select>` of active departments), `unit`, `satProductCode`, `ivaRate` (numeric input with `%` suffix), `iepsRate` (numeric input with `%` suffix), `isActive`, and `isTaxable` (toggle/checkbox labeled "Sujeto a impuestos", default unchecked = false). The `code` field SHALL be uppercase-forced as the user types and SHALL be disabled in `edit` mode. In `edit` mode `isTaxable` SHALL be pre-filled from the loaded entity. In both modes `isTaxable` SHALL submit as boolean. In `edit` mode the save button SHALL be disabled when the diff against the loaded entity is empty. In `create` mode the save button SHALL be enabled when required fields (`code`, `name`, `departmentId`, `unit`) are filled and pass client validation. Validation SHALL mirror the backend: `code` `^[A-Z0-9_]{1,32}$`, `satProductCode` `^\d{8}$` (when present), `ivaRate`/`iepsRate` numeric 0–100 (or empty → null). Validation errors SHALL be shown inline in Spanish. The `ivaRate`/`iepsRate` values SHALL be submitted as percentages (the backend normalizes values `> 1` to decimal); an empty tax field SHALL be submitted as `null`.
+The system SHALL provide a single modal component `ProductEditModal` that handles both creation and edition based on a `mode` prop (`"create" | "edit"`). The modal SHALL render the editable fields: `code`, `name`, `departmentId` (a `<select>` of active departments), `unit`, `satProductCode`, `ivaRate` (numeric input with `%` suffix), `iepsRate` (numeric input with `%` suffix), `acquisitionPrice` (numeric input labeled "Precio de adquisición", no suffix, ≥ 0, empty → `null`), `isActive`, and `isTaxable` (toggle/checkbox labeled "Sujeto a impuestos", default unchecked = false). The `code` field SHALL be uppercase-forced as the user types and SHALL be disabled in `edit` mode. In `edit` mode `isTaxable` and `acquisitionPrice` SHALL be pre-filled from the loaded entity. In both modes `isTaxable` SHALL submit as boolean. In `edit` mode the save button SHALL be disabled when the diff against the loaded entity is empty. In `create` mode the save button SHALL be enabled when required fields (`code`, `name`, `departmentId`, `unit`) are filled and pass client validation. Validation SHALL mirror the backend: `code` `^[A-Z0-9_]{1,32}$`, `satProductCode` `^\d{8}$` (when present), `ivaRate`/`iepsRate` numeric 0–100 (or empty → null), `acquisitionPrice` numeric ≥ 0 (or empty → null). Validation errors SHALL be shown inline in Spanish. The `ivaRate`/`iepsRate` values SHALL be submitted as percentages (the backend normalizes values `> 1` to decimal); an empty tax field SHALL be submitted as `null`.
 
 #### Scenario: Create mode defaults isTaxable to false
 - **WHEN** the modal opens in `mode="create"`
@@ -90,6 +90,22 @@ The system SHALL provide a single modal component `ProductEditModal` that handle
 - **WHEN** the user clears the IEPS field and submits
 - **THEN** the request body sends `{ "iepsRate": null }`
 
+#### Scenario: Edit mode pre-fills acquisitionPrice
+- **WHEN** the modal opens in `mode="edit"` with `entity.acquisitionPrice = 45.5`
+- **THEN** the "Precio de adquisición" field shows `45.5`
+
+#### Scenario: acquisitionPrice submitted as number
+- **WHEN** the user enters `52.3` in "Precio de adquisición" and submits
+- **THEN** the request body sends `{ "acquisitionPrice": 52.3 }`
+
+#### Scenario: Empty acquisitionPrice submitted as null
+- **WHEN** the user clears "Precio de adquisición" and submits
+- **THEN** the request body sends `{ "acquisitionPrice": null }`
+
+#### Scenario: Negative acquisitionPrice rejected client-side
+- **WHEN** the user types `-5` in "Precio de adquisición" and tries to submit
+- **THEN** the modal shows an inline error and does not dispatch the request
+
 #### Scenario: Empty diff in edit disables save
 - **WHEN** the modal is in `edit` mode and no field has changed
 - **THEN** the save button is disabled
@@ -102,10 +118,8 @@ The system SHALL provide a single modal component `ProductEditModal` that handle
 - **WHEN** the user submits with a `departmentId` that the backend rejects as not found or inactive (400)
 - **THEN** the modal stays open and an inline error "El departamento no existe o está inactivo." appears under the department field
 
----
-
 ### Requirement: Product detail screen with tabs
-The system SHALL provide a detail screen at `/catalogs/products/[id]` reachable from the list's "Gestionar" action, requiring `products:read`. The screen SHALL load the product via `GET /api/v1/admin/products/:id` and render its `code` and `name` as a header plus three tabs: "General", "Precios", "Dosificaciones". The "General" tab SHALL embed the same editable fields as `ProductEditModal` with a "Guardar cambios" button (diff submit, disabled when no changes) gated by `products:write`. A 404 on load SHALL render a "Producto no encontrado" state with a link back to `/catalogs/products`.
+The system SHALL provide a detail screen at `/catalogs/products/[id]` reachable from the list's "Gestionar" action, requiring `products:read`. The screen SHALL load the product via `GET /api/v1/admin/products/:id` and render its `code` and `name` as a header plus three tabs: "General", "Precios", "Dosificaciones". The "General" tab SHALL embed the same editable fields as `ProductEditModal` — including `manufactureDate` — with a "Guardar cambios" button (diff submit, disabled when no changes) gated by `products:write`. A 404 on load SHALL render a "Producto no encontrado" state with a link back to `/catalogs/products`.
 
 #### Scenario: Detail loads and shows tabs
 - **WHEN** a user with `products:read` opens `/catalogs/products/<id>` for an existing product
@@ -122,8 +136,6 @@ The system SHALL provide a detail screen at `/catalogs/products/[id]` reachable 
 #### Scenario: Viewer sees General tab read-only
 - **WHEN** a user with only `products:read` opens the detail
 - **THEN** the General tab fields are disabled and the "Guardar cambios" button is not rendered
-
----
 
 ### Requirement: Product prices management in the Precios tab
 The "Precios" tab SHALL list the product's prices via `GET /api/v1/admin/products/:id/prices` in a table with columns: `Nombre`, `Precio` (currency), `Cantidad mín.` (`minQuantity`), `Descuento` (`discountPct` as `"%"` or `"—"`), `Default` (a badge on the default row), and `Acciones`. A "Nuevo precio" button (gated by `products:write`) SHALL open a `ProductPriceModal` for creation; rows SHALL offer "Editar" and "Eliminar" (hard delete with `ConfirmDialog`). The modal SHALL validate `name` (required), `price >= 0`, `minQuantity >= 1`, `discountPct` 0–100 (or empty → null), and `isDefault` (boolean). After any mutation that changes the default price, the table SHALL re-fetch so the moved default badge is reflected. When the user lacks `products:write`, the table SHALL render read-only with a caption "Solo lectura — requiere products:write".

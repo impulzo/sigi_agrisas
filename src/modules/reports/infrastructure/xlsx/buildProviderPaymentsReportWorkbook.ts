@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import { ProviderPaymentsReportResponseDto } from "../../application/dto/ProviderPaymentsReportResponseDto";
 
-const HEADER = ["Folio pago", "Folio compra", "Proveedor", "Sucursal", "Monto", "Estado", "Fecha"];
+const HEADER = ["Folio pago", "Folio compra", "Proveedor", "Sucursal", "Monto", "Estado", "Fecha", "Saldo inicial", "Saldo actual"];
 
 export function buildProviderPaymentsReportWorkbook(data: ProviderPaymentsReportResponseDto): Buffer {
   const rows: (string | number)[][] = [HEADER];
@@ -15,6 +15,8 @@ export function buildProviderPaymentsReportWorkbook(data: ProviderPaymentsReport
       r.amount,
       r.status,
       r.paidAt,
+      r.providerInitialBalance ?? "—",
+      r.providerCurrentBalance ?? "—",
     ]);
   }
 

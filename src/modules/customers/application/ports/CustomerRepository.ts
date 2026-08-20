@@ -3,7 +3,7 @@ import { Customer } from "../../domain/entities/Customer";
 export interface CreateCustomerData {
   code: string;
   name: string;
-  rfc: string;
+  rfc?: string | null;
   legalName?: string | null;
   taxRegime?: string | null;
   cfdiUse?: string | null;
@@ -14,6 +14,7 @@ export interface CreateCustomerData {
   contactName?: string | null;
   notes?: string | null;
   creditLimit?: number | null;
+  initialBalance?: number;
   creditDays?: number;
   isActive?: boolean;
   addressStreet?: string | null;
@@ -28,7 +29,7 @@ export interface CreateCustomerData {
 
 export interface UpdateCustomerData {
   name?: string;
-  rfc?: string;
+  rfc?: string | null;
   legalName?: string | null;
   taxRegime?: string | null;
   cfdiUse?: string | null;
@@ -39,6 +40,7 @@ export interface UpdateCustomerData {
   contactName?: string | null;
   notes?: string | null;
   creditLimit?: number | null;
+  initialBalance?: number;
   creditDays?: number;
   isActive?: boolean;
   addressStreet?: string | null;

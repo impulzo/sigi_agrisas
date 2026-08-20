@@ -31,6 +31,8 @@ export function toProduct(dto: ProductDto): Product {
     ivaRate: dto.ivaRate,
     iepsRate: dto.iepsRate,
     imageUrl: dto.imageUrl ?? null,
+    manufactureDate: dto.manufactureDate ?? null,
+    acquisitionPrice: dto.acquisitionPrice ?? null,
     isActive: dto.isActive,
     createdAt: new Date(dto.createdAt),
     updatedAt: new Date(dto.updatedAt),

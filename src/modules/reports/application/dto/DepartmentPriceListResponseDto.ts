@@ -16,6 +16,7 @@ export interface DepartmentProductDto {
   stockQuantity: string;
   ivaRate: string | null;
   iepsRate: string | null;
+  acquisitionPrice: string | null;
   prices: DepartmentPriceDto[];
 }
 

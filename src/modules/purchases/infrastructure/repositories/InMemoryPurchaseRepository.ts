@@ -48,6 +48,7 @@ interface ProductMock {
   iepsRate: number | null;
   isTaxable: boolean;
   isActive: boolean;
+  acquisitionPrice?: number | null;
 }
 
 export interface InventoryLotMock {
@@ -57,6 +58,7 @@ export interface InventoryLotMock {
   purchaseItemId: string;
   lotNumber: string;
   expirationDate: Date;
+  manufactureDate: Date | null;
   quantity: number;
 }
 
@@ -186,6 +188,7 @@ export class InMemoryPurchaseRepository implements PurchaseRepository {
       iepsRate: number | null;
       lotNumber: string | null;
       expirationDate: Date | null;
+      manufactureDate: Date | null;
     }> = [];
 
     for (const item of data.items) {
@@ -211,7 +214,10 @@ export class InMemoryPurchaseRepository implements PurchaseRepository {
         iepsRate: product.isTaxable ? product.iepsRate : 0,
         lotNumber: item.lotNumber ?? null,
         expirationDate: item.expirationDate ?? null,
+        manufactureDate: item.manufactureDate ?? null,
       });
+      // El costo de adquisición del producto se actualiza con el último costo comprado.
+      this.products.set(product.id, { ...product, acquisitionPrice: item.unitCost });
     }
 
     const totals = PurchaseTotalsCalculator.computeTotals(calcLines);
@@ -287,6 +293,7 @@ export class InMemoryPurchaseRepository implements PurchaseRepository {
         purchaseItemId: items[i].id,
         lotNumber: snapshot.lotNumber,
         expirationDate: snapshot.expirationDate,
+        manufactureDate: snapshot.manufactureDate,
         quantity: snapshot.quantity,
       });
     }

@@ -3,7 +3,7 @@
  */
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { PurchaseStatusBadge } from "../../../../../../app/(private)/purchases/_blocks/PurchaseStatusBadge";
+import { PurchaseStatusBadge, PurchasePaymentStatusBadge } from "../../../../../../app/(private)/purchases/_blocks/PurchaseStatusBadge";
 
 describe("PurchaseStatusBadge", () => {
   it("renderiza 'Activa' con bg-primary-container para completed", () => {
@@ -16,5 +16,22 @@ describe("PurchaseStatusBadge", () => {
     const { container } = render(<PurchaseStatusBadge status="cancelled" />);
     expect(screen.getByText("Cancelada")).toBeInTheDocument();
     expect(container.querySelector("span")).toHaveClass("bg-surface-container-highest");
+  });
+});
+
+describe("PurchasePaymentStatusBadge", () => {
+  it("renderiza 'Pendiente' para pending", () => {
+    render(<PurchasePaymentStatusBadge paymentStatus="pending" />);
+    expect(screen.getByText("Pendiente")).toBeInTheDocument();
+  });
+
+  it("renderiza 'Parcial' para partial", () => {
+    render(<PurchasePaymentStatusBadge paymentStatus="partial" />);
+    expect(screen.getByText("Parcial")).toBeInTheDocument();
+  });
+
+  it("renderiza 'Pagado' para paid", () => {
+    render(<PurchasePaymentStatusBadge paymentStatus="paid" />);
+    expect(screen.getByText("Pagado")).toBeInTheDocument();
   });
 });

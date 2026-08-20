@@ -23,6 +23,9 @@ import {
   SaleHasNoCustomerError,
   CustomerNotFoundForWaybillError,
   CustomerAddressIncompleteError,
+  EmitterFiscalDataIncompleteError,
+  VehicleNotFoundForWaybillError,
+  DriverNotFoundForWaybillError,
 } from "../../domain/errors";
 import { WaybillStatus, isValidWaybillStatus } from "../../domain/value-objects/WaybillStatus";
 import { WaybillType, isValidWaybillType } from "../../domain/value-objects/WaybillType";
@@ -79,6 +82,7 @@ const createCartaPorteWaybillSchema = z.object({
   type: z.literal("carta_porte"),
   saleId: z.string().uuid(),
   vehicle: z.object({
+    vehicleId: z.string().uuid().nullable().optional(),
     plate: z.string().min(1).max(20),
     config: z.string().min(1).max(10),
     permitType: z.string().min(1).max(10),
@@ -87,6 +91,7 @@ const createCartaPorteWaybillSchema = z.object({
     insurancePolicy: z.string().min(1).max(50),
   }),
   driver: z.object({
+    driverId: z.string().uuid().nullable().optional(),
     name: z.string().min(1).max(150),
     rfc: z.string().max(13).nullable().optional(),
     licenseNumber: z.string().min(1).max(50),
@@ -252,6 +257,9 @@ export class WaybillsController {
       if (err instanceof FacturamaStampError) {
         return NextResponse.json({ error: "FacturamaStampError", detail: err.detail }, { status: 422 });
       }
+      if (err instanceof EmitterFiscalDataIncompleteError) {
+        return NextResponse.json({ error: "EmitterFiscalDataIncomplete" }, { status: 409 });
+      }
       if (err instanceof CanonicalFolioMissingError) {
         return NextResponse.json({ error: "CanonicalFolioMissing", folioCode: err.folioCode }, { status: 500 });
       }
@@ -272,6 +280,12 @@ export class WaybillsController {
           { error: "CustomerAddressIncomplete", customerId: err.customerId, missingFields: err.missingFields },
           { status: 400 }
         );
+      }
+      if (err instanceof VehicleNotFoundForWaybillError) {
+        return NextResponse.json({ error: "VehicleNotFound" }, { status: 400 });
+      }
+      if (err instanceof DriverNotFoundForWaybillError) {
+        return NextResponse.json({ error: "DriverNotFound" }, { status: 400 });
       }
       throw err;
     }

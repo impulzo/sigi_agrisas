@@ -88,6 +88,15 @@ export function usePartialInvoiceForm(): UsePartialInvoiceFormResult {
       setError(new Error("Agrega al menos una línea"));
       return null;
     }
+    const zeroPricedCatalogLine = lines.find((l) => l.productId != null && l.unitPrice <= 0);
+    if (zeroPricedCatalogLine) {
+      setError(
+        new Error(
+          `La línea "${zeroPricedCatalogLine.description || zeroPricedCatalogLine.productCode}" tiene precio $0. Selecciona una lista de precios o captura un precio manual antes de timbrar.`
+        )
+      );
+      return null;
+    }
     setIsSubmitting(true);
     setError(null);
     try {

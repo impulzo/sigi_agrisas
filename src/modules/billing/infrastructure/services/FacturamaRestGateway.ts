@@ -1,6 +1,6 @@
 import {
   FacturamaGateway,
-  FacturамаStampInput,
+  FacturamaStampInput,
   FacturamaStampResult,
   FacturamaCancelResult,
   FacturamaDownloadResult,
@@ -91,7 +91,7 @@ export class FacturamaRestGateway implements FacturamaGateway {
     return res.text() as unknown as Promise<T>;
   }
 
-  async stamp(input: FacturамаStampInput): Promise<FacturamaStampResult> {
+  async stamp(input: FacturamaStampInput): Promise<FacturamaStampResult> {
     const payload = {
       Serie: input.series ?? undefined,
       Currency: input.currency,

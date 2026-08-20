@@ -14,6 +14,8 @@ export interface ProductDto {
   ivaRate: number | null;
   iepsRate: number | null;
   imageUrl: string | null;
+  manufactureDate: string | null;
+  acquisitionPrice: number | null;
   isTaxable: boolean;
   isActive: boolean;
   createdAt: string;
@@ -45,6 +47,8 @@ export interface CreateProductBody {
   satProductCode?: string | null;
   ivaRate?: number | null;
   iepsRate?: number | null;
+  manufactureDate?: string | null;
+  acquisitionPrice?: number | null;
   isTaxable?: boolean;
   isActive?: boolean;
 }
@@ -57,6 +61,8 @@ export interface UpdateProductBody {
   satProductCode?: string | null;
   ivaRate?: number | null;
   iepsRate?: number | null;
+  manufactureDate?: string | null;
+  acquisitionPrice?: number | null;
   isTaxable?: boolean;
   isActive?: boolean;
 }

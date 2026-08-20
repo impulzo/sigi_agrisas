@@ -2,7 +2,7 @@ export interface Provider {
   id: string;
   code: string;
   name: string;
-  rfc: string;
+  rfc: string | null;
   legalName: string | null;
   taxRegime: string | null;
   cfdiUse: string | null;
@@ -12,6 +12,10 @@ export interface Provider {
   address: string | null;
   contactName: string | null;
   notes: string | null;
+  creditLimit: number | null;
+  currentBalance: number;
+  initialBalance: number;
+  creditDays: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

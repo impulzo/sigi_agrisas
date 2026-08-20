@@ -20,6 +20,7 @@ const baseCustomer: Customer = {
   notes: null,
   creditLimit: 50000,
   currentBalance: 1000,
+  initialBalance: 0,
   creditDays: 30,
   isActive: true,
   addressStreet: null,

@@ -1,5 +1,25 @@
 import { FacturamaRestGateway } from "../../../../src/modules/waybills/infrastructure/services/FacturamaRestGateway";
-import { FacturamaStampError, FacturamaCancelError } from "../../../../src/modules/waybills/domain/errors";
+import {
+  FacturamaStampError,
+  FacturamaCancelError,
+  EmitterFiscalDataIncompleteError,
+} from "../../../../src/modules/waybills/domain/errors";
+import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
+
+jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
+  getEmitterFiscalSettings: jest.fn(),
+  isEmitterFiscalDataComplete: (data: Record<string, unknown> | null) =>
+    !!data && !!data.rfc && !!data.legalName && !!data.fiscalRegime && !!data.zipCode,
+}));
+
+const mockedGetEmitterFiscalSettings = getEmitterFiscalSettings as jest.Mock;
+
+const EMITTER = {
+  rfc: "XAXX010101000",
+  legalName: "Agrisas",
+  fiscalRegime: "601",
+  zipCode: "83000",
+};
 
 function mockFetch(responseData: unknown, status = 200) {
   return jest.fn().mockResolvedValue({
@@ -16,10 +36,6 @@ const BASE_OPTS = {
   baseUrl: "https://apisandbox.facturama.mx/",
   user: "testuser",
   password: "testpass",
-  emitterRfc: "XAXX010101000",
-  emitterName: "Agrisas",
-  emitterFiscalRegime: "601",
-  emitterZipCode: "83000",
 };
 
 const EXPECTED_AUTH = "Basic " + Buffer.from("testuser:testpass").toString("base64");
@@ -66,6 +82,11 @@ const STAMP_INPUT = {
 };
 
 describe("waybills FacturamaRestGateway", () => {
+  beforeEach(() => {
+    mockedGetEmitterFiscalSettings.mockReset();
+    mockedGetEmitterFiscalSettings.mockResolvedValue(EMITTER);
+  });
+
   it("sends Authorization: Basic header on stampTraslado", async () => {
     const fakeFetch = mockFetch({ Id: "cfdi-id-1", Complement: { TaxStamp: { Uuid: "UUID-1" } } });
     const gw = new FacturamaRestGateway({ ...BASE_OPTS, fetchImpl: fakeFetch as unknown as typeof fetch });
@@ -142,15 +163,27 @@ describe("waybills FacturamaRestGateway", () => {
     ).toThrow(/FACTURAMA_USER/);
   });
 
-  it("throws startup error when emitter fiscal data missing", () => {
+  it("does not throw at construction when emitter fiscal data is missing", () => {
     expect(
-      () =>
-        new FacturamaRestGateway({
-          baseUrl: "https://api.facturama.mx/",
-          user: "u",
-          password: "p",
-          emitterRfc: "",
-        })
-    ).toThrow(/FACTURAMA_EMITTER_RFC/);
+      () => new FacturamaRestGateway({ baseUrl: "https://api.facturama.mx/", user: "u", password: "p" })
+    ).not.toThrow();
+  });
+
+  it("throws EmitterFiscalDataIncompleteError on stampTraslado when emitter settings are incomplete, without calling fetchImpl", async () => {
+    mockedGetEmitterFiscalSettings.mockResolvedValue({ rfc: "XAXX010101000", legalName: "Agrisas" });
+    const fakeFetch = jest.fn();
+    const gw = new FacturamaRestGateway({ ...BASE_OPTS, fetchImpl: fakeFetch as unknown as typeof fetch });
+
+    await expect(gw.stampTraslado(STAMP_INPUT)).rejects.toThrow(EmitterFiscalDataIncompleteError);
+    expect(fakeFetch).not.toHaveBeenCalled();
+  });
+
+  it("throws EmitterFiscalDataIncompleteError when no emitter settings are persisted at all", async () => {
+    mockedGetEmitterFiscalSettings.mockResolvedValue(null);
+    const fakeFetch = jest.fn();
+    const gw = new FacturamaRestGateway({ ...BASE_OPTS, fetchImpl: fakeFetch as unknown as typeof fetch });
+
+    await expect(gw.stampTraslado(STAMP_INPUT)).rejects.toThrow(EmitterFiscalDataIncompleteError);
+    expect(fakeFetch).not.toHaveBeenCalled();
   });
 });

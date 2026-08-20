@@ -48,6 +48,7 @@ function reportFixture() {
             stockQuantity: "25.0000",
             ivaRate: "0.1600",
             iepsRate: null,
+            acquisitionPrice: null,
             prices: [
               { priceId: "p1", name: "Menudeo", price: "100.0000", minQuantity: 1, discountPct: "0.00", isDefault: true },
             ],
@@ -69,6 +70,7 @@ function reportFixture() {
             stockQuantity: "8.0000",
             ivaRate: "0.1600",
             iepsRate: null,
+            acquisitionPrice: null,
             prices: [
               { priceId: "p2", name: "Menudeo", price: "500.0000", minQuantity: 1, discountPct: null, isDefault: true },
             ],

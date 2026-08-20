@@ -32,6 +32,8 @@ export interface CreateProductData {
   satProductCode?: string | null;
   ivaRate?: number | null;
   iepsRate?: number | null;
+  manufactureDate?: string | null;
+  acquisitionPrice?: number | null;
   isTaxable?: boolean;
   isActive?: boolean;
 }
@@ -45,6 +47,8 @@ export interface UpdateProductData {
   ivaRate?: number | null;
   iepsRate?: number | null;
   imageUrl?: string | null;
+  manufactureDate?: string | null;
+  acquisitionPrice?: number | null;
   isTaxable?: boolean;
   isActive?: boolean;
 }

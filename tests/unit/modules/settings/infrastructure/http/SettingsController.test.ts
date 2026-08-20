@@ -6,23 +6,29 @@ import { UploadTicketLogoUseCase } from "@/modules/settings/application/use-case
 import { DeleteTicketLogoUseCase } from "@/modules/settings/application/use-cases/DeleteTicketLogoUseCase";
 import { GetPricingSettingsUseCase } from "@/modules/settings/application/use-cases/GetPricingSettingsUseCase";
 import { UpdatePricingSettingsUseCase } from "@/modules/settings/application/use-cases/UpdatePricingSettingsUseCase";
+import { GetInventoryNotificationSettingsUseCase } from "@/modules/settings/application/use-cases/GetInventoryNotificationSettingsUseCase";
+import { UpdateInventoryNotificationSettingsUseCase } from "@/modules/settings/application/use-cases/UpdateInventoryNotificationSettingsUseCase";
 import { InMemoryTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 import { InMemoryTicketLogoStorage } from "@/modules/settings/infrastructure/services/InMemoryTicketLogoStorage";
 import { InMemoryPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryPricingSettingsRepository";
+import { InMemoryInventoryNotificationSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryInventoryNotificationSettingsRepository";
 
 function buildController() {
   const repo = new InMemoryTicketSettingsRepository();
   const storage = new InMemoryTicketLogoStorage();
   const pricingRepo = new InMemoryPricingSettingsRepository();
+  const inventoryNotificationsRepo = new InMemoryInventoryNotificationSettingsRepository();
   const controller = new SettingsController(
     new GetTicketSettingsUseCase(repo),
     new UpdateTicketSettingsUseCase(repo),
     new UploadTicketLogoUseCase(repo, storage),
     new DeleteTicketLogoUseCase(repo, storage),
     new GetPricingSettingsUseCase(pricingRepo),
-    new UpdatePricingSettingsUseCase(pricingRepo)
+    new UpdatePricingSettingsUseCase(pricingRepo),
+    new GetInventoryNotificationSettingsUseCase(inventoryNotificationsRepo),
+    new UpdateInventoryNotificationSettingsUseCase(inventoryNotificationsRepo)
   );
-  return { controller, repo, storage, pricingRepo };
+  return { controller, repo, storage, pricingRepo, inventoryNotificationsRepo };
 }
 
 function req(method: string, body?: unknown): NextRequest {
@@ -169,6 +175,47 @@ describe("SettingsController", () => {
     it("returns 400 on a non-numeric value", async () => {
       const { controller } = buildController();
       const res = await controller.updatePricing(req("PATCH", { dosificationSurchargePct: "abc" }));
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("getInventoryNotifications", () => {
+    it("returns 200 with null email when nothing configured", async () => {
+      const { controller } = buildController();
+      const res = await controller.getInventoryNotifications();
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toEqual({ expirationNotificationEmail: null });
+    });
+  });
+
+  describe("updateInventoryNotifications", () => {
+    it("returns 200 on a valid update", async () => {
+      const { controller } = buildController();
+      const res = await controller.updateInventoryNotifications(req("PATCH", { expirationNotificationEmail: "compras@agrisas.mx" }));
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toEqual({ expirationNotificationEmail: "compras@agrisas.mx" });
+    });
+
+    it("returns 200 when clearing the email to null", async () => {
+      const { controller } = buildController();
+      await controller.updateInventoryNotifications(req("PATCH", { expirationNotificationEmail: "compras@agrisas.mx" }));
+      const res = await controller.updateInventoryNotifications(req("PATCH", { expirationNotificationEmail: null }));
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toEqual({ expirationNotificationEmail: null });
+    });
+
+    it("returns 400 on an empty body", async () => {
+      const { controller } = buildController();
+      const res = await controller.updateInventoryNotifications(req("PATCH", {}));
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 on an invalid email format", async () => {
+      const { controller } = buildController();
+      const res = await controller.updateInventoryNotifications(req("PATCH", { expirationNotificationEmail: "no-es-un-correo" }));
       expect(res.status).toBe(400);
     });
   });

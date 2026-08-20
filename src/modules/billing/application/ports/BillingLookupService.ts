@@ -27,7 +27,7 @@ export interface CustomerForBilling {
   id: string;
   name: string;
   legalName: string | null;
-  rfc: string;
+  rfc: string | null;
   taxRegime: string | null;
   cfdiUse: string | null;
   taxZipCode: string | null;

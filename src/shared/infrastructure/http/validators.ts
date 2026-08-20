@@ -13,4 +13,24 @@ export const rfcSchema = z
   .transform((v) => v.trim().toUpperCase())
   .pipe(z.string().regex(RFC_REGEX, "rfc must be a valid Mexican RFC"));
 
+/**
+ * RFC opcional. Preserva la distinción `undefined` (campo ausente/no tocado) vs `null`
+ * (limpiar explícitamente) — necesaria para que el PATCH detecte "al menos un campo
+ * actualizable" con `"rfc" in data`. `""` se normaliza a `null`; un valor no vacío se
+ * valida igual que rfcSchema.
+ */
+export const optionalRfcSchema = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((v) => {
+    if (v === undefined) return undefined;
+    if (v === null) return null;
+    const trimmed = v.trim().toUpperCase();
+    return trimmed === "" ? null : trimmed;
+  })
+  .pipe(
+    z.union([z.undefined(), z.null(), z.string().regex(RFC_REGEX, "rfc must be a valid Mexican RFC")])
+  );
+
 export const taxRegimeSchema = z.string().regex(TAX_REGIME_REGEX, "taxRegime must be 3 digits");

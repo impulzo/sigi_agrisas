@@ -1,6 +1,8 @@
 "use client";
 
 import { Table, THead, TBody, Tr, Th, Td } from "../../../../_components/molecules/DataTable";
+import { PurchaseStatusBadge, PurchasePaymentStatusBadge } from "../../../purchases/_blocks/PurchaseStatusBadge";
+import type { PurchaseStatus, PurchasePaymentStatus } from "../../../purchases/_logic/types/api";
 import type { PurchasesReportRowDto } from "../_logic/types/api";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
@@ -24,6 +26,7 @@ export function PurchasesTable({ rows }: { rows: PurchasesReportRowDto[] }) {
             <Th align="right">Impuestos</Th>
             <Th align="right">Total</Th>
             <Th align="right">Pagado</Th>
+            <Th align="right">Saldo</Th>
             <Th>Estado pago</Th>
             <Th>Estado</Th>
             <Th>Fecha</Th>
@@ -32,7 +35,7 @@ export function PurchasesTable({ rows }: { rows: PurchasesReportRowDto[] }) {
         <TBody>
           {rows.length === 0 ? (
             <tr>
-              <Td colSpan={10} className="text-center text-on-surface-variant">Sin compras</Td>
+              <Td colSpan={11} className="text-center text-on-surface-variant">Sin compras</Td>
             </tr>
           ) : (
             rows.map((r) => (
@@ -44,8 +47,13 @@ export function PurchasesTable({ rows }: { rows: PurchasesReportRowDto[] }) {
                 <Td align="right">{money(r.taxTotal)}</Td>
                 <Td align="right">{money(r.total)}</Td>
                 <Td align="right">{money(r.paidAmount)}</Td>
-                <Td>{r.paymentStatus}</Td>
-                <Td>{r.status}</Td>
+                <Td align="right">{money(r.balance)}</Td>
+                <Td>
+                  <PurchasePaymentStatusBadge paymentStatus={r.paymentStatus as PurchasePaymentStatus} />
+                </Td>
+                <Td>
+                  <PurchaseStatusBadge status={r.status as PurchaseStatus} />
+                </Td>
                 <Td>{dateOnly(r.purchasedAt)}</Td>
               </Tr>
             ))

@@ -33,6 +33,8 @@ export function ProviderPaymentsReportPdf({ data }: { data: ProviderPaymentsRepo
               <Text style={s.cellNarrow}>Monto</Text>
               <Text style={s.cell}>Estado</Text>
               <Text style={s.cell}>Fecha</Text>
+              <Text style={s.cellNarrow}>Saldo inicial</Text>
+              <Text style={s.cellNarrow}>Saldo actual</Text>
             </View>
             {data.rows.map((r, i) => (
               <View key={r.id} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
@@ -43,6 +45,8 @@ export function ProviderPaymentsReportPdf({ data }: { data: ProviderPaymentsRepo
                 <Text style={s.cellNarrow}>{r.amount}</Text>
                 <Text style={[s.cell, r.status === "cancelled" ? s.badge : {}]}>{r.status}</Text>
                 <Text style={s.cell}>{formatDate(r.paidAt)}</Text>
+                <Text style={s.cellNarrow}>{r.providerInitialBalance ?? "—"}</Text>
+                <Text style={s.cellNarrow}>{r.providerCurrentBalance ?? "—"}</Text>
               </View>
             ))}
           </View>

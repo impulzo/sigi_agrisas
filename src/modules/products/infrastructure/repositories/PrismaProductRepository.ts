@@ -39,6 +39,8 @@ function toProductWithDepartment(
       ivaRate: decToNullableNumber(row.ivaRate),
       iepsRate: decToNullableNumber(row.iepsRate),
       imageUrl: row.imageUrl ?? null,
+      manufactureDate: row.manufactureDate ?? null,
+      acquisitionPrice: decToNullableNumber(row.acquisitionPrice),
       isTaxable: row.isTaxable,
       isActive: row.isActive,
       createdAt: row.createdAt,
@@ -149,6 +151,8 @@ export class PrismaProductRepository implements ProductRepository {
           satProductCode: data.satProductCode ?? null,
           ivaRate: data.ivaRate ?? null,
           iepsRate: data.iepsRate ?? null,
+          manufactureDate: data.manufactureDate ? new Date(data.manufactureDate) : null,
+          acquisitionPrice: data.acquisitionPrice ?? null,
           ...(data.isTaxable !== undefined ? { isTaxable: data.isTaxable } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
         },
@@ -175,6 +179,10 @@ export class PrismaProductRepository implements ProductRepository {
           ...("ivaRate" in data ? { ivaRate: data.ivaRate ?? null } : {}),
           ...("iepsRate" in data ? { iepsRate: data.iepsRate ?? null } : {}),
           ...("imageUrl" in data ? { imageUrl: data.imageUrl ?? null } : {}),
+          ...("manufactureDate" in data
+            ? { manufactureDate: data.manufactureDate ? new Date(data.manufactureDate) : null }
+            : {}),
+          ...("acquisitionPrice" in data ? { acquisitionPrice: data.acquisitionPrice ?? null } : {}),
           ...(data.isTaxable !== undefined ? { isTaxable: data.isTaxable } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
         },

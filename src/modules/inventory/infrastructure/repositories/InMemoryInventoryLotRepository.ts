@@ -1,4 +1,8 @@
 import { InventoryLotRepository, NearestExpirationLot } from "../../application/ports/InventoryLotRepository";
+import type {
+  ExpiryNotificationThreshold,
+  InventoryLotExpirySnapshot,
+} from "../../domain/services/InventoryLotExpiryNotificationPolicy";
 
 interface LotSeed {
   branchId: string;
@@ -9,13 +13,19 @@ interface LotSeed {
 
 export class InMemoryInventoryLotRepository implements InventoryLotRepository {
   private lots: LotSeed[] = [];
+  private expirySnapshots: InventoryLotExpirySnapshot[] = [];
 
   reset(): void {
     this.lots = [];
+    this.expirySnapshots = [];
   }
 
   seedLot(lot: LotSeed): void {
     this.lots.push(lot);
+  }
+
+  seedExpirySnapshot(lot: InventoryLotExpirySnapshot): void {
+    this.expirySnapshots.push(lot);
   }
 
   async findNearestExpirationByProducts(
@@ -32,5 +42,18 @@ export class InMemoryInventoryLotRepository implements InventoryLotRepository {
       }
     }
     return result;
+  }
+
+  async findPendingExpiryNotificationLots(): Promise<InventoryLotExpirySnapshot[]> {
+    return this.expirySnapshots.filter((lot) => lot.notifiedDayOfAt === null);
+  }
+
+  async markLotNotified(lotId: string, threshold: ExpiryNotificationThreshold): Promise<void> {
+    const lot = this.expirySnapshots.find((l) => l.id === lotId);
+    if (!lot) return;
+    const now = new Date();
+    if (threshold === "sixMonths") lot.notifiedSixMonthsAt = now;
+    if (threshold === "threeMonths") lot.notifiedThreeMonthsAt = now;
+    if (threshold === "dayOf") lot.notifiedDayOfAt = now;
   }
 }

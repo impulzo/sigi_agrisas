@@ -48,6 +48,7 @@ export class GetDepartmentPriceListReportUseCase {
           stockQuantity: row.stockQuantity.toFixed(4),
           ivaRate: row.ivaRate ? row.ivaRate.toFixed(4) : null,
           iepsRate: row.iepsRate ? row.iepsRate.toFixed(4) : null,
+          acquisitionPrice: row.acquisitionPrice ? row.acquisitionPrice.toFixed(4) : null,
           prices: [],
         };
         dept.products.push(product);

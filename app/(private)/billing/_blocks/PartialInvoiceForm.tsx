@@ -4,13 +4,22 @@ import { useMemo, useState } from "react";
 import { CustomerPicker } from "../../pos/_blocks/CustomerPicker";
 import { CustomerQuickAddModal } from "../../pos/_blocks/CustomerQuickAddModal";
 import { ProductCatalogPanel } from "../../pos/_blocks/ProductCatalogPanel";
+import { PriceTierPicker } from "../../pos/_blocks/PriceTierPicker";
+import { getProductPrices } from "../../pos/_logic/services/getProductPrices";
 import { PartialInvoiceLineRow } from "./PartialInvoiceLineRow";
 import { InvoicePreviewModal } from "./InvoicePreviewModal";
 import { usePartialInvoiceForm } from "../_logic/hooks/usePartialInvoiceForm";
 import { buildInvoicePreview } from "../_logic/lib/buildInvoicePreview";
 import { ReceiverFiscalDataIncompleteError, FacturamaStampError } from "../_logic/errors";
 import type { CustomerDto } from "../../pos/_logic/types/api";
-import type { ProductDto } from "../../pos/_logic/types/api";
+import type { ProductDto, ProductPriceDto } from "../../pos/_logic/types/api";
+
+interface PricePickerState {
+  product: ProductDto;
+  prices: ProductPriceDto[];
+  isLoading: boolean;
+  lineKey: string;
+}
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
 
@@ -39,6 +48,7 @@ export function PartialInvoiceForm() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showCatalog, setShowCatalog] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [pricePicker, setPricePicker] = useState<PricePickerState | null>(null);
 
   const canPreview = lines.length > 0 && !!customer && fiscalMissingFields.length === 0;
 
@@ -79,7 +89,9 @@ export function PartialInvoiceForm() {
     });
   }
 
-  function handleAddProduct(product: ProductDto) {
+  async function handleAddProduct(product: ProductDto) {
+    const prices = await getProductPrices(product.id);
+    const defaultPrice = prices.find((p) => p.isDefault) ?? prices[0] ?? null;
     addLine({
       productId: product.id,
       productCode: product.code,
@@ -88,12 +100,41 @@ export function PartialInvoiceForm() {
       satUnitCode: "",
       unit: "H87",
       quantity: 1,
-      unitPrice: 0,
+      unitPrice: defaultPrice?.price ?? 0,
+      priceId: defaultPrice?.id ?? null,
+      priceName: defaultPrice?.name ?? null,
       discountPct: 0,
       ivaRate: product.ivaRate ?? 0.16,
       iepsRate: product.iepsRate ?? 0,
     });
     setShowCatalog(false);
+  }
+
+  function handleChangeTier(lineKey: string) {
+    const line = lines.find((l) => l._key === lineKey);
+    if (!line || !line.productId) return;
+    const fakeProduct: ProductDto = {
+      id: line.productId,
+      code: line.productCode,
+      name: line.description,
+      ivaRate: line.ivaRate,
+      iepsRate: line.iepsRate,
+      isActive: true,
+      departmentId: "",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      stock: null,
+    };
+    setPricePicker({ product: fakeProduct, prices: [], isLoading: true, lineKey });
+    getProductPrices(line.productId).then((prices) => {
+      setPricePicker((prev) => (prev ? { ...prev, prices, isLoading: false } : null));
+    });
+  }
+
+  function handlePriceConfirm(price: ProductPriceDto) {
+    if (!pricePicker) return;
+    updateLine(pricePicker.lineKey, { unitPrice: price.price, priceId: price.id, priceName: price.name });
+    setPricePicker(null);
   }
 
   function handleAddFreeLine() {
@@ -214,6 +255,7 @@ export function PartialInvoiceForm() {
                     lineTotal={totals.lines[idx]?.lineTotal ?? 0}
                     onUpdate={(patch) => updateLine(line._key, patch)}
                     onRemove={() => removeLine(line._key)}
+                    onChangePriceTier={line.productId ? () => handleChangeTier(line._key) : undefined}
                   />
                 ))}
               </tbody>
@@ -297,6 +339,18 @@ export function PartialInvoiceForm() {
         onConfirmStamp={handleConfirmStamp}
         isSubmitting={isSubmitting}
       />
+
+      {pricePicker && (
+        <PriceTierPicker
+          product={pricePicker.product}
+          prices={pricePicker.prices}
+          isLoading={pricePicker.isLoading}
+          initialQuantity={lines.find((l) => l._key === pricePicker.lineKey)?.quantity}
+          initialDiscountPct={lines.find((l) => l._key === pricePicker.lineKey)?.discountPct}
+          onConfirm={handlePriceConfirm}
+          onClose={() => setPricePicker(null)}
+        />
+      )}
 
       {showQuickAdd && (
         <CustomerQuickAddModal

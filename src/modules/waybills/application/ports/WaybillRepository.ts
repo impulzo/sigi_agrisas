@@ -61,6 +61,8 @@ export interface CartaPorteWaybillData {
   saleId: string;
   originAddress: WaybillAddressSnapshot;
   destinationAddress: WaybillAddressSnapshot;
+  vehicleId: string | null;
+  driverId: string | null;
   vehiclePlate: string;
   vehicleConfig: string;
   vehiclePermitType: string;

@@ -12,12 +12,15 @@ jest.mock("../../../../../app/(private)/settings/_logic/services/uploadTicketLog
 jest.mock("../../../../../app/(private)/settings/_logic/services/deleteTicketLogo", () => ({
   deleteTicketLogo: jest.fn(),
 }));
+jest.mock("../../../../../app/_hooks/useSatCatalogSearch");
 
 import { useTicketSettingsMutations } from "../../../../../app/(private)/settings/_logic/hooks/useTicketSettingsMutations";
+import { useSatCatalogSearch } from "../../../../../app/_hooks/useSatCatalogSearch";
 import { TicketSettingsForm } from "../../../../../app/(private)/settings/_blocks/TicketSettingsForm";
 import type { TicketSettingsDto } from "../../../../../app/(private)/settings/_logic/types/api";
 
 const mockUseMutations = useTicketSettingsMutations as jest.MockedFunction<typeof useTicketSettingsMutations>;
+const mockUseSatCatalogSearch = useSatCatalogSearch as jest.MockedFunction<typeof useSatCatalogSearch>;
 
 const settings: TicketSettingsDto = {
   logoUrl: null,
@@ -41,7 +44,10 @@ function setup() {
 }
 
 describe("TicketSettingsForm", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseSatCatalogSearch.mockReturnValue({ options: [], isLoading: false });
+  });
 
   it("shows editable inputs when canWrite is true", () => {
     setup();
@@ -95,6 +101,56 @@ describe("TicketSettingsForm", () => {
         businessPhone: "951 000 00 00",
         businessRfc: "AGR010101XY2",
       })
+    );
+  });
+
+  it("loads an existing 'code — description' businessTaxRegime as free text without error", () => {
+    setup();
+    render(<TicketSettingsForm settings={settings} canWrite={true} onChange={jest.fn()} />);
+
+    expect(screen.getByLabelText(/régimen fiscal/i)).toHaveValue(
+      "612 Personas Físicas con Actividad Empresarial"
+    );
+  });
+
+  it("loads a legacy bare-code businessTaxRegime as free text without error", () => {
+    setup();
+    render(
+      <TicketSettingsForm
+        settings={{ ...settings, businessTaxRegime: "612" }}
+        canWrite={true}
+        onChange={jest.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText(/régimen fiscal/i)).toHaveValue("612");
+  });
+
+  it("selecting a régimen fiscal option saves 'code — description' to businessTaxRegime", async () => {
+    const update = jest.fn().mockResolvedValue(settings);
+    mockUseMutations.mockReturnValue({
+      isSaving: false,
+      mutationError: null,
+      clearError: jest.fn(),
+      update,
+    });
+    mockUseSatCatalogSearch.mockReturnValue({
+      options: [{ code: "601", description: "General de Ley Personas Morales" }],
+      isLoading: false,
+    });
+    render(<TicketSettingsForm settings={settings} canWrite={true} onChange={jest.fn()} />);
+
+    const user = userEvent.setup();
+    const input = screen.getByLabelText(/régimen fiscal/i);
+    await user.clear(input);
+    await user.type(input, "601");
+    await user.click(
+      screen.getByRole("button", { name: /601.*General de Ley Personas Morales/ })
+    );
+    await user.click(screen.getByRole("button", { name: /guardar cambios/i }));
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ businessTaxRegime: "601 — General de Ley Personas Morales" })
     );
   });
 });

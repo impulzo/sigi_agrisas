@@ -14,10 +14,11 @@ jest.mock("../../../../../../app/_hooks/useCurrentUser", () => ({
 }));
 jest.mock("../../../../../../app/(private)/quotes/_logic/hooks/useQuoteDetail");
 jest.mock("../../../../../../app/(private)/quotes/_logic/hooks/useQuoteMutations");
+const mockAddLine = jest.fn();
 const mockUseCart = jest.fn().mockReturnValue({
   lines: [],
   totals: { subtotal: 0, taxTotal: 0, total: 0 },
-  addLine: jest.fn(),
+  addLine: mockAddLine,
   updateQuantity: jest.fn(),
   updateDiscountPct: jest.fn(),
   changeTier: jest.fn(),
@@ -91,6 +92,7 @@ const mutationsBase = {
 
 beforeEach(() => {
   mockPush.mockReset();
+  mockAddLine.mockReset();
   jest.useFakeTimers();
   mockUseQuoteMutations.mockReturnValue({ ...mutationsBase });
 });
@@ -145,6 +147,66 @@ describe("QuoteEditPage — recargo de dosificación", () => {
     });
     render(<QuoteEditPage id="q1" />);
     expect(mockUseCart).toHaveBeenCalledWith(7);
+  });
+
+  it("revierte el recargo ya aplicado en el snapshot para una línea de cantidad fraccionaria", () => {
+    // unitPrice=105 ya incluye el recargo mockeado de 7% sobre un precio base de 100.
+    const fractionalItem = {
+      id: "i1",
+      productId: "p1",
+      productCodeSnapshot: "COD1",
+      productNameSnapshot: "Producto 1",
+      productPriceId: "pp1",
+      priceNameSnapshot: "General",
+      quantity: 0.5,
+      unitPrice: 105,
+      discountPct: 0,
+      ivaRate: 0.16,
+      iepsRate: 0,
+      lineSubtotal: 0,
+      lineIva: 0,
+      lineIeps: 0,
+      lineTotal: 0,
+    };
+    mockUseQuoteDetail.mockReturnValue({
+      quote: { ...draftQuote, items: [fractionalItem] }, isLoading: false, error: null, refresh: jest.fn(),
+    });
+
+    render(<QuoteEditPage id="q1" />);
+
+    expect(mockAddLine).toHaveBeenCalledTimes(1);
+    const [, fakePrice, quantity] = mockAddLine.mock.calls[0];
+    expect(quantity).toBe(0.5);
+    expect(fakePrice.price).toBeCloseTo(105 / 1.07, 10);
+  });
+
+  it("no modifica el precio de una línea de cantidad entera (sin división)", () => {
+    const integerItem = {
+      id: "i2",
+      productId: "p2",
+      productCodeSnapshot: "COD2",
+      productNameSnapshot: "Producto 2",
+      productPriceId: "pp2",
+      priceNameSnapshot: "General",
+      quantity: 2,
+      unitPrice: 50,
+      discountPct: 0,
+      ivaRate: 0.16,
+      iepsRate: 0,
+      lineSubtotal: 0,
+      lineIva: 0,
+      lineIeps: 0,
+      lineTotal: 0,
+    };
+    mockUseQuoteDetail.mockReturnValue({
+      quote: { ...draftQuote, items: [integerItem] }, isLoading: false, error: null, refresh: jest.fn(),
+    });
+
+    render(<QuoteEditPage id="q1" />);
+
+    expect(mockAddLine).toHaveBeenCalledTimes(1);
+    const [, fakePrice] = mockAddLine.mock.calls[0];
+    expect(fakePrice.price).toBe(50);
   });
 });
 

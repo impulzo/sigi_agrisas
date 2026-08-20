@@ -18,6 +18,7 @@ export function toCustomerDto(c: Customer): CustomerDto {
     notes: c.notes,
     creditLimit: c.creditLimit,
     currentBalance: c.currentBalance,
+    initialBalance: c.initialBalance,
     creditDays: c.creditDays,
     isActive: c.isActive,
     addressStreet: c.addressStreet,

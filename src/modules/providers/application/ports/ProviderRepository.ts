@@ -3,7 +3,7 @@ import { Provider } from "../../domain/entities/Provider";
 export interface CreateProviderData {
   code: string;
   name: string;
-  rfc: string;
+  rfc?: string | null;
   legalName?: string | null;
   taxRegime?: string | null;
   cfdiUse?: string | null;
@@ -13,11 +13,14 @@ export interface CreateProviderData {
   address?: string | null;
   contactName?: string | null;
   notes?: string | null;
+  creditLimit?: number | null;
+  initialBalance?: number;
+  creditDays?: number;
 }
 
 export interface UpdateProviderData {
   name?: string;
-  rfc?: string;
+  rfc?: string | null;
   legalName?: string | null;
   taxRegime?: string | null;
   cfdiUse?: string | null;
@@ -27,6 +30,9 @@ export interface UpdateProviderData {
   address?: string | null;
   contactName?: string | null;
   notes?: string | null;
+  creditLimit?: number | null;
+  initialBalance?: number;
+  creditDays?: number;
   isActive?: boolean;
 }
 

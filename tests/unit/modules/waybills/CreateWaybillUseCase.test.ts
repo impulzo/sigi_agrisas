@@ -1,5 +1,7 @@
 import { CreateWaybillUseCase } from "../../../../src/modules/waybills/application/use-cases/CreateWaybillUseCase";
 import { InMemoryWaybillRepository } from "../../../../src/modules/waybills/infrastructure/repositories/InMemoryWaybillRepository";
+import { InMemoryVehicleRepository } from "../../../../src/modules/vehicles/infrastructure/repositories/InMemoryVehicleRepository";
+import { InMemoryDriverRepository } from "../../../../src/modules/drivers/infrastructure/repositories/InMemoryDriverRepository";
 import {
   WaybillFacturamaGateway,
   StampTrasladoInput,
@@ -23,6 +25,8 @@ import {
   SaleHasNoCustomerError,
   SaleNotCompletedError,
   WaybillSaleNotFoundError,
+  VehicleNotFoundForWaybillError,
+  DriverNotFoundForWaybillError,
 } from "../../../../src/modules/waybills/domain/errors";
 import { CreateWaybillRequest, CreateCartaPorteWaybillRequest } from "../../../../src/modules/waybills/application/dto/WaybillDto";
 
@@ -157,8 +161,10 @@ function setup() {
   lookup.customers.set(CUSTOMER_ID, completeCustomer(CUSTOMER_ID, "Cliente Uno"));
   lookup.sales.set(SALE_ID, completedSale());
   lookup.products.set(PRODUCT_ID, { id: PRODUCT_ID, code: "FERT01", name: "Fertilizante", isActive: true });
-  const useCase = new CreateWaybillUseCase(repo, gateway, lookup);
-  return { repo, gateway, lookup, useCase };
+  const vehicleRepo = new InMemoryVehicleRepository();
+  const driverRepo = new InMemoryDriverRepository();
+  const useCase = new CreateWaybillUseCase(repo, gateway, lookup, vehicleRepo, driverRepo);
+  return { repo, gateway, lookup, vehicleRepo, driverRepo, useCase };
 }
 
 describe("CreateWaybillUseCase — type: carta_porte (from sale)", () => {
@@ -250,5 +256,128 @@ describe("CreateWaybillUseCase — type: carta_porte (from sale)", () => {
 
     expect(waybill.status).toBe("completed");
     expect(waybill.items[0].productId).toBeNull();
+  });
+
+  it("persists vehicleId/driverId when both resolve to existing catalog entries", async () => {
+    const { useCase, vehicleRepo, driverRepo } = setup();
+    const vehicle = await vehicleRepo.create({
+      code: "VEH01",
+      plate: "XYZ999",
+      vehicleConfig: "C2",
+      permitType: "TPAF01",
+      permitNumber: "SCT-999",
+      insuranceCompany: "Aseguradora SA",
+      insurancePolicy: "POL-9",
+    });
+    const driver = await driverRepo.create({
+      code: "DRV01",
+      name: "Pedro Paramo",
+      licenseNumber: "LIC-9",
+    });
+
+    const waybill = await useCase.execute(
+      baseRequest({
+        vehicle: {
+          vehicleId: vehicle.id,
+          plate: "ABC1234",
+          config: "C2",
+          permitType: "TPAF01",
+          permitNumber: "SCT-123",
+          insuranceCompany: "Aseguradora SA",
+          insurancePolicy: "POL-1",
+        },
+        driver: { driverId: driver.id, name: "Juan Perez", licenseNumber: "LIC-1" },
+      }),
+      CREATOR_ID
+    );
+
+    expect(waybill.vehicleId).toBe(vehicle.id);
+    expect(waybill.driverId).toBe(driver.id);
+    // Trace-back IDs never replace the flat snapshot, which stays authoritative.
+    expect(waybill.vehiclePlate).toBe("ABC1234");
+    expect(waybill.driverName).toBe("Juan Perez");
+  });
+
+  it("soft-deleting the referenced vehicle/driver afterward does not alter the waybill's snapshot", async () => {
+    const { useCase, repo, vehicleRepo, driverRepo } = setup();
+    const vehicle = await vehicleRepo.create({
+      code: "VEH02",
+      plate: "PAST-001",
+      vehicleConfig: "C2",
+      permitType: "TPAF01",
+      permitNumber: "SCT-999",
+      insuranceCompany: "Aseguradora SA",
+      insurancePolicy: "POL-9",
+    });
+    const driver = await driverRepo.create({ code: "DRV02", name: "Pedro Paramo", licenseNumber: "LIC-9" });
+
+    const waybill = await useCase.execute(
+      baseRequest({
+        vehicle: {
+          vehicleId: vehicle.id,
+          plate: "ABC1234",
+          config: "C2",
+          permitType: "TPAF01",
+          permitNumber: "SCT-123",
+          insuranceCompany: "Aseguradora SA",
+          insurancePolicy: "POL-1",
+        },
+        driver: { driverId: driver.id, name: "Juan Perez", licenseNumber: "LIC-1" },
+      }),
+      CREATOR_ID
+    );
+
+    await vehicleRepo.update(vehicle.id, { isActive: false });
+    await driverRepo.update(driver.id, { isActive: false });
+
+    const reloaded = await repo.findById(waybill.id);
+    expect(reloaded!.vehiclePlate).toBe("ABC1234");
+    expect(reloaded!.vehicleConfig).toBe("C2");
+    expect(reloaded!.driverName).toBe("Juan Perez");
+    expect(reloaded!.vehicleId).toBe(vehicle.id);
+    expect(reloaded!.driverId).toBe(driver.id);
+  });
+
+  it("rejects an unknown vehicleId with VehicleNotFoundForWaybillError", async () => {
+    const { useCase } = setup();
+
+    await expect(
+      useCase.execute(
+        baseRequest({
+          vehicle: {
+            vehicleId: "99999999-9999-9999-9999-999999999999",
+            plate: "ABC1234",
+            config: "C2",
+            permitType: "TPAF01",
+            permitNumber: "SCT-123",
+            insuranceCompany: "Aseguradora SA",
+            insurancePolicy: "POL-1",
+          },
+        }),
+        CREATOR_ID
+      )
+    ).rejects.toThrow(VehicleNotFoundForWaybillError);
+  });
+
+  it("rejects an unknown driverId with DriverNotFoundForWaybillError", async () => {
+    const { useCase } = setup();
+
+    await expect(
+      useCase.execute(
+        baseRequest({
+          driver: { driverId: "99999999-9999-9999-9999-999999999999", name: "Juan Perez", licenseNumber: "LIC-1" },
+        }),
+        CREATOR_ID
+      )
+    ).rejects.toThrow(DriverNotFoundForWaybillError);
+  });
+
+  it("persists null vehicleId/driverId for manual capture without catalog IDs (regression)", async () => {
+    const { useCase } = setup();
+
+    const waybill = await useCase.execute(baseRequest(), CREATOR_ID);
+
+    expect(waybill.vehicleId).toBeNull();
+    expect(waybill.driverId).toBeNull();
   });
 });

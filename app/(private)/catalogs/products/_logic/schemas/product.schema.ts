@@ -16,6 +16,8 @@ export const createProductSchema = z.object({
     .optional(),
   ivaRate: z.number().min(0, "El IVA no puede ser negativo.").max(100, "El IVA no puede superar 100.").nullable().optional(),
   iepsRate: z.number().min(0, "El IEPS no puede ser negativo.").max(100, "El IEPS no puede superar 100.").nullable().optional(),
+  manufactureDate: z.string().nullable().optional(),
+  acquisitionPrice: z.number().min(0, "El precio de adquisición no puede ser negativo.").nullable().optional(),
   isTaxable: z.boolean().optional().default(false),
   isActive: z.boolean().optional(),
 });
@@ -32,6 +34,8 @@ export const updateProductSchema = z
       .optional(),
     ivaRate: z.number().min(0).max(100).nullable().optional(),
     iepsRate: z.number().min(0).max(100).nullable().optional(),
+    manufactureDate: z.string().nullable().optional(),
+    acquisitionPrice: z.number().min(0, "El precio de adquisición no puede ser negativo.").nullable().optional(),
     isTaxable: z.boolean().optional(),
     isActive: z.boolean().optional(),
   })
@@ -43,6 +47,8 @@ export const updateProductSchema = z
       d.satProductCode !== undefined ||
       d.ivaRate !== undefined ||
       d.iepsRate !== undefined ||
+      d.manufactureDate !== undefined ||
+      d.acquisitionPrice !== undefined ||
       d.isTaxable !== undefined ||
       d.isActive !== undefined,
     { message: "Debes modificar al menos un campo." },

@@ -16,6 +16,22 @@ export interface LowStockNotification {
   reorderPoint: number;
 }
 
+export type InventoryExpiryThreshold = "sixMonths" | "threeMonths" | "dayOf";
+
+export interface InventoryExpiryDigestItem {
+  productName: string;
+  branchName: string;
+  lotNumber: string;
+  quantity: number;
+  expirationDate: Date;
+}
+
+const THRESHOLD_LABEL: Record<InventoryExpiryThreshold, string> = {
+  sixMonths: "6 meses",
+  threeMonths: "3 meses",
+  dayOf: "hoy",
+};
+
 export class AdminNotificationService {
   constructor(private readonly mailer: MailerPort) {}
 
@@ -59,6 +75,49 @@ export class AdminNotificationService {
       });
     } catch (err) {
       console.error("[AdminNotificationService] Failed to send low-stock notification:", err);
+    }
+  }
+
+  async notifyInventoryExpiryDigest(params: {
+    to: string | null;
+    threshold: InventoryExpiryThreshold;
+    items: InventoryExpiryDigestItem[];
+  }): Promise<void> {
+    if (!params.to) return;
+    const rows = params.items
+      .map(
+        (item) => `
+          <tr>
+            <td>${item.productName}</td>
+            <td>${item.branchName}</td>
+            <td>${item.lotNumber}</td>
+            <td>${item.quantity}</td>
+            <td>${item.expirationDate.toISOString().slice(0, 10)}</td>
+          </tr>`
+      )
+      .join("");
+    try {
+      await this.mailer.send({
+        to: params.to,
+        subject: `Lotes de inventario por vencer — ${THRESHOLD_LABEL[params.threshold]}`,
+        html: `
+          <p>Los siguientes lotes de inventario vencen en <strong>${THRESHOLD_LABEL[params.threshold]}</strong>:</p>
+          <table border="1" cellpadding="6" cellspacing="0">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Sucursal</th>
+                <th>Lote</th>
+                <th>Cantidad</th>
+                <th>Fecha de caducidad</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `,
+      });
+    } catch (err) {
+      console.error("[AdminNotificationService] Failed to send inventory-expiry digest:", err);
     }
   }
 }

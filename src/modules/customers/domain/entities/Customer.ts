@@ -2,7 +2,7 @@ export interface CustomerProps {
   id: string;
   code: string;
   name: string;
-  rfc: string;
+  rfc: string | null;
   legalName: string | null;
   taxRegime: string | null;
   cfdiUse: string | null;
@@ -14,6 +14,7 @@ export interface CustomerProps {
   notes: string | null;
   creditLimit: number | null;
   currentBalance: number;
+  initialBalance: number;
   creditDays: number;
   isActive: boolean;
   addressStreet: string | null;
@@ -32,7 +33,7 @@ export class Customer {
   readonly id: string;
   readonly code: string;
   readonly name: string;
-  readonly rfc: string;
+  readonly rfc: string | null;
   readonly legalName: string | null;
   readonly taxRegime: string | null;
   readonly cfdiUse: string | null;
@@ -44,6 +45,7 @@ export class Customer {
   readonly notes: string | null;
   readonly creditLimit: number | null;
   readonly currentBalance: number;
+  readonly initialBalance: number;
   readonly creditDays: number;
   readonly isActive: boolean;
   readonly addressStreet: string | null;
@@ -73,6 +75,7 @@ export class Customer {
     this.notes = props.notes;
     this.creditLimit = props.creditLimit;
     this.currentBalance = props.currentBalance;
+    this.initialBalance = props.initialBalance;
     this.creditDays = props.creditDays;
     this.isActive = props.isActive;
     this.addressStreet = props.addressStreet;

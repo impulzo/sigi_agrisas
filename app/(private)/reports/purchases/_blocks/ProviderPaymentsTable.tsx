@@ -7,6 +7,9 @@ const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", 
 function money(v: string): string {
   return MX.format(Number(v));
 }
+function moneyOrDash(v: string | null): string {
+  return v === null ? "—" : MX.format(Number(v));
+}
 function dateOnly(iso: string): string {
   return new Date(iso).toLocaleDateString("es-MX", { timeZone: "UTC" });
 }
@@ -24,12 +27,14 @@ export function ProviderPaymentsTable({ rows }: { rows: ProviderPaymentsReportRo
             <Th align="right">Monto</Th>
             <Th>Estado</Th>
             <Th>Fecha</Th>
+            <Th align="right">Saldo inicial</Th>
+            <Th align="right">Saldo actual</Th>
           </tr>
         </THead>
         <TBody>
           {rows.length === 0 ? (
             <tr>
-              <Td colSpan={7} className="text-center text-on-surface-variant">Sin pagos a proveedores</Td>
+              <Td colSpan={9} className="text-center text-on-surface-variant">Sin pagos a proveedores</Td>
             </tr>
           ) : (
             rows.map((r) => (
@@ -41,6 +46,8 @@ export function ProviderPaymentsTable({ rows }: { rows: ProviderPaymentsReportRo
                 <Td align="right">{money(r.amount)}</Td>
                 <Td>{r.status}</Td>
                 <Td>{dateOnly(r.paidAt)}</Td>
+                <Td align="right">{moneyOrDash(r.providerInitialBalance)}</Td>
+                <Td align="right">{moneyOrDash(r.providerCurrentBalance)}</Td>
               </Tr>
             ))
           )}

@@ -23,7 +23,7 @@ export class InMemoryProviderRepository implements ProviderRepository {
         (p) =>
           p.name.toLowerCase().includes(q) ||
           (p.legalName ?? "").toLowerCase().includes(q) ||
-          p.rfc.toLowerCase().includes(q)
+          (p.rfc ?? "").toLowerCase().includes(q)
       );
     }
 
@@ -40,7 +40,7 @@ export class InMemoryProviderRepository implements ProviderRepository {
     if (this.store.some((p) => p.code === data.code)) {
       throw new ProviderCodeAlreadyInUseError(data.code);
     }
-    if (this.store.some((p) => p.rfc === data.rfc)) {
+    if (data.rfc != null && this.store.some((p) => p.rfc === data.rfc)) {
       throw new ProviderRfcAlreadyInUseError(data.rfc);
     }
 
@@ -49,7 +49,7 @@ export class InMemoryProviderRepository implements ProviderRepository {
       id: makeId(),
       code: data.code,
       name: data.name,
-      rfc: data.rfc,
+      rfc: data.rfc ?? null,
       legalName: data.legalName ?? null,
       taxRegime: data.taxRegime ?? null,
       cfdiUse: data.cfdiUse ?? null,
@@ -59,6 +59,10 @@ export class InMemoryProviderRepository implements ProviderRepository {
       address: data.address ?? null,
       contactName: data.contactName ?? null,
       notes: data.notes ?? null,
+      creditLimit: data.creditLimit ?? null,
+      currentBalance: data.initialBalance ?? 0,
+      initialBalance: data.initialBalance ?? 0,
+      creditDays: data.creditDays ?? 30,
       isActive: true,
       createdAt: now,
       updatedAt: now,
@@ -72,16 +76,18 @@ export class InMemoryProviderRepository implements ProviderRepository {
     const idx = this.store.findIndex((p) => p.id === id);
     if (idx === -1) throw new ProviderNotFoundError(id);
 
-    if (data.rfc !== undefined && this.store.some((p, i) => i !== idx && p.rfc === data.rfc)) {
-      throw new ProviderRfcAlreadyInUseError(data.rfc!);
+    if (data.rfc != null && this.store.some((p, i) => i !== idx && p.rfc === data.rfc)) {
+      throw new ProviderRfcAlreadyInUseError(data.rfc);
     }
 
     const existing = this.store[idx];
+    const newInitialBalance = data.initialBalance !== undefined ? data.initialBalance : existing.initialBalance;
+    const balanceDelta = data.initialBalance !== undefined ? data.initialBalance - existing.initialBalance : 0;
     const updated = Provider.create({
       id: existing.id,
       code: existing.code,
       name: data.name ?? existing.name,
-      rfc: data.rfc ?? existing.rfc,
+      rfc: "rfc" in data ? data.rfc ?? null : existing.rfc,
       legalName: "legalName" in data ? data.legalName ?? null : existing.legalName,
       taxRegime: "taxRegime" in data ? data.taxRegime ?? null : existing.taxRegime,
       cfdiUse: "cfdiUse" in data ? data.cfdiUse ?? null : existing.cfdiUse,
@@ -91,6 +97,10 @@ export class InMemoryProviderRepository implements ProviderRepository {
       address: "address" in data ? data.address ?? null : existing.address,
       contactName: "contactName" in data ? data.contactName ?? null : existing.contactName,
       notes: "notes" in data ? data.notes ?? null : existing.notes,
+      creditLimit: "creditLimit" in data ? data.creditLimit ?? null : existing.creditLimit,
+      currentBalance: existing.currentBalance + balanceDelta,
+      initialBalance: newInitialBalance,
+      creditDays: data.creditDays ?? existing.creditDays,
       isActive: data.isActive ?? existing.isActive,
       createdAt: existing.createdAt,
       updatedAt: new Date(),

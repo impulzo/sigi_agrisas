@@ -15,6 +15,8 @@ export interface ProductDto {
   ivaRate: number | null;
   iepsRate: number | null;
   imageUrl: string | null;
+  manufactureDate: string | null;
+  acquisitionPrice: number | null;
   isTaxable: boolean;
   isActive: boolean;
   createdAt: string;

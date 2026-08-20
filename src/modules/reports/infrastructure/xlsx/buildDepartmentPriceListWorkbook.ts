@@ -2,7 +2,16 @@ import * as XLSX from "xlsx";
 import { DepartmentPriceListResponseDto } from "../../application/dto/DepartmentPriceListResponseDto";
 import { priceColumnNames } from "../../domain/services/priceColumnNames";
 
-const BASE_HEADER = ["Departamento", "Código", "Producto", "Unidad", "Stock"];
+const BASE_HEADER = ["Departamento", "Código", "Producto", "Unidad", "Stock", "Costo Adq."];
+
+function money(v: string | null): string {
+  if (v === null) return "—";
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    minimumFractionDigits: 2,
+  }).format(Number(v));
+}
 
 /** Construye el workbook del inventario por departamento — una fila por producto, precios pivotados como columnas, con subtotales por depto y totales al final. */
 export function buildDepartmentPriceListWorkbook(data: DepartmentPriceListResponseDto): Buffer {
@@ -15,7 +24,7 @@ export function buildDepartmentPriceListWorkbook(data: DepartmentPriceListRespon
     for (const product of dept.products) {
       const priceValues = priceCols.map((name) => {
         const price = product.prices.find((p) => p.name === name);
-        return price ? price.price : "—";
+        return price ? money(price.price) : "—";
       });
       rows.push([
         dept.departmentName,
@@ -23,6 +32,7 @@ export function buildDepartmentPriceListWorkbook(data: DepartmentPriceListRespon
         product.name,
         product.unitDescription ?? product.unit,
         product.stockQuantity,
+        money(product.acquisitionPrice),
         ...priceValues,
       ]);
     }

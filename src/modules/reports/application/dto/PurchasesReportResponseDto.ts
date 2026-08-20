@@ -7,6 +7,7 @@ export interface PurchasesReportRowDto {
   taxTotal: string;
   total: string;
   paidAmount: string;
+  balance: string;
   paymentStatus: string;
   status: string;
   purchasedAt: string;

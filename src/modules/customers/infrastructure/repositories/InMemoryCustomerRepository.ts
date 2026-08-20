@@ -26,7 +26,7 @@ export class InMemoryCustomerRepository implements CustomerRepository {
         (c) =>
           c.name.toLowerCase().includes(q) ||
           (c.legalName ?? "").toLowerCase().includes(q) ||
-          c.rfc.toLowerCase().includes(q)
+          (c.rfc ?? "").toLowerCase().includes(q)
       );
     }
 
@@ -43,7 +43,7 @@ export class InMemoryCustomerRepository implements CustomerRepository {
     if (this.store.some((c) => c.code === data.code)) {
       throw new CustomerCodeAlreadyInUseError(data.code);
     }
-    if (this.store.some((c) => c.rfc === data.rfc)) {
+    if (data.rfc != null && this.store.some((c) => c.rfc === data.rfc)) {
       throw new CustomerRfcAlreadyInUseError(data.rfc);
     }
 
@@ -52,7 +52,7 @@ export class InMemoryCustomerRepository implements CustomerRepository {
       id: makeId(),
       code: data.code,
       name: data.name,
-      rfc: data.rfc,
+      rfc: data.rfc ?? null,
       legalName: data.legalName ?? null,
       taxRegime: data.taxRegime ?? null,
       cfdiUse: data.cfdiUse ?? null,
@@ -63,7 +63,8 @@ export class InMemoryCustomerRepository implements CustomerRepository {
       contactName: data.contactName ?? null,
       notes: data.notes ?? null,
       creditLimit: data.creditLimit ?? null,
-      currentBalance: 0,
+      currentBalance: data.initialBalance ?? 0,
+      initialBalance: data.initialBalance ?? 0,
       creditDays: data.creditDays ?? 30,
       isActive: data.isActive ?? true,
       addressStreet: data.addressStreet ?? null,
@@ -86,16 +87,18 @@ export class InMemoryCustomerRepository implements CustomerRepository {
     const idx = this.store.findIndex((c) => c.id === id);
     if (idx === -1) throw new CustomerNotFoundError(id);
 
-    if (data.rfc !== undefined && this.store.some((c, i) => i !== idx && c.rfc === data.rfc)) {
-      throw new CustomerRfcAlreadyInUseError(data.rfc!);
+    if (data.rfc != null && this.store.some((c, i) => i !== idx && c.rfc === data.rfc)) {
+      throw new CustomerRfcAlreadyInUseError(data.rfc);
     }
 
     const existing = this.store[idx];
+    const newInitialBalance = data.initialBalance !== undefined ? data.initialBalance : existing.initialBalance;
+    const balanceDelta = data.initialBalance !== undefined ? data.initialBalance - existing.initialBalance : 0;
     const updated = Customer.create({
       id: existing.id,
       code: existing.code,
       name: data.name ?? existing.name,
-      rfc: data.rfc ?? existing.rfc,
+      rfc: "rfc" in data ? data.rfc ?? null : existing.rfc,
       legalName: "legalName" in data ? data.legalName ?? null : existing.legalName,
       taxRegime: "taxRegime" in data ? data.taxRegime ?? null : existing.taxRegime,
       cfdiUse: "cfdiUse" in data ? data.cfdiUse ?? null : existing.cfdiUse,
@@ -106,7 +109,8 @@ export class InMemoryCustomerRepository implements CustomerRepository {
       contactName: "contactName" in data ? data.contactName ?? null : existing.contactName,
       notes: "notes" in data ? data.notes ?? null : existing.notes,
       creditLimit: "creditLimit" in data ? data.creditLimit ?? null : existing.creditLimit,
-      currentBalance: existing.currentBalance,
+      currentBalance: existing.currentBalance + balanceDelta,
+      initialBalance: newInitialBalance,
       creditDays: data.creditDays ?? existing.creditDays,
       isActive: data.isActive ?? existing.isActive,
       addressStreet: "addressStreet" in data ? data.addressStreet ?? null : existing.addressStreet,

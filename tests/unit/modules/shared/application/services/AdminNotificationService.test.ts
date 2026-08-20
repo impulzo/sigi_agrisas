@@ -98,4 +98,55 @@ describe("AdminNotificationService", () => {
       ).resolves.toBeUndefined();
     });
   });
+
+  describe("notifyInventoryExpiryDigest", () => {
+    const items = [
+      {
+        productName: "PACKHARD 20 L",
+        branchName: "Matriz",
+        lotNumber: "L-001",
+        quantity: 10,
+        expirationDate: new Date("2027-02-14T00:00:00.000Z"),
+      },
+    ];
+
+    it("sends a digest email to the explicit recipient", async () => {
+      const mailer: MailerPort = { send: jest.fn().mockResolvedValue(undefined) };
+      const service = new AdminNotificationService(mailer);
+
+      await service.notifyInventoryExpiryDigest({ to: "compras@agrisas.mx", threshold: "threeMonths", items });
+
+      expect(mailer.send).toHaveBeenCalledWith(
+        expect.objectContaining({ to: "compras@agrisas.mx", subject: expect.stringContaining("3 meses") })
+      );
+    });
+
+    it("does not attempt to send when `to` is null", async () => {
+      const mailer: MailerPort = { send: jest.fn().mockResolvedValue(undefined) };
+      const service = new AdminNotificationService(mailer);
+
+      await service.notifyInventoryExpiryDigest({ to: null, threshold: "dayOf", items });
+
+      expect(mailer.send).not.toHaveBeenCalled();
+    });
+
+    it("does not attempt to send when `to` is empty string", async () => {
+      const mailer: MailerPort = { send: jest.fn().mockResolvedValue(undefined) };
+      const service = new AdminNotificationService(mailer);
+
+      await service.notifyInventoryExpiryDigest({ to: "", threshold: "dayOf", items });
+
+      expect(mailer.send).not.toHaveBeenCalled();
+    });
+
+    it("swallows mailer errors without throwing", async () => {
+      const mailer: MailerPort = { send: jest.fn().mockRejectedValue(new Error("SMTP down")) };
+      jest.spyOn(console, "error").mockImplementation(() => {});
+      const service = new AdminNotificationService(mailer);
+
+      await expect(
+        service.notifyInventoryExpiryDigest({ to: "compras@agrisas.mx", threshold: "sixMonths", items })
+      ).resolves.toBeUndefined();
+    });
+  });
 });

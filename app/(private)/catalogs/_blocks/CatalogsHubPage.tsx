@@ -69,6 +69,22 @@ const CATALOG_CARDS = [
     href: "/catalogs/customers",
     permission: "customers:read",
   },
+  {
+    key: "vehicles",
+    icon: "local_shipping" as const,
+    title: "Vehículos",
+    description: "Gestiona el catálogo de vehículos para carta porte.",
+    href: "/catalogs/vehicles",
+    permission: "vehicles:read",
+  },
+  {
+    key: "drivers",
+    icon: "badge" as const,
+    title: "Operadores",
+    description: "Gestiona el catálogo de operadores para carta porte.",
+    href: "/catalogs/drivers",
+    permission: "drivers:read",
+  },
 ];
 
 export function CatalogsHubPage() {

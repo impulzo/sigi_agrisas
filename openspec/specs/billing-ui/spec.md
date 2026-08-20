@@ -5,9 +5,7 @@
 Define la interfaz de usuario del módulo de Facturación (CFDI 4.0 vía Facturama) del panel de Agrisas: listado paginado con filtros y branch scoping, detalle con descarga PDF/XML y cancelación, emisión en dos modos (facturar una venta completa o factura parcial standalone con líneas y precio manual que **no afecta inventario**), gestión de Certificado de Sello Digital (CSD), integración en el detalle de venta, servicios tipados y hooks de estado/mutación. La UI consume la capability backend `billing-api` sin modificarla.
 
 ---
-
 ## Requirements
-
 ### Requirement: `/billing` route (paginated list with filters)
 The system SHALL expose a private route `/billing` that lists CFDI invoices in a paginated table. The page SHALL gate behind `billing:read` via `useCurrentUser().can("billing:read")` and SHALL render `null` (or redirect to `/dashboard`) when the permission resolves to `false`. While `"loading"`, the page SHALL render its layout optimistically.
 
@@ -157,19 +155,47 @@ The service SHALL map 409 `SaleAlreadyInvoiced{invoiceId}` → `SaleAlreadyInvoi
 ### Requirement: Partial standalone invoice ("Factura parcial") does not affect inventory
 `PartialInvoiceForm` SHALL build a standalone CFDI **without `saleId`**. It SHALL collect:
 - A receiver via `CustomerPicker` (reading `rfc`, `name`, `cfdiUse`, `taxRegime`→`fiscalRegime`, `taxZipCode`). When fiscal data is incomplete the form SHALL block submit and list the missing fields inline.
-- One or more lines added either from the product catalog (`ProductCatalogPanel`/`ProductCatalogTable`) or as **free lines** ("Agregar línea libre", no `productId`, manual `description` + `satProductCode`). Each line (`PartialInvoiceLineRow`) SHALL allow editing `quantity`, **`unitPrice` manually**, `discountPct`, `ivaRate`, `iepsRate`.
+- One or more lines added either from the product catalog (`ProductCatalogPanel`/`ProductCatalogTable`) or as **free lines** ("Agregar línea libre", no `productId`, manual `description` + `satProductCode`). A catalog line SHALL be added with its default price preselected: `unitPrice` SHALL be initialized from `prices.find(p => p.isDefault) ?? prices[0]` (same fallback criterion as `pos-ui`'s `PriceTierPicker`) fetched via `getProductPrices(productId)`, or `0` if the product has no prices at all. Each catalog line (`PartialInvoiceLineRow`) SHALL render a price-tier selector (reusing `PriceTierPicker`) letting the user switch among the product's available `ProductPrice` entries — selecting a different tier SHALL update the line's `unitPrice` to that tier's price. Free lines SHALL NOT render a price-tier selector — they keep manual `unitPrice` entry, unchanged. Every line SHALL allow editing `quantity`, `unitPrice` (manually, in addition to the tier selector for catalog lines), `discountPct`, `ivaRate`, `iepsRate`, and each of these 5 numeric fields SHALL support being fully cleared while editing (no forced `0` reappearing on each keystroke) — normalization to a numeric value SHALL occur only on blur.
 
-It SHALL show live totals computed by the shared `computeTotalsClient` (banker's rounding) and a visible note **"La factura parcial no afecta inventario"**. On submit it SHALL call `POST /api/v1/admin/invoices { customer, items[], paymentForm?, paymentMethod? }` via `stampInvoice` and navigate to `/billing/[id]`.
+It SHALL show live totals computed by the shared `computeTotalsClient` (banker's rounding) and a visible note **"La factura parcial no afecta inventario"**. Before submit, the form SHALL block and show an inline error if any line with a non-null `productId` has `unitPrice <= 0` (empty treated as `0` for this check) — free lines are exempt from this check. On submit it SHALL call `POST /api/v1/admin/invoices { customer, items[], paymentForm?, paymentMethod? }` via `stampInvoice` and navigate to `/billing/[id]`.
 
 Because the payload carries no `saleId`, the request SHALL reach the backend standalone path, which performs no inventory movement.
 
 #### Scenario: Build and stamp a partial invoice
-- **WHEN** the user picks a fiscally-complete customer, adds two lines, edits each `unitPrice` manually, and confirms
+- **WHEN** the user picks a fiscally-complete customer, adds two catalog lines (each keeping its preselected default price), and confirms
 - **THEN** `POST /invoices` SHALL be sent with `{ customer, items: [...] }` and **without** `saleId`, and on 201 navigate to `/billing/[id]`
 
+#### Scenario: Catalog line preselects the default price
+- **WHEN** the user adds a product that has a `ProductPrice` marked `isDefault: true`
+- **THEN** the line is added with `unitPrice` equal to that default price's value, not `0`
+
+#### Scenario: Catalog line without any price falls back to zero, still overridable
+- **WHEN** the user adds a product with no `ProductPrice` records at all
+- **THEN** the line is added with `unitPrice: 0` (unchanged fallback behavior) and remains editable manually or blocked at submit per the zero-price validation below
+
+#### Scenario: Switching price tier updates unitPrice
+- **WHEN** the user changes the price-tier selector on a catalog line from "Precio público" to "10"
+- **THEN** the line's `unitPrice` updates to the "10" tier's price, and the footer totals recompute live
+
 #### Scenario: Manual price reflected in totals
-- **WHEN** the user changes a line `unitPrice`
+- **WHEN** the user changes a line `unitPrice` manually
 - **THEN** the footer totals (subtotal/iva/ieps/total) SHALL recompute live via `computeTotalsClient`
+
+#### Scenario: Numeric field can be fully cleared while editing
+- **WHEN** the user selects all text in the `unitPrice` (or `quantity`/`discountPct`/`ivaRate`/`iepsRate`) input and presses delete
+- **THEN** the input shows empty — it does NOT immediately snap back to `0`, and the user can type a new value (e.g. `150`) without first deleting a reappearing `0`
+
+#### Scenario: Empty numeric field normalizes to zero on blur
+- **WHEN** the user leaves a numeric field empty and moves focus away (blur)
+- **THEN** the field's underlying value normalizes to `0` at that point, not while the field was being edited
+
+#### Scenario: Submit blocked when a catalog line has zero price
+- **WHEN** the user tries to submit with at least one catalog line (`productId` set) whose `unitPrice` is `0` or was left empty
+- **THEN** the form blocks submission, shows an inline error identifying the offending line, and does NOT call `POST /invoices`
+
+#### Scenario: Free line at zero price is allowed
+- **WHEN** a free line (`productId: null`) has `unitPrice: 0`
+- **THEN** submission is NOT blocked by the zero-price check (only catalog lines are checked)
 
 #### Scenario: Inventory untouched
 - **WHEN** a partial invoice is stamped
@@ -183,16 +209,14 @@ Because the payload carries no `saleId`, the request SHALL reach the backend sta
 - **WHEN** the user clicks "Agregar línea libre" and fills `description`, `unitPrice`, `satProductCode`
 - **THEN** the line SHALL be added with `productId` null and included in the `items[]` payload
 
----
-
 ### Requirement: Invoice preview before stamping
-Both emission forms (`StampSaleForm` and `PartialInvoiceForm`, under `/billing/new`) SHALL render a "Vista previa" button. Clicking it SHALL open `InvoicePreviewModal` (a native `<dialog>`, following the same open/close pattern as `CancelInvoiceModal`) showing: the Agrisas logo (`/logo.png`), a folio placeholder "PENDIENTE DE TIMBRAR", a visible badge "BORRADOR — no válido fiscalmente", the receiver's fiscal data, the line items with per-line and aggregate totals computed client-side via `computeInvoiceTotalsClient`, and two actions: "Volver a editar" (closes the modal without side effects) and "Timbrar ahora" (invokes the same existing `submit()` used by the form's real "Emitir factura" action — it SHALL NOT call Facturama or persist anything on its own).
+Both emission forms (`StampSaleForm` and `PartialInvoiceForm`, under `/billing/new`) SHALL render a "Vista previa" button. Clicking it SHALL open `InvoicePreviewModal` (a native `<dialog>`, following the same open/close pattern as `CancelInvoiceModal`) showing: the Agrisas logo (`/logo.png`), a folio placeholder "PENDIENTE DE TIMBRAR", a visible badge "BORRADOR — no válido fiscalmente", the receiver's fiscal data, the line items with per-line and aggregate totals computed client-side via `computeInvoiceTotalsClient`, and three actions: "Volver a editar" (closes the modal without side effects), "Descargar PDF" (downloads the currently-displayed preview as a PDF via `POST /api/v1/admin/invoices/preview/pdf`, sending the same `InvoicePreviewData` already rendered on screen — no side effects, no Facturama call), and "Timbrar ahora" (invokes the same existing `submit()` used by the form's real "Emitir factura" action — it SHALL NOT call Facturama or persist anything on its own).
 
 For `PartialInvoiceForm`, the preview data SHALL be built entirely from data already present in the form's local state (customer, lines, payment form/method) — no network request SHALL be made to open the preview.
 
-For `StampSaleForm`, which does not hold line items or the receiver's fiscal data in its local state, opening the preview SHALL resolve that data by reading `GET /api/v1/admin/sales/:id` and (when the sale has a `customerId`) `GET /api/v1/admin/customers/:id` — both already-existing read endpoints, reused unmodified. While resolving, the modal SHALL show a loading state. If the selected sale has no `customerId`, the modal SHALL show the message "Esta venta no tiene cliente asociado, no se puede facturar" and SHALL disable "Timbrar ahora".
+For `StampSaleForm`, which does not hold line items or the receiver's fiscal data in its local state, opening the preview SHALL resolve that data by reading `GET /api/v1/admin/sales/:id` and (when the sale has a `customerId`) `GET /api/v1/admin/customers/:id` — both already-existing read endpoints, reused unmodified. While resolving, the modal SHALL show a loading state. If the selected sale has no `customerId`, the modal SHALL show the message "Esta venta no tiene cliente asociado, no se puede facturar" and SHALL disable "Timbrar ahora" AND "Descargar PDF".
 
-The preview SHALL never introduce a persisted draft state: `Invoice.status` remains only `"stamped" | "cancelled"`, and closing the modal without confirming SHALL leave the form's state untouched.
+The preview SHALL never introduce a persisted draft state: `Invoice.status` remains only `"stamped" | "cancelled"`, and closing the modal without confirming SHALL leave the form's state untouched. Downloading the PDF SHALL NOT close the modal or alter the form's state.
 
 #### Scenario: Preview from partial invoice form (no network)
 - **WHEN** the user has picked a fiscally-complete customer and added at least one line in `PartialInvoiceForm`, then clicks "Vista previa"
@@ -202,9 +226,9 @@ The preview SHALL never introduce a persisted draft state: `Invoice.status` rema
 - **WHEN** the user has selected a `completed` sale with an associated customer in `StampSaleForm`, then clicks "Vista previa"
 - **THEN** the modal SHALL show a brief loading state, then render the sale's lines and the customer's real fiscal data
 
-#### Scenario: Sale without customer blocks preview confirmation
+#### Scenario: Sale without customer blocks preview confirmation and download
 - **WHEN** the user clicks "Vista previa" in `StampSaleForm` for a sale with no `customerId`
-- **THEN** the modal SHALL show "Esta venta no tiene cliente asociado, no se puede facturar" and SHALL disable "Timbrar ahora", without throwing an unhandled error
+- **THEN** the modal SHALL show "Esta venta no tiene cliente asociado, no se puede facturar" and SHALL disable both "Timbrar ahora" and "Descargar PDF", without throwing an unhandled error
 
 #### Scenario: Confirm stamps for real
 - **WHEN** the user clicks "Timbrar ahora" inside the preview modal (either form)
@@ -214,7 +238,21 @@ The preview SHALL never introduce a persisted draft state: `Invoice.status` rema
 - **WHEN** the user clicks "Volver a editar"
 - **THEN** the modal SHALL close and no field of the underlying form SHALL be modified
 
----
+#### Scenario: Download PDF from partial invoice preview
+- **WHEN** the user, with a partial-invoice preview open, clicks "Descargar PDF"
+- **THEN** the browser downloads a PDF containing the same receiver, lines, and totals shown in the modal, watermarked "BORRADOR — no válido fiscalmente", without closing the modal or calling `POST /invoices`
+
+#### Scenario: Download PDF from stamp-sale preview
+- **WHEN** the user, with a stamp-sale preview open (customer resolved), clicks "Descargar PDF"
+- **THEN** the browser downloads a PDF matching the sale's lines and the customer's fiscal data, same watermark
+
+#### Scenario: Download does not affect modal state
+- **WHEN** the user clicks "Descargar PDF" and the download completes (or fails)
+- **THEN** the modal remains open with its data unchanged, and "Timbrar ahora"/"Volver a editar" remain available
+
+#### Scenario: Download failure shown inline
+- **WHEN** `POST /api/v1/admin/invoices/preview/pdf` fails (network error or non-200)
+- **THEN** the modal shows an inline error near the "Descargar PDF" button without closing or clearing the preview
 
 ### Requirement: CSD management `/billing/csd`
 The system SHALL expose a private route `/billing/csd` gated by `billing:manage_csd` (admin only). `CsdManagerPage` SHALL display the current CSD status (`GET /api/v1/admin/billing/csd` via `getCsdStatus`) and a form to upload/replace a CSD: `rfc`, a `.cer` file, a `.key` file, and `privateKeyPassword`. Files SHALL be converted to base64 client-side (`FileReader`) and submitted via `POST /api/v1/admin/billing/csd` (`uploadCsd`). The password SHALL NOT be persisted in client storage.
@@ -275,3 +313,4 @@ All billing services under `app/(private)/billing/_logic/services/` SHALL use `a
 #### Scenario: Test injection
 - **WHEN** a unit test calls a service with `fetchImpl`
 - **THEN** the service SHALL use the injected fetch instead of the global `authFetch` transport
+

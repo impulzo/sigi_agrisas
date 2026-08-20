@@ -30,6 +30,8 @@ export function toWaybillDto(waybill: Waybill): WaybillDto {
     notes: waybill.notes,
     originAddress: waybill.originAddress ? toAddressDto(waybill.originAddress) : null,
     destinationAddress: waybill.destinationAddress ? toAddressDto(waybill.destinationAddress) : null,
+    vehicleId: waybill.vehicleId,
+    driverId: waybill.driverId,
     vehiclePlate: waybill.vehiclePlate,
     vehicleConfig: waybill.vehicleConfig,
     vehiclePermitType: waybill.vehiclePermitType,

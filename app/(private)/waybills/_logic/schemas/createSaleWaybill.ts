@@ -21,6 +21,7 @@ export const createSaleWaybillSchema = z
     type: z.literal("carta_porte"),
     saleId: z.string().uuid("Venta inválida"),
     vehicle: z.object({
+      vehicleId: z.string().uuid().nullable().optional(),
       plate: z.string().min(1, "La placa es obligatoria"),
       config: z.string().min(1, "La configuración vehicular es obligatoria"),
       permitType: z.string().min(1, "El tipo de permiso SCT es obligatorio"),
@@ -29,6 +30,7 @@ export const createSaleWaybillSchema = z
       insurancePolicy: z.string().min(1, "La póliza es obligatoria"),
     }),
     driver: z.object({
+      driverId: z.string().uuid().nullable().optional(),
       name: z.string().min(1, "El nombre del operador es obligatorio"),
       rfc: z.string().nullable().optional(),
       licenseNumber: z.string().min(1, "El número de licencia es obligatorio"),

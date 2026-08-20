@@ -2,11 +2,18 @@
  * @jest-environment jsdom
  */
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+jest.mock("../../../../../app/(private)/billing/_logic/services/downloadInvoicePreviewPdf", () => ({
+  downloadInvoicePreviewPdf: jest.fn(),
+}));
+
 import { InvoicePreviewModal } from "../../../../../app/(private)/billing/_blocks/InvoicePreviewModal";
+import { downloadInvoicePreviewPdf } from "../../../../../app/(private)/billing/_logic/services/downloadInvoicePreviewPdf";
 import type { InvoicePreviewData } from "../../../../../app/(private)/billing/_logic/types/preview";
+
+const mockDownload = downloadInvoicePreviewPdf as jest.MockedFunction<typeof downloadInvoicePreviewPdf>;
 
 HTMLDialogElement.prototype.showModal = jest.fn(function (this: HTMLDialogElement) {
   this.setAttribute("open", "");
@@ -33,6 +40,60 @@ function makeData(overrides: Partial<InvoicePreviewData> = {}): InvoicePreviewDa
 }
 
 describe("InvoicePreviewModal", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("invokes downloadInvoicePreviewPdf with the preview data when clicking Descargar PDF", async () => {
+    mockDownload.mockResolvedValueOnce(undefined);
+    const data = makeData();
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={data}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    await userEvent.setup().click(screen.getByRole("button", { name: /descargar pdf/i }));
+
+    await waitFor(() => expect(mockDownload).toHaveBeenCalledWith(data));
+  });
+
+  it("disables Descargar PDF when there is no data (same guard as Timbrar ahora)", () => {
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={null}
+        isLoading={true}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /descargar pdf/i })).toBeDisabled();
+  });
+
+  it("shows a download error inline without closing the modal", async () => {
+    mockDownload.mockRejectedValueOnce(new Error("No se pudo generar el PDF"));
+    const onClose = jest.fn();
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={onClose}
+        data={makeData()}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    await userEvent.setup().click(screen.getByRole("button", { name: /descargar pdf/i }));
+
+    expect(await screen.findByText("No se pudo generar el PDF")).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("shows the draft badge, pending folio and logo when data is present", () => {
     render(
       <InvoicePreviewModal

@@ -120,6 +120,8 @@ export class InMemoryWaybillRepository implements WaybillRepository {
       notes: data.notes,
       originAddress: data.type === "carta_porte" ? data.originAddress : null,
       destinationAddress: data.type === "carta_porte" ? data.destinationAddress : null,
+      vehicleId: data.type === "carta_porte" ? data.vehicleId : null,
+      driverId: data.type === "carta_porte" ? data.driverId : null,
       vehiclePlate: data.type === "carta_porte" ? data.vehiclePlate : null,
       vehicleConfig: data.type === "carta_porte" ? data.vehicleConfig : null,
       vehiclePermitType: data.type === "carta_porte" ? data.vehiclePermitType : null,

@@ -5,12 +5,10 @@
 Define the reports backend module (`src/modules/reports/`), which exposes endpoints under `/api/v1/admin/reports/**` for generating audit-oriented reports (inventory stock, inventory by department / price list, payment history, sales cut, cash cut, account statements) in JSON, PDF and XLSX formats. Reports apply RBAC permissions and branch scoping consistent with the rest of the panel, and the PDF artifacts are produced server-side with `@react-pdf/renderer` (XLSX con `xlsx`).
 
 ---
-
 ## Requirements
-
 ### Requirement: Inventory Stock Report endpoint
 
-El sistema SHALL exponer `GET /api/v1/admin/reports/inventory/stock` que devuelve el reporte de stock agrupado por sucursal → departamento → productos, en formato JSON (default) o PDF, según el query param `?format=`. El endpoint SHALL delegar a `reportsController` (módulo `src/modules/reports/`) y ejecutar el use case `GetInventoryStockReportUseCase`.
+El sistema SHALL exponer `GET /api/v1/admin/reports/inventory/stock` que devuelve el reporte de stock agrupado por sucursal → departamento → productos, en formato JSON (default), PDF o XLSX, según el query param `?format=`. El endpoint SHALL delegar a `reportsController` (módulo `src/modules/reports/`) y ejecutar el use case `GetInventoryStockReportUseCase`.
 
 #### Scenario: Request JSON con autenticación válida
 
@@ -22,10 +20,15 @@ El sistema SHALL exponer `GET /api/v1/admin/reports/inventory/stock` que devuelv
 - **WHEN** un usuario autenticado con permiso `reports:inventory_read` ejecuta `GET /api/v1/admin/reports/inventory/stock?format=pdf`
 - **THEN** el sistema responde `200 application/pdf` con `Content-Disposition: attachment; filename="stock-YYYY-MM-DD.pdf"` y el cuerpo es un PDF binario válido generado por `@react-pdf/renderer`
 
+#### Scenario: Request XLSX con autenticación válida
+
+- **WHEN** un usuario autenticado con permiso `reports:inventory_read` ejecuta `GET /api/v1/admin/reports/inventory/stock?format=xlsx`
+- **THEN** el sistema responde `200 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` con `Content-Disposition: attachment; filename="stock-YYYY-MM-DD.xlsx"` y el cuerpo es un workbook XLSX válido generado por `buildInventoryStockWorkbook`
+
 #### Scenario: format desconocido
 
-- **WHEN** el query param `format` toma un valor distinto a `json` o `pdf` (ej. `?format=csv`)
-- **THEN** el sistema responde `400 application/json` con `{"error":"Invalid format. Allowed: json, pdf"}`
+- **WHEN** el query param `format` toma un valor distinto a `json`, `pdf` o `xlsx` (ej. `?format=csv`)
+- **THEN** el sistema responde `400 application/json` con `{"error":"Invalid format. Allowed: json, pdf, xlsx"}`
 
 ---
 
@@ -91,7 +94,7 @@ El endpoint SHALL aceptar los siguientes filtros opcionales en la querystring, t
 - `branchId?: string (UUID)` — descrito en el requirement de branch scoping.
 - `departmentId?: string (UUID)` — restringe los productos al departamento dado. Si el departamento no existe, el reporte devuelve `branches[].departments[]` vacíos (no `404`).
 - `includeZeroStock?: boolean` (default `true`) — cuando `false`, excluye productos con `quantity === 0` antes de calcular subtotales.
-- `format?: "json" | "pdf"` (default `"json"`).
+- `format?: "json" | "pdf" | "xlsx"` (default `"json"`).
 
 #### Scenario: Filtro por departmentId
 
@@ -249,7 +252,7 @@ El módulo `src/modules/reports/` SHALL respetar el layering hexagonal del proye
 
 ### Requirement: Payment History Report endpoint
 
-El sistema SHALL exponer `GET /api/v1/admin/reports/payments/history` que devuelve el historial de abonos con totales agregados, en formato JSON (default) o PDF según `?format=`. El endpoint SHALL delegar a `reportsController` y ejecutar el use case `GetPaymentHistoryReportUseCase`. Se diferencia del endpoint operativo `GET /api/v1/admin/payments/history` (módulo `payments`) en que: (a) no pagina — devuelve todos los abonos del rango solicitado; (b) incluye un bloque `summary` con totales bruto/neto/cancelado; (c) su PDF está orientado a auditoría ejecutiva.
+El sistema SHALL exponer `GET /api/v1/admin/reports/payments/history` que devuelve el historial de abonos con totales agregados, en formato JSON (default), PDF o XLSX según `?format=`. El endpoint SHALL delegar a `reportsController` y ejecutar el use case `GetPaymentHistoryReportUseCase`. Se diferencia del endpoint operativo `GET /api/v1/admin/payments/history` (módulo `payments`) en que: (a) no pagina — devuelve todos los abonos del rango solicitado; (b) incluye un bloque `summary` con totales bruto/neto/cancelado; (c) su PDF está orientado a auditoría ejecutiva.
 
 #### Scenario: Request JSON con autenticación válida
 
@@ -261,10 +264,15 @@ El sistema SHALL exponer `GET /api/v1/admin/reports/payments/history` que devuel
 - **WHEN** un usuario con `payments:report_read` ejecuta `GET /api/v1/admin/reports/payments/history?format=pdf`
 - **THEN** el sistema responde `200 application/pdf` con `Content-Disposition: attachment; filename="payments-YYYY-MM-DD.pdf"` y cuerpo PDF binario válido
 
+#### Scenario: Request XLSX con autenticación válida
+
+- **WHEN** un usuario con `payments:report_read` ejecuta `GET /api/v1/admin/reports/payments/history?format=xlsx`
+- **THEN** el sistema responde `200 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` con `Content-Disposition: attachment; filename="payments-YYYY-MM-DD.xlsx"` y el cuerpo es un workbook XLSX válido generado por `buildPaymentHistoryWorkbook`
+
 #### Scenario: format desconocido
 
-- **WHEN** `?format=csv` u otro valor distinto a `json` | `pdf`
-- **THEN** el sistema responde `400 application/json` con `{"error":"Invalid format. Allowed: json, pdf"}`
+- **WHEN** `?format=csv` u otro valor distinto a `json`, `pdf` o `xlsx`
+- **THEN** el sistema responde `400 application/json` con `{"error":"Invalid format. Allowed: json, pdf, xlsx"}`
 
 ---
 
@@ -317,7 +325,7 @@ El endpoint SHALL aceptar los siguientes filtros opcionales, validados por Zod e
 - `customerId?: string (UUID)` — restringe los abonos al cliente dado. Si el cliente no existe, el reporte devuelve `payments: []` y `summary` en cero (no `404`).
 - `startDate?: string (ISO 8601 date, ej. "2026-01-01")` — filtra `payment_date >= startDate 00:00:00 UTC`.
 - `endDate?: string (ISO 8601 date, ej. "2026-06-07")` — filtra `payment_date <= endDate 23:59:59 UTC`.
-- `format?: "json" | "pdf"` (default `"json"`).
+- `format?: "json" | "pdf" | "xlsx"` (default `"json"`).
 
 #### Scenario: Filtro por customerId
 
@@ -338,8 +346,6 @@ El endpoint SHALL aceptar los siguientes filtros opcionales, validados por Zod e
 
 - **WHEN** `?startDate=01-06-2026` (formato no ISO `YYYY-MM-DD`)
 - **THEN** el sistema responde `400 application/json` con `{"error":"Invalid startDate"}`
-
----
 
 ### Requirement: Payment history report JSON DTO
 
@@ -490,7 +496,7 @@ El endpoint SHALL aceptar en la querystring, validados por Zod en el controller:
 
 ### Requirement: Department price list report JSON DTO
 
-La respuesta JSON SHALL tener exactamente la siguiente forma. Los `Decimal` se serializan como `string` preservando la escala del schema (`price` con 4 decimales, `discountPct` con 2); los `Decimal` nullable (`ivaRate`, `iepsRate`, `discountPct`) SHALL aparecer como `null` cuando no tienen valor.
+La respuesta JSON SHALL tener exactamente la siguiente forma. Los `Decimal` se serializan como `string` preservando la escala del schema (`price` con 4 decimales, `discountPct` con 2, `acquisitionPrice` con 4); los `Decimal` nullable (`ivaRate`, `iepsRate`, `discountPct`, `acquisitionPrice`) SHALL aparecer como `null` cuando no tienen valor.
 
 ```json
 {
@@ -510,6 +516,7 @@ La respuesta JSON SHALL tener exactamente la siguiente forma. Los `Decimal` se s
           "unit": "PZA",
           "ivaRate": "0.1600",
           "iepsRate": null,
+          "acquisitionPrice": "45.5000",
           "prices": [
             {
               "priceId": "<uuid>",
@@ -550,11 +557,21 @@ La respuesta JSON SHALL tener exactamente la siguiente forma. Los `Decimal` se s
 - **WHEN** el filtro selecciona un departamento sin productos
 - **THEN** el reporte devuelve `departments: []`, `totals.productCount === 0` y `totals.priceCount === 0`
 
+#### Scenario: Producto con costo de adquisición
+
+- **WHEN** un producto tiene `acquisitionPrice` capturado
+- **THEN** el JSON incluye `"acquisitionPrice": "<valor con 4 decimales>"` en ese producto
+
+#### Scenario: Producto sin costo de adquisición
+
+- **WHEN** un producto no tiene `acquisitionPrice` capturado
+- **THEN** el JSON incluye `"acquisitionPrice": null`
+
 ---
 
 ### Requirement: Department price list report PDF and Excel artifacts
 
-Cuando `?format=pdf`, el sistema SHALL generar el PDF con `@react-pdf/renderer` que contenga al menos: header con título "Inventario por Departamento", `generatedAt` formateado y email del `generatedBy`; una sección por departamento con `departmentCode` + `departmentName`; por cada producto un grupo con código, nombre y unidad seguido de sus filas de precio (lista, precio, cantidad mínima, % descuento, default); subtotales por departamento y totales globales; footer con número de página (`Página X de Y`). Cuando `?format=xlsx`, el sistema SHALL devolver un workbook con una fila por precio y las columnas `Departamento | Código | Producto | Unidad | Lista | Precio | Cant. Mín | % Descto | Default`, más filas de subtotal por departamento y totales al final.
+Cuando `?format=pdf`, el sistema SHALL generar el PDF con `@react-pdf/renderer` que contenga al menos: header con título "Inventario por Departamento", `generatedAt` formateado y email del `generatedBy`; una sección por departamento con `departmentCode` + `departmentName`; por cada producto un grupo con código, nombre, unidad y costo de adquisición (formateado como moneda MXN, o "—" si es `null`) seguido de sus filas de precio (lista, precio formateado como moneda MXN, cantidad mínima, % descuento, default); subtotales por departamento y totales globales; footer con número de página (`Página X de Y`). Cuando `?format=xlsx`, el sistema SHALL devolver un workbook con una fila por precio y las columnas `Departamento | Código | Producto | Unidad | Costo Adq. | Lista | Precio | Cant. Mín | % Descto | Default`, más filas de subtotal por departamento y totales al final. En ambos formatos, dentro de cada departamento las columnas/filas de nivel de precio SHALL ordenarse: primero el/los nombre(s) de precio marcados `isDefault=true` en los datos, luego el resto por orden alfabético `es-MX`.
 
 #### Scenario: PDF con metadatos correctos
 
@@ -565,3 +582,47 @@ Cuando `?format=pdf`, el sistema SHALL generar el PDF con `@react-pdf/renderer` 
 
 - **WHEN** se solicita `?format=xlsx` con datos
 - **THEN** la hoja contiene una fila por precio (columnas de producto repetidas), filas de subtotal por departamento y filas de totales al final
+
+#### Scenario: Costo de adquisición formateado como moneda en PDF
+
+- **WHEN** se solicita `?format=pdf` y un producto tiene `acquisitionPrice: "45.5000"`
+- **THEN** el PDF muestra `$45.50` (formato moneda MXN), no el string crudo `"45.5000"`
+
+#### Scenario: Costo de adquisición ausente en PDF/Excel
+
+- **WHEN** un producto tiene `acquisitionPrice: null`
+- **THEN** el PDF y el Excel muestran `"—"` en la columna de costo de adquisición
+
+#### Scenario: Orden de columnas de precio — default primero
+
+- **WHEN** un departamento tiene productos con precios nombrados `"10"`, `"15"`, `"4"` y `"Precio público"` (este último marcado `isDefault: true` en al menos una ocurrencia)
+- **THEN** las columnas/filas de precio se ordenan `Precio público, 10, 15, 4` — el precio default aparece primero, el resto en orden alfabético `es-MX`, no puramente alfabético
+
+### Requirement: Stock report XLSX artifact
+
+Cuando `?format=xlsx`, el sistema SHALL generar el workbook con `buildInventoryStockWorkbook` (paquete `xlsx`, `XLSX.utils.aoa_to_sheet` + `XLSX.write(..., { type: "buffer", bookType: "xlsx" })`) y devolverlo con `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment; filename="stock-YYYY-MM-DD.xlsx"` (misma fecha que usa la rama PDF). El workbook SHALL contener, agrupado por sucursal → departamento igual que el PDF: columnas Código, Producto, Unidad, Stock, Reservado, Disponible, Reorden, Estado; subtotales por departamento y por sucursal; totales globales al final.
+
+#### Scenario: XLSX con metadatos correctos
+
+- **WHEN** el endpoint devuelve `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+- **THEN** la response tiene ese `Content-Type` y `Content-Disposition` cuyo `filename` matchea `^stock-\d{4}-\d{2}-\d{2}\.xlsx$`
+
+#### Scenario: XLSX cuando el reporte está vacío
+
+- **WHEN** la consulta no devuelve sucursales (`branches: []`)
+- **THEN** el workbook se genera con encabezados y totales en cero, sin lanzar error; status `200`
+
+### Requirement: Payment history report XLSX artifact
+
+Cuando `?format=xlsx`, el sistema SHALL generar el workbook con `buildPaymentHistoryWorkbook` y devolverlo con `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment; filename="payments-YYYY-MM-DD.xlsx"`. El workbook SHALL contener una fila por abono con columnas Folio Recibo, Folio Venta, Cliente, Sucursal, Monto, Fecha, Estado, más un bloque de totales (`summary`: abonos completados, monto bruto, abonos cancelados, monto cancelado, monto neto) al final.
+
+#### Scenario: XLSX con metadatos correctos
+
+- **WHEN** el endpoint devuelve `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+- **THEN** la response tiene ese `Content-Type` y `Content-Disposition` cuyo `filename` matchea `^payments-\d{4}-\d{2}-\d{2}\.xlsx$`
+
+#### Scenario: XLSX cuando el reporte está vacío
+
+- **WHEN** `payments: []`
+- **THEN** el workbook se genera con encabezados y el bloque `summary` en cero, sin lanzar error; status `200`
+

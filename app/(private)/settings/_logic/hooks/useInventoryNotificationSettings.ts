@@ -1,0 +1,33 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { getInventoryNotificationSettings } from "../services/getInventoryNotificationSettings";
+import type { InventoryNotificationSettingsDto } from "../types/api";
+
+interface UseInventoryNotificationSettingsResult {
+  settings: InventoryNotificationSettingsDto | null;
+  isLoading: boolean;
+  error: Error | null;
+  refresh: () => void;
+}
+
+export function useInventoryNotificationSettings(): UseInventoryNotificationSettingsResult {
+  const [settings, setSettings] = useState<InventoryNotificationSettingsDto | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [version, setVersion] = useState(0);
+
+  const refresh = useCallback(() => setVersion((v) => v + 1), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    getInventoryNotificationSettings()
+      .then((data) => { if (!cancelled) { setSettings(data); setError(null); } })
+      .catch((err) => { if (!cancelled) setError(err as Error); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [version]);
+
+  return { settings, isLoading, error, refresh };
+}

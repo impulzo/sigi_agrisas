@@ -27,6 +27,7 @@ function toCustomer(row: PrismaCustomer): Customer {
     notes: row.notes,
     creditLimit: row.creditLimit ? Number(row.creditLimit) : null,
     currentBalance: Number(row.currentBalance),
+    initialBalance: Number(row.initialBalance),
     creditDays: row.creditDays,
     isActive: row.isActive,
     addressStreet: row.addressStreet,
@@ -95,7 +96,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
         data: {
           code: data.code,
           name: data.name,
-          rfc: data.rfc,
+          rfc: data.rfc ?? null,
           legalName: data.legalName ?? null,
           taxRegime: data.taxRegime ?? null,
           cfdiUse: data.cfdiUse ?? null,
@@ -106,6 +107,8 @@ export class PrismaCustomerRepository implements CustomerRepository {
           contactName: data.contactName ?? null,
           notes: data.notes ?? null,
           creditLimit: data.creditLimit ?? null,
+          initialBalance: data.initialBalance ?? 0,
+          currentBalance: data.initialBalance ?? 0,
           creditDays: data.creditDays ?? 30,
           isActive: data.isActive ?? true,
           addressStreet: data.addressStreet ?? null,
@@ -121,12 +124,18 @@ export class PrismaCustomerRepository implements CustomerRepository {
       return toCustomer(row);
     } catch (err) {
       if (isPrismaUniqueError(err, "code")) throw new CustomerCodeAlreadyInUseError(data.code);
-      if (isPrismaUniqueError(err, "rfc")) throw new CustomerRfcAlreadyInUseError(data.rfc);
+      if (isPrismaUniqueError(err, "rfc")) throw new CustomerRfcAlreadyInUseError(data.rfc ?? "");
       throw err;
     }
   }
 
   async update(id: string, data: UpdateCustomerData): Promise<Customer> {
+    let balanceDelta: number | null = null;
+    if (data.initialBalance !== undefined) {
+      const existing = await this.prisma.customer.findUnique({ where: { id }, select: { initialBalance: true } });
+      if (!existing) throw new CustomerNotFoundError(id);
+      balanceDelta = data.initialBalance - Number(existing.initialBalance);
+    }
     try {
       const row = await this.prisma.customer.update({
         where: { id },
@@ -143,6 +152,9 @@ export class PrismaCustomerRepository implements CustomerRepository {
           ...(data.contactName !== undefined ? { contactName: data.contactName } : {}),
           ...(data.notes !== undefined ? { notes: data.notes } : {}),
           ...(data.creditLimit !== undefined ? { creditLimit: data.creditLimit } : {}),
+          ...(data.initialBalance !== undefined
+            ? { initialBalance: data.initialBalance, currentBalance: { increment: balanceDelta as number } }
+            : {}),
           ...(data.creditDays !== undefined ? { creditDays: data.creditDays } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
           ...(data.addressStreet !== undefined ? { addressStreet: data.addressStreet } : {}),

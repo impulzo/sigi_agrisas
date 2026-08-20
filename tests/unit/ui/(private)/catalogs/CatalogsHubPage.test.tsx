@@ -11,7 +11,7 @@ import { useCurrentUser } from "../../../../../app/_hooks/useCurrentUser";
 import { CatalogsHubPage } from "../../../../../app/(private)/catalogs/_blocks/CatalogsHubPage";
 
 describe("CatalogsHubPage", () => {
-  it("renderiza las 8 tarjetas de catálogos incluyendo Productos, Tasas de Impuesto y Clientes", () => {
+  it("renderiza las 10 tarjetas de catálogos incluyendo Productos, Tasas de Impuesto, Clientes, Vehículos y Operadores", () => {
     (useCurrentUser as jest.Mock).mockReturnValue({
       can: jest.fn(() => true),
     });
@@ -23,6 +23,8 @@ describe("CatalogsHubPage", () => {
     expect(screen.getByText("Proveedores")).toBeInTheDocument();
     expect(screen.getByText("Productos")).toBeInTheDocument();
     expect(screen.getByText("Clientes")).toBeInTheDocument();
+    expect(screen.getByText("Vehículos")).toBeInTheDocument();
+    expect(screen.getByText("Operadores")).toBeInTheDocument();
   });
 
   it("la tarjeta de Proveedores aparece como 'Sin acceso' cuando falta providers:read", () => {
@@ -57,7 +59,7 @@ describe("CatalogsHubPage", () => {
       can: jest.fn(() => "loading" as const),
     });
     render(<CatalogsHubPage />);
-    expect(screen.getAllByRole("link", { name: /Abrir/i }).length).toBe(8);
+    expect(screen.getAllByRole("link", { name: /Abrir/i }).length).toBe(10);
     expect(screen.queryByText("Sin acceso")).not.toBeInTheDocument();
   });
 
@@ -75,6 +77,8 @@ describe("CatalogsHubPage", () => {
     expect(hrefs).toContain("/catalogs/providers");
     expect(hrefs).toContain("/catalogs/products");
     expect(hrefs).toContain("/catalogs/customers");
+    expect(hrefs).toContain("/catalogs/vehicles");
+    expect(hrefs).toContain("/catalogs/drivers");
   });
 
   it("tarjeta Productos muestra 'Sin acceso' cuando products:read es false", () => {

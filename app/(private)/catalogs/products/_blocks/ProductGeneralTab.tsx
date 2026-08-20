@@ -37,6 +37,18 @@ function parseTaxInput(val: string): number | null {
   return isNaN(n) ? null : n;
 }
 
+function priceToDisplay(price: number | null): string {
+  if (price === null) return "";
+  return String(price);
+}
+
+function parsePriceInput(val: string): number | null {
+  const t = val.trim();
+  if (!t) return null;
+  const n = parseFloat(t);
+  return isNaN(n) ? null : n;
+}
+
 export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }: ProductGeneralTabProps) {
   const [name, setName] = useState(product.name);
   const [unit, setUnit] = useState(product.unit);
@@ -45,6 +57,8 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
   const [satProductCode, setSatProductCode] = useState(product.satProductCode ?? "");
   const [ivaRate, setIvaRate] = useState(taxRateToDisplay(product.ivaRate));
   const [iepsRate, setIepsRate] = useState(taxRateToDisplay(product.iepsRate));
+  const [manufactureDate, setManufactureDate] = useState(product.manufactureDate ?? "");
+  const [acquisitionPrice, setAcquisitionPrice] = useState(priceToDisplay(product.acquisitionPrice));
   const [isTaxable, setIsTaxable] = useState(product.isTaxable);
   const [isActive, setIsActive] = useState(product.isActive);
   const [imageUrl, setImageUrl] = useState<string | null>(product.imageUrl ?? null);
@@ -70,10 +84,14 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
     if (parsedIva !== product.ivaRate) diff.ivaRate = parsedIva;
     const parsedIeps = parseTaxInput(iepsRate);
     if (parsedIeps !== product.iepsRate) diff.iepsRate = parsedIeps;
+    const parsedManufactureDate = manufactureDate.trim() === "" ? null : manufactureDate.trim();
+    if (parsedManufactureDate !== product.manufactureDate) diff.manufactureDate = parsedManufactureDate;
+    const parsedAcquisitionPrice = parsePriceInput(acquisitionPrice);
+    if (parsedAcquisitionPrice !== product.acquisitionPrice) diff.acquisitionPrice = parsedAcquisitionPrice;
     if (isTaxable !== product.isTaxable) diff.isTaxable = isTaxable;
     if (isActive !== product.isActive) diff.isActive = isActive;
     return diff;
-  }, [product, name, unit, departmentId, taxRateId, satProductCode, ivaRate, iepsRate, isTaxable, isActive]);
+  }, [product, name, unit, departmentId, taxRateId, satProductCode, ivaRate, iepsRate, manufactureDate, acquisitionPrice, isTaxable, isActive]);
 
   const isDiffEmpty = Object.keys(buildDiff()).length === 0;
 
@@ -158,6 +176,18 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
       </div>
 
       <div>
+        <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="product-manufacture-date">Fecha de elaboración</label>
+        <input
+          type="date"
+          id="product-manufacture-date"
+          value={manufactureDate}
+          onChange={(e) => setManufactureDate(e.target.value)}
+          disabled={!canWrite}
+          className={fieldClass}
+        />
+      </div>
+
+      <div>
         <label className="block text-label-lg text-on-surface-variant mb-1">Imagen del producto</label>
         <ImageUploadField
           currentUrl={imageUrl}
@@ -168,6 +198,22 @@ export function ProductGeneralTab({ product, canWrite, deptOptions, onUpdated }:
           uploadFn={uploadProductImage}
           deleteFn={deleteProductImage}
         />
+      </div>
+
+      <div>
+        <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="product-acquisition-price">Precio de adquisición</label>
+        <input
+          type="number"
+          id="product-acquisition-price"
+          value={acquisitionPrice}
+          onChange={(e) => setAcquisitionPrice(e.target.value)}
+          disabled={!canWrite}
+          min={0}
+          step="any"
+          placeholder="Ej. 45.50"
+          className={fieldClass}
+        />
+        {validationErrors.acquisitionPrice && <p className="text-label-sm text-error mt-1">{validationErrors.acquisitionPrice}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

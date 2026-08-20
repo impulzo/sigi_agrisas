@@ -140,6 +140,16 @@ describe("GetAccountStatementLedgerUseCase", () => {
     expect(dto.closingBalance).toBe("250.0000");
   });
 
+  it("openingBalance parte de initialBalance del cliente, no de 0", async () => {
+    const uc = new GetAccountStatementLedgerUseCase(
+      repoWith([cust({ initialBalance: 500, currentBalance: 750 })], movements)
+    );
+    const dto = await uc.execute({ customerId: CUST, ...LEDGER_BASE, generatedBy: GEN });
+    // openingBalance = initialBalance (500); closingBalance = 500 + 200 + 100 - 50 = 750 = currentBalance
+    expect(dto.openingBalance).toBe("500.0000");
+    expect(dto.closingBalance).toBe("750.0000");
+  });
+
   it("sort=invoice reordena sin alterar runningBalance", async () => {
     const uc = new GetAccountStatementLedgerUseCase(repoWith([cust()], movements));
     const byDate = await uc.execute({ customerId: CUST, ...LEDGER_BASE, generatedBy: GEN });

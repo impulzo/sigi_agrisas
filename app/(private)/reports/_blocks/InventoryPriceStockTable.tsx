@@ -15,16 +15,29 @@ function money(v: string): string {
   return MX.format(Number(v));
 }
 
-function priceColumnNames(departments: DepartmentPriceListDepartmentDto[]): string[] {
-  const names = new Set<string>();
+/**
+ * Nombres únicos de lista de precio entre los departamentos dados.
+ * Orden: el/los nombre(s) marcados `isDefault` en los datos van primero;
+ * el resto se ordena alfabéticamente (es-MX). Copia local del algoritmo de
+ * `src/modules/reports/domain/services/priceColumnNames.ts` (backend) — el
+ * cliente no puede importar de `src/modules/*`.
+ */
+export function priceColumnNames(departments: DepartmentPriceListDepartmentDto[]): string[] {
+  const isDefaultByName = new Map<string, boolean>();
   for (const dept of departments) {
     for (const product of dept.products) {
       for (const price of product.prices) {
-        names.add(price.name);
+        const current = isDefaultByName.get(price.name) ?? false;
+        isDefaultByName.set(price.name, current || price.isDefault);
       }
     }
   }
-  return Array.from(names).sort((a, b) => a.localeCompare(b, "es-MX"));
+  return Array.from(isDefaultByName.keys()).sort((a, b) => {
+    const aDefault = isDefaultByName.get(a) ?? false;
+    const bDefault = isDefaultByName.get(b) ?? false;
+    if (aDefault !== bDefault) return aDefault ? -1 : 1;
+    return a.localeCompare(b, "es-MX");
+  });
 }
 
 function ProductRow({
@@ -40,6 +53,7 @@ function ProductRow({
       <Td>{product.name}</Td>
       <Td className="text-on-surface-variant">{product.unitDescription ?? product.unit}</Td>
       <Td align="right">{product.stockQuantity}</Td>
+      <Td align="right">{product.acquisitionPrice ? money(product.acquisitionPrice) : "—"}</Td>
       {priceColumns.map((name) => {
         const price = product.prices.find((p) => p.name === name);
         return (
@@ -76,6 +90,7 @@ export function InventoryPriceStockTable({
                   <Th>Producto</Th>
                   <Th>Unidad</Th>
                   <Th align="right">Stock</Th>
+                  <Th align="right">Costo adq.</Th>
                   {priceColumns.map((name) => (
                     <Th key={name} align="right">
                       {name}

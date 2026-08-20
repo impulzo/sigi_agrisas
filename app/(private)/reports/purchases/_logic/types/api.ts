@@ -7,6 +7,7 @@ export interface PurchasesReportRowDto {
   taxTotal: string;
   total: string;
   paidAmount: string;
+  balance: string;
   paymentStatus: string;
   status: string;
   purchasedAt: string;
@@ -35,6 +36,8 @@ export interface ProviderPaymentsReportRowDto {
   amount: string;
   status: string;
   paidAt: string;
+  providerInitialBalance: string | null;
+  providerCurrentBalance: string | null;
 }
 
 export interface ProviderPaymentsReportDto {

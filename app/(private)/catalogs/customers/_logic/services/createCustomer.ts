@@ -11,7 +11,7 @@ export async function createCustomer(
   const normalized: CreateCustomerBody = {
     ...body,
     code: body.code.trim().toUpperCase(),
-    rfc: body.rfc.trim().toUpperCase(),
+    rfc: body.rfc ? body.rfc.trim().toUpperCase() : body.rfc,
   };
 
   let res: Response;

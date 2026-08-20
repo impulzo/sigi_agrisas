@@ -7,6 +7,8 @@ export interface ProviderPaymentsReportRowDto {
   amount: string;
   status: string;
   paidAt: string;
+  providerInitialBalance: string | null;
+  providerCurrentBalance: string | null;
 }
 
 export interface ProviderPaymentsReportResponseDto {

@@ -24,6 +24,15 @@ function normalizeOptional(value: string): string | null {
   return trimmed.length === 0 ? null : trimmed;
 }
 
+function normalizeOptionalNumber(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  const parsed = Number(trimmed);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+const DEFAULT_CREDIT_DAYS = 30;
+
 export function ProviderEditModal({
   open,
   mode,
@@ -49,6 +58,9 @@ export function ProviderEditModal({
   const [address, setAddress] = useState("");
   const [contactName, setContactName] = useState("");
   const [notes, setNotes] = useState("");
+  const [creditLimit, setCreditLimit] = useState("");
+  const [initialBalance, setInitialBalance] = useState("");
+  const [creditDays, setCreditDays] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
@@ -85,11 +97,14 @@ export function ProviderEditModal({
       setAddress("");
       setContactName("");
       setNotes("");
+      setCreditLimit("");
+      setInitialBalance("");
+      setCreditDays("");
       setIsActive(true);
     } else if (entity) {
       setCode(entity.code);
       setName(entity.name);
-      setRfc(entity.rfc);
+      setRfc(entity.rfc ?? "");
       setLegalName(entity.legalName ?? "");
       setTaxRegime(entity.taxRegime ?? "");
       setCfdiUse(entity.cfdiUse ?? "");
@@ -99,16 +114,20 @@ export function ProviderEditModal({
       setAddress(entity.address ?? "");
       setContactName(entity.contactName ?? "");
       setNotes(entity.notes ?? "");
+      setCreditLimit(entity.creditLimit !== null ? String(entity.creditLimit) : "");
+      setInitialBalance(String(entity.initialBalance));
+      setCreditDays(String(entity.creditDays));
       setIsActive(entity.isActive);
     }
     setValidationErrors({});
   }, [open, mode, entity]);
 
   function buildCreatePayload(): CreateProviderBody {
+    const trimmedCreditDays = creditDays.trim();
     return {
       code,
       name: name.trim(),
-      rfc,
+      rfc: normalizeOptional(rfc),
       legalName: normalizeOptional(legalName),
       taxRegime: normalizeOptional(taxRegime),
       cfdiUse: normalizeOptional(cfdiUse),
@@ -118,6 +137,9 @@ export function ProviderEditModal({
       address: normalizeOptional(address),
       contactName: normalizeOptional(contactName),
       notes: normalizeOptional(notes),
+      creditLimit: normalizeOptionalNumber(creditLimit),
+      ...(initialBalance.trim().length > 0 ? { initialBalance: Number(initialBalance.trim()) } : {}),
+      ...(trimmedCreditDays.length > 0 ? { creditDays: Number(trimmedCreditDays) } : {}),
       isActive,
     };
   }
@@ -126,7 +148,8 @@ export function ProviderEditModal({
     if (!entity) return {};
     const diff: UpdateProviderBody = {};
     if (name.trim() !== entity.name) diff.name = name.trim();
-    if (rfc !== entity.rfc) diff.rfc = rfc;
+    const rfcNorm = normalizeOptional(rfc);
+    if (rfcNorm !== entity.rfc) diff.rfc = rfcNorm;
     const ln = normalizeOptional(legalName);
     if (ln !== entity.legalName) diff.legalName = ln;
     const tr = normalizeOptional(taxRegime);
@@ -145,6 +168,14 @@ export function ProviderEditModal({
     if (cn !== entity.contactName) diff.contactName = cn;
     const nt = normalizeOptional(notes);
     if (nt !== entity.notes) diff.notes = nt;
+    const cl = normalizeOptionalNumber(creditLimit);
+    if (cl !== entity.creditLimit) diff.creditLimit = cl;
+    const trimmedInitialBalance = initialBalance.trim();
+    const ib = trimmedInitialBalance.length > 0 ? Number(trimmedInitialBalance) : entity.initialBalance;
+    if (ib !== entity.initialBalance) diff.initialBalance = ib;
+    const trimmedCreditDays = creditDays.trim();
+    const cd = trimmedCreditDays.length > 0 ? Number(trimmedCreditDays) : entity.creditDays;
+    if (cd !== entity.creditDays) diff.creditDays = cd;
     if (isActive !== entity.isActive) diff.isActive = isActive;
     return diff;
   }
@@ -275,7 +306,7 @@ export function ProviderEditModal({
 
           <div>
             <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="provider-rfc">
-              RFC <span className="text-error">*</span>
+              RFC
             </label>
             <input
               id="provider-rfc"
@@ -364,10 +395,10 @@ export function ProviderEditModal({
           </div>
         </section>
 
-        {/* Sección: Contacto */}
+        {/* Sección: Contacto y crédito */}
         <section className="space-y-4 pt-4 border-t border-outline-variant">
           <h3 className="text-title-sm font-medium text-on-surface-variant uppercase tracking-wide">
-            Contacto
+            Contacto y crédito
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -454,6 +485,65 @@ export function ProviderEditModal({
             />
             {validationErrors.notes && (
               <p className="text-label-sm text-error mt-1">{validationErrors.notes}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="provider-creditLimit">
+                Límite de crédito
+              </label>
+              <input
+                id="provider-creditLimit"
+                type="number"
+                min={0}
+                step="0.01"
+                value={creditLimit}
+                onChange={(e) => setCreditLimit(e.target.value)}
+                placeholder="Sin límite (opcional)"
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {validationErrors.creditLimit && (
+                <p className="text-label-sm text-error mt-1">{validationErrors.creditLimit}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="provider-creditDays">
+                Plazo de crédito (días)
+              </label>
+              <input
+                id="provider-creditDays"
+                type="number"
+                min={0}
+                step="1"
+                value={creditDays}
+                onChange={(e) => setCreditDays(e.target.value)}
+                placeholder={String(DEFAULT_CREDIT_DAYS)}
+                className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {validationErrors.creditDays && (
+                <p className="text-label-sm text-error mt-1">{validationErrors.creditDays}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="provider-initialBalance">
+              Saldo inicial (deuda inicial)
+            </label>
+            <input
+              id="provider-initialBalance"
+              type="number"
+              min={0}
+              step="0.01"
+              value={initialBalance}
+              onChange={(e) => setInitialBalance(e.target.value)}
+              placeholder="0.00"
+              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {validationErrors.initialBalance && (
+              <p className="text-label-sm text-error mt-1">{validationErrors.initialBalance}</p>
             )}
           </div>
         </section>

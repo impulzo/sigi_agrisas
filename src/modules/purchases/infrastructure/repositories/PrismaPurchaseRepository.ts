@@ -185,17 +185,20 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
 
       let providerId = data.providerId;
       if (data.newProvider) {
-        const created = await tx.provider.upsert({
-          where: { rfc: data.newProvider.rfc },
-          update: {},
-          create: {
-            code: `PROV_${data.newProvider.rfc}`,
-            name: data.newProvider.name,
-            rfc: data.newProvider.rfc,
-            legalName: data.newProvider.legalName ?? null,
-            taxRegime: data.newProvider.taxRegime ?? null,
-          },
-        });
+        // rfc ya no es @unique en Prisma (índice único parcial vía SQL crudo), así que
+        // no puede usarse como where de upsert — se resuelve con find-or-create manual.
+        const existingProvider = await tx.provider.findFirst({ where: { rfc: data.newProvider.rfc } });
+        const created =
+          existingProvider ??
+          (await tx.provider.create({
+            data: {
+              code: `PROV_${data.newProvider.rfc}`,
+              name: data.newProvider.name,
+              rfc: data.newProvider.rfc,
+              legalName: data.newProvider.legalName ?? null,
+              taxRegime: data.newProvider.taxRegime ?? null,
+            },
+          }));
         providerId = created.id;
       }
       if (!providerId) throw new ProviderNotFoundOrInactiveError();
@@ -229,6 +232,7 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
         iepsRate: number | null;
         lotNumber: string | null;
         expirationDate: Date | null;
+        manufactureDate: Date | null;
       }> = [];
 
       for (const item of data.items) {
@@ -258,6 +262,7 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
           iepsRate: product.isTaxable ? iepsRate : 0,
           lotNumber: item.lotNumber ?? null,
           expirationDate: item.expirationDate ?? null,
+          manufactureDate: item.manufactureDate ?? null,
         });
       }
 
@@ -283,6 +288,12 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
           folioNumber,
           sourceType: "purchase",
           sourceId: purchaseId,
+        });
+        // El costo de adquisición del producto se actualiza con el último costo comprado.
+        // Comportamiento intencional: cancel() no lo revierte (ver purchases-api spec).
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { acquisitionPrice: new Prisma.Decimal(item.unitCost) },
         });
       }
 
@@ -347,6 +358,7 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
             purchaseItemId: item.id,
             lotNumber: item.lotNumber as string,
             expirationDate: item.expirationDate as Date,
+            manufactureDate: item.manufactureDate ?? null,
             quantity: new Prisma.Decimal(item.quantity),
           })),
         });

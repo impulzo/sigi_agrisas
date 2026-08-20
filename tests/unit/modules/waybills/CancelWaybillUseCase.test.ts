@@ -1,6 +1,8 @@
 import { CreateWaybillUseCase } from "../../../../src/modules/waybills/application/use-cases/CreateWaybillUseCase";
 import { CancelWaybillUseCase } from "../../../../src/modules/waybills/application/use-cases/CancelWaybillUseCase";
 import { InMemoryWaybillRepository } from "../../../../src/modules/waybills/infrastructure/repositories/InMemoryWaybillRepository";
+import { InMemoryVehicleRepository } from "../../../../src/modules/vehicles/infrastructure/repositories/InMemoryVehicleRepository";
+import { InMemoryDriverRepository } from "../../../../src/modules/drivers/infrastructure/repositories/InMemoryDriverRepository";
 import {
   WaybillFacturamaGateway,
   StampTrasladoInput,
@@ -154,7 +156,7 @@ async function setupWithCompletedWaybill() {
   lookup.folio = { id: "folio-ts", isActive: true };
   repo.setStock(ORIGIN_ID, PRODUCT_ID, 50);
 
-  const createUseCase = new CreateWaybillUseCase(repo, gateway, lookup);
+  const createUseCase = new CreateWaybillUseCase(repo, gateway, lookup, new InMemoryVehicleRepository(), new InMemoryDriverRepository());
   const cancelUseCase = new CancelWaybillUseCase(repo, gateway);
   const waybill = await createUseCase.execute(request(), CREATOR_ID);
 
@@ -171,7 +173,7 @@ async function setupWithCompletedSimpleWaybill() {
   lookup.folio = { id: "folio-tri", isActive: true };
   repo.setStock(ORIGIN_ID, PRODUCT_ID, 50);
 
-  const createUseCase = new CreateWaybillUseCase(repo, gateway, lookup);
+  const createUseCase = new CreateWaybillUseCase(repo, gateway, lookup, new InMemoryVehicleRepository(), new InMemoryDriverRepository());
   const cancelUseCase = new CancelWaybillUseCase(repo, gateway);
   const waybill = await createUseCase.execute(simpleRequest(), CREATOR_ID);
 

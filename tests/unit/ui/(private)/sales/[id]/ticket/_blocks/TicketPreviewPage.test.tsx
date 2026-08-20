@@ -126,13 +126,15 @@ describe("TicketPreviewPage", () => {
     expect(screen.queryByText(/Orden:/i)).not.toBeInTheDocument();
   });
 
-  it("aumenta el tamaño del logo a 75x105px", async () => {
+  it("aumenta el tamaño del logo a 105x147px (+40%)", async () => {
     jest
       .mocked(getTicketSettings)
       .mockResolvedValueOnce({
         logoUrl: "https://x.test/logo.png",
         footerText: null,
         paperWidth: "80mm",
+        businessName: null,
+        businessRfc: null,
         businessAddress: null,
         businessPhone: null,
         businessTaxRegime: null,
@@ -143,10 +145,10 @@ describe("TicketPreviewPage", () => {
 
     await waitFor(() => {
       const previewLogo = Array.from(container.querySelectorAll('img[alt="Logo"]')).find((el) =>
-        el.className.includes("w-[75px]")
+        el.className.includes("w-[105px]")
       );
       expect(previewLogo).toBeDefined();
-      expect(previewLogo!.className).toContain("h-[105px]");
+      expect(previewLogo!.className).toContain("h-[147px]");
       expect(previewLogo!.className).toContain("object-contain");
       expect(previewLogo!.className).toContain("mb-[4.8px]");
     });
@@ -158,7 +160,7 @@ describe("TicketPreviewPage", () => {
 
     await waitFor(() => {
       const previewLogo = Array.from(container.querySelectorAll('img[alt="Logo"]')).find((el) =>
-        el.className.includes("w-[75px]")
+        el.className.includes("w-[105px]")
       );
       expect(previewLogo).toBeDefined();
       expect(previewLogo!.getAttribute("src")).toBe("/logo.png");
@@ -171,7 +173,7 @@ describe("TicketPreviewPage", () => {
 
     await waitFor(() => {
       const previewLogo = Array.from(container.querySelectorAll('img[alt="Logo"]')).find((el) =>
-        el.className.includes("w-[75px]")
+        el.className.includes("w-[105px]")
       );
       expect(previewLogo).toBeDefined();
     });
@@ -231,6 +233,48 @@ describe("TicketPreviewPage", () => {
 
     expect(screen.queryByText(/centro agrícola integral/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Encabezado")).not.toBeInTheDocument();
+  });
+
+  it("no renderiza ningún párrafo de footer cuando footerText es null (sin fallback hardcodeado)", async () => {
+    jest.mocked(getTicketSettings).mockResolvedValueOnce({
+      logoUrl: null,
+      footerText: null,
+      paperWidth: "80mm",
+      businessName: null,
+      businessRfc: null,
+      businessAddress: null,
+      businessPhone: null,
+      businessTaxRegime: null,
+      legendText: null,
+    });
+    mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.queryByText(/gracias por su compra/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/agricultura sana/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it("renderiza exactamente el footerText configurado cuando está presente", async () => {
+    jest.mocked(getTicketSettings).mockResolvedValueOnce({
+      logoUrl: null,
+      footerText: "Vuelva pronto",
+      paperWidth: "80mm",
+      businessName: null,
+      businessRfc: null,
+      businessAddress: null,
+      businessPhone: null,
+      businessTaxRegime: null,
+      legendText: null,
+    });
+    mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Vuelva pronto").length).toBeGreaterThanOrEqual(1);
+      expect(screen.queryByText(/gracias por su compra/i)).not.toBeInTheDocument();
+    });
   });
 
   it("muestra 'Total a pagar' como etiqueta del total de la venta", async () => {

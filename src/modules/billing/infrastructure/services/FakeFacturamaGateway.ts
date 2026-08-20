@@ -1,29 +1,131 @@
 import { randomUUID } from "crypto";
+import { createElement } from "react";
+import { renderToBuffer } from "@react-pdf/renderer";
 import {
   FacturamaGateway,
-  FacturамаStampInput,
+  FacturamaStampInput,
   FacturamaStampResult,
   FacturamaCancelResult,
   FacturamaDownloadResult,
   FacturamaCsdInput,
   FacturamaCsdStatus,
 } from "../../application/ports/FacturamaGateway";
+import { InvoiceDocumentPdf, InvoiceDocumentPdfData } from "../pdf/InvoiceDocumentPdf";
 
-// Minimal but structurally valid single-page PDF (correct xref/trailer/%%EOF) — must open in
-// real PDF viewers, not just decode; a merely well-formed-looking stub isn't enough.
-const FAKE_PDF_BASE64 =
-  "JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cgL1BhZ2VzIDIgMCBSID4+CmVuZG9iagoyIDAgb2JqCjw8IC9UeXBlIC9QYWdlcyAvS2lkcyBbMyAwIFJdIC9Db3VudCAxID4+CmVuZG9iagozIDAgb2JqCjw8IC9UeXBlIC9QYWdlIC9QYXJlbnQgMiAwIFIgL01lZGlhQm94IFswIDAgMzAwIDE1MF0gL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNCAwIFIgPj4gPj4gL0NvbnRlbnRzIDUgMCBSID4+CmVuZG9iago0IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKNSAwIG9iago8PCAvTGVuZ3RoIDU3ID4+CnN0cmVhbQpCVCAvRjEgMTQgVGYgMjAgMTAwIFRkIChDRkRJIGRlIHBydWViYSAtIG1vZG8gbW9jaykgVGogRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTkgMDAwMDAgbiAKMDAwMDAwMDA2OCAwMDAwMCBuIAowMDAwMDAwMTI1IDAwMDAwIG4gCjAwMDAwMDAyNTEgMDAwMDAgbiAKMDAwMDAwMDMyMSAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDYgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjQyOAolJUVPRg==";
-const FAKE_XML_BASE64 = Buffer.from(
-  '<?xml version="1.0" encoding="UTF-8"?><cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Version="4.0" NoCertificado="FAKE"/>'
-).toString("base64");
+const MOCK_WATERMARK = "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL";
+
+const FALLBACK_INVOICE_DATA: InvoiceDocumentPdfData = {
+  issuer: { name: "Agrisas", rfc: "AGR010101AB1" },
+  receiver: {
+    rfc: "XAXX010101000",
+    name: "Cliente de prueba",
+    cfdiUse: "G03",
+    fiscalRegime: "601",
+    taxZipCode: "00000",
+  },
+  lines: [
+    {
+      description: "Concepto de prueba",
+      productCode: "MOCK-001",
+      satProductCode: "01010101",
+      quantity: 1,
+      unitPrice: 100,
+      discountPct: 0,
+      ivaRate: 0.16,
+      iepsRate: 0,
+      lineSubtotal: 100,
+      lineTotal: 116,
+    },
+  ],
+  paymentForm: "01",
+  paymentMethod: "PUE",
+  subtotal: 100,
+  taxTotal: 16,
+  total: 116,
+  currency: "MXN",
+};
+
+function toInvoiceDocumentPdfData(input: FacturamaStampInput, uuid: string): InvoiceDocumentPdfData {
+  return {
+    issuer: { name: "Agrisas (mock)", rfc: "AGR010101AB1" },
+    receiver: {
+      rfc: input.receiver.rfc,
+      name: input.receiver.name,
+      cfdiUse: input.receiver.cfdiUse,
+      fiscalRegime: input.receiver.fiscalRegime,
+      taxZipCode: input.receiver.taxZipCode,
+    },
+    lines: input.items.map((item) => {
+      const ivaRate = item.taxes.find((t) => t.type === "IVA")?.rate ?? 0;
+      const iepsRate = item.taxes.find((t) => t.type === "IEPS")?.rate ?? 0;
+      const grossAmount = item.quantity * item.unitPrice;
+      const discountPct = item.discount && grossAmount > 0 ? (item.discount / grossAmount) * 100 : 0;
+      return {
+        description: item.description,
+        productCode: item.identificationNumber ?? item.productCode,
+        satProductCode: item.productCode,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discountPct,
+        ivaRate,
+        iepsRate,
+        lineSubtotal: item.subtotal,
+        lineTotal: item.total,
+      };
+    }),
+    paymentForm: input.paymentForm,
+    paymentMethod: input.paymentMethod,
+    subtotal: input.items.reduce((sum, i) => sum + i.subtotal, 0),
+    taxTotal: input.items.reduce((sum, i) => sum + i.taxes.reduce((s, t) => s + t.total, 0), 0),
+    total: input.items.reduce((sum, i) => sum + i.total, 0),
+    currency: input.currency,
+    uuid,
+  };
+}
+
+function escapeXml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function buildFakeXml(input: FacturamaStampInput | null, uuid: string): string {
+  if (!input) {
+    return (
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+      `<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Version="4.0" NoCertificado="FAKE">` +
+      `<!-- DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL --><cfdi:Complemento><tfd:TimbreFiscalDigital UUID="${uuid}"/></cfdi:Complemento>` +
+      `</cfdi:Comprobante>`
+    );
+  }
+  const conceptos = input.items
+    .map(
+      (item) =>
+        `<cfdi:Concepto ClaveProdServ="${escapeXml(item.productCode)}" Descripcion="${escapeXml(item.description)}" ` +
+        `Cantidad="${item.quantity}" ValorUnitario="${item.unitPrice}" Importe="${item.subtotal}"/>`
+    )
+    .join("");
+  return (
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Version="4.0" NoCertificado="FAKE" ` +
+    `Moneda="${escapeXml(input.currency)}" FormaPago="${escapeXml(input.paymentForm)}" MetodoPago="${escapeXml(input.paymentMethod)}">` +
+    `<!-- DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL -->` +
+    `<cfdi:Receptor Rfc="${escapeXml(input.receiver.rfc)}" Nombre="${escapeXml(input.receiver.name)}" ` +
+    `UsoCFDI="${escapeXml(input.receiver.cfdiUse)}" RegimenFiscalReceptor="${escapeXml(input.receiver.fiscalRegime)}" ` +
+    `DomicilioFiscalReceptor="${escapeXml(input.receiver.taxZipCode)}"/>` +
+    `<cfdi:Conceptos>${conceptos}</cfdi:Conceptos>` +
+    `<cfdi:Complemento><tfd:TimbreFiscalDigital UUID="${uuid}"/></cfdi:Complemento>` +
+    `</cfdi:Comprobante>`
+  );
+}
 
 export class FakeFacturamaGateway implements FacturamaGateway {
   private cancelledIds = new Set<string>();
+  private stampedInputs = new Map<string, { input: FacturamaStampInput; uuid: string }>();
 
   // Each call returns a fresh random UUID — unique per stamp, not identical across calls.
-  async stamp(_input: FacturамаStampInput): Promise<FacturamaStampResult> {
+  async stamp(input: FacturamaStampInput): Promise<FacturamaStampResult> {
     const cfdiId = randomUUID();
     const uuid = randomUUID().toUpperCase();
+    this.stampedInputs.set(cfdiId, { input, uuid });
     return {
       cfdiId,
       uuid,
@@ -37,11 +139,20 @@ export class FakeFacturamaGateway implements FacturamaGateway {
     return { success: true };
   }
 
-  async download(format: "pdf" | "xml", _cfdiId: string): Promise<FacturamaDownloadResult> {
-    return {
-      contentBase64: format === "pdf" ? FAKE_PDF_BASE64 : FAKE_XML_BASE64,
-      contentType: format === "pdf" ? "application/pdf" : "application/xml",
-    };
+  async download(format: "pdf" | "xml", cfdiId: string): Promise<FacturamaDownloadResult> {
+    const stored = this.stampedInputs.get(cfdiId);
+    const uuid = stored?.uuid ?? randomUUID().toUpperCase();
+
+    if (format === "xml") {
+      const xml = buildFakeXml(stored?.input ?? null, uuid);
+      return { contentBase64: Buffer.from(xml).toString("base64"), contentType: "application/xml" };
+    }
+
+    const data = stored ? toInvoiceDocumentPdfData(stored.input, uuid) : { ...FALLBACK_INVOICE_DATA, uuid };
+    const buffer = await renderToBuffer(
+      createElement(InvoiceDocumentPdf, { data, watermark: MOCK_WATERMARK, folioLabel: uuid }) as never
+    );
+    return { contentBase64: buffer.toString("base64"), contentType: "application/pdf" };
   }
 
   async uploadCsd(_input: FacturamaCsdInput): Promise<FacturamaCsdStatus> {

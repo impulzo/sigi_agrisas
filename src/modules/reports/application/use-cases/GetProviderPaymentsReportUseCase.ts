@@ -32,6 +32,8 @@ function toRowDto(row: ProviderPaymentsReportRow): ProviderPaymentsReportRowDto 
     amount: money(row.amount),
     status: row.status,
     paidAt: row.paidAt.toISOString(),
+    providerInitialBalance: row.providerInitialBalance === null ? null : money(row.providerInitialBalance),
+    providerCurrentBalance: row.providerCurrentBalance === null ? null : money(row.providerCurrentBalance),
   };
 }
 

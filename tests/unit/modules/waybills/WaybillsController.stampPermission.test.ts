@@ -17,6 +17,8 @@ import { ListWaybillsUseCase } from "@/modules/waybills/application/use-cases/Li
 import { GetWaybillUseCase } from "@/modules/waybills/application/use-cases/GetWaybillUseCase";
 import { DownloadWaybillFileUseCase } from "@/modules/waybills/application/use-cases/DownloadWaybillFileUseCase";
 import { InMemoryWaybillRepository } from "@/modules/waybills/infrastructure/repositories/InMemoryWaybillRepository";
+import { InMemoryVehicleRepository } from "@/modules/vehicles/infrastructure/repositories/InMemoryVehicleRepository";
+import { InMemoryDriverRepository } from "@/modules/drivers/infrastructure/repositories/InMemoryDriverRepository";
 import {
   WaybillFacturamaGateway,
   StampTrasladoInput,
@@ -138,7 +140,7 @@ function buildController(granted: string[]) {
   const repo = new InMemoryWaybillRepository();
   repo.setStock(ORIGIN_BRANCH, PRODUCT_ID, 100);
   const controller = new WaybillsController(
-    new CreateWaybillUseCase(repo, new FakeGateway(), new FakeLookupService()),
+    new CreateWaybillUseCase(repo, new FakeGateway(), new FakeLookupService(), new InMemoryVehicleRepository(), new InMemoryDriverRepository()),
     new CancelWaybillUseCase(repo, new FakeGateway()),
     new ListWaybillsUseCase(repo),
     new GetWaybillUseCase(repo),

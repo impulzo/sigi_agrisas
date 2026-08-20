@@ -144,3 +144,28 @@ export class CustomerAddressIncompleteError extends Error {
     this.missingFields = missingFields;
   }
 }
+
+export class VehicleNotFoundForWaybillError extends Error {
+  readonly vehicleId: string;
+  constructor(vehicleId: string) {
+    super(`Vehicle not found: ${vehicleId}`);
+    this.name = "VehicleNotFoundForWaybillError";
+    this.vehicleId = vehicleId;
+  }
+}
+
+export class DriverNotFoundForWaybillError extends Error {
+  readonly driverId: string;
+  constructor(driverId: string) {
+    super(`Driver not found: ${driverId}`);
+    this.name = "DriverNotFoundForWaybillError";
+    this.driverId = driverId;
+  }
+}
+
+export class EmitterFiscalDataIncompleteError extends Error {
+  constructor() {
+    super("Emitter fiscal data (RFC, legal name, fiscal regime, zip code) is incomplete");
+    this.name = "EmitterFiscalDataIncompleteError";
+  }
+}

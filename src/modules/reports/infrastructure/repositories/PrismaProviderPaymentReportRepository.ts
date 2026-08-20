@@ -42,7 +42,7 @@ export class PrismaProviderPaymentReportRepository implements ProviderPaymentRep
         where,
         include: {
           purchase: { select: { folioCode: true } },
-          provider: { select: { name: true } },
+          provider: { select: { name: true, initialBalance: true, currentBalance: true } },
           branch: { select: { name: true } },
         },
         orderBy: { paidAt: "desc" },
@@ -61,6 +61,8 @@ export class PrismaProviderPaymentReportRepository implements ProviderPaymentRep
       amount: Number(r.amount),
       status: r.status,
       paidAt: r.paidAt,
+      providerInitialBalance: r.provider ? Number(r.provider.initialBalance) : null,
+      providerCurrentBalance: r.provider ? Number(r.provider.currentBalance) : null,
     }));
 
     return { items, total };

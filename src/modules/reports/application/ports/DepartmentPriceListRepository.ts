@@ -18,6 +18,7 @@ export interface RawPriceListRow {
   stockQuantity: Decimal;
   ivaRate: Decimal | null;
   iepsRate: Decimal | null;
+  acquisitionPrice: Decimal | null;
   priceId: string | null;
   priceName: string | null;
   price: Decimal | null;

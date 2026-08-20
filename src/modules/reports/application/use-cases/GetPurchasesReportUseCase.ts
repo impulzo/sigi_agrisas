@@ -32,6 +32,7 @@ function toRowDto(row: PurchaseSummary): PurchasesReportRowDto {
     taxTotal: money(row.purchase.taxTotal),
     total: money(row.purchase.total),
     paidAmount: money(row.purchase.paidAmount),
+    balance: money(row.purchase.total - row.purchase.paidAmount),
     paymentStatus: row.purchase.paymentStatus,
     status: row.purchase.status,
     purchasedAt: row.purchase.purchasedAt.toISOString(),

@@ -36,7 +36,7 @@ type PrismaReturnWithJoins = {
   updatedAt: Date;
   sale: { folioCode: string; folioNumber: number } | null;
   branch: { name: string } | null;
-  customer: { name: string; rfc: string } | null;
+  customer: { name: string; rfc: string | null } | null;
   creator: { name: string | null; email: string } | null;
   items: Array<{
     id: string;
@@ -123,7 +123,7 @@ function toReturnItem(item: PrismaReturnWithJoins["items"][0]): ReturnItem {
 function toJoined(row: {
   sale: { folioCode: string; folioNumber: number } | null;
   branch: { name: string } | null;
-  customer: { name: string; rfc: string } | null;
+  customer: { name: string; rfc: string | null } | null;
   creator: { name: string | null; email: string } | null;
 }): ReturnJoinedFields {
   return {

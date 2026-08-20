@@ -18,6 +18,9 @@ interface UseCsdManagerResult {
     cerFile: File;
     keyFile: File;
     password: string;
+    legalName?: string;
+    fiscalRegime?: string;
+    zipCode?: string;
   }) => Promise<CsdStatusDto | null>;
 }
 
@@ -54,8 +57,9 @@ export function useCsdManager(): UseCsdManagerResult {
   const refreshStatus = useCallback(() => setTick((t) => t + 1), []);
   const clearUploadError = useCallback(() => setUploadError(null), []);
 
-  const upload = useCallback(async ({ rfc, cerFile, keyFile, password }: {
+  const upload = useCallback(async ({ rfc, cerFile, keyFile, password, legalName, fiscalRegime, zipCode }: {
     rfc: string; cerFile: File; keyFile: File; password: string;
+    legalName?: string; fiscalRegime?: string; zipCode?: string;
   }): Promise<CsdStatusDto | null> => {
     setIsUploading(true);
     setUploadError(null);
@@ -65,7 +69,15 @@ export function useCsdManager(): UseCsdManagerResult {
         fileToBase64(cerFile),
         fileToBase64(keyFile),
       ]);
-      const result = await uploadCsd({ rfc, certificateBase64, privateKeyBase64, privateKeyPassword: password });
+      const result = await uploadCsd({
+        rfc,
+        certificateBase64,
+        privateKeyBase64,
+        privateKeyPassword: password,
+        legalName,
+        fiscalRegime,
+        zipCode,
+      });
       setUploadSuccess(true);
       setTick((t) => t + 1);
       return result;

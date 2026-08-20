@@ -24,6 +24,7 @@ export function SummaryTable({ rows, onRowClick }: Props) {
           <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
             <th className="px-4 py-3 text-left font-medium">Código</th>
             <th className="px-4 py-3 text-left font-medium">Cliente</th>
+            <th className="px-4 py-3 text-right font-medium">Saldo inicial</th>
             <th className="px-4 py-3 text-right font-medium">Cargado</th>
             <th className="px-4 py-3 text-right font-medium">Abonado</th>
             <th className="px-4 py-3 text-right font-medium">Saldo</th>
@@ -40,6 +41,7 @@ export function SummaryTable({ rows, onRowClick }: Props) {
             >
               <td className="px-4 py-3 font-mono text-on-surface-variant">{r.customerCode}</td>
               <td className="px-4 py-3 max-w-[220px] truncate">{r.customerName}</td>
+              <td className="px-4 py-3 text-right tabular-nums text-on-surface-variant">{money(r.initialBalance)}</td>
               <td className="px-4 py-3 text-right tabular-nums text-on-surface-variant">{money(r.totalCharged)}</td>
               <td className="px-4 py-3 text-right tabular-nums text-on-surface-variant">{money(r.totalPaid)}</td>
               <td className="px-4 py-3 text-right tabular-nums font-medium">{money(r.currentBalance)}</td>

@@ -40,6 +40,7 @@ export interface CreatePurchaseItemInput {
   discountPct: number | null;
   lotNumber?: string | null;
   expirationDate?: Date | null;
+  manufactureDate?: Date | null;
 }
 
 export interface NewProviderInput {

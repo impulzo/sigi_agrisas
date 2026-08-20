@@ -32,6 +32,8 @@ export interface WaybillProps {
   notes: string | null;
   originAddress: WaybillAddressSnapshot | null;
   destinationAddress: WaybillAddressSnapshot | null;
+  vehicleId: string | null;
+  driverId: string | null;
   vehiclePlate: string | null;
   vehicleConfig: string | null;
   vehiclePermitType: string | null;
@@ -73,6 +75,8 @@ export class Waybill {
   readonly notes!: string | null;
   readonly originAddress!: WaybillAddressSnapshot | null;
   readonly destinationAddress!: WaybillAddressSnapshot | null;
+  readonly vehicleId!: string | null;
+  readonly driverId!: string | null;
   readonly vehiclePlate!: string | null;
   readonly vehicleConfig!: string | null;
   readonly vehiclePermitType!: string | null;

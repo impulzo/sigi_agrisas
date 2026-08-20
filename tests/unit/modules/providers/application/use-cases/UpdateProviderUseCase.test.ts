@@ -56,4 +56,20 @@ describe("UpdateProviderUseCase", () => {
     const reactivated = await updateUseCase.execute(created.id, { isActive: true });
     expect(reactivated.isActive).toBe(true);
   });
+
+  it("adjusts currentBalance by delta on initialBalance update, without resetting it", async () => {
+    const created = await createUseCase.execute({
+      code: "PROV001",
+      name: "Original",
+      rfc: "XAXX010101000",
+      initialBalance: 1000,
+    });
+    // Simulate currentBalance having diverged from initialBalance (e.g. a payment of 300).
+    (repo as unknown as { store: { currentBalance: number }[] }).store[0].currentBalance = 700;
+
+    const updated = await updateUseCase.execute(created.id, { initialBalance: 1300 });
+    expect(updated.initialBalance).toBe(1300);
+    // delta = 1300 - 1000 = 300 → currentBalance = 700 + 300 = 1000 (not reset to 1300)
+    expect(updated.currentBalance).toBe(1000);
+  });
 });

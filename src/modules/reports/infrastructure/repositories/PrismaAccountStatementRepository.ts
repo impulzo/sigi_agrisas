@@ -50,7 +50,7 @@ export class PrismaAccountStatementRepository implements AccountStatementReposit
 
     const customers = await this.prisma.customer.findMany({
       where: customerWhere,
-      select: { id: true, code: true, name: true, currentBalance: true, creditLimit: true },
+      select: { id: true, code: true, name: true, currentBalance: true, initialBalance: true, creditLimit: true },
       orderBy: { name: "asc" },
       skip: (pagination.page - 1) * pagination.pageSize,
       take: pagination.pageSize,
@@ -104,6 +104,7 @@ export class PrismaAccountStatementRepository implements AccountStatementReposit
         totalCharged: chargedByCustomer.get(c.id) ?? 0,
         totalPaid: paidByCustomer.get(c.id) ?? 0,
         currentBalance: Number(c.currentBalance),
+        initialBalance: Number(c.initialBalance),
         creditLimit: c.creditLimit === null ? null : Number(c.creditLimit),
       })),
       total,
@@ -123,6 +124,7 @@ export class PrismaAccountStatementRepository implements AccountStatementReposit
         code: true,
         name: true,
         currentBalance: true,
+        initialBalance: true,
         creditLimit: true,
         address: true,
       },
@@ -211,6 +213,7 @@ export class PrismaAccountStatementRepository implements AccountStatementReposit
         code: customer.code,
         name: customer.name,
         currentBalance: Number(customer.currentBalance),
+        initialBalance: Number(customer.initialBalance),
         creditLimit: customer.creditLimit === null ? null : Number(customer.creditLimit),
         address: customer.address,
       },

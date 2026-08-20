@@ -15,6 +15,8 @@ export interface AccountSummaryRow {
   totalPaid: number;
   /** Saldo vigente leído de `customers.current_balance` (fuente de verdad). */
   currentBalance: number;
+  /** Deuda inicial capturada al migrar el cliente (`customers.initial_balance`). */
+  initialBalance: number;
   creditLimit: number | null;
 }
 
@@ -32,6 +34,7 @@ export interface AccountLedgerData {
     code: string;
     name: string;
     currentBalance: number;
+    initialBalance: number;
     creditLimit: number | null;
     address: string | null;
   };

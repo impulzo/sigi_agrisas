@@ -15,6 +15,7 @@ export interface InMemoryStatementCustomer {
   code: string;
   name: string;
   currentBalance: number;
+  initialBalance?: number;
   creditLimit: number | null;
   address?: string | null;
 }
@@ -90,6 +91,7 @@ export class InMemoryAccountStatementRepository implements AccountStatementRepos
         totalCharged,
         totalPaid,
         currentBalance: c.currentBalance,
+        initialBalance: c.initialBalance ?? 0,
         creditLimit: c.creditLimit,
       };
     });
@@ -127,6 +129,7 @@ export class InMemoryAccountStatementRepository implements AccountStatementRepos
         code: customer.code,
         name: customer.name,
         currentBalance: customer.currentBalance,
+        initialBalance: customer.initialBalance ?? 0,
         creditLimit: customer.creditLimit,
         address: customer.address ?? null,
       },

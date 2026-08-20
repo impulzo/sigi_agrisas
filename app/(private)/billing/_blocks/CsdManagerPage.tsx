@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useCsdManager } from "../_logic/hooks/useCsdManager";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
@@ -14,8 +14,19 @@ export function CsdManagerPage() {
 
   const [rfc, setRfc] = useState("");
   const [password, setPassword] = useState("");
+  const [legalName, setLegalName] = useState("");
+  const [fiscalRegime, setFiscalRegime] = useState("");
+  const [zipCode, setZipCode] = useState("");
   const cerRef = useRef<HTMLInputElement>(null);
   const keyRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!status) return;
+    setRfc((current) => current || status.rfc || "");
+    setLegalName((current) => current || status.legalName || "");
+    setFiscalRegime((current) => current || status.fiscalRegime || "");
+    setZipCode((current) => current || status.zipCode || "");
+  }, [status]);
 
   if (canManage === "loading") {
     return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
@@ -32,7 +43,15 @@ export function CsdManagerPage() {
     if (!rfc.trim() || !cerFile || !keyFile || !password) {
       return;
     }
-    await upload({ rfc: rfc.trim(), cerFile, keyFile, password });
+    await upload({
+      rfc: rfc.trim(),
+      cerFile,
+      keyFile,
+      password,
+      legalName: legalName.trim() || undefined,
+      fiscalRegime: fiscalRegime.trim() || undefined,
+      zipCode: zipCode.trim() || undefined,
+    });
     setPassword("");
     if (cerRef.current) cerRef.current.value = "";
     if (keyRef.current) keyRef.current.value = "";
@@ -55,6 +74,9 @@ export function CsdManagerPage() {
         ) : status ? (
           <dl className="grid grid-cols-2 gap-3 text-body-sm">
             {status.rfc && <div><dt className="text-label-sm text-on-surface-variant">RFC</dt><dd className="font-mono">{status.rfc}</dd></div>}
+            {status.legalName && <div><dt className="text-label-sm text-on-surface-variant">Razón social</dt><dd>{status.legalName}</dd></div>}
+            {status.fiscalRegime && <div><dt className="text-label-sm text-on-surface-variant">Régimen fiscal</dt><dd className="font-mono">{status.fiscalRegime}</dd></div>}
+            {status.zipCode && <div><dt className="text-label-sm text-on-surface-variant">Código postal</dt><dd className="font-mono">{status.zipCode}</dd></div>}
             {status.alias && <div><dt className="text-label-sm text-on-surface-variant">Alias</dt><dd>{status.alias}</dd></div>}
             {status.issuedAt && <div><dt className="text-label-sm text-on-surface-variant">Emitido</dt><dd>{status.issuedAt}</dd></div>}
             {status.expiresAt && <div><dt className="text-label-sm text-on-surface-variant">Vence</dt><dd>{status.expiresAt}</dd></div>}
@@ -94,6 +116,44 @@ export function CsdManagerPage() {
               placeholder="XAXX010101000"
               className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono uppercase"
             />
+          </div>
+          <div>
+            <label htmlFor="csd-legal-name" className="block text-label-md text-on-surface mb-1">Razón social</label>
+            <input
+              id="csd-legal-name"
+              type="text"
+              value={legalName}
+              onChange={(e) => setLegalName(e.target.value)}
+              maxLength={200}
+              placeholder="Agrisas SA de CV"
+              className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="csd-fiscal-regime" className="block text-label-md text-on-surface mb-1">Régimen fiscal</label>
+              <input
+                id="csd-fiscal-regime"
+                type="text"
+                value={fiscalRegime}
+                onChange={(e) => setFiscalRegime(e.target.value.replace(/\D/g, ""))}
+                maxLength={3}
+                placeholder="601"
+                className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono"
+              />
+            </div>
+            <div>
+              <label htmlFor="csd-zip-code" className="block text-label-md text-on-surface mb-1">Código postal</label>
+              <input
+                id="csd-zip-code"
+                type="text"
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value.replace(/\D/g, ""))}
+                maxLength={5}
+                placeholder="83000"
+                className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono"
+              />
+            </div>
           </div>
           <div>
             <label htmlFor="csd-cer" className="block text-label-md text-on-surface mb-1">Certificado (.cer) <span className="text-error">*</span></label>

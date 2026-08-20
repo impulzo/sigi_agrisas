@@ -33,6 +33,8 @@ const BASE_DTO = {
   ivaRate: 0.16,
   iepsRate: null,
   imageUrl: null,
+  manufactureDate: null,
+  acquisitionPrice: null,
   isTaxable: true,
   isActive: true,
   createdAt: "2026-05-01T00:00:00.000Z",

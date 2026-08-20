@@ -176,6 +176,30 @@ describe("usePartialInvoiceForm", () => {
     }
   });
 
+  it("submit blocked when a catalog line has unitPrice 0", async () => {
+    const { result } = renderHook(() => usePartialInvoiceForm());
+    act(() => {
+      result.current.setCustomer(COMPLETE_CUSTOMER);
+      result.current.addLine(makeLine({ productId: "prod-1", productCode: "P001", unitPrice: 0 }));
+    });
+    let ret: unknown;
+    await act(async () => { ret = await result.current.submit(); });
+    expect(ret).toBeNull();
+    expect(mockStamp).not.toHaveBeenCalled();
+    expect(result.current.error?.message).toMatch(/precio \$0/i);
+  });
+
+  it("submit allowed when a free line has unitPrice 0", async () => {
+    mockStamp.mockResolvedValueOnce(makeInvoiceResult());
+    const { result } = renderHook(() => usePartialInvoiceForm());
+    act(() => {
+      result.current.setCustomer(COMPLETE_CUSTOMER);
+      result.current.addLine(makeLine({ productId: null, productCode: "LIB-1", unitPrice: 0 }));
+    });
+    await act(async () => { await result.current.submit(); });
+    expect(mockStamp).toHaveBeenCalledTimes(1);
+  });
+
   it("stamp error stored in form.error", async () => {
     mockStamp.mockRejectedValueOnce(new SaleAlreadyInvoicedError("inv-x"));
     const { result } = renderHook(() => usePartialInvoiceForm());

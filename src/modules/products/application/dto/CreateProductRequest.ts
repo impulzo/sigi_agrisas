@@ -7,6 +7,8 @@ export interface CreateProductRequest {
   satProductCode?: string | null;
   ivaRate?: number | null;
   iepsRate?: number | null;
+  manufactureDate?: string | null;
+  acquisitionPrice?: number | null;
   isTaxable?: boolean;
   isActive?: boolean;
 }

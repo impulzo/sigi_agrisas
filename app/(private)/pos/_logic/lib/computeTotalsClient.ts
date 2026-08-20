@@ -11,7 +11,7 @@ export interface TotalsLine {
 
 /** Mirrors `src/modules/products/domain/services/isFractionalQuantity.ts` — duplicated here
  * because `app/` (frontend) may not import runtime code from `src/` (backend-only). */
-function isFractionalQuantity(quantity: number): boolean {
+export function isFractionalQuantity(quantity: number): boolean {
   return Math.round(quantity * 10000) % 10000 !== 0;
 }
 

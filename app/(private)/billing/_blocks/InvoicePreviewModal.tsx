@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../_components/atoms/Button/Button";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
+import { downloadInvoicePreviewPdf } from "../_logic/services/downloadInvoicePreviewPdf";
 import type { InvoicePreviewData } from "../_logic/types/preview";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
@@ -29,12 +30,18 @@ export function InvoicePreviewModal({
   isSubmitting,
 }: InvoicePreviewModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<Error | null>(null);
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (open) dialog.showModal();
-    else dialog.close();
+    if (open) {
+      dialog.showModal();
+      setDownloadError(null);
+    } else {
+      dialog.close();
+    }
   }, [open]);
 
   useEffect(() => {
@@ -46,6 +53,20 @@ export function InvoicePreviewModal({
   }, [onClose]);
 
   const canConfirm = !isLoading && !loadError && !!data && !isSubmitting;
+  const canDownload = !isLoading && !loadError && !!data && !isDownloading;
+
+  async function handleDownloadPdf() {
+    if (!data) return;
+    setDownloadError(null);
+    setIsDownloading(true);
+    try {
+      await downloadInvoicePreviewPdf(data);
+    } catch (err) {
+      setDownloadError(err as Error);
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   return (
     <dialog
@@ -155,9 +176,18 @@ export function InvoicePreviewModal({
         </div>
       )}
 
+      {downloadError && (
+        <div className="rounded bg-error-container/30 border border-error/30 px-4 py-3 text-body-sm text-error mt-4">
+          {downloadError.message || "No se pudo descargar el PDF."}
+        </div>
+      )}
+
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-outline-variant">
         <Button type="button" variant="text" onClick={onClose}>
           Volver a editar
+        </Button>
+        <Button type="button" variant="outlined" onClick={handleDownloadPdf} disabled={!canDownload} loading={isDownloading}>
+          Descargar PDF
         </Button>
         <Button type="button" onClick={onConfirmStamp} disabled={!canConfirm} loading={isSubmitting}>
           Timbrar ahora

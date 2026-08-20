@@ -16,6 +16,8 @@ import {
   SaleHasNoCustomerError,
   CustomerNotFoundForWaybillError,
   CustomerAddressIncompleteError,
+  VehicleNotFoundError,
+  DriverNotFoundError,
 } from "../errors";
 import { mapWaybillDetailDto } from "../_mappers";
 
@@ -57,6 +59,8 @@ export async function createWaybill(body: CreateWaybillRequest, fetchImpl = auth
     if (errBody.error === "CustomerAddressIncomplete") {
       throw new CustomerAddressIncompleteError(errBody.customerId, errBody.missingFields ?? []);
     }
+    if (errBody.error === "VehicleNotFound") throw new VehicleNotFoundError();
+    if (errBody.error === "DriverNotFound") throw new DriverNotFoundError();
     throw new InvalidBranchPairError();
   }
   if (res.status === 404) {

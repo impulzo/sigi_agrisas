@@ -6,6 +6,7 @@ import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useQuoteDetail } from "../_logic/hooks/useQuoteDetail";
 import { useQuoteMutations } from "../_logic/hooks/useQuoteMutations";
 import { useCart } from "../../pos/_logic/hooks/useCart";
+import { isFractionalQuantity } from "../../pos/_logic/lib/computeTotalsClient";
 import { useFoliosOptions } from "../../../_hooks/useFoliosOptions";
 import { usePricingSettingsOptions } from "../../../_hooks/usePricingSettingsOptions";
 import { getProductPrices } from "../../pos/_logic/services/getProductPrices";
@@ -69,10 +70,16 @@ export function QuoteEditPage({ id }: QuoteEditPageProps) {
           updatedAt: new Date(),
           stock: null,
         };
+        // item.unitPrice is the persisted snapshot, already surcharged for fractional-quantity
+        // lines; useCart/computeTotalsClient re-applies dosificationSurchargePct on top of
+        // whatever base price they receive, so revert it here to avoid double-charging.
+        const basePrice = isFractionalQuantity(item.quantity)
+          ? item.unitPrice / (1 + dosificationSurchargePct / 100)
+          : item.unitPrice;
         const fakePrice: ProductPriceDto = {
           id: item.productPriceId,
           name: item.priceNameSnapshot,
-          price: item.unitPrice,
+          price: basePrice,
           minQuantity: 1,
           discountPct: 0,
           isDefault: false,
@@ -82,7 +89,7 @@ export function QuoteEditPage({ id }: QuoteEditPageProps) {
       }
       setInitialized(true);
     }
-  }, [quote, initialized, clear, addLine]);
+  }, [quote, initialized, clear, addLine, dosificationSurchargePct]);
 
   // Redirect if non-draft
   useEffect(() => {
