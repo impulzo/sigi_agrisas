@@ -169,7 +169,7 @@ export interface ProviderDto {
 export interface CreateProviderBody {
   code: string;
   name: string;
-  rfc: string;
+  rfc?: string;
   legalName?: string;
   taxRegime?: string;
   cfdiUse?: string;

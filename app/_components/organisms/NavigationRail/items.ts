@@ -10,7 +10,6 @@ export interface RailItem {
 }
 
 export const primaryItems: RailItem[] = [
-  { key: "dashboard", href: "/dashboard", icon: "dashboard", label: "Inicio" },
   { key: "pos", href: "/pos", icon: "point_of_sale", label: "POS", requires: "sales:create" },
   { key: "sales", href: "/sales", icon: "receipt_long", label: "Ventas", requires: "sales:read" },
   { key: "quotes", href: "/quotes", icon: "request_quote", label: "Cotizaciones", requires: "quotes:read" },
@@ -43,7 +42,5 @@ export const primaryItems: RailItem[] = [
 ];
 
 export const secondaryItems: RailItem[] = [
-  { key: "support", href: "/support", icon: "contact_support", label: "Support" },
-  { key: "account", href: "/account", icon: "account_circle", label: "Account" },
   { key: "settings", href: "/settings", icon: "settings", label: "Configuración", requires: "settings:read" },
 ];

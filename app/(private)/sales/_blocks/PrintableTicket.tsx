@@ -49,8 +49,8 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
       <style>{`
         @page { size: ${paperWidth} ${pageHeightMm}mm; margin: 0; }
         @media print {
-          .printable-ticket { width: ${paperWidth}; font-family: monospace; font-size: 10px; }
-          .printable-ticket img { width: 105px; height: 147px; object-fit: contain; display: block; margin: 0 auto 2.4px; }
+          .printable-ticket { width: ${paperWidth}; margin: 0; font-family: monospace; font-size: 10px; }
+          .printable-ticket img { width: 125px; height: 77px; object-fit: contain; display: block; margin: 0 auto 8px; }
           .printable-ticket table { width: 100%; border-collapse: collapse; }
           .printable-ticket hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
         }

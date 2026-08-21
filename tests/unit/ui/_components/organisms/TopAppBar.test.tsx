@@ -9,9 +9,9 @@ describe("TopAppBar", () => {
     expect(screen.queryByRole("heading", { name: "Agrisas" })).not.toBeInTheDocument();
   });
 
-  it("renders icon buttons for notifications, help and settings", () => {
+  it("renders icon buttons for help and settings", () => {
     render(<TopAppBar userName="Admin" userEmail="admin@agrisas.com" />);
-    expect(screen.getByRole("button", { name: "Notificaciones" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Notificaciones" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ayuda" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ajustes" })).toBeInTheDocument();
   });

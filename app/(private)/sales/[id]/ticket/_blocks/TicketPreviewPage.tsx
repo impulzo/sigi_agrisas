@@ -63,7 +63,7 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
   const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
 
   return (
-    <div className="w-full max-w-lg mx-auto space-y-4">
+    <div className="w-full max-w-lg mx-auto space-y-4 px-gutter py-lg">
       <Link
         href={`/sales/${sale.id}`}
         className="inline-flex items-center gap-2 text-on-surface-variant hover:text-on-surface text-body-sm"
@@ -87,12 +87,12 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
         />
         <div className="p-6 flex flex-col gap-6">
           {/* Brand header */}
-          <div className="flex flex-col items-center gap-2 text-center border-b border-outline-variant pb-4">
+          <div className="flex flex-col items-center text-center border-b border-outline-variant pb-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={ticketSettings?.logoUrl ?? "/logo.png"}
               alt="Logo"
-              className="h-[147px] w-[105px] object-contain mb-[4.8px]"
+              className="h-[86px] w-[140px] object-contain mb-2"
             />
             {(ticketSettings?.businessName || ticketSettings?.businessRfc || ticketSettings?.businessAddress || ticketSettings?.businessPhone || ticketSettings?.businessTaxRegime) && (
               <div className="text-body-sm text-on-surface-variant whitespace-pre-wrap">

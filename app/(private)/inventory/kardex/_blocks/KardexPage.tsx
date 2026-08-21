@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import Link from "next/link";
 import { useCurrentUser } from "../../../../_hooks/useCurrentUser";
 import { useBranchesOptions } from "../../../../_hooks/useBranchesOptions";
 import { useKardex } from "../_logic/hooks/useKardex";
@@ -13,7 +12,7 @@ import { InlineFilterInput } from "./InlineFilterInput";
 import { RebuildArticleButton } from "./RebuildArticleButton";
 import { ExportButtons } from "./ExportButtons";
 import { MOVEMENT_TYPE_LABELS } from "../_logic/lib/movementTypeLabels";
-import { Icon } from "../../../../_components/atoms/Icon/Icon";
+import { PageShell } from "../../../../_components/organisms/PageShell";
 import { Spinner } from "../../../../_components/atoms/Spinner/Spinner";
 import { EmptyState } from "../../../../_components/molecules/EmptyState/EmptyState";
 import type { ProductOptionDto } from "../_logic/types/api";
@@ -90,17 +89,12 @@ export function KardexPage({ initialProductId, initialBranchId }: KardexPageProp
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <Link href="/inventory" className="text-on-surface-variant hover:text-on-surface">
-          <Icon name="arrow_back" size={20} />
-        </Link>
-        <div>
-          <h1 className="text-headline-lg font-semibold text-on-surface">Kardex de Inventario</h1>
-          <p className="text-body-md text-on-surface-variant mt-1">Historial de movimientos por artículo.</p>
-        </div>
-      </div>
-
+    <PageShell
+      title="Kardex de Inventario"
+      description="Historial de movimientos por artículo."
+      backHref="/inventory"
+    >
+      <div className="flex flex-col gap-6">
       <KardexFilters
         productId={productId}
         onProductChange={(id, product) => { setProductId(id); setSelectedProduct(product); }}
@@ -184,6 +178,7 @@ export function KardexPage({ initialProductId, initialBranchId }: KardexPageProp
       {selectedProduct && (
         <p className="sr-only">Producto seleccionado: {selectedProduct.code}</p>
       )}
-    </div>
+      </div>
+    </PageShell>
   );
 }

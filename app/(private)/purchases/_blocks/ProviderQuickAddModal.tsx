@@ -73,7 +73,7 @@ export function ProviderQuickAddModal({ onCreated, onClose }: ProviderQuickAddMo
     const input = {
       code: form.code.trim().toUpperCase(),
       name: form.name.trim(),
-      rfc: form.rfc.trim().toUpperCase(),
+      ...(form.rfc.trim() ? { rfc: form.rfc.trim().toUpperCase() } : {}),
       ...(form.legalName.trim() ? { legalName: form.legalName.trim() } : {}),
       ...(form.taxRegime.trim() ? { taxRegime: form.taxRegime.trim() } : {}),
       ...(form.cfdiUse.trim() ? { cfdiUse: form.cfdiUse.trim().toUpperCase() } : {}),
@@ -136,7 +136,7 @@ export function ProviderQuickAddModal({ onCreated, onClose }: ProviderQuickAddMo
             {errors.code && <p className="text-label-sm text-error mt-1">{errors.code}</p>}
           </div>
           <div>
-            <label className="text-label-sm text-on-surface-variant mb-1 block">RFC *</label>
+            <label className="text-label-sm text-on-surface-variant mb-1 block">RFC</label>
             <input
               value={form.rfc}
               onChange={(e) => set("rfc", e.target.value.toUpperCase())}

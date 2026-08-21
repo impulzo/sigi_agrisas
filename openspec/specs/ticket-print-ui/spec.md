@@ -61,13 +61,17 @@ The system SHALL render the "Imprimir Ticket" action on `/sales/:id/ticket` (la 
 - **WHEN** `GET /settings/ticket` returns `paperWidth: "58mm"`
 - **THEN** the printable view's `@media print` CSS sets the content width to `58mm` (not the `80mm` default)
 
-#### Scenario: Page size matches the configured paper width
-- **WHEN** the print view renders with `paperWidth: "80mm"` (default) or `paperWidth: "58mm"`
-- **THEN** the injected CSS also declares `@page { size: <paperWidth> 3276mm; margin: 0; }` using the same `paperWidth` value that sets the content width — the browser's print dialog uses that page size instead of falling back to Letter/A4, so a thermal printer prints one continuous strip instead of paginating
+#### Scenario: Page height matches the expected rendered content, not a fixed oversized value
+- **WHEN** the print view renders
+- **THEN** the injected CSS declares `@page { size: <paperWidth> <alturaCalculada>mm; margin: 0; }`, where `<alturaCalculada>` is derived deterministically from the sale's own content — a base height covering fixed sections (logo, business header, ticket meta, totals, footer, legend, barcode), plus a fixed amount per item line in `sale.items`, plus conditional amounts for the customer section (when `sale.customerId` is set) and credit conditions line (when `sale.customerCreditDays` is not null), plus a fixed safety margin — NOT a fixed literal like `3276mm` — so that printers/drivers using a fixed physical page (Letter/A4) or "Save as PDF" do not trigger a disproportionate fit-to-page shrink of the printed content
+
+#### Scenario: Height calculation requires no DOM measurement or print-event timing
+- **WHEN** the print view renders (before, during, or independent of any print event)
+- **THEN** the calculated `@page` height is available immediately from the already-loaded `sale` data — the calculation never depends on `getBoundingClientRect()`, `ref`s, or the `beforeprint`/print pipeline timing, so it can never resolve to `undefined`/`NaN` or race with `window.print()`
 
 #### Scenario: Long ticket does not split across pages
 - **WHEN** a ticket has enough item lines to exceed a standard Letter/A4 page height
-- **THEN** it still prints as a single continuous page (page height `3276mm`), not split across multiple physical pages
+- **THEN** it still prints as a single continuous page — the calculated `@page` height grows with `sale.items.length` and always exceeds the expected rendered content height by the safety margin, so no content is cut off across multiple physical pages
 
 #### Scenario: Print view hidden outside of printing
 - **WHEN** the page is viewed normally on screen (not printing)
@@ -75,9 +79,42 @@ The system SHALL render the "Imprimir Ticket" action on `/sales/:id/ticket` (la 
 
 #### Scenario: Settings fetch failure degrades gracefully
 - **WHEN** `GET /settings/ticket` fails (network error, missing `settings:read`, etc.)
-- **THEN** the print view still renders with the sale data, omitting logo/footer/business (name, RFC, address, phone, tax regime)/legend (falling back to `80mm` width, and `@page` sized to that fallback width) rather than blocking the print action entirely
+- **THEN** the print view still renders with the sale data, omitting logo/footer/business (name, RFC, address, phone, tax regime)/legend (falling back to `80mm` width, and `@page` sized to that fallback width with the same dynamically-calculated height) rather than blocking the print action entirely
 
 #### Scenario: Logo rendered at 75x105px
 - **WHEN** the printed ticket renders its logo (either `logoUrl` from settings or the `/logo.png` fallback)
 - **THEN** the `img` is sized to 75px wide × 105px tall with `object-fit: contain` so the aspect ratio is preserved (no distortion)
+
+### Requirement: Márgenes de página en la vista previa del ticket
+La vista previa del ticket de venta (`/sales/[id]/ticket`) SHALL usar el mismo padding de página (horizontal y vertical) que el resto de las pantallas del panel bajo `app/(private)/`.
+
+#### Scenario: Padding estándar al cargar la vista previa
+- **WHEN** un cajero navega a `/sales/[id]/ticket` de una venta existente
+- **THEN** el contenedor raíz de la vista previa tiene padding vertical y horizontal equivalente al usado por `PageShell` en el resto del sistema (`px-gutter`/`py-lg`, 24px)
+
+#### Scenario: Padding no se rompe con secciones opcionales
+- **WHEN** la venta previsualizada incluye secciones opcionales (datos de cliente, condiciones de crédito)
+- **THEN** el padding de página se mantiene consistente y no se duplica ni se anula por el espaciado entre bloques (`space-y-4`) del contenido interno
+
+### Requirement: Proporción y margen del logo consistentes entre preview e impresión
+El logo del negocio SHALL renderizarse con la misma proporción apaisada (~1.63:1, acorde al aspect ratio del asset real) y el mismo margen inferior visible, tanto en la vista previa en pantalla como en el ticket impreso.
+
+#### Scenario: Misma proporción de caja en preview e impresión
+- **WHEN** se renderiza el logo (`ticketSettings.logoUrl` o el fallback `/logo.png`) en la vista previa y en el markup de impresión (`PrintableTicket`)
+- **THEN** ambos usan una caja con proporción apaisada consistente con el aspect ratio real del logo, sin que `object-fit: contain` deje espacio vacío interno por una caja de orientación incorrecta (retrato)
+
+#### Scenario: Margen visible entre logo y datos del negocio
+- **WHEN** se mide el espacio entre el borde inferior del logo renderizado y el bloque de datos del negocio (nombre, RFC, dirección, teléfono, régimen fiscal) inmediatamente debajo
+- **THEN** existe un margen visible y no residual (mayor al valor casi nulo previo de 2.4px impresión / 4.8px preview) y ese margen es el mismo en ambos contextos
+
+### Requirement: Anclaje superior del ticket en impresión térmica
+El contenido imprimible del ticket SHALL quedar anclado a la esquina superior izquierda de la página de impresión calculada, sin quedar centrado verticalmente, y sin que ningún estilo intermedio reintroduzca un `margin`/`position` que lo recentre.
+
+#### Scenario: Anclaje top-left en la vista de impresión del navegador
+- **WHEN** el cajero ejecuta `window.print()` desde la vista previa y se abre el diálogo/vista de impresión del navegador
+- **THEN** el contenido de `.printable-ticket`/`.print-area` aparece anclado en `top: 0; left: 0` del `@page` calculado por `computeTicketPageHeightMm`, sin margen ni centrado vertical introducido por CSS del propio sistema
+
+#### Scenario: Centrado remanente por limitación de driver/impresora queda fuera de alcance
+- **WHEN** tras el refuerzo de CSS el ticket sigue apareciendo centrado en una impresora térmica física, debido a que el driver/SO usa un tamaño de papel distinto al `@page` calculado
+- **THEN** ese caso se documenta como limitación conocida en el change `document-thermal-print-limitation` y no bloquea el cierre de este change ni motiva más cambios de CSS en este alcance
 

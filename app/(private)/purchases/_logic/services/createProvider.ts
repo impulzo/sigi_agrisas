@@ -6,7 +6,7 @@ export async function createProvider(body: CreateProviderBody, fetchImpl = authF
   const normalized: CreateProviderBody = {
     ...body,
     code: body.code.trim().toUpperCase(),
-    rfc: body.rfc.trim().toUpperCase(),
+    ...(body.rfc ? { rfc: body.rfc.trim().toUpperCase() } : {}),
   };
 
   let res: Response;

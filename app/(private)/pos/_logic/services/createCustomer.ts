@@ -5,7 +5,7 @@ import { CustomerCodeAlreadyInUseError, CustomerRfcAlreadyInUseError } from "../
 export interface CreateCustomerBody {
   code: string;
   name: string;
-  rfc: string;
+  rfc?: string;
   legalName?: string;
   taxRegime?: string;
   cfdiUse?: string;

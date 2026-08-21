@@ -1,0 +1,255 @@
+## REMOVED Requirements
+
+### Requirement: Permiso reports:read gatea el Dashboard en el NavigationRail
+
+**Reason**: El item "Dashboard"/"Inicio" se elimina completamente del `NavigationRail` (historia de usuario 1 en `proposal.md`) — ya no queda ningún item de menú al que aplicarle este gate de permiso.
+
+**Migration**: El permiso `reports:read` sigue existiendo en el seed RBAC sin cambios y sigue siendo el guard de la página `/dashboard` en sí (fuera del alcance de este requirement, que sólo regía la visibilidad en el menú). Si en el futuro se requiere condicionar el acceso a `/dashboard`, debe implementarse como guard de página (`useCurrentUser().can()` dentro de `DashboardPage`), no como visibilidad de un item de `NavigationRail` que ya no existe.
+
+## MODIFIED Requirements
+
+### Requirement: NavigationRail organism con destinos primarios y secundarios
+
+`app/_components/organisms/NavigationRail/NavigationRail.tsx` SHALL renderizar una barra vertical fija de 80px de ancho, alto completo, con: logo Agrisas arriba, los destinos primarios del panel (`POS`, `Inventario`, `Facturación`, entre otros — ver el requirement `Navigation rail item catalogue` para la lista completa y su orden) en el centro, y un único destino secundario abajo (`Configuración`, condicional a `settings:read`). Cada destino es un `<Link>` (Next.js) con icono Material Symbols + label `label-sm`. El active state SHALL aplicar `bg-primary-container text-on-primary-container rounded-xl scale-90` al destino cuya ruta coincida con `usePathname()`. Por usar `usePathname`, el componente SHALL ser client component (`"use client"`).
+
+#### Scenario: Dashboard ya no aparece como destino del rail
+- **WHEN** se inspecciona el HTML del NavigationRail
+- **THEN** NO contiene ningún enlace con `href="/dashboard"`; el primer destino primario visible es `pos` (`href="/pos"`)
+
+#### Scenario: Único destino secundario para usuario con settings:read
+- **WHEN** se inspecciona el HTML del NavigationRail y el usuario tiene `settings:read`
+- **THEN** contiene únicamente el enlace a `/settings` con icono `settings` ubicado con `mt-auto`; NO contiene enlaces a `/support` ni `/account`
+
+#### Scenario: Active state en la ruta actual
+- **WHEN** el usuario está en `/pos`
+- **THEN** el enlace a POS tiene clases `bg-primary-container text-on-primary-container` y los otros destinos no
+
+#### Scenario: Navegación con click
+- **WHEN** el usuario hace click en el destino "POS"
+- **THEN** el router navega a `/pos` usando `next/link`
+
+#### Scenario: NavigationRail no hace fetch ni accede a storage
+- **WHEN** se inspecciona el archivo
+- **THEN** no importa `fetch`, `axios`, `localStorage`, `sessionStorage` ni `document`
+
+---
+
+### Requirement: TopAppBar organism con título, búsqueda, acciones y avatar
+
+`app/_components/organisms/TopAppBar/TopAppBar.tsx` SHALL renderizar una barra superior fija de 64px de alto, con `pl-24 pr-8`, conteniendo: logo Agrisas (`<Image src="/logo.png" alt="Agrisas">`, 40x40px), `SearchInput` (oculto en `<md`), `IconButton` de ayuda y settings, y un `Avatar` final. El componente acepta `userName: string`, `userEmail: string`, `avatarUrl?: string` como props y NO hace fetch.
+
+#### Scenario: Renderiza con props
+- **WHEN** `<TopAppBar userName="Admin" userEmail="admin@agrisas.com" />` se renderiza
+- **THEN** el HTML muestra la imagen del logo Agrisas (sin heading de texto), el SearchInput, los 2 `IconButton` (ayuda y settings) y el Avatar con `fallbackInitials="A"` (primera letra de `userName`)
+
+#### Scenario: Avatar con src
+- **WHEN** se pasa `avatarUrl="https://example.com/u.jpg"`
+- **THEN** el Avatar renderiza `<img src="https://example.com/u.jpg" alt="...">`
+
+#### Scenario: SearchInput oculto en móvil
+- **WHEN** el viewport es <768px
+- **THEN** el `SearchInput` tiene la clase `hidden md:flex` y no es visible
+
+#### Scenario: TopAppBar es presentational
+- **WHEN** se inspecciona el archivo
+- **THEN** no contiene `fetch`, `useRouter().push`, `useEffect` con efectos secundarios ni accesos a storage
+
+---
+
+### Requirement: Navigation rail item catalogue
+
+The shared private layout SHALL render a fixed `NavigationRail` (80px wide) on the left edge of the viewport with the agreed Material 3 visual language and the brand mark at the top. The rail SHALL be split into two groups: a primary group with the destinations of the panel and a secondary group at the bottom with a settings entry. Each destination is declared as a typed `RailItem` `{ key, href, icon, label, requires?, children? }` where `requires?` is an optional permission key string (`<resource>:<action>`) and `children?` is an optional array of nested `RailItem` (only one level of nesting). The primary group SHALL include the following items in this order:
+
+1. `pos` (icon `point_of_sale`, href `/pos`, label `POS`, declares `requires: "sales:create"`).
+2. `sales` (icon `receipt_long`, href `/sales`, label `Ventas`, declares `requires: "sales:read"`).
+3. `quotes` (icon `request_quote`, href `/quotes`, label `Cotizaciones`, declares `requires: "quotes:read"`).
+4. `returns` (icon `assignment_return`, href `/returns`, label `Devoluciones`, declares `requires: "returns:read"`).
+5. `payments` (icon `payments`, href `/payments`, label `Abonos`, declares `requires: "payments:read"`).
+6. `purchases` (icon `shopping_cart`, href `/purchases`, label `Compras`, declares `requires: "purchases:read"`).
+7. `billing` (icon `description`, href `/billing`, label `Facturación`, declares `requires: "billing:read"`).
+8. `inventory` (icon `inventory_2`, href `/inventory`, label `Inventario`, declares `requires: "inventory:read"`).
+9. `waybills` (icon `swap_horiz`, href `/waybills`, label `Traspasos`, declares `requires: "waybills:read"`).
+10. `reports` (icon `summarize`, href `/reports`, label `Reportes`, declares `requires: "reports:account_statements_read"`).
+11. `catalogs` (icon `category`, href `/catalogs`, label `Catálogos`, with `children`: `payment-methods` (`payment_methods:read`, icon `payments`, href `/catalogs/payment-methods`), `folios` (`folios:read`, icon `tag`, href `/catalogs/folios`), `departments` (`departments:read`, icon `apartment`, href `/catalogs/departments`), `branches` (`branches:read`, icon `store`, href `/catalogs/branches`), `providers` (`providers:read`, icon `local_shipping`, href `/catalogs/providers`), `products` (`products:read`, icon `inventory_2`, href `/catalogs/products`), `customers` (`customers:read`, icon `groups`, href `/catalogs/customers`)).
+12. `users` (icon `group`, href `/users`, label `Usuarios`, declares `requires: "users:read"`).
+13. `roles` (icon `shield_person`, href `/roles`, label `Roles`, declares `requires: "roles:read"`).
+
+(Nota: `billing`, `waybills` y `reports` ya existían en el código antes de un change previo y no estaban documentados en versiones anteriores de este requirement — se incluyen aquí para que la lista quede completa y verificable. El item `dashboard`/"Inicio" que encabezaba esta lista se elimina en este change: ver historia de usuario 1 en `proposal.md`.)
+
+The secondary group SHALL include the following item:
+
+1. `settings` (icon `settings`, href `/settings`, label `Configuración`, declares `requires: "settings:read"`).
+
+Secondary items follow the same visibility rules as primary items: an item without `requires` is always rendered for any authenticated user; an item with `requires` (`settings`) is rendered when `can(requires)` resolves to `true` or is still `"loading"` (optimistic), and hidden when it resolves to `false`.
+
+Below the secondary items, the rail SHALL render a standalone logout action button (icon `logout`, `title="Cerrar sesión"`) that invokes `useLogout` and is disabled while the logout is in flight.
+
+When a `RailItem` has `children`, the rail SHALL render the parent item normally (icon + label) and, on hover or click of the parent, SHALL display a flyout panel (`RailFlyout`) anchored to the right edge of the rail (`left: 80px`) containing the visible children rendered as horizontal rows with icon + label. The parent item SHALL be visible if AT LEAST ONE child is visible according to the standard `requires` permission check; if all children are still in `"loading"` state, the parent SHALL be shown optimistically. Clicking the parent's icon SHALL navigate to the parent's `href`. Clicking a child inside the flyout SHALL navigate to the child's `href` and close the flyout.
+
+#### Scenario: Items without requires are always shown
+- **WHEN** a `RailItem` declares no `requires` property
+- **THEN** the rail SHALL render the item unconditionally for every authenticated user
+
+#### Scenario: Authorized user sees the quotes item
+- **WHEN** the current user's effective permissions include `quotes:read`
+- **THEN** the rail SHALL render the `quotes` item (label "Cotizaciones", href `/quotes`, icon `request_quote`) between `sales` and `returns`
+
+#### Scenario: Unauthorized user does not see the quotes item
+- **WHEN** the current user's effective permissions do not include `quotes:read` and the permission check has resolved
+- **THEN** the rail SHALL NOT render the `quotes` item
+
+#### Scenario: Quotes item permission still loading
+- **WHEN** the permission check for `quotes:read` is still in flight
+- **THEN** the rail SHALL render the `quotes` item optimistically to avoid layout shift; the `QuotesListPage` route guard handles the unauthorized case if the check ultimately resolves to false
+
+#### Scenario: Authorized user sees the returns item
+- **WHEN** the current user's effective permissions include `returns:read`
+- **THEN** the rail SHALL render the `returns` item (label "Devoluciones", href `/returns`, icon `assignment_return`) between `quotes` and `payments`
+
+#### Scenario: Unauthorized user does not see the returns item
+- **WHEN** the current user's effective permissions do not include `returns:read` and the permission check has resolved
+- **THEN** the rail SHALL NOT render the `returns` item
+
+#### Scenario: Returns item permission still loading
+- **WHEN** the permission check for `returns:read` is still in flight
+- **THEN** the rail SHALL render the `returns` item optimistically to avoid layout shift; the `ReturnsListPage` route guard handles the unauthorized case if the check ultimately resolves to false
+
+#### Scenario: Returns item active for detail routes
+- **WHEN** the current pathname is `/returns/abc-123`
+- **THEN** the `returns` item SHALL render with the active styling because `pathname.startsWith("/returns/")`
+
+#### Scenario: Usuario con payments:read ve el item Abonos
+- **WHEN** las permissions efectivas del usuario incluyen `payments:read`
+- **THEN** el rail renderiza el item con label "Abonos", href `/payments`, icon `payments` entre "Devoluciones" y "Compras"
+
+#### Scenario: Usuario sin payments:read no ve el item
+- **WHEN** las permissions efectivas del usuario NO incluyen `payments:read` y el check ha resuelto
+- **THEN** el rail NO renderiza el item "Abonos"
+
+#### Scenario: Item Abonos se muestra optimistamente durante loading
+- **WHEN** `can("payments:read")` devuelve `"loading"` (check en vuelo)
+- **THEN** el item "Abonos" es visible (comportamiento optimista, evita layout shift)
+
+#### Scenario: Usuario con purchases:read ve el item Compras
+- **WHEN** las permissions efectivas del usuario incluyen `purchases:read`
+- **THEN** el rail renderiza el item con label "Compras", href `/purchases`, icon `shopping_cart` entre "Abonos" y "Facturación"
+
+#### Scenario: Usuario sin purchases:read no ve el item Compras
+- **WHEN** las permissions efectivas del usuario NO incluyen `purchases:read` y el check ha resuelto
+- **THEN** el rail NO renderiza el item "Compras"
+
+#### Scenario: Item Compras se muestra optimistamente durante loading
+- **WHEN** `can("purchases:read")` devuelve `"loading"` (check en vuelo)
+- **THEN** el item "Compras" es visible (comportamiento optimista, evita layout shift)
+
+#### Scenario: Purchases item active for detail routes
+- **WHEN** the current pathname is `/purchases/abc-123` (or `/purchases/new`)
+- **THEN** the `purchases` item SHALL render with the active styling because `pathname.startsWith("/purchases/")` or matches `/purchases` exactly
+
+#### Scenario: Authorized user sees the sales item
+- **WHEN** the current user's effective permissions include `sales:read`
+- **THEN** the rail SHALL render the `sales` item (label "Ventas", href `/sales`) between `pos` and `quotes`
+
+#### Scenario: Authorized user sees the pos item
+- **WHEN** the current user's effective permissions include `sales:create`
+- **THEN** the rail SHALL render the `pos` item (label "POS", href `/pos`) as the first primary item, immediately before `sales`
+
+#### Scenario: Authorized user sees the inventory item
+- **WHEN** the current user's effective permissions include `inventory:read`
+- **THEN** the rail SHALL render the `inventory` item (label "Inventario", href `/inventory`) between `billing` and `waybills`
+
+#### Scenario: Unauthorized user does not see the inventory item
+- **WHEN** the current user's effective permissions do not include `inventory:read` and the permission check has resolved
+- **THEN** the rail SHALL NOT render the `inventory` item
+
+#### Scenario: Authorized user sees the users item
+- **WHEN** the current user's effective permissions include `users:read`
+- **THEN** the rail SHALL render the `users` item between `catalogs` and `roles`
+
+#### Scenario: Authorized user sees the roles item
+- **WHEN** the current user's effective permissions include `roles:read`
+- **THEN** the rail SHALL render the `roles` item between `users` and the secondary group
+
+#### Scenario: Unauthorized user does not see the users item
+- **WHEN** the current user's effective permissions do not include `users:read` and the permission check has resolved
+- **THEN** the rail SHALL NOT render the `users` item
+
+#### Scenario: Unauthorized user does not see the roles item
+- **WHEN** the current user's effective permissions do not include `roles:read` and the permission check has resolved
+- **THEN** the rail SHALL NOT render the `roles` item
+
+#### Scenario: Permission check still loading
+- **WHEN** the permission check for a `requires`-gated item is still in flight
+- **THEN** the rail SHALL render the item optimistically to avoid layout shift; the route guard on the destination page SHALL handle unauthorized access if the check ultimately resolves to false
+
+#### Scenario: Active state of selected route
+- **WHEN** the current pathname matches an item's `href` (or starts with `<href>/`)
+- **THEN** that item SHALL render with the active styling (`bg-primary-container text-on-primary-container`)
+
+#### Scenario: Quotes item active for detail routes
+- **WHEN** the current pathname is `/quotes/abc-123` (or `/quotes/abc-123/edit`, or `/quotes/new`)
+- **THEN** the `quotes` item SHALL render with the active styling because `pathname.startsWith("/quotes/")`
+
+#### Scenario: Logout button always visible
+- **WHEN** any authenticated user is on any private route
+- **THEN** the logout button is rendered at the bottom of the NavigationRail, below the secondary items
+
+#### Scenario: Logout button triggers session termination
+- **WHEN** the user clicks the logout button
+- **THEN** the button becomes disabled, the session is cleared, and the router navigates to `/auth/login`
+
+#### Scenario: Catalogs parent visible when any child is allowed
+- **WHEN** the user's permissions include at least one of `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`, `customers:read`
+- **THEN** the rail SHALL render the `catalogs` parent item between `reports` and `users`
+
+#### Scenario: Catalogs parent hidden when all children are denied
+- **WHEN** the permission check has resolved and the user holds none of `payment_methods:read`, `folios:read`, `departments:read`, `branches:read`, `providers:read`, `products:read`, `customers:read`
+- **THEN** the rail SHALL NOT render the `catalogs` parent item
+
+#### Scenario: Providers child rendered in the flyout
+- **WHEN** the user holds `providers:read` and hovers the `catalogs` parent
+- **THEN** the flyout SHALL include a `Proveedores` entry (icon `local_shipping`, href `/catalogs/providers`) in the children list
+
+#### Scenario: Products child rendered in the flyout
+- **WHEN** the user holds `products:read` and hovers the `catalogs` parent
+- **THEN** the flyout SHALL include a `Productos` entry (icon `inventory_2`, href `/catalogs/products`) in the children list
+
+#### Scenario: Customers child rendered in the flyout
+- **WHEN** the user holds `customers:read` and hovers the `catalogs` parent
+- **THEN** the flyout SHALL include a `Clientes` entry (icon `groups`, href `/catalogs/customers`) as the last child in the list
+
+#### Scenario: Customers child hidden without permission
+- **WHEN** the user's permissions do not include `customers:read` and the check has resolved
+- **THEN** the flyout SHALL NOT include a `Clientes` entry
+
+#### Scenario: Hovering catalogs opens the flyout
+- **WHEN** the pointer enters the `catalogs` parent item
+- **THEN** the rail SHALL render a `RailFlyout` panel adjacent to the rail (anchored at `left: 80px`, aligned vertically with the parent) showing the visible child items as horizontal rows
+
+#### Scenario: Clicking the catalogs parent navigates to the hub
+- **WHEN** the user clicks the `catalogs` parent icon
+- **THEN** the router SHALL navigate to `/catalogs`
+
+#### Scenario: Clicking a child in the flyout navigates and closes
+- **WHEN** the user clicks "Formas de pago" in the flyout
+- **THEN** the router SHALL navigate to `/catalogs/payment-methods` and the flyout SHALL close
+
+#### Scenario: Flyout closes on mouse leave
+- **WHEN** the pointer leaves both the `catalogs` parent and the flyout panel
+- **THEN** the flyout SHALL close
+
+#### Scenario: Child active state propagates to parent
+- **WHEN** the current pathname starts with `/catalogs/`
+- **THEN** the `catalogs` parent SHALL render with the active styling AND the matching child inside the flyout SHALL also be marked active when the flyout is open
+
+#### Scenario: Authorized user sees the settings item
+- **WHEN** the current user's effective permissions include `settings:read`
+- **THEN** the rail SHALL render the `settings` item (label "Configuración", href `/settings`, icon `settings`) as the sole entry of the secondary group
+
+#### Scenario: Unauthorized user does not see the settings item
+- **WHEN** the current user's effective permissions do not include `settings:read` and the permission check has resolved
+- **THEN** the rail SHALL NOT render the `settings` item
+
+#### Scenario: Settings item permission still loading
+- **WHEN** the permission check for `settings:read` is still in flight
+- **THEN** the rail SHALL render the `settings` item optimistically to avoid layout shift; `SettingsPage`'s own `can("settings:read")` gate and the `settings:read`/`settings:write` guards on `app/api/v1/admin/settings/**` routes remain the authoritative enforcement if the check ultimately resolves to false
