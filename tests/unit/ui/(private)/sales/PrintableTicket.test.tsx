@@ -97,20 +97,20 @@ describe("PrintableTicket", () => {
     expect(screen.getByAltText("Logo")).toBeInTheDocument();
   });
 
-  it("sizes the logo to 105x147px (+40%) in the print layout", () => {
+  it("sizes the logo to 125x77px (landscape ratio) in the print layout", () => {
     const { container } = render(<PrintableTicket sale={sale} ticketSettings={null} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
     expect(printStyle).toContain(".printable-ticket img");
-    expect(printStyle).toContain("width: 105px; height: 147px;");
+    expect(printStyle).toContain("width: 125px; height: 77px;");
     expect(printStyle).toContain("object-fit: contain");
   });
 
-  it("reduces the logo bottom margin 40% to 2.4px", () => {
+  it("gives the logo an 8px bottom margin", () => {
     const { container } = render(<PrintableTicket sale={sale} ticketSettings={null} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
-    expect(printStyle).toContain("margin: 0 auto 2.4px;");
+    expect(printStyle).toContain("margin: 0 auto 8px;");
   });
 
   it("declares @page size matching the default 80mm paper width when ticketSettings is null", () => {

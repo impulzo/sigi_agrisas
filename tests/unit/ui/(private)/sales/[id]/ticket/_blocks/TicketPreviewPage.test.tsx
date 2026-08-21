@@ -126,7 +126,7 @@ describe("TicketPreviewPage", () => {
     expect(screen.queryByText(/Orden:/i)).not.toBeInTheDocument();
   });
 
-  it("aumenta el tamaño del logo a 105x147px (+40%)", async () => {
+  it("usa una caja de logo apaisada (140x86px) consistente con la proporción del asset real", async () => {
     jest
       .mocked(getTicketSettings)
       .mockResolvedValueOnce({
@@ -145,12 +145,12 @@ describe("TicketPreviewPage", () => {
 
     await waitFor(() => {
       const previewLogo = Array.from(container.querySelectorAll('img[alt="Logo"]')).find((el) =>
-        el.className.includes("w-[105px]")
+        el.className.includes("w-[140px]")
       );
       expect(previewLogo).toBeDefined();
-      expect(previewLogo!.className).toContain("h-[147px]");
+      expect(previewLogo!.className).toContain("h-[86px]");
       expect(previewLogo!.className).toContain("object-contain");
-      expect(previewLogo!.className).toContain("mb-[4.8px]");
+      expect(previewLogo!.className).toContain("mb-2");
     });
   });
 
@@ -160,7 +160,7 @@ describe("TicketPreviewPage", () => {
 
     await waitFor(() => {
       const previewLogo = Array.from(container.querySelectorAll('img[alt="Logo"]')).find((el) =>
-        el.className.includes("w-[105px]")
+        el.className.includes("w-[140px]")
       );
       expect(previewLogo).toBeDefined();
       expect(previewLogo!.getAttribute("src")).toBe("/logo.png");
@@ -173,7 +173,7 @@ describe("TicketPreviewPage", () => {
 
     await waitFor(() => {
       const previewLogo = Array.from(container.querySelectorAll('img[alt="Logo"]')).find((el) =>
-        el.className.includes("w-[105px]")
+        el.className.includes("w-[140px]")
       );
       expect(previewLogo).toBeDefined();
     });
