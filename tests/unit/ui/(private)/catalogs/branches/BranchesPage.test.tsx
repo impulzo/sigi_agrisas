@@ -102,19 +102,19 @@ describe("BranchesPage", () => {
     expect(screen.getByText("Ciudad de México")).toBeInTheDocument();
   });
 
-  it("botón Nuevo NO visible cuando canWrite=false", () => {
+  it("botón Nueva sucursal NO visible cuando canWrite=false", () => {
     mockCan.mockImplementation((p: string) => p === "branches:read" ? true : false);
     render(<BranchesPage />);
-    expect(screen.queryByRole("button", { name: /nuevo/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /nueva sucursal/i })).not.toBeInTheDocument();
   });
 
-  it("botón Nuevo VISIBLE cuando canWrite=true", () => {
+  it("botón Nueva sucursal VISIBLE cuando canWrite=true", () => {
     mockCan.mockReturnValue(true);
     render(<BranchesPage />);
-    expect(screen.getByRole("button", { name: /nuevo/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /nueva sucursal/i })).toBeInTheDocument();
   });
 
-  it("botón Nuevo abre el modal", async () => {
+  it("botón Nueva sucursal abre el modal", async () => {
     mockCan.mockReturnValue(true);
     const clearError = jest.fn();
     jest.spyOn(useBranchMutationsModule, "useBranchMutations").mockReturnValue({
@@ -122,7 +122,7 @@ describe("BranchesPage", () => {
       clearError,
     });
     render(<BranchesPage />);
-    await userEvent.setup().click(screen.getByRole("button", { name: /nuevo/i }));
+    await userEvent.setup().click(screen.getByRole("button", { name: /nueva sucursal/i }));
     expect(clearError).toHaveBeenCalled();
   });
 });

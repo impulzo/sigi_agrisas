@@ -8,12 +8,16 @@ import { usePermissionsCatalog } from "../_logic/hooks/usePermissionsCatalog";
 import { RolesList } from "./RolesList";
 import { RoleDetailHeader } from "./RoleDetailHeader";
 import { RolePermissionsEditor } from "./RolePermissionsEditor";
+import { RoleCreateModal } from "./RoleCreateModal";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import { PageShell } from "../../../_components/organisms/PageShell";
 import { Button } from "../../../_components/atoms/Button/Button";
+import { CreateButton } from "../../../_components/molecules/CreateButton/CreateButton";
+import { useRoleMutations } from "../_logic/hooks/useRoleMutations";
 import { grantPermissionToRole } from "../_logic/services/grantPermissionToRole";
 import { revokePermissionFromRole } from "../_logic/services/revokePermissionFromRole";
+import { RoleAlreadyExistsError, ValidationError } from "../_logic/types/domain";
 
 export function RolesPage() {
   const { can } = useCurrentUser();
@@ -21,8 +25,11 @@ export function RolesPage() {
   const [staged, setStaged] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const { roles, isLoading: rolesLoading, error: rolesError, refresh: refreshRoles } = useRoles();
+  const { createRole, isSaving: isCreatingRole } = useRoleMutations();
   const {
     permissions: rolePermissions,
     isLoading: rolePermsLoading,
@@ -100,6 +107,21 @@ export function RolesPage() {
     }
   }, [selectedRoleId, staged, originalIds, catalog, refreshRolePerms]);
 
+  const handleCreateRole = useCallback(async (data: { name: string; description?: string }) => {
+    setCreateError(null);
+    try {
+      const role = await createRole(data);
+      if (!role) return;
+      setIsCreateModalOpen(false);
+      refreshRoles();
+      setSelectedRoleId(role.id);
+    } catch (err) {
+      if (err instanceof RoleAlreadyExistsError) setCreateError(err.message);
+      else if (err instanceof ValidationError) setCreateError("Nombre inválido");
+      else setCreateError(err instanceof Error ? err.message : "Error al crear el rol");
+    }
+  }, [createRole, refreshRoles]);
+
   const canAccess = can("roles:read");
   const canWrite = can("roles:write");
 
@@ -135,7 +157,9 @@ export function RolesPage() {
     <PageShell
       title="Roles y Permisos"
       description="Gestiona el acceso de los usuarios a los diferentes módulos"
-      actions={canWrite === true && <Button icon="add">Crear Nuevo Rol</Button>}
+      actions={canWrite === true && (
+        <CreateButton label="Nuevo rol" onClick={() => { setCreateError(null); setIsCreateModalOpen(true); }} />
+      )}
     >
       <div className="flex gap-6 min-h-[70vh]">
         {/* Master pane */}
@@ -202,6 +226,14 @@ export function RolesPage() {
           )}
         </section>
       </div>
+
+      <RoleCreateModal
+        open={isCreateModalOpen}
+        isSaving={isCreatingRole}
+        error={createError}
+        onSubmit={handleCreateRole}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </PageShell>
   );
 }

@@ -1,4 +1,5 @@
 import { ButtonHTMLAttributes } from "react";
+import Link from "next/link";
 import { cn } from "../../../_lib/cn";
 import { Spinner } from "../Spinner/Spinner";
 import { Icon } from "../Icon/Icon";
@@ -27,6 +28,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
   icon?: IconName;
   iconPosition?: "start" | "end";
+  href?: string;
 }
 
 export function Button({
@@ -38,20 +40,33 @@ export function Button({
   disabled,
   children,
   className,
+  href,
   ...props
 }: ButtonProps) {
   const iconNode = icon && !loading ? <Icon name={icon} size={18} /> : null;
 
+  const classes = cn(
+    "inline-flex items-center justify-center gap-2 rounded-full font-medium",
+    "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+    "disabled:opacity-50 disabled:cursor-not-allowed",
+    sizeClasses[size],
+    variantClasses[variant],
+    className
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={classes}>
+        {iconNode && iconPosition === "start" && iconNode}
+        {children}
+        {iconNode && iconPosition === "end" && iconNode}
+      </Link>
+    );
+  }
+
   return (
     <button
-      className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-full font-medium",
-        "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-        "disabled:opacity-50 disabled:cursor-not-allowed",
-        sizeClasses[size],
-        variantClasses[variant],
-        className
-      )}
+      className={classes}
       disabled={disabled || loading}
       aria-busy={loading}
       {...props}

@@ -7,3 +7,9 @@ export async function GET(req: NextRequest) {
   if (guard) return guard;
   return rbacController.listRoles(req);
 }
+
+export async function POST(req: NextRequest) {
+  const guard = await requirePermission(req, "roles:write");
+  if (guard) return guard;
+  return rbacController.createRole(req);
+}

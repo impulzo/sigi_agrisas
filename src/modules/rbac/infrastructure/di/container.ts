@@ -12,6 +12,7 @@ import { GrantPermissionToRoleUseCase } from "@/modules/rbac/application/use-cas
 import { RevokePermissionFromRoleUseCase } from "@/modules/rbac/application/use-cases/RevokePermissionFromRoleUseCase";
 import { ListUserPermissionsUseCase } from "@/modules/rbac/application/use-cases/ListUserPermissionsUseCase";
 import { ListRolesUseCase } from "@/modules/rbac/application/use-cases/ListRolesUseCase";
+import { CreateRoleUseCase } from "@/modules/rbac/application/use-cases/CreateRoleUseCase";
 import { ListPermissionsUseCase } from "@/modules/rbac/application/use-cases/ListPermissionsUseCase";
 import { CheckUserPermissionUseCase } from "@/modules/rbac/application/use-cases/CheckUserPermissionUseCase";
 import { RbacController } from "@/modules/rbac/infrastructure/http/RbacController";
@@ -31,11 +32,13 @@ const grantPermissionToRole = new GrantPermissionToRoleUseCase(roleRepo, permiss
 const revokePermissionFromRole = new RevokePermissionFromRoleUseCase(roleRepo, permissionRepo, rolePermissionRepo, authorizationService);
 const listUserPermissions = new ListUserPermissionsUseCase(authorizationService);
 const listRoles = new ListRolesUseCase(roleRepo);
+const createRole = new CreateRoleUseCase(roleRepo);
 const listPermissions = new ListPermissionsUseCase(permissionRepo);
 const checkUserPermission = new CheckUserPermissionUseCase(authorizationService);
 
 export const rbacController = new RbacController(
   listRoles,
+  createRole,
   rolePermissionRepo,
   grantPermissionToRole,
   revokePermissionFromRole,

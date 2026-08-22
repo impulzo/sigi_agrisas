@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useWaybillsList } from "../_logic/hooks/useWaybillsList";
@@ -11,6 +10,7 @@ import { WaybillsToolbar } from "./WaybillsToolbar";
 import { WaybillsTable } from "./WaybillsTable";
 import { WaybillsEmpty } from "./WaybillsEmpty";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
+import { CreateButton } from "../../../_components/molecules/CreateButton/CreateButton";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import type { WaybillStatus, WaybillType } from "../_logic/types/api";
@@ -108,14 +108,7 @@ export function WaybillsListPage() {
             }}
             onReset={handleReset}
           />
-          {canWrite === true && (
-            <Link
-              href="/waybills/new"
-              className="rounded-full bg-primary text-on-primary px-4 py-2 text-label-lg font-medium hover:bg-primary/90 transition-colors flex-shrink-0"
-            >
-              + Nuevo traspaso
-            </Link>
-          )}
+          {canWrite === true && <CreateButton label="Nuevo traspaso" href="/waybills/new" />}
         </div>
       }
     >

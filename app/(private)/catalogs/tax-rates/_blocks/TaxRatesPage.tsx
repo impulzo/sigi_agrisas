@@ -138,6 +138,7 @@ export function TaxRatesPage() {
           <CatalogToolbar
             canWrite={canWrite === true}
             onCreate={handleCreate}
+            createButtonLabel="Nueva tasa de impuesto"
             searchValue={search}
             onSearchChange={setSearch}
             includeInactive={includeInactive}

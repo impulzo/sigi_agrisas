@@ -179,6 +179,7 @@ export function FoliosPage() {
           <CatalogToolbar
             canWrite={canWrite === true}
             onCreate={handleCreate}
+            createButtonLabel="Nuevo folio"
             searchValue={search}
             onSearchChange={setSearch}
             includeInactive={includeInactive}

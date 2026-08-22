@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Combobox } from "../../../_components/molecules/Combobox/Combobox";
+import { CreateButton } from "../../../_components/molecules/CreateButton/CreateButton";
 import { useDebounce } from "../../../_hooks/useDebounce";
 import { useProviderSearch } from "../_logic/hooks/useProviderSearch";
 import type { PurchaseStatus } from "../_logic/types/api";
@@ -133,14 +133,7 @@ export function PurchasesToolbar({
         </button>
       )}
 
-      {canCreate && (
-        <Link
-          href="/purchases/new"
-          className="rounded-full bg-primary text-on-primary px-4 py-2 text-label-lg font-medium hover:bg-primary/90 transition-colors flex-shrink-0"
-        >
-          Nueva compra
-        </Link>
-      )}
+      {canCreate && <CreateButton label="Nueva compra" href="/purchases/new" />}
     </div>
   );
 }
