@@ -33,6 +33,13 @@ export class PermissionAlreadyGrantedError extends Error {
   }
 }
 
+export class RoleAlreadyExistsError extends Error {
+  constructor() {
+    super("Ya existe un rol con este nombre");
+    this.name = "RoleAlreadyExistsError";
+  }
+}
+
 export class ValidationError extends Error {
   constructor(public details: unknown) {
     super("Validation error");

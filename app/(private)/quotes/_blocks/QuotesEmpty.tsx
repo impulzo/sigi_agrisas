@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
+import { CreateButton } from "../../../_components/molecules/CreateButton/CreateButton";
 
 interface QuotesEmptyProps {
   onRefresh?: () => void;
@@ -14,14 +14,7 @@ export function QuotesEmpty({ canCreate = false }: QuotesEmptyProps) {
         title="Sin cotizaciones"
         description="No se encontraron cotizaciones con los filtros actuales."
       />
-      {canCreate && (
-        <Link
-          href="/quotes/new"
-          className="rounded-full bg-secondary-container text-on-secondary-container px-4 py-2 text-label-lg font-medium hover:bg-secondary-container/80 transition-colors"
-        >
-          Nueva cotización
-        </Link>
-      )}
+      {canCreate && <CreateButton label="Nueva cotización" href="/quotes/new" />}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { ListRolesUseCase } from "@/modules/rbac/application/use-cases/ListRolesUseCase";
+import { CreateRoleUseCase } from "@/modules/rbac/application/use-cases/CreateRoleUseCase";
 import { RolePermissionRepository } from "@/modules/rbac/application/ports/RolePermissionRepository";
 import { GrantPermissionToRoleUseCase } from "@/modules/rbac/application/use-cases/GrantPermissionToRoleUseCase";
 import { RevokePermissionFromRoleUseCase } from "@/modules/rbac/application/use-cases/RevokePermissionFromRoleUseCase";
@@ -15,9 +16,16 @@ import { RoleNotFoundError } from "@/modules/rbac/domain/errors/RoleNotFoundErro
 import { PermissionNotFoundError } from "@/modules/rbac/domain/errors/PermissionNotFoundError";
 import { RoleAlreadyAssignedError } from "@/modules/rbac/domain/errors/RoleAlreadyAssignedError";
 import { PermissionAlreadyGrantedError } from "@/modules/rbac/domain/errors/PermissionAlreadyGrantedError";
+import { RoleAlreadyExistsError } from "@/modules/rbac/domain/errors/RoleAlreadyExistsError";
+import { InvalidRoleNameError } from "@/modules/rbac/domain/errors/InvalidRoleNameError";
 
 const assignRoleSchema = z.object({
   roleName: z.string().regex(/^[a-z][a-z0-9_]{1,31}$/),
+});
+
+const createRoleSchema = z.object({
+  name: z.string().regex(/^[a-z][a-z0-9_]{1,31}$/),
+  description: z.string().optional(),
 });
 
 const grantPermissionSchema = z.object({
@@ -27,6 +35,7 @@ const grantPermissionSchema = z.object({
 export class RbacController {
   constructor(
     private readonly listRolesUC: ListRolesUseCase,
+    private readonly createRoleUC: CreateRoleUseCase,
     private readonly rolePermissionRepo: RolePermissionRepository,
     private readonly grantPermissionUC: GrantPermissionToRoleUseCase,
     private readonly revokePermissionUC: RevokePermissionFromRoleUseCase,
@@ -40,6 +49,20 @@ export class RbacController {
   async listRoles(_req: NextRequest): Promise<NextResponse> {
     const roles = await this.listRolesUC.execute();
     return NextResponse.json({ roles: roles.map(RoleMapper.toPlain) });
+  }
+
+  async createRole(req: NextRequest): Promise<NextResponse> {
+    const body = await req.json().catch(() => ({}));
+    const parsed = createRoleSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Validation error", fieldErrors: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
+    try {
+      const role = await this.createRoleUC.execute(parsed.data);
+      return NextResponse.json({ role: RoleMapper.toPlain(role) }, { status: 201 });
+    } catch (err) {
+      return this.handleError(err);
+    }
   }
 
   async listRolePermissions(_req: NextRequest, roleId: string): Promise<NextResponse> {
@@ -107,8 +130,11 @@ export class RbacController {
     if (err instanceof RoleNotFoundError || err instanceof PermissionNotFoundError) {
       return NextResponse.json({ error: err.message }, { status: 404 });
     }
-    if (err instanceof RoleAlreadyAssignedError || err instanceof PermissionAlreadyGrantedError) {
+    if (err instanceof RoleAlreadyAssignedError || err instanceof PermissionAlreadyGrantedError || err instanceof RoleAlreadyExistsError) {
       return NextResponse.json({ error: err.message }, { status: 409 });
+    }
+    if (err instanceof InvalidRoleNameError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
     }
     throw err;
   }

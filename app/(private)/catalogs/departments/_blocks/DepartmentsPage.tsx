@@ -179,6 +179,7 @@ export function DepartmentsPage() {
           <CatalogToolbar
             canWrite={canWrite === true}
             onCreate={handleCreate}
+            createButtonLabel="Nuevo departamento"
             searchValue={search}
             onSearchChange={setSearch}
             includeInactive={includeInactive}

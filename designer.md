@@ -144,6 +144,17 @@ Todas bajo `app/_components/`. Presentational — sin `fetch`, sin `sessionStora
 
 `size`: `sm` (label-md) · `md` (label-lg, default) · `lg` (title-md). Siempre `rounded-full`.
 
+`Button` acepta `href?: string`: si está presente, renderiza `next/link` en vez de `<button>`, con las mismas clases de `variant`/`size`/ícono. Úsalo para CTAs que navegan a una ruta en vez de abrir un modal.
+
+### `molecules/CreateButton`
+
+```tsx
+<CreateButton label="Nuevo proveedor" onClick={openCreateModal} />
+<CreateButton label="Nueva cotización" href="/quotes/new" />
+```
+
+**Regla obligatoria**: todo botón de creación de recurso ("Nuevo/a X", "Crear X", "Agregar X") en cualquier página bajo `(private)` usa `CreateButton` — nunca `Button` instanciado directamente con `variant="filled"` + `icon="add"`. `CreateButton` envuelve `Button` con esas dos props fijas y expone sólo `label: string` (obligatoria, sin default genérico como el antiguo `"Nuevo"`) y `onClick`/`href` (uno de los dos, según abra modal o navegue). El gating por permisos (`canWrite`/`can(...)`) sigue siendo responsabilidad del caller — `CreateButton` no valida autorización.
+
 ### `molecules/DataTable` — `Table`, `THead`, `TBody`, `Tr`, `Th`, `Td`
 
 ```tsx

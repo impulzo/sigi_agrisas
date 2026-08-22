@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Combobox } from "../../../_components/molecules/Combobox/Combobox";
+import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useDebounce } from "../../../_hooks/useDebounce";
 import { useProviderSearch } from "../_logic/hooks/useProviderSearch";
@@ -44,7 +45,8 @@ export function ProviderPicker({ value, onChange, onOpenQuickAdd }: ProviderPick
         onMouseDown={(e) => { e.preventDefault(); onOpenQuickAdd(); }}
         className="w-full px-3 py-2 text-left text-label-sm text-primary hover:bg-primary/5 flex items-center gap-2 transition-colors"
       >
-        + Nuevo proveedor
+        <Icon name="add" size={14} />
+        Nuevo proveedor
       </button>
     ) : null;
 

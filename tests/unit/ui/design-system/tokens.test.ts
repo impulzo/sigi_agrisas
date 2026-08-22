@@ -140,7 +140,6 @@ const RAW_ELEMENT_ALLOWLIST = new Set([
   "app/(private)/catalogs/_blocks/CatalogEmpty.tsx",
   "app/(private)/catalogs/_blocks/CatalogError.tsx",
   "app/(private)/catalogs/_blocks/CatalogPagination.tsx",
-  "app/(private)/catalogs/_blocks/CatalogToolbar.tsx",
   "app/(private)/catalogs/branches/_blocks/BranchEditModal.tsx",
   "app/(private)/catalogs/branches/_blocks/BranchesTable.tsx",
   "app/(private)/catalogs/customers/_blocks/CustomerEditModal.tsx",

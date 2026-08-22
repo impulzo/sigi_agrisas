@@ -17,6 +17,7 @@ import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { Input } from "../../../_components/atoms/Input/Input";
 import { Select } from "../../../_components/atoms/Select/Select";
 import { Button } from "../../../_components/atoms/Button/Button";
+import { CreateButton } from "../../../_components/molecules/CreateButton/CreateButton";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog/ConfirmDialog";
@@ -174,12 +175,10 @@ export function InventoryPage() {
                   <span className="text-label-lg text-on-surface-variant">Solo bajo punto de reorden</span>
                 </label>
                 {canWrite === true && (
-                  <Button
-                    icon="add"
+                  <CreateButton
+                    label="Asignar producto"
                     onClick={() => { clearError(); setAssignError(null); setModal({ type: "assign", item: null }); }}
-                  >
-                    Asignar producto
-                  </Button>
+                  />
                 )}
               </>
             )}

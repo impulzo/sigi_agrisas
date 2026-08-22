@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { SearchInput } from "../../../_components/molecules/SearchInput/SearchInput";
+import { CreateButton } from "../../../_components/molecules/CreateButton/CreateButton";
 
 interface BranchOption {
   id: string;
@@ -104,14 +104,7 @@ export function QuotesToolbar({
           Limpiar
         </button>
 
-        {canCreate && (
-          <Link
-            href="/quotes/new"
-            className="rounded-full bg-secondary-container text-on-secondary-container px-4 py-2 text-label-lg font-medium hover:bg-secondary-container/80 transition-colors whitespace-nowrap"
-          >
-            Nueva cotización
-          </Link>
-        )}
+        {canCreate && <CreateButton label="Nueva cotización" href="/quotes/new" />}
       </div>
     </div>
   );

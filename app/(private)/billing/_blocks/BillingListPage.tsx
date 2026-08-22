@@ -10,6 +10,7 @@ import { BillingToolbar } from "./BillingToolbar";
 import { InvoicesTable } from "./InvoicesTable";
 import { BillingEmpty } from "./BillingEmpty";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
+import { CreateButton } from "../../../_components/molecules/CreateButton/CreateButton";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import type { InvoiceStatus } from "../_logic/types/domain";
@@ -75,12 +76,7 @@ export function BillingListPage() {
             </Link>
           )}
           {(canWrite === true || canWrite === "loading") && (
-            <Link
-              href="/billing/new"
-              className="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-4 py-2 text-label-lg font-medium hover:bg-primary/90 transition-colors"
-            >
-              Nueva factura
-            </Link>
+            <CreateButton label="Nueva factura" href="/billing/new" />
           )}
         </>
       }

@@ -184,6 +184,7 @@ Nota: `CLAUDE.md` está versionado en git — este es un usuario admin sembrado 
 - E2E: `tests/e2e/` (sin runner aún).
 - Los use cases se prueban con `InMemory<Repo>`, nunca mock de BD real.
 - `jest.config.ts` usa `projects` para separar `node` (backend) y `jsdom` (UI).
+- **Verificación manual/visual en browser: usar Playwright (`mcp__playwright__*`), nunca Claude-in-Chrome** — Claude-in-Chrome mostró timeouts de captura/script no reproducibles ni siquiera en páginas externas (`example.com`), Playwright es la vía confiable en este entorno.
 
 ## JWT
 

@@ -27,3 +27,12 @@ export interface ListRolePermissionsResponse {
 export interface GrantPermissionPayload {
   permissionKey: string;
 }
+
+export interface CreateRolePayload {
+  name: string;
+  description?: string;
+}
+
+export interface CreateRoleResponse {
+  role: RoleDto;
+}

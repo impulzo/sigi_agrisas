@@ -1,5 +1,6 @@
 import { cn } from "../../../_lib/cn";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
+import { CreateButton } from "../../../_components/molecules/CreateButton/CreateButton";
 
 interface UsersToolbarProps {
   search: string;
@@ -37,16 +38,7 @@ export function UsersToolbar({
             className="w-full pl-10 pr-4 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
-        {canCreate && (
-          <button
-            type="button"
-            onClick={onCreateClick}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
-          >
-            <Icon name="person_add" size={18} />
-            Crear usuario
-          </button>
-        )}
+        {canCreate && <CreateButton label="Nuevo usuario" onClick={onCreateClick} />}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <button

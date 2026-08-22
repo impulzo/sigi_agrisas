@@ -187,6 +187,7 @@ export function ProvidersPage() {
           <CatalogToolbar
             canWrite={canWrite === true}
             onCreate={handleCreate}
+            createButtonLabel="Nuevo proveedor"
             searchValue={searchInput}
             onSearchChange={handleSearchChange}
             includeInactive={includeInactive}

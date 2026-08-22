@@ -177,6 +177,7 @@ export function BranchesPage() {
           <CatalogToolbar
             canWrite={canWrite === true}
             onCreate={handleCreate}
+            createButtonLabel="Nueva sucursal"
             searchValue={search}
             onSearchChange={setSearch}
             includeInactive={includeInactive}

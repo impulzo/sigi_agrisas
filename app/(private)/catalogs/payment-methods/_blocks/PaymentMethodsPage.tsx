@@ -177,6 +177,7 @@ export function PaymentMethodsPage() {
           <CatalogToolbar
             canWrite={canWrite === true}
             onCreate={handleCreate}
+            createButtonLabel="Nuevo método de pago"
             searchValue={search}
             onSearchChange={setSearch}
             includeInactive={includeInactive}

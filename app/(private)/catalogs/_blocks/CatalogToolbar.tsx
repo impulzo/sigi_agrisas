@@ -2,6 +2,7 @@
 
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { Switch } from "../../../_components/atoms/Switch/Switch";
+import { CreateButton } from "../../../_components/molecules/CreateButton/CreateButton";
 
 interface CatalogToolbarProps {
   canWrite: boolean;
@@ -56,16 +57,7 @@ export function CatalogToolbar({
           <span className="text-label-lg text-on-surface-variant">Mostrar inactivos</span>
         </label>
 
-        {canWrite && (
-          <button
-            type="button"
-            onClick={onCreate}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-primary text-on-primary text-label-lg font-medium hover:opacity-90 transition-opacity"
-          >
-            <Icon name="add" size={18} />
-            {createButtonLabel}
-          </button>
-        )}
+        {canWrite && <CreateButton label={createButtonLabel} onClick={onCreate} />}
       </div>
 
       {searchScope === "server" && !showMinLengthHint && (
