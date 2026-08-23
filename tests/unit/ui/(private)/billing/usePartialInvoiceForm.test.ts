@@ -189,6 +189,41 @@ describe("usePartialInvoiceForm", () => {
     expect(result.current.error?.message).toMatch(/precio \$0/i);
   });
 
+  it("submit blocked when a free line has a partial (non-8-digit) satProductCode", async () => {
+    const { result } = renderHook(() => usePartialInvoiceForm());
+    act(() => {
+      result.current.setCustomer(COMPLETE_CUSTOMER);
+      result.current.addLine(makeLine({ satProductCode: "1234" }));
+    });
+    let ret: unknown;
+    await act(async () => { ret = await result.current.submit(); });
+    expect(ret).toBeNull();
+    expect(mockStamp).not.toHaveBeenCalled();
+    expect(result.current.error?.message).toMatch(/clave sat/i);
+  });
+
+  it("submit allowed when a free line's satProductCode is empty", async () => {
+    mockStamp.mockResolvedValueOnce(makeInvoiceResult());
+    const { result } = renderHook(() => usePartialInvoiceForm());
+    act(() => {
+      result.current.setCustomer(COMPLETE_CUSTOMER);
+      result.current.addLine(makeLine({ satProductCode: "" }));
+    });
+    await act(async () => { await result.current.submit(); });
+    expect(mockStamp).toHaveBeenCalledTimes(1);
+  });
+
+  it("submit allowed when a free line's satProductCode is exactly 8 digits", async () => {
+    mockStamp.mockResolvedValueOnce(makeInvoiceResult());
+    const { result } = renderHook(() => usePartialInvoiceForm());
+    act(() => {
+      result.current.setCustomer(COMPLETE_CUSTOMER);
+      result.current.addLine(makeLine({ satProductCode: "01010101" }));
+    });
+    await act(async () => { await result.current.submit(); });
+    expect(mockStamp).toHaveBeenCalledTimes(1);
+  });
+
   it("submit allowed when a free line has unitPrice 0", async () => {
     mockStamp.mockResolvedValueOnce(makeInvoiceResult());
     const { result } = renderHook(() => usePartialInvoiceForm());

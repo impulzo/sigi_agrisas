@@ -158,6 +158,8 @@ describe("QuoteActionsBar", () => {
         onAuthorize={jest.fn()}
         onCancel={jest.fn()}
         onConvert={jest.fn()}
+        isExporting={false}
+        onDownloadPdf={jest.fn()}
       />,
     );
     expect(screen.getByRole("button", { name: /Autorizar/i })).toBeInTheDocument();
@@ -175,6 +177,8 @@ describe("QuoteActionsBar", () => {
         onAuthorize={jest.fn()}
         onCancel={jest.fn()}
         onConvert={jest.fn()}
+        isExporting={false}
+        onDownloadPdf={jest.fn()}
       />,
     );
     expect(screen.getByRole("button", { name: /Convertir/i })).toBeInTheDocument();
@@ -192,6 +196,8 @@ describe("QuoteActionsBar", () => {
         onAuthorize={jest.fn()}
         onCancel={jest.fn()}
         onConvert={jest.fn()}
+        isExporting={false}
+        onDownloadPdf={jest.fn()}
       />,
     );
     expect(screen.getByRole("button", { name: /Convertir/i })).toBeDisabled();
@@ -206,13 +212,15 @@ describe("QuoteActionsBar", () => {
         onAuthorize={jest.fn()}
         onCancel={jest.fn()}
         onConvert={jest.fn()}
+        isExporting={false}
+        onDownloadPdf={jest.fn()}
       />,
     );
     expect(screen.getByRole("link", { name: /Ver venta/i })).toHaveAttribute("href", "/sales/s1");
   });
 
-  it("cancelled: no renderiza botones", () => {
-    const { container } = render(
+  it("cancelled: no renderiza botones de escritura, sólo Imprimir PDF", () => {
+    render(
       <QuoteActionsBar
         quote={{ ...baseQuote, status: "cancelled" }}
         can={fullCan}
@@ -220,9 +228,65 @@ describe("QuoteActionsBar", () => {
         onAuthorize={jest.fn()}
         onCancel={jest.fn()}
         onConvert={jest.fn()}
+        isExporting={false}
+        onDownloadPdf={jest.fn()}
       />,
     );
-    expect(container.firstChild).toBeNull();
+    expect(screen.queryByRole("button", { name: /Autorizar/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Cancelar/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Editar/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Imprimir PDF/i })).toBeInTheDocument();
+  });
+
+  it("converted: también muestra Imprimir PDF junto al enlace de venta", () => {
+    render(
+      <QuoteActionsBar
+        quote={{ ...baseQuote, status: "converted", convertedSaleId: "s1" }}
+        can={fullCan}
+        isSaving={false}
+        onAuthorize={jest.fn()}
+        onCancel={jest.fn()}
+        onConvert={jest.fn()}
+        isExporting={false}
+        onDownloadPdf={jest.fn()}
+      />,
+    );
+    expect(screen.getByRole("link", { name: /Ver venta/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Imprimir PDF/i })).toBeInTheDocument();
+  });
+
+  it("Imprimir PDF: se deshabilita mientras isExporting=true", () => {
+    render(
+      <QuoteActionsBar
+        quote={{ ...baseQuote, status: "draft" }}
+        can={fullCan}
+        isSaving={false}
+        onAuthorize={jest.fn()}
+        onCancel={jest.fn()}
+        onConvert={jest.fn()}
+        isExporting={true}
+        onDownloadPdf={jest.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Imprimir PDF/i })).toBeDisabled();
+  });
+
+  it("Imprimir PDF: invoca onDownloadPdf al hacer click", () => {
+    const onDownloadPdf = jest.fn();
+    render(
+      <QuoteActionsBar
+        quote={{ ...baseQuote, status: "draft" }}
+        can={fullCan}
+        isSaving={false}
+        onAuthorize={jest.fn()}
+        onCancel={jest.fn()}
+        onConvert={jest.fn()}
+        isExporting={false}
+        onDownloadPdf={onDownloadPdf}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Imprimir PDF/i }));
+    expect(onDownloadPdf).toHaveBeenCalledTimes(1);
   });
 
   it('loading state: muestra Spinner cuando can() devuelve "loading"', () => {
@@ -234,6 +298,8 @@ describe("QuoteActionsBar", () => {
         onAuthorize={jest.fn()}
         onCancel={jest.fn()}
         onConvert={jest.fn()}
+        isExporting={false}
+        onDownloadPdf={jest.fn()}
       />,
     );
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
@@ -248,6 +314,8 @@ describe("QuoteActionsBar", () => {
         onAuthorize={jest.fn()}
         onCancel={jest.fn()}
         onConvert={jest.fn()}
+        isExporting={false}
+        onDownloadPdf={jest.fn()}
       />,
     );
     const btn = screen.getByRole("button", { name: /Autorizar/i });

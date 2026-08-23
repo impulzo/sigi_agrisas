@@ -7,8 +7,10 @@ import {
   ReceiverFiscalDataIncompleteError,
   FacturamaStampError,
   BillingForbiddenError,
+  BranchRequiredError,
 } from "../errors";
 import { mapInvoiceDto } from "./_mappers";
+import { messageFromZodErrorBody } from "./_errorMessage";
 
 export async function stampInvoice(
   payload: StampFromSaleRequest | StampStandaloneRequest,
@@ -35,11 +37,14 @@ export async function stampInvoice(
   }
 
   if (res.status === 400) {
-    const body = await res.json() as { error: string; missingFields?: string[] };
+    const body = await res.json() as { error: unknown; missingFields?: string[] };
     if (body.error === "ReceiverFiscalDataIncomplete") {
       throw new ReceiverFiscalDataIncompleteError(body.missingFields ?? []);
     }
-    throw new NetworkError();
+    if (body.error === "BranchRequired") {
+      throw new BranchRequiredError();
+    }
+    throw new Error(messageFromZodErrorBody(body));
   }
 
   if (res.status === 422) {

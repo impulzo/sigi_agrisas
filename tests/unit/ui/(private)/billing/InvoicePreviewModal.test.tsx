@@ -60,6 +60,27 @@ describe("InvoicePreviewModal", () => {
     await waitFor(() => expect(mockDownload).toHaveBeenCalledWith(data));
   });
 
+  it("renders discountPct at whole-percent scale (0-100), not multiplied again by 100", () => {
+    const data = makeData({
+      lines: [
+        { description: "Fertilizante", productCode: "SKU1", quantity: 1, unitPrice: 100, discountPct: 10, ivaRate: 0.16, iepsRate: 0, lineSubtotal: 77.59, lineTotal: 90 },
+      ],
+    });
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={data}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    expect(screen.getByText("10%")).toBeInTheDocument();
+    expect(screen.queryByText("1000%")).not.toBeInTheDocument();
+    expect(screen.getByText("16%")).toBeInTheDocument();
+  });
+
   it("disables Descargar PDF when there is no data (same guard as Timbrar ahora)", () => {
     render(
       <InvoicePreviewModal

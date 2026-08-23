@@ -63,6 +63,13 @@ export class InvoiceNoEmailError extends Error {
   constructor() { super("El cliente no tiene correo registrado. Captura uno para continuar."); this.name = "InvoiceNoEmailError"; }
 }
 
+export class BranchRequiredError extends Error {
+  constructor() {
+    super("No hay sucursal matriz configurada. Especifica una sucursal o marca una como matriz en Catálogos › Sucursales.");
+    this.name = "BranchRequiredError";
+  }
+}
+
 export class InvoiceNotStampedError extends Error {
   constructor() { super("Esta factura no ha sido timbrada"); this.name = "InvoiceNotStampedError"; }
 }

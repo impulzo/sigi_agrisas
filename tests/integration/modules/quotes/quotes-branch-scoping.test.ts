@@ -13,6 +13,21 @@
  *  - DELETE /:id sobre cotización de otra sucursal → 403
  *  - POST /convert sobre cotización de otra sucursal → 403
  */
+// @react-pdf/renderer is a server-only ESM lib; mock it for the node test env
+jest.mock("@react-pdf/renderer", () => ({
+  renderToBuffer: jest.fn().mockResolvedValue(Buffer.from("%PDF-1.4 mock")),
+  Document: ({ children }: { children: unknown }) => children,
+  Page: ({ children }: { children: unknown }) => children,
+  Text: ({ children }: { children: unknown }) => children,
+  View: ({ children }: { children: unknown }) => children,
+  StyleSheet: { create: (s: unknown) => s },
+}));
+
+// QuotePdf uses JSX which the node test env can't parse; mock the whole module
+jest.mock("@/modules/quotes/infrastructure/pdf/QuotePdf", () => ({
+  QuotePdf: () => null,
+}));
+
 import { NextRequest } from "next/server";
 import { prisma } from "@/shared/infrastructure/prisma/client";
 import { PrismaBranchRepository } from "@/modules/branches/infrastructure/repositories/PrismaBranchRepository";
@@ -37,6 +52,8 @@ import { CancelQuoteUseCase } from "@/modules/quotes/application/use-cases/Cance
 import { ConvertQuoteToSaleUseCase } from "@/modules/quotes/application/use-cases/ConvertQuoteToSaleUseCase";
 import { QuotesController } from "@/modules/quotes/infrastructure/http/QuotesController";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
+import { PrismaTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaTicketSettingsRepository";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 
 jest.setTimeout(30000);
 
@@ -98,6 +115,8 @@ describe("Quotes — branch scoping a nivel controller (integration real DB)", (
   const quoteRepo = new PrismaQuoteRepository(prisma);
   const saleRepo = new PrismaSaleRepository(prisma);
   const lookups = new PrismaPosLookupService(prisma);
+  const ticketSettingsRepo = new PrismaTicketSettingsRepository(prisma);
+  const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketSettingsRepo);
 
   const createCustomer = new CreateCustomerUseCase(customerRepo);
   const createProduct = new CreateProductUseCase(productRepo, deptRepo);
@@ -112,7 +131,8 @@ describe("Quotes — branch scoping a nivel controller (integration real DB)", (
       new AuthorizeQuoteUseCase(quoteRepo),
       new CancelQuoteUseCase(quoteRepo),
       new ConvertQuoteToSaleUseCase(quoteRepo, saleRepo, lookups),
-      makeAuthz(bypass)
+      makeAuthz(bypass),
+      getTicketSettingsUseCase
     );
   }
 

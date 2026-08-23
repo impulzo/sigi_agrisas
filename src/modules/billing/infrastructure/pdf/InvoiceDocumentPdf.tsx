@@ -42,6 +42,7 @@ interface InvoiceDocumentPdfProps {
   data: InvoiceDocumentPdfData;
   watermark: string;
   folioLabel: string;
+  isDraft?: boolean;
 }
 
 function money(n: number, currency: string): string {
@@ -52,7 +53,7 @@ function pct(n: number): string {
   return `${(n * 100).toFixed(0)}%`;
 }
 
-export function InvoiceDocumentPdf({ data, watermark, folioLabel }: InvoiceDocumentPdfProps) {
+export function InvoiceDocumentPdf({ data, watermark, folioLabel, isDraft = false }: InvoiceDocumentPdfProps) {
   const ivaTotal = data.lines.reduce((sum, l) => sum + l.lineSubtotal * l.ivaRate, 0);
   const iepsTotal = data.lines.reduce((sum, l) => sum + l.lineSubtotal * l.iepsRate, 0);
 
@@ -125,10 +126,11 @@ export function InvoiceDocumentPdf({ data, watermark, folioLabel }: InvoiceDocum
               <Text style={s.colDescription}>{line.description}</Text>
               <Text style={s.colQty}>{line.quantity}</Text>
               <Text style={s.colPrice}>{money(line.unitPrice, data.currency)}</Text>
-              {/* discountPct/ivaRate both fed through the same pct() helper the on-screen
-                  InvoicePreviewModal already uses (WYSIWYG parity is the point of this PDF —
-                  it must render exactly what the modal shows, not a "corrected" value). */}
-              <Text style={s.colDiscount}>{pct(line.discountPct)}</Text>
+              {/* discountPct is already whole-percent scale (0-100); ivaRate/iepsRate are
+                  fraction scale (0-1) and go through pct() to become whole-percent for display.
+                  WYSIWYG parity with InvoicePreviewModal is maintained by applying the same
+                  fix there. */}
+              <Text style={s.colDiscount}>{line.discountPct.toFixed(0)}%</Text>
               <Text style={s.colTax}>{pct(line.ivaRate)}</Text>
               <Text style={s.colTotal}>{money(line.lineTotal, data.currency)}</Text>
             </View>
@@ -163,19 +165,21 @@ export function InvoiceDocumentPdf({ data, watermark, folioLabel }: InvoiceDocum
           </View>
         </View>
 
-        <View style={s.fiscalFooter}>
-          <View style={s.fiscalFooterRow}>
-            <Text style={s.fiscalFooterLabel}>Sello digital:</Text>
-            <Text style={s.fiscalFooterValue}>{watermark}</Text>
+        {!isDraft && (
+          <View style={s.fiscalFooter}>
+            <View style={s.fiscalFooterRow}>
+              <Text style={s.fiscalFooterLabel}>Sello digital:</Text>
+              <Text style={s.fiscalFooterValue}>{watermark}</Text>
+            </View>
+            <View style={s.fiscalFooterRow}>
+              <Text style={s.fiscalFooterLabel}>Cadena original:</Text>
+              <Text style={s.fiscalFooterValue}>||4.0|{folioLabel}|{data.receiver.rfc}||</Text>
+            </View>
+            <View style={s.qrPlaceholder}>
+              <Text style={s.qrPlaceholderText}>QR</Text>
+            </View>
           </View>
-          <View style={s.fiscalFooterRow}>
-            <Text style={s.fiscalFooterLabel}>Cadena original:</Text>
-            <Text style={s.fiscalFooterValue}>||4.0|{folioLabel}|{data.receiver.rfc}||</Text>
-          </View>
-          <View style={s.qrPlaceholder}>
-            <Text style={s.qrPlaceholderText}>QR</Text>
-          </View>
-        </View>
+        )}
 
         <Text style={s.watermarkFooter}>{watermark}</Text>
       </Page>

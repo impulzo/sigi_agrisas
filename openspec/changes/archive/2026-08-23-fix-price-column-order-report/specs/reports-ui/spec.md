@@ -1,0 +1,55 @@
+## MODIFIED Requirements
+
+### Requirement: Inventory by department view
+
+El sistema SHALL exponer la vista de UI `app/(private)/reports/inventory-by-department/`: una tarjeta "Inventario por Departamento" en el hub `/reports` gated por `reports:inventory_read`, un selector de departamento, una tabla que agrupa los productos con su costo de adquisición y sus listas de precio, y botones "Exportar PDF" y "Exportar Excel" que descargan los artefactos con los filtros aplicados vía `authFetch` (Bearer). Los `_blocks` SHALL ser presentacionales (sin `fetch`, navegación ni validación); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. La tabla SHALL mostrar una columna "Costo adq." (formateada como moneda MXN, o "—" si el producto no tiene costo capturado) inmediatamente después de la columna "Stock" y antes de las columnas dinámicas de nivel de precio. Las columnas de nivel de precio SHALL ordenarse por rango de negocio: primero el/los nombre(s) de precio marcados `isDefault=true` en los datos, luego los que matcheen `/subdis/i` en el nombre, luego los que matcheen `/distri/i`, y por último el resto — dentro de cada rango, orden alfabético `es-MX` en caso de empate; no puramente alfabético sobre el nombre completo. Mismo criterio de rango que ya aplica `sortProductPricesForDisplay` en catálogo de productos y POS. (Traza: historia 2 y historia 1 de `fix-price-column-order-report`.)
+
+#### Scenario: Tarjeta en el hub
+
+- **WHEN** un usuario con `reports:inventory_read` abre `/reports`
+- **THEN** ve la tarjeta "Inventario por Departamento" con icono `inventory_2` que navega a `/reports/inventory-by-department`
+
+#### Scenario: Tarjeta oculta sin permiso
+
+- **WHEN** el usuario no tiene `reports:inventory_read`
+- **THEN** la tarjeta no se muestra en el hub
+
+#### Scenario: Página sin permiso
+
+- **WHEN** un usuario sin `reports:inventory_read` abre `/reports/inventory-by-department`
+- **THEN** la página muestra un estado "Sin acceso" en lugar del reporte
+
+#### Scenario: Selección de departamento
+
+- **WHEN** el usuario abre la página sin seleccionar departamento
+- **THEN** ve un selector de departamentos (solo activos) y se le solicita elegir uno antes de mostrar el reporte
+
+#### Scenario: Tabla agrupada por producto
+
+- **WHEN** el usuario selecciona un departamento con productos
+- **THEN** la tabla muestra cada producto con código, nombre, unidad y costo de adquisición, y debajo sus filas de precio (lista, precio, cantidad mínima, % descuento, default)
+
+#### Scenario: Exportar PDF
+
+- **WHEN** el usuario pulsa "Exportar PDF" con un departamento seleccionado
+- **THEN** se descarga `inventory-by-department-YYYY-MM-DD.pdf` con los mismos filtros, autenticado vía `authFetch`
+
+#### Scenario: Exportar Excel
+
+- **WHEN** el usuario pulsa "Exportar Excel" con un departamento seleccionado
+- **THEN** se descarga `inventory-by-department-YYYY-MM-DD.xlsx` con los mismos filtros, autenticado vía `authFetch`
+
+#### Scenario: Sin productos
+
+- **WHEN** el departamento seleccionado no tiene productos
+- **THEN** se muestra un estado vacío en lugar de la tabla
+
+#### Scenario: Columna de costo de adquisición sin valor
+
+- **WHEN** un producto listado no tiene `acquisitionPrice` capturado
+- **THEN** la celda de "Costo adq." muestra "—"
+
+#### Scenario: Orden de columnas de precio en la tabla web — rango de negocio, no alfabético puro
+
+- **WHEN** el departamento seleccionado tiene productos con precios nombrados `"Precio Publico"` (marcado `isDefault: true`), `"Precio Subdis 10%"`, `"Precio Distri 15%"` y `"Precio 4"`
+- **THEN** las columnas de la tabla se muestran en el orden `Precio Publico, Precio Subdis 10%, Precio Distri 15%, Precio 4` — default primero, luego subdistribuidor, luego distribuidor, luego el resto; NO alfabético puro sobre el nombre completo

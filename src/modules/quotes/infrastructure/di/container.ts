@@ -2,6 +2,8 @@ import { prisma } from "@/shared/infrastructure/prisma/client";
 import { PrismaQuoteRepository } from "@/modules/quotes/infrastructure/repositories/PrismaQuoteRepository";
 import { PrismaSaleRepository } from "@/modules/pos/infrastructure/repositories/PrismaSaleRepository";
 import { PrismaPosLookupService } from "@/modules/pos/infrastructure/repositories/PrismaPosLookupService";
+import { PrismaTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaTicketSettingsRepository";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { ListQuotesUseCase } from "@/modules/quotes/application/use-cases/ListQuotesUseCase";
 import { GetQuoteUseCase } from "@/modules/quotes/application/use-cases/GetQuoteUseCase";
 import { CreateQuoteUseCase } from "@/modules/quotes/application/use-cases/CreateQuoteUseCase";
@@ -20,6 +22,8 @@ import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
 export const quoteRepo = new PrismaQuoteRepository(prisma);
 const saleRepo = new PrismaSaleRepository(prisma);
 const lookups = new PrismaPosLookupService(prisma);
+const ticketSettingsRepo = new PrismaTicketSettingsRepository(prisma);
+const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketSettingsRepo);
 
 const listUseCase = new ListQuotesUseCase(quoteRepo);
 const getUseCase = new GetQuoteUseCase(quoteRepo);
@@ -37,5 +41,6 @@ export const quotesController = new QuotesController(
   authorizeUseCase,
   cancelUseCase,
   convertUseCase,
-  rbacContainer.authorizationService
+  rbacContainer.authorizationService,
+  getTicketSettingsUseCase
 );

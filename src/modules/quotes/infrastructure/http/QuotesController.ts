@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import React from "react";
+import { renderToBuffer } from "@react-pdf/renderer";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { QuotePdf } from "../pdf/QuotePdf";
 import { ListQuotesUseCase } from "../../application/use-cases/ListQuotesUseCase";
 import { GetQuoteUseCase } from "../../application/use-cases/GetQuoteUseCase";
 import { CreateQuoteUseCase } from "../../application/use-cases/CreateQuoteUseCase";
@@ -27,6 +31,8 @@ import {
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 
 const uuidSchema = z.string().uuid("Invalid quote ID format");
+
+const getByIdFormatSchema = z.enum(["json", "pdf"]).default("json");
 
 const listQueryFiltersSchema = z.object({
   branchId: z.string().uuid().optional(),
@@ -95,7 +101,8 @@ export class QuotesController {
     private readonly authorizeUseCase: AuthorizeQuoteUseCase,
     private readonly cancelUseCase: CancelQuoteUseCase,
     private readonly convertUseCase: ConvertQuoteToSaleUseCase,
-    private readonly authzService: AuthorizationService
+    private readonly authzService: AuthorizationService,
+    private readonly getTicketSettingsUseCase: GetTicketSettingsUseCase
   ) {}
 
   async list(req: NextRequest): Promise<NextResponse> {
@@ -144,10 +151,28 @@ export class QuotesController {
     if (!idParsed.success) {
       return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
     }
+    const { searchParams } = new URL(req.url);
+    const formatParsed = getByIdFormatSchema.safeParse(searchParams.get("format") ?? undefined);
+    if (!formatParsed.success) {
+      return NextResponse.json({ error: "Invalid format. Allowed: json, pdf" }, { status: 400 });
+    }
     try {
       const { dto, branchId } = await this.getUseCase.execute(idParsed.data);
       const scope = await enforceBranchScope(req, branchId, this.authzService);
       if (scope) return scope;
+
+      if (formatParsed.data === "pdf") {
+        const issuer = await this.getTicketSettingsUseCase.execute();
+        const pdfBuffer = await renderToBuffer(React.createElement(QuotePdf, { data: dto, issuer }) as never);
+        return new NextResponse(pdfBuffer as unknown as BodyInit, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="cotizacion-${dto.folioCode}-${dto.folioNumber}.pdf"`,
+          },
+        });
+      }
+
       return NextResponse.json(dto);
     } catch (err) {
       if (err instanceof QuoteNotFoundError) {

@@ -113,7 +113,7 @@ export function InvoicePreviewModal({
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
                 <dt className="text-label-sm text-on-surface-variant">RFC</dt>
-                <dd className="text-body-sm text-on-surface font-mono">{data.receiver.rfc}</dd>
+                <dd className="text-body-sm text-on-surface font-mono">{data.receiver.rfc || "—"}</dd>
               </div>
               <div>
                 <dt className="text-label-sm text-on-surface-variant">Nombre</dt>
@@ -150,7 +150,7 @@ export function InvoicePreviewModal({
                 </div>
                 <span className="text-right tabular-nums">{line.quantity}</span>
                 <span className="text-right tabular-nums">{fmt(line.unitPrice)}</span>
-                <span className="text-right tabular-nums">{pct(line.discountPct)}</span>
+                <span className="text-right tabular-nums">{line.discountPct.toFixed(0)}%</span>
                 <span className="text-right tabular-nums">{pct(line.ivaRate)}</span>
                 <span className="text-right tabular-nums font-medium">{fmt(line.lineTotal)}</span>
               </div>

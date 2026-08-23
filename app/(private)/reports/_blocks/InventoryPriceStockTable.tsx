@@ -16,9 +16,21 @@ function money(v: string): string {
 }
 
 /**
+ * Rango de negocio por nombre de precio — mismo patrón que
+ * `sortProductPricesForDisplay` (catálogo/POS): default primero, luego
+ * subdistribuidor, luego distribuidor, el resto al final.
+ */
+function priorityOf(name: string, isDefault: boolean): number {
+  if (isDefault) return 0;
+  if (/subdis/i.test(name)) return 1;
+  if (/distri/i.test(name)) return 2;
+  return 3;
+}
+
+/**
  * Nombres únicos de lista de precio entre los departamentos dados.
- * Orden: el/los nombre(s) marcados `isDefault` en los datos van primero;
- * el resto se ordena alfabéticamente (es-MX). Copia local del algoritmo de
+ * Orden: rango de negocio (`priorityOf`); dentro del mismo rango,
+ * alfabético (es-MX). Copia local del algoritmo de
  * `src/modules/reports/domain/services/priceColumnNames.ts` (backend) — el
  * cliente no puede importar de `src/modules/*`.
  */
@@ -33,9 +45,8 @@ export function priceColumnNames(departments: DepartmentPriceListDepartmentDto[]
     }
   }
   return Array.from(isDefaultByName.keys()).sort((a, b) => {
-    const aDefault = isDefaultByName.get(a) ?? false;
-    const bDefault = isDefaultByName.get(b) ?? false;
-    if (aDefault !== bDefault) return aDefault ? -1 : 1;
+    const rankDiff = priorityOf(a, isDefaultByName.get(a) ?? false) - priorityOf(b, isDefaultByName.get(b) ?? false);
+    if (rankDiff !== 0) return rankDiff;
     return a.localeCompare(b, "es-MX");
   });
 }

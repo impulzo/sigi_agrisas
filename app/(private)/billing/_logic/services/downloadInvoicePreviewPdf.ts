@@ -1,5 +1,6 @@
 import { authFetch, NetworkError } from "../../../../_lib/authFetch";
 import type { InvoicePreviewData } from "../types/preview";
+import { messageFromZodErrorBody } from "./_errorMessage";
 
 export async function downloadInvoicePreviewPdf(
   data: InvoicePreviewData,
@@ -14,6 +15,11 @@ export async function downloadInvoicePreviewPdf(
     });
   } catch {
     throw new NetworkError();
+  }
+
+  if (res.status === 400) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(messageFromZodErrorBody(body));
   }
 
   if (!res.ok) throw new NetworkError();

@@ -89,4 +89,27 @@ describe("priceColumnNames", () => {
     ];
     expect(priceColumnNames(departments)).toEqual(["Mayoreo", "Público"]);
   });
+
+  it("ordena por rango de negocio con nombres reales de producción (default, subdis, distri, resto)", () => {
+    const departments = [
+      dept({
+        products: [
+          product({
+            prices: [
+              price("Precio Distri 15%"),
+              price("Precio 4"),
+              price("Precio Subdis 10%"),
+              price("Precio Publico", true),
+            ],
+          }),
+        ],
+      }),
+    ];
+    expect(priceColumnNames(departments)).toEqual([
+      "Precio Publico",
+      "Precio Subdis 10%",
+      "Precio Distri 15%",
+      "Precio 4",
+    ]);
+  });
 });

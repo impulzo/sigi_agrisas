@@ -18,7 +18,48 @@ jest.mock("../../../../../app/(private)/pos/_logic/services/getProductPrices", (
 }));
 
 jest.mock("../../../../../app/(private)/pos/_blocks/CustomerPicker", () => ({
-  CustomerPicker: () => <div data-testid="customer-picker" />,
+  CustomerPicker: ({ onChange, onOpenQuickAdd }: { onChange: (id: string, dto: unknown) => void; onOpenQuickAdd: () => void }) => (
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          onChange("cust-null-rfc", {
+            id: "cust-null-rfc",
+            rfc: null,
+            name: "Cliente sin RFC",
+            cfdiUse: "G03",
+            taxRegime: "601",
+            taxZipCode: "45010",
+          })
+        }
+      >
+        Seleccionar cliente sin RFC
+      </button>
+      <button type="button" onClick={onOpenQuickAdd}>
+        Abrir alta rápida
+      </button>
+    </>
+  ),
+}));
+
+jest.mock("../../../../../app/(private)/pos/_blocks/CustomerQuickAddModal", () => ({
+  CustomerQuickAddModal: ({ onCreated }: { onCreated: (dto: unknown) => void }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onCreated({
+          id: "cust-quickadd-null-rfc",
+          rfc: null,
+          name: "Cliente nuevo sin RFC",
+          cfdiUse: "G03",
+          taxRegime: "601",
+          taxZipCode: "45010",
+        })
+      }
+    >
+      Confirmar alta rápida sin RFC
+    </button>
+  ),
 }));
 
 jest.mock("../../../../../app/(private)/pos/_blocks/ProductCatalogPanel", () => ({
@@ -49,6 +90,27 @@ import { getProductPrices } from "../../../../../app/(private)/pos/_logic/servic
 import { PartialInvoiceForm } from "../../../../../app/(private)/billing/_blocks/PartialInvoiceForm";
 
 const mockGetProductPrices = getProductPrices as jest.MockedFunction<typeof getProductPrices>;
+
+describe("PartialInvoiceForm — customer selection normalizes null fields", () => {
+  it("selecting a customer with rfc: null does not crash, and lists RFC as a missing fiscal field", async () => {
+    render(<PartialInvoiceForm />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /seleccionar cliente sin rfc/i }));
+
+    expect(await screen.findByText(/datos fiscales faltantes/i)).toBeInTheDocument();
+  });
+
+  it("creating a customer via quick-add with rfc: null does not crash, and lists RFC as a missing fiscal field", async () => {
+    render(<PartialInvoiceForm />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /abrir alta rápida/i }));
+    await user.click(screen.getByRole("button", { name: /confirmar alta rápida sin rfc/i }));
+
+    expect(await screen.findByText(/datos fiscales faltantes/i)).toBeInTheDocument();
+  });
+});
 
 describe("PartialInvoiceForm — handleAddProduct preselects default price", () => {
   beforeEach(() => jest.clearAllMocks());
