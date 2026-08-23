@@ -5,3 +5,4 @@ export { updateQuote } from "./updateQuote";
 export { authorizeQuote } from "./authorizeQuote";
 export { cancelQuote } from "./cancelQuote";
 export { convertQuote } from "./convertQuote";
+export { downloadQuotePdf } from "./downloadQuotePdf";

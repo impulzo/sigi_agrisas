@@ -279,7 +279,7 @@ La ruta `/reports/sales-by-product` SHALL renderizar filtros de sucursal (visibl
 
 ### Requirement: Inventory by department view
 
-El sistema SHALL exponer la vista de UI `app/(private)/reports/inventory-by-department/`: una tarjeta "Inventario por Departamento" en el hub `/reports` gated por `reports:inventory_read`, un selector de departamento, una tabla que agrupa los productos con su costo de adquisición y sus listas de precio, y botones "Exportar PDF" y "Exportar Excel" que descargan los artefactos con los filtros aplicados vía `authFetch` (Bearer). Los `_blocks` SHALL ser presentacionales (sin `fetch`, navegación ni validación); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. La tabla SHALL mostrar una columna "Costo adq." (formateada como moneda MXN, o "—" si el producto no tiene costo capturado) inmediatamente después de la columna "Stock" y antes de las columnas dinámicas de nivel de precio. Las columnas de nivel de precio SHALL ordenarse: primero el/los nombre(s) de precio marcados `isDefault=true` en los datos, luego el resto por orden alfabético `es-MX` — no puramente alfabético. (Traza: historia 2.)
+El sistema SHALL exponer la vista de UI `app/(private)/reports/inventory-by-department/`: una tarjeta "Inventario por Departamento" en el hub `/reports` gated por `reports:inventory_read`, un selector de departamento, una tabla que agrupa los productos con su costo de adquisición y sus listas de precio, y botones "Exportar PDF" y "Exportar Excel" que descargan los artefactos con los filtros aplicados vía `authFetch` (Bearer). Los `_blocks` SHALL ser presentacionales (sin `fetch`, navegación ni validación); el HTTP vive en `_logic/services/` y la orquestación en `_logic/hooks/`. La tabla SHALL mostrar una columna "Costo adq." (formateada como moneda MXN, o "—" si el producto no tiene costo capturado) inmediatamente después de la columna "Stock" y antes de las columnas dinámicas de nivel de precio. Las columnas de nivel de precio SHALL ordenarse por rango de negocio: primero el/los nombre(s) de precio marcados `isDefault=true` en los datos, luego los que matcheen `/subdis/i` en el nombre, luego los que matcheen `/distri/i`, y por último el resto — dentro de cada rango, orden alfabético `es-MX` en caso de empate; no puramente alfabético sobre el nombre completo. Mismo criterio de rango que ya aplica `sortProductPricesForDisplay` en catálogo de productos y POS. (Traza: historia 2 y historia 1 de `fix-price-column-order-report`.)
 
 #### Scenario: Tarjeta en el hub
 
@@ -326,10 +326,10 @@ El sistema SHALL exponer la vista de UI `app/(private)/reports/inventory-by-depa
 - **WHEN** un producto listado no tiene `acquisitionPrice` capturado
 - **THEN** la celda de "Costo adq." muestra "—"
 
-#### Scenario: Orden de columnas de precio en la tabla web
+#### Scenario: Orden de columnas de precio en la tabla web — rango de negocio, no alfabético puro
 
-- **WHEN** el departamento seleccionado tiene productos con precios nombrados `"10"`, `"15"`, `"4"` y un precio marcado `isDefault: true` (p. ej. "Precio público")
-- **THEN** las columnas de la tabla se muestran en el orden `Precio público, 10, 15, 4`
+- **WHEN** el departamento seleccionado tiene productos con precios nombrados `"Precio Publico"` (marcado `isDefault: true`), `"Precio Subdis 10%"`, `"Precio Distri 15%"` y `"Precio 4"`
+- **THEN** las columnas de la tabla se muestran en el orden `Precio Publico, Precio Subdis 10%, Precio Distri 15%, Precio 4` — default primero, luego subdistribuidor, luego distribuidor, luego el resto; NO alfabético puro sobre el nombre completo
 
 ### Requirement: Reports adopta el shell y la tabla estándar del design system
 

@@ -1,3 +1,18 @@
+// @react-pdf/renderer is a server-only ESM lib; mock it for the node test env
+jest.mock("@react-pdf/renderer", () => ({
+  renderToBuffer: jest.fn().mockResolvedValue(Buffer.from("%PDF-1.4 mock")),
+  Document: ({ children }: { children: unknown }) => children,
+  Page: ({ children }: { children: unknown }) => children,
+  Text: ({ children }: { children: unknown }) => children,
+  View: ({ children }: { children: unknown }) => children,
+  StyleSheet: { create: (s: unknown) => s },
+}));
+
+// QuotePdf uses JSX which the node test env can't parse; mock the whole module
+jest.mock("@/modules/quotes/infrastructure/pdf/QuotePdf", () => ({
+  QuotePdf: () => null,
+}));
+
 // Prevent Prisma instantiation: enforceBranchScope imports rbacContainer at module level
 // but QuotesController always passes its own authzService so the default is never used.
 jest.mock("@/modules/rbac/infrastructure/di/container", () => ({
@@ -24,6 +39,9 @@ import { InMemoryQuoteRepository } from "@/modules/quotes/infrastructure/reposit
 import { InMemorySaleRepository } from "@/modules/pos/infrastructure/repositories/InMemorySaleRepository";
 import { PosLookupService } from "@/modules/pos/application/ports/PosLookups";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { TicketSettingsRepository } from "@/modules/settings/application/ports/TicketSettingsRepository";
+import { DEFAULT_TICKET_SETTINGS } from "@/modules/settings/domain/entities/TicketSettings";
 
 const BRANCH_ID = "11111111-1111-1111-1111-111111111111";
 const OTHER_BRANCH_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -79,6 +97,15 @@ function makeAuthz(bypass: boolean): AuthorizationService {
   };
 }
 
+function makeTicketSettingsUseCase(): GetTicketSettingsUseCase {
+  const repo: TicketSettingsRepository = {
+    get: jest.fn().mockResolvedValue({ ...DEFAULT_TICKET_SETTINGS, businessName: "Agrisas Test" }),
+    update: jest.fn(),
+    updateLogoUrl: jest.fn(),
+  };
+  return new GetTicketSettingsUseCase(repo);
+}
+
 function buildController(opts: {
   bypass?: boolean;
   quoteRepo?: InMemoryQuoteRepository;
@@ -96,7 +123,8 @@ function buildController(opts: {
     new AuthorizeQuoteUseCase(quoteRepo),
     new CancelQuoteUseCase(quoteRepo),
     new ConvertQuoteToSaleUseCase(quoteRepo, saleRepo, lookups),
-    makeAuthz(opts.bypass ?? false)
+    makeAuthz(opts.bypass ?? false),
+    makeTicketSettingsUseCase()
   );
   return { controller, quoteRepo, saleRepo };
 }
@@ -577,5 +605,47 @@ describe("QuotesController.getById", () => {
     const { controller: noBypass } = buildController({ bypass: false, quoteRepo });
     const res = await noBypass.getById(req("GET", `/quotes/${created.id}`), created.id);
     expect(res.status).toBe(403);
+  });
+
+  it("400 con format inválido", async () => {
+    const { controller, quoteRepo } = buildController();
+    const created = await seedQuote(quoteRepo, controller);
+    const res = await controller.getById(req("GET", `/quotes/${created.id}?format=xyz`), created.id);
+    expect(res.status).toBe(400);
+  });
+
+  it("200 con format=pdf devuelve un buffer PDF no vacío", async () => {
+    const { controller, quoteRepo } = buildController();
+    const created = await seedQuote(quoteRepo, controller);
+    const res = await controller.getById(req("GET", `/quotes/${created.id}?format=pdf`), created.id);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("application/pdf");
+    expect(res.headers.get("Content-Disposition")).toContain("cotizacion-");
+    const buffer = await res.arrayBuffer();
+    expect(buffer.byteLength).toBeGreaterThan(0);
+  });
+
+  it("200 con format=pdf en cotización sin cliente asignado", async () => {
+    const { controller, quoteRepo } = buildController();
+    const created = await seedQuote(quoteRepo, controller, { customerId: null });
+    const res = await controller.getById(req("GET", `/quotes/${created.id}?format=pdf`), created.id);
+    expect(res.status).toBe(200);
+    const buffer = await res.arrayBuffer();
+    expect(buffer.byteLength).toBeGreaterThan(0);
+  });
+
+  it("403 con format=pdf cuando el caller sin bypass consulta cotización de otra sucursal", async () => {
+    const { controller, quoteRepo } = buildController({ bypass: true });
+    const created = await seedQuote(quoteRepo, controller, { branchId: OTHER_BRANCH_ID });
+    const { controller: noBypass } = buildController({ bypass: false, quoteRepo });
+    const res = await noBypass.getById(req("GET", `/quotes/${created.id}?format=pdf`), created.id);
+    expect(res.status).toBe(403);
+  });
+
+  it("404 con format=pdf cuando no existe", async () => {
+    const { controller } = buildController();
+    const fakeId = "deadbeef-dead-beef-dead-beefdeadbeef";
+    const res = await controller.getById(req("GET", `/quotes/${fakeId}?format=pdf`), fakeId);
+    expect(res.status).toBe(404);
   });
 });

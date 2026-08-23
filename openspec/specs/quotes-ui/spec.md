@@ -5,9 +5,7 @@
 Define las pantallas de gestión de cotizaciones del panel Agrisas: listado paginado con filtros, creación de cotización reutilizando los bloques POS, detalle con barra de acciones contextual por estado, edición de borradores, y los modales de autorización, cancelación y conversión a venta. Incluye el modo "Cotización" en el POS (SegmentedButton) y la elevación de hooks compartidos (`useFoliosOptions`, `usePaymentMethodsOptions`) a `app/_hooks/`.
 
 ---
-
 ## Requirements
-
 ### Requirement: Quotes list screen with filters and pagination
 The system SHALL provide a screen at `/quotes` (`QuotesListPage`) that requires the `quotes:read` permission (gated via `useCurrentUser().can("quotes:read")`). The screen SHALL render a `CatalogShell` with a `CatalogToolbar` (`searchScope="server"`), filter controls, a `QuotesTable`, and a `CatalogPagination`. The toolbar SHALL include: a debounced search input (300 ms, min 2 chars) mapped to `?search=`; a state `<select>` with options `Todas | Borrador | Autorizada | Convertida | Cancelada | Vencida` mapped to `?status=`; a branch `<select>` (hidden when the caller does NOT have `branches:access_all`); and two `<input type="date">` fields for `?from=` and `?to=`. Without `quotes:read` the screen SHALL render an empty/forbidden state without dispatching any request.
 
@@ -120,14 +118,14 @@ The system SHALL provide a screen at `/quotes/[id]` (`QuoteDetailPage`) that req
 
 | status | isExpired | Buttons |
 |---|---|---|
-| `draft` | false | Autorizar (`quotes:authorize`), Editar (`quotes:write`), Cancelar (`quotes:cancel`) |
-| `draft` | true | Editar (enabled, `quotes:write`), Cancelar (`quotes:cancel`); Autorizar disabled with tooltip "Extiende la fecha de vencimiento primero" |
-| `authorized` | false | Convertir (`quotes:convert`), Cancelar (`quotes:cancel`) |
-| `authorized` | true | Convertir disabled with tooltip "Cotización vencida — cancela y crea otra", Cancelar (`quotes:cancel`) |
-| `converted` | n/a | Ver venta generada (link `/sales/[convertedSaleId]`) only |
-| `cancelled` | n/a | banner only; no buttons |
+| `draft` | false | Autorizar (`quotes:authorize`), Editar (`quotes:write`), Cancelar (`quotes:cancel`), Imprimir PDF |
+| `draft` | true | Editar (enabled, `quotes:write`), Cancelar (`quotes:cancel`), Imprimir PDF; Autorizar disabled with tooltip "Extiende la fecha de vencimiento primero" |
+| `authorized` | false | Convertir (`quotes:convert`), Cancelar (`quotes:cancel`), Imprimir PDF |
+| `authorized` | true | Convertir disabled with tooltip "Cotización vencida — cancela y crea otra", Cancelar (`quotes:cancel`), Imprimir PDF |
+| `converted` | n/a | Ver venta generada (link `/sales/[convertedSaleId]`), Imprimir PDF |
+| `cancelled` | n/a | banner, Imprimir PDF |
 
-Buttons whose required permission is `"loading"` SHALL render disabled with a small spinner. Buttons whose required permission is `false` SHALL NOT render.
+Buttons whose required permission is `"loading"` SHALL render disabled with a small spinner. Buttons whose required permission is `false` SHALL NOT render. The "Imprimir PDF" button SHALL render in every status (including `converted` and `cancelled`, which otherwise render no other write actions) since it requires no permission beyond the `quotes:read` already needed to view the screen. While a PDF download is in progress the button SHALL render disabled with a loading indicator; it SHALL re-enable once the download completes (success or failure).
 
 #### Scenario: Draft quote shows three actions
 - **WHEN** the quote has `status='draft'` and the caller has all three permissions
@@ -143,11 +141,11 @@ Buttons whose required permission is `"loading"` SHALL render disabled with a sm
 
 #### Scenario: Converted quote deep-links to sale
 - **WHEN** the quote has `status='converted'` with `convertedSaleId='S-1'`
-- **THEN** the action bar renders only the link "Ver venta generada" pointing to `/sales/S-1`
+- **THEN** the action bar renders the link "Ver venta generada" pointing to `/sales/S-1`
 
 #### Scenario: Cancelled quote shows reason banner
 - **WHEN** the quote has `status='cancelled'` with `cancellationReason='Cliente cambió de proveedor'`
-- **THEN** the screen renders a banner with the reason and the cancelled date; no action buttons render
+- **THEN** the screen renders a banner with the reason and the cancelled date; no write action buttons render
 
 #### Scenario: Permission loading state
 - **WHEN** the `quotes:authorize` permission resolves to `"loading"`
@@ -155,13 +153,23 @@ Buttons whose required permission is `"loading"` SHALL render disabled with a sm
 
 #### Scenario: Viewer cannot see write actions
 - **WHEN** the caller has only `quotes:read`
-- **THEN** the action bar renders no write buttons (authorize/edit/cancel/convert)
+- **THEN** the action bar renders no write buttons (authorize/edit/cancel/convert), but "Imprimir PDF" still renders enabled
 
 #### Scenario: isExpired banner appears
 - **WHEN** the detail returns `isExpired=true`
 - **THEN** an amber banner "Cotización vencida — el precio podría no estar vigente" renders above the totals block
 
----
+#### Scenario: Imprimir PDF available on converted and cancelled quotes
+- **WHEN** the quote has `status='converted'` or `status='cancelled'`
+- **THEN** the action bar still renders the "Imprimir PDF" button alongside whatever status-specific content (link or banner) is shown
+
+#### Scenario: Imprimir PDF click triggers a direct download
+- **WHEN** the caller clicks "Imprimir PDF" on any quote
+- **THEN** the browser downloads a file named `cotizacion-<folioCode>-<folioNumber>.pdf` without opening any preview modal, and no other action button is disabled by this in-flight download
+
+#### Scenario: Imprimir PDF disables while exporting
+- **WHEN** a PDF download triggered by "Imprimir PDF" is in progress
+- **THEN** the "Imprimir PDF" button renders disabled with a loading indicator until the download settles (success or error)
 
 ### Requirement: Quote edit screen rejects non-draft state
 The system SHALL provide a screen at `/quotes/[id]/edit` (`QuoteEditPage`) that requires `quotes:write`. The page SHALL render the same cart-based editor as `/quotes/new` pre-hydrated with the quote's items, `notes`, and `expiresAt`. The fields `branchId`, `customerId`, and `folioId` SHALL appear as read-only (`disabled` inputs showing the original values). If the loaded quote has `status !== 'draft'`, the page SHALL render an inline error "Esta cotización ya no es editable" and redirect to `/quotes/[id]` after 2 seconds (no PATCH dispatched). On submit it SHALL dispatch `PATCH /api/v1/admin/quotes/:id`. On HTTP 409 the page SHALL show a toast "Otro usuario cambió el estado de la cotización. Redirigiendo al detalle…" and navigate to `/quotes/[id]`.
@@ -483,3 +491,4 @@ El módulo frontend de cotizaciones (`app/(private)/quotes/_logic/`) SHALL defin
 
 - **WHEN** el servicio recibe HTTP 400 con un error que NO es `FolioScopeMismatch` (e.g. `{"error":"Folio inactive"}`)
 - **THEN** el comportamiento existente se mantiene sin cambios (otros mapeos de error siguen funcionando)
+

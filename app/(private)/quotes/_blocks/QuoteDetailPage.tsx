@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useQuoteDetail } from "../_logic/hooks/useQuoteDetail";
 import { useQuoteMutations } from "../_logic/hooks/useQuoteMutations";
+import { useQuoteExport } from "../_logic/hooks/useQuoteExport";
 import { QuoteStatusBadge } from "./QuoteStatusBadge";
 import { QuoteItemsTable } from "./QuoteItemsTable";
 import { QuoteActionsBar } from "./QuoteActionsBar";
@@ -37,6 +38,7 @@ export function QuoteDetailPage({ id }: QuoteDetailPageProps) {
   const { can } = useCurrentUser();
   const { quote, isLoading, error, refresh } = useQuoteDetail(id);
   const { isSaving, authorize, cancel, convert } = useQuoteMutations();
+  const { isExporting, downloadPdf } = useQuoteExport();
   const [modal, setModal] = useState<Modal>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -138,9 +140,11 @@ export function QuoteDetailPage({ id }: QuoteDetailPageProps) {
         quote={quote}
         can={can}
         isSaving={isSaving}
+        isExporting={isExporting}
         onAuthorize={() => setModal("authorize")}
         onCancel={() => setModal("cancel")}
         onConvert={() => setModal("convert")}
+        onDownloadPdf={() => downloadPdf(quote)}
       />
 
       {/* Metadata grid */}
