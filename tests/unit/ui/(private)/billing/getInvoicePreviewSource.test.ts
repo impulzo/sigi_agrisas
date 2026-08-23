@@ -35,6 +35,42 @@ describe("getInvoicePreviewSource", () => {
     expect(result.customer.rfc).toBe("XAXX010101000");
   });
 
+  it("normalizes null discountPct/ivaRate/iepsRate to 0", async () => {
+    const fetchImpl = jest.fn()
+      .mockResolvedValueOnce(jsonRes(200, {
+        branchName: "Matriz",
+        customerId: "cust-1",
+        items: [
+          { productNameSnapshot: "Fertilizante", productCodeSnapshot: "SKU1", quantity: 2, unitPrice: 100, discountPct: null, ivaRate: null, iepsRate: null },
+        ],
+      }))
+      .mockResolvedValueOnce(jsonRes(200, {
+        rfc: "XAXX010101000", name: "Cliente", cfdiUse: "G03", taxRegime: "601", taxZipCode: "45010",
+      }));
+
+    const result = await getInvoicePreviewSource("sale-1", fetchImpl as unknown as typeof fetch);
+
+    expect(result.sale.items[0]).toMatchObject({ discountPct: 0, ivaRate: 0, iepsRate: 0 });
+  });
+
+  it("normalizes a null customer rfc to an empty string (RFC not required for preview)", async () => {
+    const fetchImpl = jest.fn()
+      .mockResolvedValueOnce(jsonRes(200, {
+        branchName: "Matriz",
+        customerId: "cust-1",
+        items: [
+          { productNameSnapshot: "Fertilizante", productCodeSnapshot: "SKU1", quantity: 2, unitPrice: 100, discountPct: 0, ivaRate: 0.16, iepsRate: 0 },
+        ],
+      }))
+      .mockResolvedValueOnce(jsonRes(200, {
+        rfc: null, name: "Cliente", cfdiUse: "G03", taxRegime: "601", taxZipCode: "45010",
+      }));
+
+    const result = await getInvoicePreviewSource("sale-1", fetchImpl as unknown as typeof fetch);
+
+    expect(result.customer.rfc).toBe("");
+  });
+
   it("sale without customerId throws a clear error and does not call the customer endpoint", async () => {
     const fetchImpl = jest.fn().mockResolvedValueOnce(jsonRes(200, {
       branchName: "Matriz", customerId: null, items: [],

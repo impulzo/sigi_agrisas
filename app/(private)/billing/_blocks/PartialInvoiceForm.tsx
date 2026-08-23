@@ -81,7 +81,7 @@ export function PartialInvoiceForm() {
     setCustomerId(id);
     if (!dto || !id) { setCustomer(null); return; }
     setCustomer({
-      rfc: dto.rfc,
+      rfc: dto.rfc ?? "",
       name: dto.name,
       cfdiUse: dto.cfdiUse ?? "",
       fiscalRegime: dto.taxRegime ?? "",
@@ -358,7 +358,7 @@ export function PartialInvoiceForm() {
           onCreated={(dto) => {
             setCustomerId(dto.id);
             setCustomer({
-              rfc: dto.rfc,
+              rfc: dto.rfc ?? "",
               name: dto.name,
               cfdiUse: dto.cfdiUse ?? "",
               fiscalRegime: dto.taxRegime ?? "",

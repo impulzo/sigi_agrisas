@@ -1,0 +1,43 @@
+## 1. Historia 1 — Prefactura PDF: causa raíz
+
+- [x] 1.1 En `app/(private)/billing/_logic/services/getInvoicePreviewSource.ts` (líneas 60-65), reemplazar `items: saleDto.items` por un `map` explícito que normalice `discountPct: item.discountPct ?? 0`, `ivaRate: item.ivaRate ?? 0`, `iepsRate: item.iepsRate ?? 0` (resto de campos sin cambio).
+- [x] 1.2 Actualizar `tests/unit/ui/(private)/billing/getInvoicePreviewSource.test.ts`: agregar caso con `discountPct`/`ivaRate`/`iepsRate: null` en el DTO de venta → confirmar que el resultado normaliza a `0`.
+
+## 2. Historia 1 — Prefactura PDF: manejo de errores
+
+- [x] 2.1 En `app/(private)/billing/_logic/services/downloadInvoicePreviewPdf.ts`, reemplazar `if (!res.ok) throw new NetworkError();` por: si `res.status === 400`, leer el body (`res.json()`) y lanzar `new Error(mensaje)` con un mensaje derivado de `body.error` (string) o del primer `fieldErrors`/`formErrors` si `body.error` es un objeto Zod; cualquier otro `!res.ok` sigue lanzando `NetworkError()`.
+- [x] 2.2 Agregar/actualizar test en `tests/unit/ui/(private)/billing/services.test.ts` (o archivo dedicado si la convención del módulo lo pide): caso 400 con body de error → confirmar que el mensaje lanzado no es el genérico de `NetworkError`.
+- [x] 2.3 En `src/modules/billing/infrastructure/http/BillingController.ts` (`previewPdf`, líneas 443-475), envolver `renderToBuffer(...)` en `try/catch`; en el `catch`, devolver `NextResponse.json({ error: "PdfRenderError" }, { status: 500 })` (mismo patrón que `handleStampError`/demás handlers del controller).
+- [x] 2.4 Agregar test para `previewPdf` — corrección durante implementación: ya existe cobertura de `previewPdf` (caso feliz, watermark, 400 body) dentro de `tests/unit/modules/billing/infrastructure/http/BillingControllerCsd.test.ts` (archivo mal nombrado pero con describe block dedicado) — se agregaron ahí los dos casos faltantes: línea con `discountPct`/`ivaRate`/`iepsRate: null` → 400, y fallo de `renderToBuffer` → 500 con body JSON.
+
+## 3. Historia 3 — Corrección de `pct()` para discountPct
+
+- [x] 3.1 En `src/modules/billing/infrastructure/pdf/InvoiceDocumentPdf.tsx` (línea 131) Y en `app/(private)/billing/_blocks/InvoicePreviewModal.tsx` (línea 153, mismo bug confirmado durante implementación — el comentario en el PDF declara WYSIWYG con la pantalla), reemplazar `pct(line.discountPct)` por `` `${line.discountPct.toFixed(0)}%` `` — dejar `pct(line.ivaRate)` sin cambio en ambos archivos.
+- [x] 3.2 No existe test dedicado para `InvoiceDocumentPdf` (los tests de `BillingControllerCsd.test.ts` mockean `InvoiceDocumentPdf` a `() => null`, sin verificar texto renderizado — confirmado, coincide con la nota de `openspec/changes/archive/2026-08-19-invoice-preview-pdf-and-realistic-mock/design.md:31`). Se agregó en su lugar un test real en `InvoicePreviewModal.test.tsx` (`renders discountPct at whole-percent scale...`) que verifica la misma fórmula de un solo componente React real renderizado con RTL (no mockeado) — cubre la lógica compartida ya que ambos archivos usan la misma expresión `${line.discountPct.toFixed(0)}%`.
+
+## 4. Historia 2 — Factura parcial: BranchRequired
+
+- [x] 4.1 En `app/(private)/billing/_logic/errors.ts`, agregar `export class BranchRequiredError extends Error { constructor() { super("No hay sucursal matriz configurada. Especifica una sucursal o marca una como matriz en Catálogos › Sucursales."); this.name = "BranchRequiredError"; } }` (mismo molde que `InvoiceNoEmailError`).
+- [x] 4.2 En `app/(private)/billing/_logic/services/stampInvoice.ts` (bloque `if (res.status === 400)`, líneas 37-43): agregar rama `if (body.error === "BranchRequired") throw new BranchRequiredError();` antes de la rama de `ReceiverFiscalDataIncomplete`; para el fallback restante, en vez de `throw new NetworkError()`, derivar un mensaje legible del shape `{ fieldErrors, formErrors }` (mismo criterio que tarea 2.1) y lanzar `new Error(mensaje)`.
+- [x] 4.3 Agregar tests en `tests/unit/ui/(private)/billing/services.test.ts`: caso 400 `{ error: "BranchRequired" }` → `BranchRequiredError`; caso 400 con `fieldErrors` genérico → `Error` con mensaje legible (no `NetworkError`); confirmar que el caso ya existente de `ReceiverFiscalDataIncomplete` sigue pasando (no regresión).
+
+## 5. Historia 2 — Factura parcial: validación de satProductCode
+
+- [x] 5.1 En `app/(private)/billing/_blocks/PartialInvoiceLineRow.tsx` (línea ~67-70), agregar validación del input `satProductCode`: si el valor no está vacío y no coincide con `^\d{8}$`, mostrar un hint inline (ej. "Debe ser 8 dígitos o dejarse vacío") y comunicar el estado inválido a `usePartialInvoiceForm` (revisar cómo el hook ya expone `fiscalMissingFields`/validaciones existentes para seguir el mismo patrón de estado).
+- [x] 5.2 En `app/(private)/billing/_logic/hooks/usePartialInvoiceForm.ts` (`submit`, líneas 82-99), agregar el chequeo de `satProductCode` inválido en líneas junto al chequeo ya existente de `zeroPricedCatalogLine` — bloquear submit y `setError(...)` con mensaje identificando la línea, sin llegar a llamar `stampInvoice`.
+- [x] 5.0 (Ampliación, ver design.md Decisión 7) `app/(private)/billing/_blocks/PartialInvoiceForm.tsx`: `rfc: dto.rfc` → `rfc: dto.rfc ?? ""` en `handleCustomerSelect` y en `onCreated` de `CustomerQuickAddModal`. Test de regresión agregado en `PartialInvoiceForm.test.tsx` (mock de `CustomerPicker` expone `onChange` con `rfc: null` → confirma que no crashea y "RFC" aparece en "Datos fiscales faltantes").
+- [x] 5.3 Actualizar `tests/unit/ui/(private)/billing/PartialInvoiceLineRow.test.tsx` y/o `usePartialInvoiceForm.test.ts`: caso con `satProductCode` parcial (ej. `"1234"`) → confirmar bloqueo de submit con error inline, sin llamar al servicio `stampInvoice`.
+
+## 6. Verificación final
+
+- [x] 6.1 `npx jest --testPathPattern='billing'` — 25 test suites / 223 tests en verde.
+- [x] 6.2 `npx tsc --noEmit` — sin errores nuevos (0 en archivos de billing); errores preexistentes no relacionados (reports/inventory/purchases) sin cambio.
+- [x] 6.3 Recorrido manual en dev server (Playwright, `mcp__playwright__*`):
+  - `/billing/new` modo "Factura parcial" → captura de código SAT parcial ("1234") en línea libre → confirmado: hint inline "Debe ser 8 dígitos o dejarse vacío" aparece bajo el input en tiempo real.
+  - **Hallazgo adicional confirmado con el usuario durante este recorrido** (ver design.md Decisión 7): seleccionar cualquier cliente de prueba de la BD de desarrollo (dos probados: "AGRISAS AGRISAS" y "Pruebas DDDD", ambos con `rfc: null`) tumbaba la página completa con `TypeError` — no relacionado a los 3 bugs originales. Fix aplicado (`rfc: dto.rfc ?? ""` en `PartialInvoiceForm.tsx`, dos call sites) y verificado: tras el fix, seleccionar un cliente sin RFC ya no crashea — el formulario correctamente lista "RFC" en "Datos fiscales faltantes" y bloquea submit sin excepción no manejada.
+  - Nota de alcance: no se logró verificar en vivo la ruta "Facturar venta" → "Vista previa" → "Descargar PDF" (bug 1) ni el escenario `BranchRequired` (backend) dentro de esta sesión por tiempo — cubiertos exhaustivamente por los tests automatizados de las tareas 1.2, 2.2, 2.4, 4.3 (unit + integración de `BillingController`), que ejercitan los mismos paths HTTP/lógica que el recorrido manual habría cubierto. Ver también 6.3b.
+- [x] 6.3b Recorrido manual adicional — "Facturar venta" → Vista previa → Descargar PDF:
+  - Venta con cliente de datos fiscales incompletos (RFC vacío tras el fix de la Decisión 7) → clic "Descargar PDF" → confirmado: el error inline ahora dice **"Expected string, received null"** (mensaje real del backend) en vez del "Network error" genérico previo — prueba directa de que la Historia 1 funciona.
+  - No se encontraron ventas en la BD de desarrollo con `discountPct > 0` en ninguna línea para confirmar visualmente el fix de la Historia 3 en el navegador — cubierto en su lugar de forma determinística por el test RTL (componente real, no mockeado) `InvoicePreviewModal.test.tsx` con `discountPct=10`.
+  - No se encontró ningún cliente de prueba con datos fiscales 100% completos en la BD de desarrollo para confirmar la descarga exitosa (200 + PDF) en vivo — cubierto por el test de integración `previewPdf` en `BillingControllerCsd.test.ts` ("valid body → 200 application/pdf...").
+- [x] 6.4 Confirmado: specs `billing-api` (contrato no-nullable de `previewLineSchema` + 500 tipado) y `billing-ui` (errores tipados + `BranchRequiredError` + validación de `satProductCode` + normalización null→0 en preview + escenario de `rfc: null` agregado tras el hallazgo de la Decisión 7) reflejan la implementación final.

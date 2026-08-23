@@ -42,6 +42,40 @@ describe("InventoryPriceStockTable — paridad de priceColumnNames con el backen
     expect(uiPriceColumnNames(departments)).toEqual(backendPriceColumnNames(departments));
     expect(uiPriceColumnNames(departments)).toEqual(["Precio público", "10", "15", "4"]);
   });
+
+  it("produce el mismo orden que la implementación de src/modules/reports con nombres reales de producción", () => {
+    const departments = [
+      dept({
+        products: [
+          {
+            productId: "p1",
+            code: "P1",
+            name: "Producto 1",
+            unit: "PZA",
+            unitDescription: null,
+            stockQuantity: "5",
+            ivaRate: null,
+            iepsRate: null,
+            acquisitionPrice: null,
+            prices: [
+              price("Precio Distri 15%"),
+              price("Precio 4"),
+              price("Precio Subdis 10%"),
+              price("Precio Publico", true),
+            ],
+          },
+        ],
+      }),
+    ];
+
+    expect(uiPriceColumnNames(departments)).toEqual(backendPriceColumnNames(departments));
+    expect(uiPriceColumnNames(departments)).toEqual([
+      "Precio Publico",
+      "Precio Subdis 10%",
+      "Precio Distri 15%",
+      "Precio 4",
+    ]);
+  });
 });
 
 describe("InventoryPriceStockTable — columna de costo de adquisición", () => {

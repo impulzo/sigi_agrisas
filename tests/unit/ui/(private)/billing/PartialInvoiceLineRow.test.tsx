@@ -46,6 +46,28 @@ function renderRow(props: Partial<React.ComponentProps<typeof PartialInvoiceLine
   return { ...utils, onUpdate, onRemove };
 }
 
+describe("PartialInvoiceLineRow — validación de satProductCode", () => {
+  it("shows an inline hint when satProductCode is non-empty and not 8 digits", () => {
+    renderRow({ line: makeLine({ satProductCode: "1234" }) });
+    expect(screen.getByText(/debe ser 8 dígitos/i)).toBeInTheDocument();
+  });
+
+  it("does NOT show the hint when satProductCode is empty", () => {
+    renderRow({ line: makeLine({ satProductCode: "" }) });
+    expect(screen.queryByText(/debe ser 8 dígitos/i)).not.toBeInTheDocument();
+  });
+
+  it("does NOT show the hint when satProductCode is exactly 8 digits", () => {
+    renderRow({ line: makeLine({ satProductCode: "01010101" }) });
+    expect(screen.queryByText(/debe ser 8 dígitos/i)).not.toBeInTheDocument();
+  });
+
+  it("does NOT show the hint for catalog lines (satProductCode input not rendered)", () => {
+    renderRow({ line: makeLine({ productId: "prod-1", satProductCode: "1234" }) });
+    expect(screen.queryByText(/debe ser 8 dígitos/i)).not.toBeInTheDocument();
+  });
+});
+
 describe("PartialInvoiceLineRow — selector de lista de precios", () => {
   it("renders the price-tier trigger for catalog lines", () => {
     renderRow({

@@ -210,10 +210,11 @@ describe("BillingController — previewPdf", () => {
 
     expect(mockRenderToBuffer).toHaveBeenCalledTimes(1);
     const element = mockRenderToBuffer.mock.calls[0][0] as unknown as {
-      props: { watermark: string; folioLabel: string; data: { receiver: { rfc: string } } };
+      props: { watermark: string; folioLabel: string; isDraft: boolean; data: { receiver: { rfc: string } } };
     };
     expect(element.props.watermark).toBe("BORRADOR — no válido fiscalmente");
     expect(element.props.folioLabel).toBe("PENDIENTE DE TIMBRAR");
+    expect(element.props.isDraft).toBe(true);
     expect(element.props.data.receiver.rfc).toBe(VALID_PREVIEW_BODY.receiver.rfc);
   });
 
@@ -243,5 +244,39 @@ describe("BillingController — previewPdf", () => {
 
     expect(res.status).toBe(403);
     expect(mockRenderToBuffer).not.toHaveBeenCalled();
+  });
+
+  it("line with null discountPct/ivaRate/iepsRate → 400 (client must normalize to 0)", async () => {
+    const controller = buildController();
+    const bodyWithNulls = {
+      ...VALID_PREVIEW_BODY,
+      lines: [{ ...VALID_PREVIEW_BODY.lines[0], discountPct: null, ivaRate: null, iepsRate: null }],
+    };
+
+    const res = await controller.previewPdf(previewReq(bodyWithNulls));
+
+    expect(res.status).toBe(400);
+    expect(mockRenderToBuffer).not.toHaveBeenCalled();
+  });
+
+  it("receiver with empty rfc → 200 (RFC not required for a draft preview, only for real stamping)", async () => {
+    const controller = buildController();
+    const bodyWithoutRfc = { ...VALID_PREVIEW_BODY, receiver: { ...VALID_PREVIEW_BODY.receiver, rfc: "" } };
+
+    const res = await controller.previewPdf(previewReq(bodyWithoutRfc));
+
+    expect(res.status).toBe(200);
+    expect(mockRenderToBuffer).toHaveBeenCalledTimes(1);
+  });
+
+  it("renderToBuffer failure → 500 with JSON error body, not an unhandled exception", async () => {
+    const controller = buildController();
+    mockRenderToBuffer.mockRejectedValueOnce(new Error("boom"));
+
+    const res = await controller.previewPdf(previewReq(VALID_PREVIEW_BODY));
+
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBeDefined();
   });
 });

@@ -4,6 +4,7 @@
 import { stampInvoice } from "../../../../../app/(private)/billing/_logic/services/stampInvoice";
 import { cancelInvoice } from "../../../../../app/(private)/billing/_logic/services/cancelInvoice";
 import { downloadInvoiceFile } from "../../../../../app/(private)/billing/_logic/services/downloadInvoiceFile";
+import { downloadInvoicePreviewPdf } from "../../../../../app/(private)/billing/_logic/services/downloadInvoicePreviewPdf";
 import { uploadCsd } from "../../../../../app/(private)/billing/_logic/services/uploadCsd";
 import {
   SaleAlreadyInvoicedError,
@@ -15,8 +16,10 @@ import {
   FacturamaCsdError,
   InvoiceNotStampedError,
   InvoiceFileDownloadFailedError,
+  BranchRequiredError,
 } from "../../../../../app/(private)/billing/_logic/errors";
 import type { InvoiceDto } from "../../../../../app/(private)/billing/_logic/types/api";
+import type { InvoicePreviewData } from "../../../../../app/(private)/billing/_logic/types/preview";
 
 function makeInvoiceDto(overrides: Partial<InvoiceDto> = {}): InvoiceDto {
   return {
@@ -101,6 +104,18 @@ describe("stampInvoice — error mapping", () => {
     });
   });
 
+  it("400 BranchRequired → BranchRequiredError, not a generic NetworkError", async () => {
+    const fetch = errFetch(400, { error: "BranchRequired" });
+    await expect(stampInvoice({ saleId: "s1" }, fetch)).rejects.toBeInstanceOf(BranchRequiredError);
+  });
+
+  it("400 unrecognized Zod fieldErrors → readable Error, not NetworkError", async () => {
+    const fetch = errFetch(400, {
+      error: { fieldErrors: { satProductCode: ["Invalid"] }, formErrors: [] },
+    });
+    await expect(stampInvoice({ saleId: "s1" }, fetch)).rejects.toThrow("Invalid");
+  });
+
   it("201 success → returns Invoice with id", async () => {
     const dto = makeInvoiceDto();
     const fetch = okFetch(dto);
@@ -113,6 +128,44 @@ describe("stampInvoice — error mapping", () => {
     const mockFetch = okFetch(makeInvoiceDto());
     await stampInvoice({ saleId: "s1" }, mockFetch);
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── downloadInvoicePreviewPdf ─────────────────────────────────────────────
+
+describe("downloadInvoicePreviewPdf — error mapping", () => {
+  const previewData: InvoicePreviewData = {
+    issuer: { name: "Agrisas" },
+    receiver: { rfc: "XAXX010101000", name: "Cliente", cfdiUse: "G03", fiscalRegime: "601", taxZipCode: "45010" },
+    lines: [],
+    paymentForm: "03",
+    paymentMethod: "PUE",
+    subtotal: 0,
+    taxTotal: 0,
+    total: 0,
+    currency: "MXN",
+  };
+
+  beforeEach(() => {
+    Object.defineProperty(window.URL, "createObjectURL", { value: jest.fn().mockReturnValue("blob:test"), writable: true });
+    Object.defineProperty(window.URL, "revokeObjectURL", { value: jest.fn(), writable: true });
+  });
+
+  it("400 with structured error → readable Error, not generic NetworkError", async () => {
+    const fetch = errFetch(400, { error: { fieldErrors: { discountPct: ["Expected number, received null"] }, formErrors: [] } });
+    await expect(downloadInvoicePreviewPdf(previewData, fetch)).rejects.toThrow("Expected number, received null");
+  });
+
+  it("200 success → triggers a download without throwing", async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: () => Promise.resolve(new Blob(["pdf-data"])),
+    }) as unknown as typeof fetch;
+    const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    await expect(downloadInvoicePreviewPdf(previewData, fetchImpl)).resolves.toBeUndefined();
+    expect(clickSpy).toHaveBeenCalled();
+    clickSpy.mockRestore();
   });
 });
 

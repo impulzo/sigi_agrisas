@@ -29,14 +29,24 @@ export interface InvoicePreviewSource {
   customer: InvoicePreviewCustomerSource;
 }
 
+interface SaleDetailApiItemShape {
+  productNameSnapshot: string;
+  productCodeSnapshot: string;
+  quantity: number;
+  unitPrice: number;
+  discountPct: number | null;
+  ivaRate: number | null;
+  iepsRate: number | null;
+}
+
 interface SaleDetailApiShape {
   branchName?: string | null;
   customerId?: string | null;
-  items: InvoicePreviewSaleItemSource[];
+  items: SaleDetailApiItemShape[];
 }
 
 interface CustomerApiShape {
-  rfc: string;
+  rfc: string | null;
   name: string;
   cfdiUse: string | null;
   taxRegime: string | null;
@@ -61,7 +71,15 @@ export async function getInvoicePreviewSource(
   const sale: InvoicePreviewSaleSource = {
     branchName: saleDto.branchName ?? null,
     customerId: saleDto.customerId ?? null,
-    items: saleDto.items,
+    items: saleDto.items.map((item) => ({
+      productNameSnapshot: item.productNameSnapshot,
+      productCodeSnapshot: item.productCodeSnapshot,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      discountPct: item.discountPct ?? 0,
+      ivaRate: item.ivaRate ?? 0,
+      iepsRate: item.iepsRate ?? 0,
+    })),
   };
 
   if (!sale.customerId) {
@@ -83,7 +101,7 @@ export async function getInvoicePreviewSource(
   return {
     sale,
     customer: {
-      rfc: customerDto.rfc,
+      rfc: customerDto.rfc ?? "",
       name: customerDto.name,
       cfdiUse: customerDto.cfdiUse,
       taxRegime: customerDto.taxRegime,

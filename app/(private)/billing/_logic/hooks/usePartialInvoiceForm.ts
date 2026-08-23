@@ -97,6 +97,17 @@ export function usePartialInvoiceForm(): UsePartialInvoiceFormResult {
       );
       return null;
     }
+    const invalidSatProductCodeLine = lines.find(
+      (l) => l.productId == null && l.satProductCode && !/^\d{8}$/.test(l.satProductCode)
+    );
+    if (invalidSatProductCodeLine) {
+      setError(
+        new Error(
+          `La línea "${invalidSatProductCodeLine.description || "libre"}" tiene una clave SAT inválida. Debe ser 8 dígitos o dejarse vacía.`
+        )
+      );
+      return null;
+    }
     setIsSubmitting(true);
     setError(null);
     try {

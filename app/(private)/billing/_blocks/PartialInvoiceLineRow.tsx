@@ -5,6 +5,7 @@ import type { PartialLine } from "../_logic/types/domain";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
 const NUM_DRAFT_PATTERN = /^\d*\.?\d*$/;
+const SAT_PRODUCT_CODE_PATTERN = /^\d{8}$/;
 
 interface PartialInvoiceLineRowProps {
   line: PartialLine;
@@ -50,6 +51,8 @@ function NumField({ value, onChange, min = 0, step = "any", placeholder = "" }: 
 }
 
 export function PartialInvoiceLineRow({ line, lineTotal, onUpdate, onRemove, onChangePriceTier }: PartialInvoiceLineRowProps) {
+  const satProductCodeInvalid = !line.productId && !!line.satProductCode && !SAT_PRODUCT_CODE_PATTERN.test(line.satProductCode);
+
   return (
     <tr className="border-b border-outline-variant/40 align-top">
       <td className="px-2 py-2">
@@ -62,14 +65,19 @@ export function PartialInvoiceLineRow({ line, lineTotal, onUpdate, onRemove, onC
             className="w-full rounded-sm border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary"
           />
           {!line.productId && (
-            <input
-              type="text"
-              value={line.satProductCode}
-              onChange={(e) => onUpdate({ satProductCode: e.target.value })}
-              placeholder="Clave SAT (8 dígitos)"
-              maxLength={8}
-              className="w-full rounded-sm border border-outline px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary font-mono"
-            />
+            <>
+              <input
+                type="text"
+                value={line.satProductCode}
+                onChange={(e) => onUpdate({ satProductCode: e.target.value })}
+                placeholder="Clave SAT (8 dígitos)"
+                maxLength={8}
+                className={`w-full rounded-sm border px-2 py-1 text-body-sm bg-surface focus:outline-none focus:border-primary font-mono ${satProductCodeInvalid ? "border-error" : "border-outline"}`}
+              />
+              {satProductCodeInvalid && (
+                <p className="text-label-sm text-error">Debe ser 8 dígitos o dejarse vacío</p>
+              )}
+            </>
           )}
           <p className="text-label-sm text-on-surface-variant font-mono">{line.productCode}</p>
         </div>

@@ -112,7 +112,7 @@ const previewPdfSchema = z.object({
     branchName: z.string().nullable().optional(),
   }),
   receiver: z.object({
-    rfc: z.string().min(1),
+    rfc: z.string(),
     name: z.string().min(1),
     cfdiUse: z.string(),
     fiscalRegime: z.string(),
@@ -456,22 +456,27 @@ export class BillingController {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const rendered = await renderToBuffer(
-      createElement(InvoiceDocumentPdf, {
-        data: parsed.data,
-        watermark: "BORRADOR — no válido fiscalmente",
-        folioLabel: "PENDIENTE DE TIMBRAR",
-      }) as never
-    );
-    const buffer = Buffer.from(rendered);
+    try {
+      const rendered = await renderToBuffer(
+        createElement(InvoiceDocumentPdf, {
+          data: parsed.data,
+          watermark: "BORRADOR — no válido fiscalmente",
+          folioLabel: "PENDIENTE DE TIMBRAR",
+          isDraft: true,
+        }) as never
+      );
+      const buffer = Buffer.from(rendered);
 
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="factura-borrador.pdf"`,
-        "Content-Length": String(buffer.length),
-      },
-    });
+      return new NextResponse(buffer, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="factura-borrador.pdf"`,
+          "Content-Length": String(buffer.length),
+        },
+      });
+    } catch {
+      return NextResponse.json({ error: "PdfRenderError" }, { status: 500 });
+    }
   }
 
   async uploadCsd(req: NextRequest): Promise<NextResponse> {
