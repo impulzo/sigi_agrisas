@@ -22,6 +22,8 @@ import { GetProviderPaymentsReportUseCase } from "../../application/use-cases/Ge
 import { GetSalesByProductReportUseCase } from "../../application/use-cases/GetSalesByProductReportUseCase";
 import { GetCollectionsReportUseCase } from "../../application/use-cases/GetCollectionsReportUseCase";
 import { ReportsController } from "../http/ReportsController";
+import { PrismaTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaTicketSettingsRepository";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 
 const inventoryReportRepo = new PrismaInventoryReportRepository(prisma);
 const departmentPriceListRepo = new PrismaDepartmentPriceListRepository(prisma);
@@ -47,6 +49,7 @@ const purchasesUseCase = new GetPurchasesReportUseCase(purchaseRepo);
 const providerPaymentsUseCase = new GetProviderPaymentsReportUseCase(providerPaymentReportRepo);
 const salesByProductUseCase = new GetSalesByProductReportUseCase(salesByProductRepo);
 const collectionsUseCase = new GetCollectionsReportUseCase(cashCutRepo);
+const getTicketSettingsUseCase = new GetTicketSettingsUseCase(new PrismaTicketSettingsRepository(prisma));
 
 export const reportsController = new ReportsController(
   stockUseCase,
@@ -61,5 +64,6 @@ export const reportsController = new ReportsController(
   providerPaymentsUseCase,
   salesByProductUseCase,
   collectionsUseCase,
-  rbacContainer.authorizationService
+  rbacContainer.authorizationService,
+  getTicketSettingsUseCase
 );

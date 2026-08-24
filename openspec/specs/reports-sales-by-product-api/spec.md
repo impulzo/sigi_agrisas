@@ -5,9 +5,7 @@
 Expone un reporte de solo lectura con el detalle cruzado Departamento + Producto + Cliente de las ventas del periodo, para saber cuánto (en piezas y en dinero) compró cada cliente de cada producto.
 
 ---
-
 ## Requirements
-
 ### Requirement: RBAC permission for sales-by-product report
 El sistema SHALL definir el permiso `reports:sales_by_product_read` en `prisma/seed.ts` y otorgarlo idempotentemente a los roles `admin`, `operator` y `viewer`. El endpoint SHALL exigirlo vía `requirePermission(req, "reports:sales_by_product_read", authz)`, respondiendo `401` cuando falta `x-user-id` y `403` cuando `authz.userCan` devuelve `false`.
 
@@ -62,6 +60,8 @@ El endpoint SHALL aceptar `?format=pdf` o `?format=xlsx` para exportar, ignorand
 ### Requirement: Sales-by-product report PDF and Excel artifacts
 El endpoint SHALL aceptar `?format=json` (default), `?format=pdf` o `?format=xlsx`. Con `pdf`, SHALL responder `200 application/pdf` generado con `@react-pdf/renderer`, incluyendo encabezado (periodo, filtros, `generatedBy`), `totals` y la tabla de detalle. Con `xlsx`, SHALL responder `200 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (`xlsx`/SheetJS) con una única hoja "Detalle" (Departamento/Producto/Cliente/Cantidad/Monto) más totales. Ambos formatos SHALL responder con `Content-Disposition: attachment`. Un `format` distinto de `json`/`pdf`/`xlsx` SHALL responder `400 {"error":"Invalid format. Allowed: json, pdf, xlsx"}`.
 
+El header del PDF SHALL incluir el logo del negocio (tamaño reducido), resuelto desde `TicketSettings.logoUrl` con fallback al logo por defecto. Los colores de tabla SHALL provenir de la paleta de marca compartida (`pdfTheme`).
+
 #### Scenario: Export PDF
 - **WHEN** un usuario con permiso agrega `?format=pdf`
 - **THEN** responde `200 application/pdf` con `Content-Disposition: attachment` y cuerpo PDF binario válido
@@ -74,7 +74,9 @@ El endpoint SHALL aceptar `?format=json` (default), `?format=pdf` o `?format=xls
 - **WHEN** `?format=csv`
 - **THEN** responde `400` con `{"error":"Invalid format. Allowed: json, pdf, xlsx"}`
 
----
+#### Scenario: PDF incluye logo del negocio
+- **WHEN** un usuario con permiso agrega `?format=pdf`
+- **THEN** el header del PDF incluye el logo del negocio (o el fallback por defecto)
 
 ### Requirement: Branch scoping for sales-by-product report
 El endpoint SHALL aplicar `resolveScopedBranchId(req, filters.branchId, authz)`. Sin `branches:access_all`, `rows` y `totals` SHALL limitarse a `branch_id = x-user-branch-id`.
@@ -86,3 +88,4 @@ El endpoint SHALL aplicar `resolveScopedBranchId(req, filters.branchId, authz)`.
 #### Scenario: Admin con bypass
 - **WHEN** un usuario con `branches:access_all` no envía `branchId`
 - **THEN** el reporte agrega ventas de todas las sucursales
+

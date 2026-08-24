@@ -5,9 +5,7 @@
 Endpoints de lectura y reconstrucción sobre el ledger `inventory_movements` (ver `inventory-movements`): consulta de kardex por artículo con encabezado y grilla cronológica, export a xlsx/pdf, y reconstrucción determinística de saldos por `(productId, branchId)` para reparar drift entre `branch_inventory.quantity` y la suma real del ledger.
 
 ---
-
 ## Requirements
-
 ### Requirement: RBAC permissions for kardex
 El sistema SHALL definir el permiso `inventory:kardex_read` en `prisma/seed.ts`, otorgado idempotentemente a `admin`, `operator` y `viewer`. El endpoint de consulta SHALL exigirlo vía `requirePermission(req, "inventory:kardex_read", authz)`. El endpoint de reconstrucción SHALL exigir `inventory:write` (ya otorgado a `admin`/`operator`, no a `viewer`).
 
@@ -58,7 +56,7 @@ El sistema SHALL aplicar `resolveScopedBranchId(req, branchId, authz)` en la con
 ---
 
 ### Requirement: Export formats
-El endpoint SHALL aceptar `?format=xlsx` (200, `Content-Type` de spreadsheet, `Content-Disposition: attachment; filename="kardex-<code>-<from>_<to>.xlsx"`, una fila por movimiento) y `?format=pdf` (200 `application/pdf`, `Content-Disposition: attachment`, encabezado + tabla vía `@react-pdf/renderer`). Un `format` fuera de `json|pdf|xlsx` SHALL responder `400 {"error":"Invalid format. Allowed: json, pdf, xlsx"}`. Si el rango filtrado supera 10 000 movimientos, el sistema SHALL responder `409 {"error":"ReportTooLarge","tooLarge":true}` para cualquier formato.
+El endpoint SHALL aceptar `?format=xlsx` (200, `Content-Type` de spreadsheet, `Content-Disposition: attachment; filename="kardex-<code>-<from>_<to>.xlsx"`, una fila por movimiento) y `?format=pdf` (200 `application/pdf`, `Content-Disposition: attachment`, encabezado + tabla vía `@react-pdf/renderer`). El encabezado del PDF SHALL incluir el logo del negocio (tamaño reducido, junto al título), resuelto desde `TicketSettings.logoUrl` con fallback al logo por defecto (`public/logo.png`) cuando no está configurado. Los colores de tabla (encabezado, bordes, texto mutado) SHALL provenir de la paleta de marca compartida (`pdfTheme`), no de valores hex arbitrarios específicos de este módulo. Un `format` fuera de `json|pdf|xlsx` SHALL responder `400 {"error":"Invalid format. Allowed: json, pdf, xlsx"}`. Si el rango filtrado supera 10 000 movimientos, el sistema SHALL responder `409 {"error":"ReportTooLarge","tooLarge":true}` para cualquier formato.
 
 #### Scenario: Export Excel
 - **WHEN** un usuario con permiso agrega `?format=xlsx`
@@ -76,7 +74,13 @@ El endpoint SHALL aceptar `?format=xlsx` (200, `Content-Type` de spreadsheet, `C
 - **WHEN** el rango filtrado tiene más de 10 000 movimientos
 - **THEN** responde `409` con `tooLarge:true`
 
----
+#### Scenario: PDF incluye logo del negocio
+- **WHEN** un usuario con permiso solicita `?format=pdf`
+- **THEN** el PDF generado incluye el logo del negocio (o el fallback por defecto) en el encabezado, sin alterar el layout de las tarjetas de resumen (existencia total/almacén/saldo anterior/saldo final)
+
+#### Scenario: PDF usa colores de marca
+- **WHEN** un usuario con permiso solicita `?format=pdf`
+- **THEN** el color de fondo del encabezado de tabla del PDF corresponde a la paleta de marca compartida, no al azul `#1565C0` anterior
 
 ### Requirement: Rebuild article balances
 El sistema SHALL exponer `POST /api/v1/admin/inventory/kardex/rebuild` con body `{productId, branchId}` (ambos obligatorios). El sistema SHALL releer todos los movimientos de ese par `(productId, branchId)` ordenados por `(movementAt, sequence)`, recalcular `balanceAfter` acumulado desde `0`, sobrescribir cada fila con el saldo correcto, y actualizar `branch_inventory.quantity` al saldo final recalculado — todo en una transacción. La operación SHALL ser determinística (repetirla sin movimientos nuevos produce el mismo resultado) y SHALL NO insertar movimientos nuevos. La respuesta SHALL incluir `movementsRebuilt`, `previousQuantity`, `newQuantity`.
@@ -92,3 +96,4 @@ El sistema SHALL exponer `POST /api/v1/admin/inventory/kardex/rebuild` con body 
 #### Scenario: Reconstrucción idempotente
 - **WHEN** se reconstruye dos veces seguidas sin movimientos nuevos entre medio
 - **THEN** el resultado (`newQuantity`) es el mismo en ambas ejecuciones
+

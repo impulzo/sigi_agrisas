@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { renderToBuffer } from "@react-pdf/renderer";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { toPdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
 import React from "react";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
 import { RegisterPaymentUseCase } from "../../application/use-cases/RegisterPaymentUseCase";
@@ -84,7 +86,8 @@ export class PaymentsController {
     private readonly getUseCase: GetPaymentUseCase,
     private readonly listBySaleUseCase: ListPaymentsBySaleUseCase,
     private readonly historyUseCase: GetPaymentHistoryReportUseCase,
-    private readonly authzService: AuthorizationService
+    private readonly authzService: AuthorizationService,
+    private readonly getTicketSettingsUseCase: GetTicketSettingsUseCase
   ) {}
 
   async register(req: NextRequest): Promise<NextResponse> {
@@ -471,7 +474,9 @@ export class PaymentsController {
         });
       }
 
-      const pdfBuffer = await renderToBuffer(React.createElement(PaymentHistoryPdf, { data: dto }) as never);
+      const settings = await this.getTicketSettingsUseCase.execute();
+      const issuer = toPdfIssuer(settings);
+      const pdfBuffer = await renderToBuffer(React.createElement(PaymentHistoryPdf, { data: dto, issuer }) as never);
 
       return new NextResponse(pdfBuffer as unknown as BodyInit, {
         status: 200,

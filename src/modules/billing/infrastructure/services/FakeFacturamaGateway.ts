@@ -11,6 +11,7 @@ import {
   FacturamaCsdStatus,
 } from "../../application/ports/FacturamaGateway";
 import { InvoiceDocumentPdf, InvoiceDocumentPdfData } from "../pdf/InvoiceDocumentPdf";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 
 const MOCK_WATERMARK = "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL";
 
@@ -121,6 +122,8 @@ export class FakeFacturamaGateway implements FacturamaGateway {
   private cancelledIds = new Set<string>();
   private stampedInputs = new Map<string, { input: FacturamaStampInput; uuid: string }>();
 
+  constructor(private readonly getTicketSettingsUseCase?: GetTicketSettingsUseCase) {}
+
   // Each call returns a fresh random UUID — unique per stamp, not identical across calls.
   async stamp(input: FacturamaStampInput): Promise<FacturamaStampResult> {
     const cfdiId = randomUUID();
@@ -148,7 +151,11 @@ export class FakeFacturamaGateway implements FacturamaGateway {
       return { contentBase64: Buffer.from(xml).toString("base64"), contentType: "application/xml" };
     }
 
-    const data = stored ? toInvoiceDocumentPdfData(stored.input, uuid) : { ...FALLBACK_INVOICE_DATA, uuid };
+    const baseData = stored ? toInvoiceDocumentPdfData(stored.input, uuid) : { ...FALLBACK_INVOICE_DATA, uuid };
+    const logoUrl = this.getTicketSettingsUseCase
+      ? (await this.getTicketSettingsUseCase.execute()).logoUrl
+      : null;
+    const data = { ...baseData, issuer: { ...baseData.issuer, logoUrl } };
     const buffer = await renderToBuffer(
       createElement(InvoiceDocumentPdf, { data, watermark: MOCK_WATERMARK, folioLabel: uuid }) as never
     );

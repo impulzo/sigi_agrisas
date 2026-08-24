@@ -16,10 +16,14 @@ import { BillingController } from "../http/BillingController";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
 import { mailer } from "@/shared/infrastructure/di/mailerContainer";
 import type { FacturamaGateway } from "../../application/ports/FacturamaGateway";
+import { PrismaTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaTicketSettingsRepository";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+
+const getTicketSettingsUseCase = new GetTicketSettingsUseCase(new PrismaTicketSettingsRepository(prisma));
 
 const isMock = process.env.FACTURAMA_MOCK !== "false";
 const gateway: FacturamaGateway = isMock
-  ? new FakeFacturamaGateway()
+  ? new FakeFacturamaGateway(getTicketSettingsUseCase)
   : new FacturamaRestGateway();
 
 const invoiceRepo = new PrismaInvoiceRepository(prisma);
@@ -46,5 +50,6 @@ export const billingController = new BillingController(
   getCsdStatusUseCase,
   rbacContainer.authorizationService,
   lookupService,
-  sendEmailUseCase
+  sendEmailUseCase,
+  getTicketSettingsUseCase
 );

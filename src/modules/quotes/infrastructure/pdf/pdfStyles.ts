@@ -1,21 +1,26 @@
 import { StyleSheet } from "@react-pdf/renderer";
+import { pdfBaseStyles } from "@/shared/infrastructure/pdf/pdfBaseStyles";
+import { PDF_COLORS } from "@/shared/infrastructure/pdf/pdfTheme";
 
 export const pdfStyles = StyleSheet.create({
-  page: {
-    fontFamily: "Helvetica",
-    fontSize: 9,
-    paddingTop: 30,
-    paddingBottom: 40,
-    paddingHorizontal: 30,
-    color: "#111",
-  },
+  ...pdfBaseStyles,
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 12,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
+    borderBottomColor: PDF_COLORS.outlineVariant,
+  },
+  logo: {
+    width: 48,
+    height: 48,
+    objectFit: "contain",
+  },
+  issuerRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
   },
   issuerBlock: {
     flexDirection: "column",
@@ -27,14 +32,14 @@ export const pdfStyles = StyleSheet.create({
   },
   issuerMeta: {
     fontSize: 8,
-    color: "#555",
+    color: PDF_COLORS.onSurfaceVariant,
   },
   quoteMeta: {
     textAlign: "right",
   },
   quoteMetaLabel: {
     fontSize: 8,
-    color: "#555",
+    color: PDF_COLORS.onSurfaceVariant,
   },
   quoteMetaValue: {
     fontSize: 9,
@@ -51,7 +56,7 @@ export const pdfStyles = StyleSheet.create({
   sectionTitle: {
     fontSize: 9,
     fontFamily: "Helvetica-Bold",
-    backgroundColor: "#f0f0f0",
+    backgroundColor: PDF_COLORS.surfaceContainer,
     padding: "3 6",
     marginBottom: 4,
   },
@@ -65,30 +70,10 @@ export const pdfStyles = StyleSheet.create({
   },
   customerLabel: {
     fontSize: 7,
-    color: "#666",
+    color: PDF_COLORS.onSurfaceVariant,
   },
   customerValue: {
     fontSize: 9,
-  },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#e0e0e0",
-    padding: "3 4",
-    fontFamily: "Helvetica-Bold",
-    fontSize: 8,
-  },
-  tableRow: {
-    flexDirection: "row",
-    padding: "3 4",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-  },
-  tableRowAlt: {
-    flexDirection: "row",
-    padding: "3 4",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-    backgroundColor: "#fafafa",
   },
   colDescription: { flex: 3, fontSize: 8 },
   colQty: { flex: 1, fontSize: 8, textAlign: "right" },
@@ -97,13 +82,10 @@ export const pdfStyles = StyleSheet.create({
   colTax: { flex: 1, fontSize: 8, textAlign: "right" },
   colTotal: { flex: 1, fontSize: 8, textAlign: "right" },
   totalsBox: {
+    ...pdfBaseStyles.totalsBand,
     marginTop: 8,
     alignSelf: "flex-end",
     width: 220,
-    padding: "6 8",
-    backgroundColor: "#e8e8e8",
-    borderTopWidth: 1,
-    borderTopColor: "#999",
   },
   totalsRow: {
     flexDirection: "row",
@@ -123,7 +105,7 @@ export const pdfStyles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 4,
     borderTopWidth: 0.5,
-    borderTopColor: "#999",
+    borderTopColor: PDF_COLORS.outline,
   },
   grandTotalLabel: {
     fontSize: 10,
@@ -138,7 +120,7 @@ export const pdfStyles = StyleSheet.create({
   },
   notesLabel: {
     fontSize: 7,
-    color: "#666",
+    color: PDF_COLORS.onSurfaceVariant,
     marginBottom: 2,
   },
   notesValue: {
@@ -151,9 +133,9 @@ export const pdfStyles = StyleSheet.create({
     right: 30,
     textAlign: "center",
     fontSize: 7,
-    color: "#999",
+    color: PDF_COLORS.onSurfaceVariant,
     borderTopWidth: 0.5,
-    borderTopColor: "#ccc",
+    borderTopColor: PDF_COLORS.outlineVariant,
     paddingTop: 4,
   },
 });

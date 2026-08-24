@@ -199,6 +199,8 @@ Cuando `?format=pdf`, el sistema SHALL generar el PDF con `@react-pdf/renderer` 
 - Subtotales por departamento y por sucursal; totales globales al final.
 - Footer con número de página (`Página X de Y`).
 
+El header SHALL incluir el logo del negocio (tamaño reducido, propio de reporte interno), resuelto desde `TicketSettings.logoUrl` con fallback al logo por defecto cuando no está configurado. Los colores de tabla (encabezado, filas alternas, bandas de totales, bordes, texto mutado) SHALL provenir de la paleta de marca compartida (`pdfTheme`), no de valores hex arbitrarios específicos de este módulo.
+
 #### Scenario: PDF con metadatos correctos
 
 - **WHEN** el endpoint devuelve `application/pdf`
@@ -209,7 +211,10 @@ Cuando `?format=pdf`, el sistema SHALL generar el PDF con `@react-pdf/renderer` 
 - **WHEN** la consulta no devuelve sucursales (`branches: []`)
 - **THEN** el PDF se genera con header, totales en cero (`Total productos: 0`), y un texto "Sin datos para los filtros aplicados"; status `200`
 
----
+#### Scenario: PDF incluye logo del negocio
+
+- **WHEN** el endpoint devuelve `application/pdf`
+- **THEN** el header del PDF incluye el logo del negocio (o el fallback por defecto)
 
 ### Requirement: Stock report runtime in Node
 
@@ -412,6 +417,8 @@ Cuando `?format=pdf`, el sistema SHALL generar el PDF con `renderToBuffer(<Payme
 - Footer con número de página (`Página X de Y`).
 - Si `payments.length === 0`: header normal + texto "Sin abonos para los filtros aplicados".
 
+El header SHALL incluir el logo del negocio (tamaño reducido), con el mismo mecanismo de resolución y fallback que el resto de los reportes internos. Los colores de tabla SHALL provenir de la paleta de marca compartida (`pdfTheme`).
+
 #### Scenario: PDF con metadatos correctos
 
 - **WHEN** el endpoint devuelve `application/pdf`
@@ -422,7 +429,10 @@ Cuando `?format=pdf`, el sistema SHALL generar el PDF con `renderToBuffer(<Payme
 - **WHEN** los filtros no producen ningún abono
 - **THEN** el PDF se genera con header, sección de totales en cero y texto "Sin abonos para los filtros aplicados"; status `200`
 
----
+#### Scenario: PDF incluye logo del negocio
+
+- **WHEN** el endpoint devuelve `application/pdf`
+- **THEN** el header del PDF incluye el logo del negocio (o el fallback por defecto)
 
 ### Requirement: Department price list report endpoint
 
@@ -573,6 +583,8 @@ La respuesta JSON SHALL tener exactamente la siguiente forma. Los `Decimal` se s
 
 Cuando `?format=pdf`, el sistema SHALL generar el PDF con `@react-pdf/renderer` que contenga al menos: header con título "Inventario por Departamento", `generatedAt` formateado y email del `generatedBy`; una sección por departamento con `departmentCode` + `departmentName`; por cada producto un grupo con código, nombre, unidad y costo de adquisición (formateado como moneda MXN, o "—" si es `null`) seguido de sus filas de precio (lista, precio formateado como moneda MXN, cantidad mínima, % descuento, default); subtotales por departamento y totales globales; footer con número de página (`Página X de Y`). Cuando `?format=xlsx`, el sistema SHALL devolver un workbook con una fila por precio y las columnas `Departamento | Código | Producto | Unidad | Costo Adq. | Lista | Precio | Cant. Mín | % Descto | Default`, más filas de subtotal por departamento y totales al final. En ambos formatos, dentro de cada departamento las columnas/filas de nivel de precio SHALL ordenarse por rango de negocio: primero el/los nombre(s) de precio marcados `isDefault=true` en los datos, luego los que matcheen `/subdis/i` en el nombre, luego los que matcheen `/distri/i`, y por último el resto — dentro de cada rango, orden alfabético `es-MX` en caso de empate. Este es el mismo criterio de rango que ya aplica `sortProductPricesForDisplay` en catálogo de productos y POS.
 
+El header del PDF SHALL incluir el logo del negocio (tamaño reducido), con el mismo mecanismo de resolución y fallback que el resto de los reportes internos. Los colores de tabla SHALL provenir de la paleta de marca compartida (`pdfTheme`).
+
 #### Scenario: PDF con metadatos correctos
 
 - **WHEN** se solicita `?format=pdf` con datos
@@ -597,6 +609,11 @@ Cuando `?format=pdf`, el sistema SHALL generar el PDF con `@react-pdf/renderer` 
 
 - **WHEN** un departamento tiene productos con precios nombrados `"Precio Publico"` (marcado `isDefault: true` en al menos una ocurrencia), `"Precio Subdis 10%"`, `"Precio Distri 15%"` y `"Precio 4"`
 - **THEN** las columnas/filas de precio se ordenan `Precio Publico, Precio Subdis 10%, Precio Distri 15%, Precio 4` — default primero, luego subdistribuidor, luego distribuidor, luego el resto; NO alfabético puro sobre el nombre completo (que pondría "Precio Distri 15%" antes que "Precio Subdis 10%")
+
+#### Scenario: PDF incluye logo del negocio
+
+- **WHEN** se solicita `?format=pdf`
+- **THEN** el header del PDF incluye el logo del negocio (o el fallback por defecto)
 
 ### Requirement: Stock report XLSX artifact
 

@@ -12,6 +12,7 @@ import { PageShell } from "../../../../_components/organisms/PageShell";
 import { EmptyState } from "../../../../_components/molecules/EmptyState/EmptyState";
 import { PageLoading } from "../../../../_components/molecules/PageLoading/PageLoading";
 import { Button } from "../../../../_components/atoms/Button/Button";
+import { ExportPdfButton } from "../../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import { Spinner } from "../../../../_components/atoms/Spinner/Spinner";
 import { SegmentedButton } from "../../../../_components/molecules/SegmentedButton/SegmentedButton";
 
@@ -90,13 +91,11 @@ export function InventoryPage() {
             )}
           </div>
           <div className="flex gap-2">
-            <Button
-              icon="print"
+            <ExportPdfButton
               onClick={() => handleExport(exportPdf)}
-              disabled={isExportingPdf || !hasData}
-            >
-              {isExportingPdf ? "Generando…" : "Exportar PDF"}
-            </Button>
+              loading={isExportingPdf}
+              disabled={!hasData}
+            />
             <Button
               variant="outlined"
               icon="summarize"

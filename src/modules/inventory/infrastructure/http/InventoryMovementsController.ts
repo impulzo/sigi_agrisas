@@ -11,6 +11,8 @@ import { buildKardexWorkbook } from "../xlsx/buildKardexWorkbook";
 import { requirePermission } from "@/modules/rbac/infrastructure/http/requirePermission";
 import { enforceBranchScope, resolveScopedBranchId } from "@/modules/rbac/infrastructure/http/enforceBranchScope";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { toPdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
 
 const MAX_MOVEMENTS = 10000;
 
@@ -40,7 +42,8 @@ export class InventoryMovementsController {
   constructor(
     private readonly getKardexUseCase: GetKardexReportUseCase,
     private readonly rebuildUseCase: RebuildInventoryArticleUseCase,
-    private readonly authzService: AuthorizationService
+    private readonly authzService: AuthorizationService,
+    private readonly getTicketSettingsUseCase: GetTicketSettingsUseCase
   ) {}
 
   async getKardex(req: NextRequest): Promise<NextResponse> {
@@ -81,11 +84,14 @@ export class InventoryMovementsController {
       }
 
       if (parsed.data.format === "pdf") {
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
         const pdfBuffer = await renderToBuffer(
           React.createElement(KardexReportPdf, {
             data: report,
             from: parsed.data.from,
             to: parsed.data.to,
+            issuer,
           }) as never
         );
         return new NextResponse(pdfBuffer as unknown as BodyInit, {

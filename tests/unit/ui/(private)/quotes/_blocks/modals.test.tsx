@@ -219,7 +219,7 @@ describe("QuoteActionsBar", () => {
     expect(screen.getByRole("link", { name: /Ver venta/i })).toHaveAttribute("href", "/sales/s1");
   });
 
-  it("cancelled: no renderiza botones de escritura, sólo Imprimir PDF", () => {
+  it("cancelled: no renderiza botones de escritura, sólo Descargar PDF", () => {
     render(
       <QuoteActionsBar
         quote={{ ...baseQuote, status: "cancelled" }}
@@ -235,10 +235,10 @@ describe("QuoteActionsBar", () => {
     expect(screen.queryByRole("button", { name: /Autorizar/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Cancelar/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Editar/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Imprimir PDF/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Descargar PDF/i })).toBeInTheDocument();
   });
 
-  it("converted: también muestra Imprimir PDF junto al enlace de venta", () => {
+  it("converted: también muestra Descargar PDF junto al enlace de venta", () => {
     render(
       <QuoteActionsBar
         quote={{ ...baseQuote, status: "converted", convertedSaleId: "s1" }}
@@ -252,10 +252,10 @@ describe("QuoteActionsBar", () => {
       />,
     );
     expect(screen.getByRole("link", { name: /Ver venta/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Imprimir PDF/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Descargar PDF/i })).toBeInTheDocument();
   });
 
-  it("Imprimir PDF: se deshabilita mientras isExporting=true", () => {
+  it("Descargar PDF: se deshabilita mientras isExporting=true", () => {
     render(
       <QuoteActionsBar
         quote={{ ...baseQuote, status: "draft" }}
@@ -268,10 +268,10 @@ describe("QuoteActionsBar", () => {
         onDownloadPdf={jest.fn()}
       />,
     );
-    expect(screen.getByRole("button", { name: /Imprimir PDF/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Descargar PDF/i })).toBeDisabled();
   });
 
-  it("Imprimir PDF: invoca onDownloadPdf al hacer click", () => {
+  it("Descargar PDF: invoca onDownloadPdf al hacer click", () => {
     const onDownloadPdf = jest.fn();
     render(
       <QuoteActionsBar
@@ -285,7 +285,7 @@ describe("QuoteActionsBar", () => {
         onDownloadPdf={onDownloadPdf}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: /Imprimir PDF/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Descargar PDF/i }));
     expect(onDownloadPdf).toHaveBeenCalledTimes(1);
   });
 

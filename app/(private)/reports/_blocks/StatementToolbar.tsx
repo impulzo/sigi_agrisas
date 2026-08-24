@@ -1,6 +1,6 @@
 "use client";
 
-import { ExportPdfButton } from "./ExportPdfButton";
+import { ExportPdfButton } from "../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import { ExportXlsxButton } from "./ExportXlsxButton";
 
 interface Branch {
@@ -93,7 +93,7 @@ export function StatementToolbar({
         >
           Limpiar
         </button>
-        <ExportPdfButton isExporting={isExporting} onClick={onExportPdf} />
+        <ExportPdfButton loading={isExporting} onClick={onExportPdf} />
         <ExportXlsxButton isExporting={isExportingXlsx} onClick={onExportXlsx} />
       </div>
     </div>

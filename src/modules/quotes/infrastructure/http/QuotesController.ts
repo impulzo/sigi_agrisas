@@ -4,6 +4,7 @@ import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { toPdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
 import { QuotePdf } from "../pdf/QuotePdf";
 import { ListQuotesUseCase } from "../../application/use-cases/ListQuotesUseCase";
 import { GetQuoteUseCase } from "../../application/use-cases/GetQuoteUseCase";
@@ -162,7 +163,7 @@ export class QuotesController {
       if (scope) return scope;
 
       if (formatParsed.data === "pdf") {
-        const issuer = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(await this.getTicketSettingsUseCase.execute());
         const pdfBuffer = await renderToBuffer(React.createElement(QuotePdf, { data: dto, issuer }) as never);
         return new NextResponse(pdfBuffer as unknown as BodyInit, {
           status: 200,

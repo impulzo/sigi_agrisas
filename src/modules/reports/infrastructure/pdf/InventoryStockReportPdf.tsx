@@ -1,14 +1,12 @@
 import React from "react";
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  pdf,
-} from "@react-pdf/renderer";
+import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { StockReportResponseDto, StockBranchDto, StockDepartmentDto } from "../../application/dto/StockReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
+import { ReportHeader } from "./ReportHeader";
+import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
+import { ReportFooter } from "./ReportFooter";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
+import { rowStyle } from "@/shared/infrastructure/pdf/rowStyle";
 
 function DeptTable({ dept }: { dept: StockDepartmentDto }) {
   return (
@@ -25,7 +23,7 @@ function DeptTable({ dept }: { dept: StockDepartmentDto }) {
         <Text style={s.cellNarrow}>Estado</Text>
       </View>
       {dept.products.map((p, i) => (
-        <View key={p.productId} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+        <View key={p.productId} style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
           <Text style={s.cell}>{p.code}</Text>
           <Text style={s.cellWide}>{p.name}</Text>
           <Text style={s.cellNarrow}>{p.unitDescription ?? p.unit}</Text>
@@ -67,17 +65,21 @@ function BranchSection({ branch }: { branch: StockBranchDto }) {
   );
 }
 
-export function InventoryStockReportPdf({ data }: { data: StockReportResponseDto }) {
+interface Props {
+  data: StockReportResponseDto;
+  issuer: PdfIssuer;
+}
+
+export function InventoryStockReportPdf({ data, issuer }: Props) {
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={s.page}>
-        <View style={s.header} fixed>
-          <Text style={s.headerTitle}>Reporte de Stock</Text>
+        <ReportHeader title="Reporte de Stock" issuer={issuer}>
           <Text style={s.headerMeta}>Generado: {formatDate(data.generatedAt)} | Por: {data.generatedBy.email}</Text>
           <Text style={s.headerMeta}>
             Filtros: sucursal={data.filters.branchId ?? "todas"} | depto={data.filters.departmentId ?? "todos"} | cero stock={data.filters.includeZeroStock ? "incluido" : "excluido"}
           </Text>
-        </View>
+        </ReportHeader>
 
         {data.branches.length === 0 ? (
           <Text style={s.emptyMessage}>Sin datos para los filtros aplicados</Text>
@@ -107,10 +109,7 @@ export function InventoryStockReportPdf({ data }: { data: StockReportResponseDto
           </View>
         </View>
 
-        <View style={s.footer} fixed>
-          <Text>{data.generatedBy.email}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
-        </View>
+        <ReportFooter generatedByEmail={data.generatedBy.email} />
       </Page>
     </Document>
   );

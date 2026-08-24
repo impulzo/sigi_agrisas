@@ -9,7 +9,7 @@ import { PeriodSelector, PeriodMode } from "./PeriodSelector";
 import { LedgerControls } from "./LedgerControls";
 import { LedgerHeader } from "./LedgerHeader";
 import { LedgerTable } from "./LedgerTable";
-import { ExportPdfButton } from "./ExportPdfButton";
+import { ExportPdfButton } from "../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import { ExportXlsxButton } from "./ExportXlsxButton";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { PageLoading } from "../../../_components/molecules/PageLoading/PageLoading";
@@ -112,7 +112,7 @@ export function LedgerPage({ customerId }: { customerId: string }) {
               onToChange={setTo}
             />
             <div className="flex gap-2">
-              <ExportPdfButton isExporting={isExporting} onClick={handleExportPdf} />
+              <ExportPdfButton loading={isExporting} onClick={handleExportPdf} />
               <ExportXlsxButton isExporting={isExportingXlsx} onClick={handleExportXlsx} />
             </div>
           </div>

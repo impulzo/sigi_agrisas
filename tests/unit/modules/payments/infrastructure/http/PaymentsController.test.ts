@@ -36,6 +36,8 @@ import { GetPaymentUseCase } from "@/modules/payments/application/use-cases/GetP
 import { ListPaymentsBySaleUseCase } from "@/modules/payments/application/use-cases/ListPaymentsBySaleUseCase";
 import { GetPaymentHistoryReportUseCase } from "@/modules/payments/application/use-cases/GetPaymentHistoryReportUseCase";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { InMemoryTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 
 const VALID_UUID = "11111111-1111-1111-1111-111111111111";
 const USER_ID = "22222222-2222-2222-2222-222222222222";
@@ -82,7 +84,8 @@ function buildController(opts: { bypass?: boolean; repo?: InMemoryPaymentReposit
     new GetPaymentUseCase(repo),
     new ListPaymentsBySaleUseCase(repo),
     new GetPaymentHistoryReportUseCase(repo),
-    authz
+    authz,
+    new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
   );
 }
 
@@ -229,7 +232,8 @@ describe("PaymentsController — register (POST /payments)", () => {
       new GetPaymentUseCase(repo),
       new ListPaymentsBySaleUseCase(repo),
       new GetPaymentHistoryReportUseCase(repo),
-      authz
+      authz,
+      new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
     );
 
     // The sale is on BRANCH_ID, but user is on "other-branch"
@@ -397,7 +401,8 @@ describe("PaymentsController — cancel (POST /payments/:id/cancel)", () => {
       new GetPaymentUseCase(repo),
       new ListPaymentsBySaleUseCase(repo),
       new GetPaymentHistoryReportUseCase(repo),
-      restrictedAuthz
+      restrictedAuthz,
+      new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
     );
 
     const res = await restrictedCtl.cancel(
@@ -456,7 +461,8 @@ describe("PaymentsController — list (GET /payments)", () => {
       new GetPaymentUseCase(repo),
       new ListPaymentsBySaleUseCase(repo),
       new GetPaymentHistoryReportUseCase(repo),
-      authz
+      authz,
+      new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
     );
     const res = await controller.list(getReq("/payments", { "x-user-branch-id": "" }));
     expect(res.status).toBe(403);

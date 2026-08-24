@@ -10,6 +10,7 @@ import { PaymentMethodBreakdownTable } from "./PaymentMethodBreakdownTable";
 import { CollectionsRowsTable } from "./CollectionsRowsTable";
 import { EmptyState } from "../../../../../_components/molecules/EmptyState/EmptyState";
 import { Button } from "../../../../../_components/atoms/Button/Button";
+import { ExportPdfButton } from "../../../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import { Spinner } from "../../../../../_components/atoms/Spinner/Spinner";
 
 function defaultFrom(): string {
@@ -61,13 +62,11 @@ export function GlobalCollectionsView() {
           onToChange={setTo}
         />
         <div className="flex gap-2">
-          <Button
-            icon="print"
+          <ExportPdfButton
             onClick={() => handleExport(exportPdf)}
-            disabled={isExportingPdf || !hasData}
-          >
-            {isExportingPdf ? "Generando…" : "Exportar PDF"}
-          </Button>
+            loading={isExportingPdf}
+            disabled={!hasData}
+          />
           <Button
             variant="outlined"
             icon="summarize"

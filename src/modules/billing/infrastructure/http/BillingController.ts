@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { InvoiceDocumentPdf } from "../pdf/InvoiceDocumentPdf";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { StampInvoiceUseCase } from "../../application/use-cases/StampInvoiceUseCase";
 import { CancelInvoiceUseCase } from "../../application/use-cases/CancelInvoiceUseCase";
 import { DownloadInvoiceFileUseCase } from "../../application/use-cases/DownloadInvoiceFileUseCase";
@@ -149,7 +150,8 @@ export class BillingController {
     private readonly getCsdStatusUseCase: GetCsdStatusUseCase,
     private readonly authz: AuthorizationService,
     private readonly lookupService: BillingLookupService,
-    private readonly sendEmailUseCase: SendInvoiceEmailUseCase
+    private readonly sendEmailUseCase: SendInvoiceEmailUseCase,
+    private readonly getTicketSettingsUseCase: GetTicketSettingsUseCase
   ) {}
 
   async list(req: NextRequest): Promise<NextResponse> {
@@ -457,9 +459,10 @@ export class BillingController {
     }
 
     try {
+      const { logoUrl } = await this.getTicketSettingsUseCase.execute();
       const rendered = await renderToBuffer(
         createElement(InvoiceDocumentPdf, {
-          data: parsed.data,
+          data: { ...parsed.data, issuer: { ...parsed.data.issuer, logoUrl } },
           watermark: "BORRADOR — no válido fiscalmente",
           folioLabel: "PENDIENTE DE TIMBRAR",
           isDraft: true,

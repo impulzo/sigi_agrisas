@@ -2,14 +2,22 @@ import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { SalesByProductReportResponseDto } from "../../application/dto/SalesByProductReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
+import { ReportHeader } from "./ReportHeader";
+import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
+import { ReportFooter } from "./ReportFooter";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
+import { rowStyle } from "@/shared/infrastructure/pdf/rowStyle";
 
-export function SalesByProductReportPdf({ data }: { data: SalesByProductReportResponseDto }) {
+interface Props {
+  data: SalesByProductReportResponseDto;
+  issuer: PdfIssuer;
+}
+
+export function SalesByProductReportPdf({ data, issuer }: Props) {
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={s.page}>
-        <View style={s.header} fixed>
-          <Text style={s.headerTitle}>Reporte de Ventas por Producto</Text>
+        <ReportHeader title="Reporte de Ventas por Producto" issuer={issuer}>
           <Text style={s.headerMeta}>
             Periodo: {data.filters.from} — {data.filters.to} | Sucursal: {data.filters.branchId ?? "todas"} |
             Cliente: {data.filters.customerId ?? "todos"}
@@ -17,7 +25,7 @@ export function SalesByProductReportPdf({ data }: { data: SalesByProductReportRe
           <Text style={s.headerMeta}>
             Fecha de emisión: {formatDate(data.generatedAt)} | Generado por: {data.generatedBy.email}
           </Text>
-        </View>
+        </ReportHeader>
 
         <View style={s.totals}>
           <View style={s.totalsRow}>
@@ -42,7 +50,7 @@ export function SalesByProductReportPdf({ data }: { data: SalesByProductReportRe
               <Text style={s.cellNarrow}>Monto</Text>
             </View>
             {data.rows.map((r, i) => (
-              <View key={`${r.departmentId}-${r.productId}-${r.customerId ?? "sin-cliente"}`} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+              <View key={`${r.departmentId}-${r.productId}-${r.customerId ?? "sin-cliente"}`} style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
                 <Text style={s.cell}>{r.departmentName}</Text>
                 <Text style={s.cellWide}>{`${r.productName} (${r.productCode})`}</Text>
                 <Text style={s.cellWide}>{r.customerName}</Text>
@@ -53,10 +61,7 @@ export function SalesByProductReportPdf({ data }: { data: SalesByProductReportRe
           </View>
         )}
 
-        <View style={s.footer} fixed>
-          <Text>{data.generatedBy.email}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
-        </View>
+        <ReportFooter generatedByEmail={data.generatedBy.email} />
       </Page>
     </Document>
   );

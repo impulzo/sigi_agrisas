@@ -1,78 +1,49 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View } from "@react-pdf/renderer";
 import {
   CashCutReportResponseDto,
   CashCutRowDto,
 } from "../../application/dto/CashCutReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
+import { ReportHeader } from "./ReportHeader";
+import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
+import { ReportFooter } from "./ReportFooter";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
+import { rowStyle } from "@/shared/infrastructure/pdf/rowStyle";
 
 function formatDateOnly(iso: string): string {
   return iso;
 }
 
-const cols = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    backgroundColor: "#e0e0e0",
-    padding: "3 2",
-    fontFamily: "Helvetica-Bold",
-    fontSize: 7,
-  },
-  row: {
-    flexDirection: "row",
-    padding: "2 2",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-    fontSize: 7,
-  },
-  rowAlt: {
-    flexDirection: "row",
-    padding: "2 2",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-    backgroundColor: "#fafafa",
-    fontSize: 7,
-  },
-  cte: { width: 35 },
-  docto: { width: 55 },
-  factura: { width: 55 },
-  cliente: { width: 90 },
-  fecFact: { width: 55 },
-  dias: { width: 28, textAlign: "right" },
-  importe: { width: 55, textAlign: "right" },
-  fp: { width: 60 },
-  referencia: { width: 90 },
-  fCobro: { width: 55 },
-  iva: { width: 45, textAlign: "right" },
-  tasa: { width: 35, textAlign: "right" },
-});
-
 function CashCutRow({ r, alt }: { r: CashCutRowDto; alt: boolean }) {
   return (
-    <View style={alt ? cols.rowAlt : cols.row}>
-      <Text style={cols.cte}>{r.customerCode}</Text>
-      <Text style={cols.docto}>{r.docto}</Text>
-      <Text style={cols.factura}>{r.factura}</Text>
-      <Text style={cols.cliente}>{r.customerName}</Text>
-      <Text style={cols.fecFact}>{formatDateOnly(r.facturaDate)}</Text>
-      <Text style={cols.dias}>{r.days}</Text>
-      <Text style={cols.importe}>{r.amount}</Text>
-      <Text style={cols.fp}>{r.paymentMethodName}</Text>
-      <Text style={cols.referencia}>{r.reference ?? ""}</Text>
-      <Text style={cols.fCobro}>{formatDate(r.collectedAt)}</Text>
-      <Text style={cols.iva}>{r.ivaAmount}</Text>
-      <Text style={cols.tasa}>{r.taxRatePct}</Text>
+    <View style={alt ? s.cashCutRowAlt : s.cashCutRow}>
+      <Text style={s.cashCutCte}>{r.customerCode}</Text>
+      <Text style={s.cashCutDocto}>{r.docto}</Text>
+      <Text style={s.cashCutFactura}>{r.factura}</Text>
+      <Text style={s.cashCutCliente}>{r.customerName}</Text>
+      <Text style={s.cashCutFecFact}>{formatDateOnly(r.facturaDate)}</Text>
+      <Text style={s.cashCutDias}>{r.days}</Text>
+      <Text style={s.cashCutImporte}>{r.amount}</Text>
+      <Text style={s.cashCutFp}>{r.paymentMethodName}</Text>
+      <Text style={s.cashCutReferencia}>{r.reference ?? ""}</Text>
+      <Text style={s.cashCutFCobro}>{formatDate(r.collectedAt)}</Text>
+      <Text style={s.cashCutIva}>{r.ivaAmount}</Text>
+      <Text style={s.cashCutTasa}>{r.taxRatePct}</Text>
     </View>
   );
 }
 
-export function CashCutReportPdf({ data }: { data: CashCutReportResponseDto }) {
+interface Props {
+  data: CashCutReportResponseDto;
+  issuer: PdfIssuer;
+}
+
+export function CashCutReportPdf({ data, issuer }: Props) {
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={s.page}>
-        <View style={s.header} fixed>
-          <Text style={s.headerTitle}>Corte de Caja — Recuperación de Cobranza</Text>
+        <ReportHeader title="Corte de Caja — Recuperación de Cobranza" issuer={issuer}>
           <Text style={s.headerMeta}>
             Periodo: {data.filters.from} — {data.filters.to} | Sucursal:{" "}
             {data.filters.branchId ?? "todas"}
@@ -80,21 +51,21 @@ export function CashCutReportPdf({ data }: { data: CashCutReportResponseDto }) {
           <Text style={s.headerMeta}>
             Fecha de emisión: {formatDate(data.generatedAt)} | Generado por: {data.generatedBy.email}
           </Text>
-        </View>
+        </ReportHeader>
 
-        <View style={cols.header} fixed>
-          <Text style={cols.cte}>Cte</Text>
-          <Text style={cols.docto}>Docto</Text>
-          <Text style={cols.factura}>Factura</Text>
-          <Text style={cols.cliente}>Nombre del cliente</Text>
-          <Text style={cols.fecFact}>Fec-Fact</Text>
-          <Text style={cols.dias}>Días</Text>
-          <Text style={cols.importe}>Importe</Text>
-          <Text style={cols.fp}>Fp</Text>
-          <Text style={cols.referencia}>Referencia</Text>
-          <Text style={cols.fCobro}>F. Cobro</Text>
-          <Text style={cols.iva}>I.V.A.</Text>
-          <Text style={cols.tasa}>Tasa%</Text>
+        <View style={s.cashCutHeader} fixed>
+          <Text style={s.cashCutCte}>Cte</Text>
+          <Text style={s.cashCutDocto}>Docto</Text>
+          <Text style={s.cashCutFactura}>Factura</Text>
+          <Text style={s.cashCutCliente}>Nombre del cliente</Text>
+          <Text style={s.cashCutFecFact}>Fec-Fact</Text>
+          <Text style={s.cashCutDias}>Días</Text>
+          <Text style={s.cashCutImporte}>Importe</Text>
+          <Text style={s.cashCutFp}>Fp</Text>
+          <Text style={s.cashCutReferencia}>Referencia</Text>
+          <Text style={s.cashCutFCobro}>F. Cobro</Text>
+          <Text style={s.cashCutIva}>I.V.A.</Text>
+          <Text style={s.cashCutTasa}>Tasa%</Text>
         </View>
 
         {data.rows.length === 0 ? (
@@ -126,7 +97,7 @@ export function CashCutReportPdf({ data }: { data: CashCutReportResponseDto }) {
                 <Text style={s.cellNarrow}>Total</Text>
               </View>
               {data.byPaymentMethod.map((r, i) => (
-                <View key={r.paymentMethodId} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+                <View key={r.paymentMethodId} style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
                   <Text style={s.cellWide}>{r.label}</Text>
                   <Text style={s.cellNarrow}>{r.count}</Text>
                   <Text style={s.cellNarrow}>{r.total}</Text>
@@ -136,10 +107,7 @@ export function CashCutReportPdf({ data }: { data: CashCutReportResponseDto }) {
           )}
         </View>
 
-        <View style={s.footer} fixed>
-          <Text>{data.generatedBy.email}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`} />
-        </View>
+        <ReportFooter generatedByEmail={data.generatedBy.email} />
       </Page>
     </Document>
   );

@@ -67,6 +67,7 @@ export const ICON_NAMES = [
   "upload_file",
   "image",
   "badge",
+  "picture_as_pdf",
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

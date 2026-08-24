@@ -14,6 +14,8 @@ jest.mock("@/modules/billing/infrastructure/pdf/InvoiceDocumentPdf", () => ({
 }));
 
 import { FakeFacturamaGateway } from "../../../../src/modules/billing/infrastructure/services/FakeFacturamaGateway";
+import { GetTicketSettingsUseCase } from "../../../../src/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { InMemoryTicketSettingsRepository } from "../../../../src/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 
 const mockRenderToBuffer = renderToBuffer as jest.MockedFunction<typeof renderToBuffer>;
 
@@ -112,6 +114,27 @@ describe("FakeFacturamaGateway", () => {
     expect(mockRenderToBuffer).toHaveBeenCalledTimes(1);
     const element = mockRenderToBuffer.mock.calls[0][0] as unknown as { props: { data: { lines: unknown[] } } };
     expect(element.props.data.lines.length).toBeGreaterThan(0);
+  });
+
+  it("download('pdf') includes the resolved logoUrl when GetTicketSettingsUseCase is injected", async () => {
+    const settingsRepo = new InMemoryTicketSettingsRepository();
+    await settingsRepo.updateLogoUrl("https://storage.example.com/tenant-logo.png");
+    const gw = new FakeFacturamaGateway(new GetTicketSettingsUseCase(settingsRepo));
+
+    await gw.download("pdf", "never-stamped-id");
+
+    const element = mockRenderToBuffer.mock.calls[0][0] as unknown as { props: { data: { issuer: { logoUrl: string | null } } } };
+    expect(element.props.data.issuer.logoUrl).toBe("https://storage.example.com/tenant-logo.png");
+  });
+
+  it("download('pdf') without the optional dependency behaves as before (no logo, no error)", async () => {
+    const gw = new FakeFacturamaGateway();
+
+    const result = await gw.download("pdf", "never-stamped-id");
+
+    expect(result.contentBase64).toBeTruthy();
+    const element = mockRenderToBuffer.mock.calls[0][0] as unknown as { props: { data: { issuer: { logoUrl: string | null } } } };
+    expect(element.props.data.issuer.logoUrl).toBeNull();
   });
 
   it("download('xml') after stamp includes the receiver RFC and a concept description", async () => {

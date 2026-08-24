@@ -2,14 +2,22 @@ import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { PurchasesReportResponseDto } from "../../application/dto/PurchasesReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
+import { ReportHeader } from "./ReportHeader";
+import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
+import { ReportFooter } from "./ReportFooter";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
+import { rowStyle } from "@/shared/infrastructure/pdf/rowStyle";
 
-export function PurchasesReportPdf({ data }: { data: PurchasesReportResponseDto }) {
+interface Props {
+  data: PurchasesReportResponseDto;
+  issuer: PdfIssuer;
+}
+
+export function PurchasesReportPdf({ data, issuer }: Props) {
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={s.page}>
-        <View style={s.header} fixed>
-          <Text style={s.headerTitle}>Reporte de Compras</Text>
+        <ReportHeader title="Reporte de Compras" issuer={issuer}>
           <Text style={s.headerMeta}>
             Generado: {formatDate(data.generatedAt)} | Por: {data.generatedBy.email}
           </Text>
@@ -19,7 +27,7 @@ export function PurchasesReportPdf({ data }: { data: PurchasesReportResponseDto 
             {data.filters.from ? ` | desde=${data.filters.from}` : ""}
             {data.filters.to ? ` | hasta=${data.filters.to}` : ""}
           </Text>
-        </View>
+        </ReportHeader>
 
         {data.rows.length === 0 ? (
           <Text style={s.emptyMessage}>Sin compras para los filtros aplicados</Text>
@@ -39,7 +47,7 @@ export function PurchasesReportPdf({ data }: { data: PurchasesReportResponseDto 
               <Text style={s.cell}>Fecha</Text>
             </View>
             {data.rows.map((r, i) => (
-              <View key={r.id} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+              <View key={r.id} style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
                 <Text style={s.cell}>{r.folioCode}</Text>
                 <Text style={s.cellWide}>{r.providerName ?? "—"}</Text>
                 <Text style={s.cell}>{r.branchName ?? "—"}</Text>
@@ -67,10 +75,7 @@ export function PurchasesReportPdf({ data }: { data: PurchasesReportResponseDto 
           </View>
         </View>
 
-        <View style={s.footer} fixed>
-          <Text>{data.generatedBy.email}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
-        </View>
+        <ReportFooter generatedByEmail={data.generatedBy.email} />
       </Page>
     </Document>
   );

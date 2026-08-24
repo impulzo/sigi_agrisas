@@ -2,12 +2,16 @@ import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { pdfStyles as s } from "./pdfStyles";
 import type { QuoteDetailDto } from "../../application/dto/QuoteDto";
+import { PdfLogo } from "@/shared/infrastructure/pdf/PdfLogo";
+import { rowStyle } from "@/shared/infrastructure/pdf/rowStyle";
+import { formatPdfCurrency } from "@/shared/infrastructure/formatters/formatPdfCurrency";
 
 export interface QuotePdfIssuer {
   businessName: string | null;
   businessRfc: string | null;
   businessAddress: string | null;
   businessPhone: string | null;
+  logoUrl: string | null;
 }
 
 interface QuotePdfProps {
@@ -23,7 +27,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function money(n: number): string {
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
+  return formatPdfCurrency(n);
 }
 
 function pct(n: number | null): string {
@@ -43,11 +47,14 @@ export function QuotePdf({ data, issuer }: QuotePdfProps) {
     <Document>
       <Page size="A4" style={s.page}>
         <View style={s.header}>
-          <View style={s.issuerBlock}>
-            <Text style={s.issuerName}>{issuer.businessName ?? "—"}</Text>
-            {issuer.businessRfc && <Text style={s.issuerMeta}>RFC: {issuer.businessRfc}</Text>}
-            {issuer.businessAddress && <Text style={s.issuerMeta}>{issuer.businessAddress}</Text>}
-            {issuer.businessPhone && <Text style={s.issuerMeta}>Tel: {issuer.businessPhone}</Text>}
+          <View style={s.issuerRow}>
+            <PdfLogo logoUrl={issuer.logoUrl} size={40} />
+            <View style={s.issuerBlock}>
+              <Text style={s.issuerName}>{issuer.businessName ?? "—"}</Text>
+              {issuer.businessRfc && <Text style={s.issuerMeta}>RFC: {issuer.businessRfc}</Text>}
+              {issuer.businessAddress && <Text style={s.issuerMeta}>{issuer.businessAddress}</Text>}
+              {issuer.businessPhone && <Text style={s.issuerMeta}>Tel: {issuer.businessPhone}</Text>}
+            </View>
           </View>
           <View style={s.quoteMeta}>
             <Text style={s.quoteMetaLabel}>Cotización</Text>
@@ -89,7 +96,7 @@ export function QuotePdf({ data, issuer }: QuotePdfProps) {
             <Text style={s.colTotal}>Total</Text>
           </View>
           {data.items.map((item, idx) => (
-            <View key={item.id} style={idx % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+            <View key={item.id} style={rowStyle(idx, s.tableRow, s.tableRowAlt)}>
               <Text style={s.colDescription}>
                 {item.productNameSnapshot} ({item.productCodeSnapshot})
               </Text>

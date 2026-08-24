@@ -2,21 +2,29 @@ import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { PaymentHistoryReportResponseDto } from "../../application/dto/PaymentHistoryReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
+import { ReportHeader } from "./ReportHeader";
+import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
+import { ReportFooter } from "./ReportFooter";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
+import { rowStyle } from "@/shared/infrastructure/pdf/rowStyle";
 
-export function PaymentHistoryReportPdf({ data }: { data: PaymentHistoryReportResponseDto }) {
+interface Props {
+  data: PaymentHistoryReportResponseDto;
+  issuer: PdfIssuer;
+}
+
+export function PaymentHistoryReportPdf({ data, issuer }: Props) {
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={s.page}>
-        <View style={s.header} fixed>
-          <Text style={s.headerTitle}>Reporte de Historial de Abonos</Text>
+        <ReportHeader title="Reporte de Historial de Abonos" issuer={issuer}>
           <Text style={s.headerMeta}>Generado: {formatDate(data.generatedAt)} | Por: {data.generatedBy.email}</Text>
           <Text style={s.headerMeta}>
             Filtros: sucursal={data.filters.branchId ?? "todas"} | cliente={data.filters.customerId ?? "todos"}
             {data.filters.startDate ? ` | desde=${data.filters.startDate}` : ""}
             {data.filters.endDate ? ` | hasta=${data.filters.endDate}` : ""}
           </Text>
-        </View>
+        </ReportHeader>
 
         {data.payments.length === 0 ? (
           <Text style={s.emptyMessage}>Sin abonos para los filtros aplicados</Text>
@@ -32,7 +40,7 @@ export function PaymentHistoryReportPdf({ data }: { data: PaymentHistoryReportRe
               <Text style={s.cellNarrow}>Estado</Text>
             </View>
             {data.payments.map((p, i) => (
-              <View key={p.paymentId} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+              <View key={p.paymentId} style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
                 <Text style={s.cell}>{p.folioNumber}</Text>
                 <Text style={s.cell}>{p.saleFolioNumber}</Text>
                 <Text style={s.cellWide}>{p.customerName}</Text>
@@ -71,10 +79,7 @@ export function PaymentHistoryReportPdf({ data }: { data: PaymentHistoryReportRe
           </View>
         </View>
 
-        <View style={s.footer} fixed>
-          <Text>{data.generatedBy.email}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
-        </View>
+        <ReportFooter generatedByEmail={data.generatedBy.email} />
       </Page>
     </Document>
   );

@@ -19,6 +19,8 @@ import { InventoryCronController } from "@/modules/inventory/infrastructure/http
 import { PrismaInventoryNotificationSettingsAdapter } from "@/modules/inventory/infrastructure/services/PrismaInventoryNotificationSettingsAdapter";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
 import { adminNotificationService } from "@/shared/infrastructure/di/adminNotificationContainer";
+import { PrismaTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaTicketSettingsRepository";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 
 const branchRepo = new PrismaBranchRepository(prisma);
 const productRepo = new PrismaProductRepository(prisma);
@@ -26,6 +28,7 @@ const inventoryRepo = new PrismaBranchInventoryRepository(prisma, adminNotificat
 const movementRepo = new PrismaInventoryMovementRepository(prisma);
 const inventoryLotRepo = new PrismaInventoryLotRepository(prisma);
 const inventoryNotificationSettingsPort = new PrismaInventoryNotificationSettingsAdapter(prisma);
+const getTicketSettingsUseCase = new GetTicketSettingsUseCase(new PrismaTicketSettingsRepository(prisma));
 
 export const branchInventoryController = new BranchInventoryController(
   new ListBranchInventoryUseCase(inventoryRepo, branchRepo, inventoryLotRepo),
@@ -39,7 +42,8 @@ export const branchInventoryController = new BranchInventoryController(
 export const inventoryMovementsController = new InventoryMovementsController(
   new GetKardexReportUseCase(movementRepo, productRepo),
   new RebuildInventoryArticleUseCase(movementRepo),
-  rbacContainer.authorizationService
+  rbacContainer.authorizationService,
+  getTicketSettingsUseCase
 );
 
 export const inventoryCronController = new InventoryCronController(

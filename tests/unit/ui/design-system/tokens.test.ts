@@ -213,7 +213,6 @@ const RAW_ELEMENT_ALLOWLIST = new Set([
   "app/(private)/quotes/_blocks/QuoteItemsTable.tsx",
   "app/(private)/quotes/_blocks/QuotesTable.tsx",
   "app/(private)/quotes/_blocks/QuotesToolbar.tsx",
-  "app/(private)/reports/_blocks/ExportPdfButton.tsx",
   "app/(private)/reports/_blocks/ExportXlsxButton.tsx",
   "app/(private)/reports/_blocks/LedgerTable.tsx",
   "app/(private)/reports/_blocks/StatementToolbar.tsx",

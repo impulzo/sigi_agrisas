@@ -16,6 +16,7 @@ import { PageShell } from "../../../../_components/organisms/PageShell";
 import { EmptyState } from "../../../../_components/molecules/EmptyState/EmptyState";
 import { PageLoading } from "../../../../_components/molecules/PageLoading/PageLoading";
 import { Button } from "../../../../_components/atoms/Button/Button";
+import { ExportPdfButton } from "../../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import { Spinner } from "../../../../_components/atoms/Spinner/Spinner";
 import type { PeriodMode } from "../_logic/types/domain";
 
@@ -105,9 +106,7 @@ export function SalesCutPage() {
             />
           </div>
           <div className="flex gap-2">
-            <Button icon="receipt_long" onClick={handleExportPdf} disabled={isExporting}>
-              {isExporting ? "Generando…" : "Exportar PDF"}
-            </Button>
+            <ExportPdfButton onClick={handleExportPdf} loading={isExporting} />
             <Button variant="outlined" icon="summarize" onClick={handleExportXlsx} disabled={isExportingXlsx}>
               {isExportingXlsx ? "Generando…" : "Exportar Excel"}
             </Button>

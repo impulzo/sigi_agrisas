@@ -283,7 +283,7 @@ Query params (todos opcionales excepto `format`):
 
 Para `format=pdf` o `format=xlsx`: sin paginación, límite duro 10,000 filas compartido entre ambos formatos. Si excede → HTTP 409 `{"error":"ReportTooLarge","limit":10000}`.
 
-Para `format=pdf`: el PDF SHALL generarse con `@react-pdf/renderer`, devuelto con `Content-Type: application/pdf` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.pdf"` (fecha del `generatedAt` UTC). El contenido SHALL agrupar visualmente las filas por ticket (`saleId`): un bloque de encabezado por ticket (folio de venta, cliente, Monto total, Saldo) seguido de las filas de sus abonos, antes de la sección de totales globales.
+Para `format=pdf`: el PDF SHALL generarse con `@react-pdf/renderer`, devuelto con `Content-Type: application/pdf` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.pdf"` (fecha del `generatedAt` UTC). El contenido SHALL agrupar visualmente las filas por ticket (`saleId`): un bloque de encabezado por ticket (folio de venta, cliente, Monto total, Saldo) seguido de las filas de sus abonos, antes de la sección de totales globales. El encabezado del PDF SHALL incluir el logo del negocio (tamaño reducido, junto al título), resuelto desde `TicketSettings.logoUrl` con fallback al logo por defecto (`public/logo.png`) cuando no está configurado. Los colores de tabla (encabezado, bordes, texto mutado) SHALL provenir de la paleta de marca compartida (`pdfTheme`), no de valores hex arbitrarios específicos de este módulo.
 
 Para `format=xlsx`: el archivo SHALL generarse como workbook `.xlsx`, devuelto con `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.xlsx"`. El contenido SHALL agrupar las filas por ticket con la misma estructura que el PDF (encabezado de ticket + filas de abonos + fila en blanco de separación), y una sección de totales globales al final de la hoja.
 
@@ -329,47 +329,13 @@ Para `format=xlsx`: el archivo SHALL generarse como workbook `.xlsx`, devuelto c
 }
 ```
 
-#### Scenario: Historial JSON con filtros
+#### Scenario: PDF incluye logo del negocio
+- **WHEN** un caller con `payments:report_read` solicita `?format=pdf`
+- **THEN** el PDF generado incluye el logo del negocio (o el fallback por defecto) en el encabezado
 
-- **WHEN** un caller con `payments:report_read` invoca `?userId=<U>&from=2026-06-01&to=2026-06-30`
-- **THEN** HTTP 200 con `items[]` filtrados (cada uno con `saleTotal`/`salePaidAmount`/`salePaymentStatus`/`saleDueAmount`) y `totals` agregados
-
-#### Scenario: Historial por ticket
-
-- **WHEN** un caller invoca `?saleId=<S>`
-- **THEN** la respuesta solo incluye abonos cuyo `sale_id === S` (cubre "historial de abonos por Ticket")
-
-#### Scenario: Historial filtrado por producto
-
-- **WHEN** un caller invoca `?productId=<P>`
-- **THEN** la respuesta incluye solo abonos cuya venta tiene al menos un `sale_item.product_id === P`; un abono cuya venta tiene 3 productos distintos aparece UNA sola vez
-
-#### Scenario: PDF de historial agrupado por ticket
-
-- **WHEN** un caller invoca `?format=pdf&userId=<U>`
-- **THEN** HTTP 200 con `Content-Type: application/pdf` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.pdf"`; el cuerpo es un PDF válido (comienza con bytes `%PDF-`) cuyo contenido agrupa las filas por ticket
-
-#### Scenario: Excel de historial agrupado por ticket
-
-- **WHEN** un caller con `payments:report_read` invoca `?format=xlsx&from=2026-06-01&to=2026-06-30`
-- **THEN** HTTP 200 con `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.xlsx"`; el archivo es un workbook `.xlsx` válido cuyo contenido agrupa las filas por ticket, con subtotal de Monto total/Saldo por ticket y totales globales al final
-
-#### Scenario: Excel demasiado grande
-
-- **WHEN** el set filtrado excede 10,000 filas y se pide `format=xlsx`
-- **THEN** HTTP 409 `{"error":"ReportTooLarge","limit":10000}` (mismo comportamiento que `format=pdf`)
-
-#### Scenario: PDF demasiado grande
-
-- **WHEN** el set filtrado excede 10,000 filas y se pide `format=pdf`
-- **THEN** HTTP 409 `{"error":"ReportTooLarge","limit":10000}`
-
-#### Scenario: Sin permiso payments:report_read
-
-- **WHEN** un usuario con `payments:read` pero SIN `payments:report_read` invoca el endpoint
-- **THEN** HTTP 403 `{"error":"Forbidden","required":"payments:report_read"}`
-
----
+#### Scenario: PDF usa colores de marca
+- **WHEN** un caller con `payments:report_read` solicita `?format=pdf`
+- **THEN** el color de fondo del encabezado de tabla del PDF corresponde a la paleta de marca compartida, no al azul `#1565C0` anterior
 
 ### Requirement: Branch scoping for payments
 

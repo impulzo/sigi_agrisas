@@ -39,6 +39,8 @@ import { GetCsdStatusUseCase } from "@/modules/billing/application/use-cases/Get
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 import type { BillingLookupService, SaleForBilling } from "@/modules/billing/application/ports/BillingLookupService";
 import type { CreateInvoiceData } from "@/modules/billing/application/ports/InvoiceRepository";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { InMemoryTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 
 const VALID_BRANCH = "11111111-1111-1111-1111-111111111111";
 const OTHER_BRANCH = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -105,7 +107,8 @@ function buildController(opts: {
     new GetCsdStatusUseCase(gateway),
     authz,
     lookup,
-    new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer)
+    new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer),
+    new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
   );
   return { controller, repo };
 }
