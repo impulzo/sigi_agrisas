@@ -7,14 +7,14 @@ import {
 } from "../../application/dto/DepartmentPriceListResponseDto";
 import { priceColumnNames } from "../../domain/services/priceColumnNames";
 import { pdfStyles as s } from "./pdfStyles";
+import { ReportHeader } from "./ReportHeader";
+import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
+import { ReportFooter } from "./ReportFooter";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
+import { formatPdfCurrency } from "@/shared/infrastructure/formatters/formatPdfCurrency";
 
 function money(v: string): string {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(Number(v));
+  return formatPdfCurrency(Number(v));
 }
 
 function ProductRow({ product, priceCols }: { product: DepartmentProductDto; priceCols: string[] }) {
@@ -73,17 +73,21 @@ function DeptSection({ dept }: { dept: DepartmentPriceListDepartmentDto }) {
   );
 }
 
-export function DepartmentPriceListReportPdf({ data }: { data: DepartmentPriceListResponseDto }) {
+interface Props {
+  data: DepartmentPriceListResponseDto;
+  issuer: PdfIssuer;
+}
+
+export function DepartmentPriceListReportPdf({ data, issuer }: Props) {
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={s.page}>
-        <View style={s.header} fixed>
-          <Text style={s.headerTitle}>Inventario por Departamento</Text>
+        <ReportHeader title="Inventario por Departamento" issuer={issuer}>
           <Text style={s.headerMeta}>Generado: {formatDate(data.generatedAt)} | Por: {data.generatedBy.email}</Text>
           <Text style={s.headerMeta}>
             Filtros: depto={data.filters.departmentId ?? "todos"} | sucursal={data.filters.branchId ?? "todas"}
           </Text>
-        </View>
+        </ReportHeader>
 
         {data.departments.length === 0 ? (
           <Text style={s.emptyMessage}>Sin datos para los filtros aplicados</Text>
@@ -113,10 +117,7 @@ export function DepartmentPriceListReportPdf({ data }: { data: DepartmentPriceLi
           </View>
         </View>
 
-        <View style={s.footer} fixed>
-          <Text>{data.generatedBy.email}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
-        </View>
+        <ReportFooter generatedByEmail={data.generatedBy.email} />
       </Page>
     </Document>
   );

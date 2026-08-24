@@ -127,12 +127,12 @@ describe("PaymentsHistoryPage", () => {
     expect(exportXlsx).toHaveBeenCalled();
   });
 
-  it("invoca exportPdf al hacer click en 'Exportar PDF'", () => {
+  it("invoca exportPdf al hacer click en 'Descargar PDF'", () => {
     setupUser(true);
     const exportPdf = jest.fn().mockResolvedValue(undefined);
     setupHistory({ exportPdf });
     render(<PaymentsHistoryPage />);
-    fireEvent.click(screen.getByRole("button", { name: /Exportar PDF/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Descargar PDF/i }));
     expect(exportPdf).toHaveBeenCalled();
   });
 

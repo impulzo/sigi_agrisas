@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
+import { DownloadPdfButton } from "../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import type { QuoteDetail } from "../_logic/types/domain";
 
 interface QuoteActionsBarProps {
@@ -34,17 +34,7 @@ export function QuoteActionsBar({
   const canCancel = can("quotes:cancel");
   const canConvert = can("quotes:convert");
 
-  const printButton = (
-    <button
-      type="button"
-      onClick={onDownloadPdf}
-      disabled={isExporting}
-      className="inline-flex items-center gap-1.5 rounded-full border border-outline px-4 py-2 text-label-lg font-medium hover:bg-surface-container-low transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {isExporting ? <Spinner size="sm" /> : <Icon name="print" size={18} />}
-      Imprimir PDF
-    </button>
-  );
+  const printButton = <DownloadPdfButton onClick={onDownloadPdf} loading={isExporting} />;
 
   if (canAuthorize === "loading" || canWrite === "loading" || canCancel === "loading" || canConvert === "loading") {
     return (

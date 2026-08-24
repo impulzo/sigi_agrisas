@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../_components/atoms/Button/Button";
+import { DownloadPdfButton } from "../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { downloadInvoicePreviewPdf } from "../_logic/services/downloadInvoicePreviewPdf";
 import type { InvoicePreviewData } from "../_logic/types/preview";
@@ -186,9 +187,7 @@ export function InvoicePreviewModal({
         <Button type="button" variant="text" onClick={onClose}>
           Volver a editar
         </Button>
-        <Button type="button" variant="outlined" onClick={handleDownloadPdf} disabled={!canDownload} loading={isDownloading}>
-          Descargar PDF
-        </Button>
+        <DownloadPdfButton onClick={handleDownloadPdf} disabled={!canDownload} loading={isDownloading} />
         <Button type="button" onClick={onConfirmStamp} disabled={!canConfirm} loading={isSubmitting}>
           Timbrar ahora
         </Button>

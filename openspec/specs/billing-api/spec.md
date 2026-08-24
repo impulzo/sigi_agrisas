@@ -212,6 +212,8 @@ The system SHALL define a `FacturamaGateway` port with operations `stamp`, `canc
 
 `FakeFacturamaGateway.stamp(input)` SHALL retain the received `input` (issuer/receiver/lines data) in an in-memory map keyed by the generated `cfdiId`, for the lifetime of the process. `FakeFacturamaGateway.download(format, cfdiId)` SHALL render that retained input through `InvoiceDocumentPdf` (for `format="pdf"`) — producing a document with issuer, receiver, a concepts table, tax breakdown, and totals, prominently watermarked "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL" — or an XML reflecting the same issuer/receiver/concepts data (for `format="xml"`), instead of the fixed placeholder strings used before this change. If `cfdiId` is not found in the map (e.g. process restarted between `stamp` and `download`), the system SHALL fall back to a minimal but still realistically laid-out placeholder document (not the prior single-line stub), still carrying the same watermark.
 
+`FakeFacturamaGateway` SHALL accept an optional `GetTicketSettingsUseCase` dependency via its constructor. When provided, `download("pdf", cfdiId)` SHALL resolve `logoUrl` from it and include the business logo in the rendered PDF's header, following the same positioning rule as the preview PDF endpoint (never overlapping the watermark). When the dependency is not provided (e.g. existing test call sites constructing `new FakeFacturamaGateway()` with no arguments), the behavior SHALL be unchanged from before this requirement's logo addition — no error, no logo rendered.
+
 #### Scenario: Mock mode by default
 - **WHEN** `FACTURAMA_MOCK` is unset or `true`
 - **THEN** stamping returns a deterministic fake CFDI and performs no network request
@@ -244,6 +246,14 @@ The system SHALL define a `FacturamaGateway` port with operations `stamp`, `canc
 - **WHEN** `FACTURAMA_MOCK=false`
 - **THEN** `FacturamaRestGateway.download` behaves exactly as before this change, returning Facturama's actual file unmodified
 
+#### Scenario: Mock PDF includes logo when the use case is injected
+- **WHEN** `FakeFacturamaGateway` is constructed with a `GetTicketSettingsUseCase` and `download("pdf", cfdiId)` is called
+- **THEN** the returned PDF's header includes the resolved business logo, without altering the "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL" watermark
+
+#### Scenario: Mock PDF without the optional dependency behaves as before
+- **WHEN** `FakeFacturamaGateway` is constructed with no arguments (as in existing test call sites) and `download("pdf", cfdiId)` is called
+- **THEN** the returned PDF renders exactly as before this requirement's logo addition, with no error thrown
+
 ### Requirement: Persist invoice with fiscal snapshot
 The system SHALL persist `invoices` and `invoice_items` such that each invoice retains a snapshot of receiver fiscal data (`receiverRfc`, `receiverName`, `receiverCfdiUse`, `receiverFiscalRegime`, `receiverTaxZipCode`), monetary totals (`subtotal`, `taxTotal`, `total` as `Decimal(14,4)`), and per-line snapshots (`productCodeSnapshot`, `productNameSnapshot`, `satProductCode`, `satUnitCode`, `unit`, `quantity`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`, `taxObject`, line totals). `saleId` is nullable with `ON DELETE SET NULL`. Snapshots SHALL survive subsequent changes or deletion of the source sale, customer or products.
 
@@ -269,6 +279,8 @@ The system SHALL register permissions `billing:read`, `billing:write`, `billing:
 ### Requirement: Invoice preview PDF endpoint
 The system SHALL expose `POST /api/v1/admin/invoices/preview/pdf`. Requires `billing:write`. The request body SHALL be the client-resolved preview data (mirroring `InvoicePreviewData`): `{ issuer: { name, branchName? }, receiver: { rfc, name, cfdiUse, fiscalRegime, taxZipCode }, lines: Array<{ description, productCode, satProductCode?, quantity, unitPrice, discountPct, ivaRate, iepsRate, lineSubtotal, lineTotal }>, paymentForm, paymentMethod, subtotal, taxTotal, total, currency }`. `discountPct`, `ivaRate`, and `iepsRate` per line SHALL be non-nullable numbers at this endpoint's boundary — the client is responsible for normalizing any `null` value coming from the underlying sale (e.g. items without a discount, IEPS-exempt products) to `0` before sending the request. Zod SHALL validate the body's shape (types, required fields) but the system SHALL NOT re-derive totals from a `saleId`, re-validate business rules already enforced client-side (receiver fiscal completeness, price ≥ 0), or persist anything — it renders `InvoiceDocumentPdf` with the data as received and returns it watermarked "BORRADOR — no válido fiscalmente" and folio placeholder "PENDIENTE DE TIMBRAR". No Facturama call occurs. Returns HTTP 200 with `Content-Type: application/pdf` and `Content-Disposition: attachment; filename="factura-borrador.pdf"`. Any exception raised while rendering the PDF (e.g. `renderToBuffer` failure) SHALL be caught and returned as HTTP 500 with a JSON body (`{ "error": "PdfRenderError" }` or equivalent), never as an unhandled exception with no JSON body.
 
+Before rendering, the system SHALL resolve `logoUrl` server-side via `GetTicketSettingsUseCase` (never from the request body) and inject it into the issuer data passed to `InvoiceDocumentPdf`. The rendered PDF's header SHALL include the business logo (the tenant's uploaded logo when set, falling back to the bundled default logo when not set), positioned so it never overlaps, shrinks, or repositions the "BORRADOR — no válido fiscalmente" watermark banner or footer. The PDF's non-watermark colors (section titles, table header, alternating rows, totals band, borders, muted text) SHALL come from the shared brand palette (`pdfTheme`) instead of module-specific arbitrary hex values; the watermark's color SHALL be the brand error color (`#ba1a1a`) instead of the prior `#c00`, with its size, position, and text unchanged.
+
 #### Scenario: Preview PDF generated from client-resolved data
 - **WHEN** an authenticated user with `billing:write` posts a well-formed preview payload
 - **THEN** the system returns HTTP 200 with `Content-Type: application/pdf`, the PDF shows the exact receiver/lines/totals from the body, the "BORRADOR — no válido fiscalmente" watermark, and "PENDIENTE DE TIMBRAR" as the folio
@@ -292,4 +304,12 @@ The system SHALL expose `POST /api/v1/admin/invoices/preview/pdf`. Requires `bil
 #### Scenario: PDF render failure returns a typed 500
 - **WHEN** `renderToBuffer` throws while composing the PDF from an otherwise well-formed body
 - **THEN** the system returns HTTP 500 with a JSON error body, not an unhandled exception
+
+#### Scenario: Preview PDF includes the business logo
+- **WHEN** the preview PDF endpoint is called and `TicketSettings.logoUrl` is set
+- **THEN** the generated PDF's header includes that logo, and the watermark banner's text, size, and position are unchanged from before this requirement's logo/color additions
+
+#### Scenario: Preview PDF ignores a client-supplied logo
+- **WHEN** the request body includes any field attempting to specify a logo or branding image
+- **THEN** the system ignores it — the logo always comes from server-side `TicketSettings`, never from client input
 

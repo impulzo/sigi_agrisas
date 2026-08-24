@@ -1,22 +1,20 @@
 import { StyleSheet } from "@react-pdf/renderer";
+import { pdfBaseStyles } from "@/shared/infrastructure/pdf/pdfBaseStyles";
+import { PDF_COLORS } from "@/shared/infrastructure/pdf/pdfTheme";
 
 export const pdfStyles = StyleSheet.create({
-  page: {
-    fontFamily: "Helvetica",
-    fontSize: 9,
-    paddingTop: 30,
-    paddingBottom: 40,
-    paddingHorizontal: 30,
-    color: "#111",
-  },
-  watermarkBanner: {
-    backgroundColor: "#c00",
-    color: "#fff",
-    fontFamily: "Helvetica-Bold",
-    fontSize: 10,
+  ...pdfBaseStyles,
+  watermarkDiagonal: {
+    position: "absolute",
+    top: "42%",
+    left: 0,
+    right: 0,
     textAlign: "center",
-    padding: "6 8",
-    marginBottom: 12,
+    fontFamily: "Helvetica-Bold",
+    fontSize: 28,
+    color: PDF_COLORS.outlineVariant,
+    opacity: 0.3,
+    transform: "rotate(-45deg)",
   },
   header: {
     flexDirection: "row",
@@ -24,17 +22,16 @@ export const pdfStyles = StyleSheet.create({
     marginBottom: 12,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
+    borderBottomColor: PDF_COLORS.outlineVariant,
   },
-  logo: {
-    width: 60,
-    height: 60,
-    objectFit: "contain",
-  },
-  issuerBlock: {
+  issuerRow: {
     flexDirection: "row",
     gap: 8,
     alignItems: "flex-start",
+  },
+  issuerBlock: {
+    flexDirection: "column",
+    gap: 2,
   },
   issuerName: {
     fontSize: 14,
@@ -42,14 +39,14 @@ export const pdfStyles = StyleSheet.create({
   },
   issuerMeta: {
     fontSize: 8,
-    color: "#555",
+    color: PDF_COLORS.onSurfaceVariant,
   },
   invoiceMeta: {
     textAlign: "right",
   },
   invoiceMetaLabel: {
     fontSize: 8,
-    color: "#555",
+    color: PDF_COLORS.onSurfaceVariant,
   },
   invoiceMetaValue: {
     fontSize: 9,
@@ -61,7 +58,7 @@ export const pdfStyles = StyleSheet.create({
   sectionTitle: {
     fontSize: 9,
     fontFamily: "Helvetica-Bold",
-    backgroundColor: "#f0f0f0",
+    backgroundColor: PDF_COLORS.surfaceContainer,
     padding: "3 6",
     marginBottom: 4,
   },
@@ -75,30 +72,10 @@ export const pdfStyles = StyleSheet.create({
   },
   receiverLabel: {
     fontSize: 7,
-    color: "#666",
+    color: PDF_COLORS.onSurfaceVariant,
   },
   receiverValue: {
     fontSize: 9,
-  },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#e0e0e0",
-    padding: "3 4",
-    fontFamily: "Helvetica-Bold",
-    fontSize: 8,
-  },
-  tableRow: {
-    flexDirection: "row",
-    padding: "3 4",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-  },
-  tableRowAlt: {
-    flexDirection: "row",
-    padding: "3 4",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-    backgroundColor: "#fafafa",
   },
   colDescription: { flex: 3, fontSize: 8 },
   colQty: { flex: 1, fontSize: 8, textAlign: "right" },
@@ -112,13 +89,10 @@ export const pdfStyles = StyleSheet.create({
     width: 220,
   },
   totalsBox: {
+    ...pdfBaseStyles.totalsBand,
     marginTop: 4,
     alignSelf: "flex-end",
     width: 220,
-    padding: "6 8",
-    backgroundColor: "#e8e8e8",
-    borderTopWidth: 1,
-    borderTopColor: "#999",
   },
   totalsRow: {
     flexDirection: "row",
@@ -138,7 +112,7 @@ export const pdfStyles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 4,
     borderTopWidth: 0.5,
-    borderTopColor: "#999",
+    borderTopColor: PDF_COLORS.outline,
   },
   grandTotalLabel: {
     fontSize: 10,
@@ -152,7 +126,7 @@ export const pdfStyles = StyleSheet.create({
     marginTop: 20,
     paddingTop: 8,
     borderTopWidth: 0.5,
-    borderTopColor: "#ccc",
+    borderTopColor: PDF_COLORS.outlineVariant,
   },
   fiscalFooterRow: {
     flexDirection: "row",
@@ -161,7 +135,7 @@ export const pdfStyles = StyleSheet.create({
   },
   fiscalFooterLabel: {
     fontSize: 7,
-    color: "#666",
+    color: PDF_COLORS.onSurfaceVariant,
     width: 80,
   },
   fiscalFooterValue: {
@@ -173,27 +147,14 @@ export const pdfStyles = StyleSheet.create({
     width: 60,
     height: 60,
     borderWidth: 1,
-    borderColor: "#999",
+    borderColor: PDF_COLORS.outline,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
   },
   qrPlaceholderText: {
     fontSize: 6,
-    color: "#999",
+    color: PDF_COLORS.outline,
     textAlign: "center",
-  },
-  watermarkFooter: {
-    position: "absolute",
-    bottom: 20,
-    left: 30,
-    right: 30,
-    textAlign: "center",
-    fontSize: 8,
-    fontFamily: "Helvetica-Bold",
-    color: "#c00",
-    borderTopWidth: 0.5,
-    borderTopColor: "#ccc",
-    paddingTop: 4,
   },
 });

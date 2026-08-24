@@ -2,6 +2,8 @@ import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { PaymentHistoryReportDto, PaymentHistoryRowDto } from "../../application/dto/PaymentDto";
 import { styles } from "./pdfStyles";
+import { PdfLogo } from "@/shared/infrastructure/pdf/PdfLogo";
+import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
 
 function groupBySale(items: PaymentHistoryRowDto[]): PaymentHistoryRowDto[][] {
   const groups = new Map<string, PaymentHistoryRowDto[]>();
@@ -15,6 +17,7 @@ function groupBySale(items: PaymentHistoryRowDto[]): PaymentHistoryRowDto[][] {
 
 interface Props {
   data: PaymentHistoryReportDto;
+  issuer: PdfIssuer;
 }
 
 function formatDate(iso: string): string {
@@ -25,7 +28,7 @@ function formatDateTime(iso: string): string {
   return iso.substring(0, 16).replace("T", " ");
 }
 
-export function PaymentHistoryPdf({ data }: Props) {
+export function PaymentHistoryPdf({ data, issuer }: Props) {
   const { generatedAt, generatedBy, filters, items, totals } = data;
 
   const activeFilters: string[] = [];
@@ -42,7 +45,17 @@ export function PaymentHistoryPdf({ data }: Props) {
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={styles.page}>
-        <Text style={styles.title}>Historial de Abonos</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={styles.issuerRow}>
+            <PdfLogo logoUrl={issuer.logoUrl} size={24} />
+            <View style={styles.issuerBlock}>
+              {issuer.businessName && <Text style={styles.issuerName}>{issuer.businessName}</Text>}
+              {issuer.businessAddress && <Text style={styles.issuerMeta}>{issuer.businessAddress}</Text>}
+              {issuer.businessRfc && <Text style={styles.issuerMeta}>RFC: {issuer.businessRfc}</Text>}
+            </View>
+          </View>
+          <Text style={styles.title}>Historial de Abonos</Text>
+        </View>
         <Text style={styles.subtitle}>
           Generado: {formatDateTime(generatedAt)} · Por: {generatedBy.email}
         </Text>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Combobox } from "../../../_components/molecules/Combobox/Combobox";
+import { DownloadPdfButton } from "../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import { useDebounce } from "../../../_hooks/useDebounce";
 import { useCustomerSearch } from "../_logic/hooks/useCustomerSearch";
 import { useProductSearch } from "../_logic/hooks/useProductSearch";
@@ -195,15 +196,7 @@ export function PaymentsHistoryToolbar({
         >
           Limpiar
         </button>
-        <button
-          type="button"
-          onClick={onExportPdf}
-          disabled={isExporting}
-          className="rounded-md bg-secondary text-on-secondary px-4 py-2 text-body-sm font-medium hover:bg-secondary/90 transition-colors disabled:opacity-60 flex items-center gap-2"
-        >
-          {isExporting && <Spinner size="sm" />}
-          Exportar PDF
-        </button>
+        <DownloadPdfButton onClick={onExportPdf} loading={isExporting} />
         <button
           type="button"
           onClick={onExportXlsx}

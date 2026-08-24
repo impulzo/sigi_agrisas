@@ -45,6 +45,8 @@ import { GetCsdStatusUseCase } from "@/modules/billing/application/use-cases/Get
 import { upsertEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
 import type { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 import type { BillingLookupService } from "@/modules/billing/application/ports/BillingLookupService";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { InMemoryTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 const mockedUpsert = upsertEmitterFiscalSettings as jest.Mock;
@@ -69,7 +71,7 @@ function makeLookup(): BillingLookupService {
   };
 }
 
-function buildController(authzOverride?: AuthorizationService) {
+function buildController(authzOverride?: AuthorizationService, ticketSettingsRepo?: InMemoryTicketSettingsRepository) {
   const repo = new InMemoryInvoiceRepository();
   const gateway = new FakeFacturamaGateway();
   const authz = authzOverride ?? makeAuthz();
@@ -87,7 +89,8 @@ function buildController(authzOverride?: AuthorizationService) {
     new GetCsdStatusUseCase(gateway),
     authz,
     lookup,
-    new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer)
+    new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer),
+    new GetTicketSettingsUseCase(ticketSettingsRepo ?? new InMemoryTicketSettingsRepository())
   );
 }
 
@@ -216,6 +219,25 @@ describe("BillingController — previewPdf", () => {
     expect(element.props.folioLabel).toBe("PENDIENTE DE TIMBRAR");
     expect(element.props.isDraft).toBe(true);
     expect(element.props.data.receiver.rfc).toBe(VALID_PREVIEW_BODY.receiver.rfc);
+  });
+
+  it("resolves logoUrl server-side via GetTicketSettingsUseCase and injects it into issuer data, ignoring any client-supplied logo field", async () => {
+    const settingsRepo = new InMemoryTicketSettingsRepository();
+    await settingsRepo.updateLogoUrl("https://storage.example.com/tenant-logo.png");
+    const controller = buildController(undefined, settingsRepo);
+
+    const bodyWithClientLogo = {
+      ...VALID_PREVIEW_BODY,
+      issuer: { ...VALID_PREVIEW_BODY.issuer, logoUrl: "https://attacker.example.com/fake-logo.png" },
+    };
+
+    await controller.previewPdf(previewReq(bodyWithClientLogo));
+
+    expect(mockRenderToBuffer).toHaveBeenCalledTimes(1);
+    const element = mockRenderToBuffer.mock.calls[0][0] as unknown as {
+      props: { data: { issuer: { logoUrl: string | null } } };
+    };
+    expect(element.props.data.issuer.logoUrl).toBe("https://storage.example.com/tenant-logo.png");
   });
 
   it("body missing receiver → 400", async () => {

@@ -14,6 +14,7 @@ import { SegmentedButton } from "../../../../_components/molecules/SegmentedButt
 import { EmptyState } from "../../../../_components/molecules/EmptyState/EmptyState";
 import { PageLoading } from "../../../../_components/molecules/PageLoading/PageLoading";
 import { Button } from "../../../../_components/atoms/Button/Button";
+import { ExportPdfButton } from "../../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import { Spinner } from "../../../../_components/atoms/Spinner/Spinner";
 
 type Section = "purchases" | "provider-payments";
@@ -91,13 +92,11 @@ export function PurchasesReportPage() {
             onToChange={(v) => { setTo(v); resetPage(); }}
           />
           <div className="flex gap-2">
-            <Button
-              icon="print"
+            <ExportPdfButton
               onClick={() => active.exportPdf()}
-              disabled={active.isExportingPdf || count === 0}
-            >
-              {active.isExportingPdf ? "Generando…" : "Exportar PDF"}
-            </Button>
+              loading={active.isExportingPdf}
+              disabled={count === 0}
+            />
             <Button
               variant="outlined"
               icon="summarize"

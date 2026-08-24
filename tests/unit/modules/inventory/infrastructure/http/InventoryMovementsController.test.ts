@@ -21,6 +21,8 @@ import { InMemoryInventoryMovementRepository } from "@/modules/inventory/infrast
 import { InMemoryProductRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductRepository";
 import { InventoryMovement } from "@/modules/inventory/domain/entities/InventoryMovement";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { InMemoryTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 const BRANCH_ID = "11111111-1111-1111-1111-111111111111";
@@ -56,7 +58,8 @@ function buildController(
   return new InventoryMovementsController(
     new GetKardexReportUseCase(movementRepo, productRepo),
     new RebuildInventoryArticleUseCase(movementRepo),
-    authz
+    authz,
+    new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
   );
 }
 

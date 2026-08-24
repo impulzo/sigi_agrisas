@@ -162,12 +162,12 @@ describe("InventoryPage", () => {
 
   it("botones de exportar deshabilitados sin datos, habilitados con datos", () => {
     const { rerender } = render(<InventoryPage />);
-    expect(screen.getByText("Exportar PDF")).toBeDisabled();
+    expect(screen.getByText("Exportar a PDF")).toBeDisabled();
     expect(screen.getByText("Exportar Excel")).toBeDisabled();
 
     mockUseInventoryReport.mockReturnValue({ ...emptyHookReturn(), report: reportFixture() });
     rerender(<InventoryPage />);
-    expect(screen.getByText("Exportar PDF")).not.toBeDisabled();
+    expect(screen.getByText("Exportar a PDF")).not.toBeDisabled();
     expect(screen.getByText("Exportar Excel")).not.toBeDisabled();
   });
 

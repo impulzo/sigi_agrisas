@@ -5,7 +5,11 @@ import {
   CollectionsRowDto,
 } from "../../application/dto/CollectionsReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
+import { ReportHeader } from "./ReportHeader";
+import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
+import { ReportFooter } from "./ReportFooter";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
+import { rowStyle } from "@/shared/infrastructure/pdf/rowStyle";
 
 function groupByCustomer(rows: CollectionsRowDto[]): Map<string, CollectionsRowDto[]> {
   const map = new Map<string, CollectionsRowDto[]>();
@@ -18,21 +22,25 @@ function groupByCustomer(rows: CollectionsRowDto[]): Map<string, CollectionsRowD
   return map;
 }
 
-export function CollectionsReportPdf({ data }: { data: CollectionsReportResponseDto }) {
+interface Props {
+  data: CollectionsReportResponseDto;
+  issuer: PdfIssuer;
+}
+
+export function CollectionsReportPdf({ data, issuer }: Props) {
   const grouped = groupByCustomer(data.rows);
 
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={s.page}>
-        <View style={s.header} fixed>
-          <Text style={s.headerTitle}>Reporte de Cobranza por Cliente</Text>
+        <ReportHeader title="Reporte de Cobranza por Cliente" issuer={issuer}>
           <Text style={s.headerMeta}>
             Periodo: {data.filters.from} — {data.filters.to} | Sucursal: {data.filters.branchId ?? "todas"}
           </Text>
           <Text style={s.headerMeta}>
             Fecha de emisión: {formatDate(data.generatedAt)} | Generado por: {data.generatedBy.email}
           </Text>
-        </View>
+        </ReportHeader>
 
         {data.rows.length === 0 ? (
           <Text style={s.emptyMessage}>Sin cobranza en el periodo</Text>
@@ -48,7 +56,7 @@ export function CollectionsReportPdf({ data }: { data: CollectionsReportResponse
                 <Text style={s.cell}>Fecha de cobro</Text>
               </View>
               {rows.map((r, i) => (
-                <View key={r.paymentId} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+                <View key={r.paymentId} style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
                   <Text style={s.cellWide}>{r.factura}</Text>
                   <Text style={s.cell}>{r.paymentMethodName}</Text>
                   <Text style={s.cellNarrow}>{r.amount}</Text>
@@ -73,10 +81,7 @@ export function CollectionsReportPdf({ data }: { data: CollectionsReportResponse
           </View>
         </View>
 
-        <View style={s.footer} fixed>
-          <Text>{data.generatedBy.email}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
-        </View>
+        <ReportFooter generatedByEmail={data.generatedBy.email} />
       </Page>
     </Document>
   );

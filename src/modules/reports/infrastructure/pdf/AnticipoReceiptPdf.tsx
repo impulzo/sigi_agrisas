@@ -2,28 +2,31 @@ import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { AnticipoReceiptResponseDto } from "../../application/dto/AnticipoReceiptResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
+import { ReportHeader } from "./ReportHeader";
+import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
+import { formatPdfCurrency } from "@/shared/infrastructure/formatters/formatPdfCurrency";
 
 function money(v: string): string {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(Number(v));
+  return formatPdfCurrency(Number(v));
+}
+
+interface Props {
+  data: AnticipoReceiptResponseDto;
+  issuer: PdfIssuer;
 }
 
 /** Recibo imprimible de un anticipo/abono. */
-export function AnticipoReceiptPdf({ data }: { data: AnticipoReceiptResponseDto }) {
+export function AnticipoReceiptPdf({ data, issuer }: Props) {
   const { payment, customer, sale } = data;
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        <View style={s.header}>
-          <Text style={s.headerTitle}>Recibo de Anticipo — {payment.folio}</Text>
+        <ReportHeader title={`Recibo de Anticipo — ${payment.folio}`} issuer={issuer} logoSize={40}>
           <Text style={s.headerMeta}>
             Generado: {formatDate(data.generatedAt)} | Por: {data.generatedBy.email}
           </Text>
-        </View>
+        </ReportHeader>
 
         <View style={s.section}>
           <Text style={s.departmentTitle}>Cliente</Text>

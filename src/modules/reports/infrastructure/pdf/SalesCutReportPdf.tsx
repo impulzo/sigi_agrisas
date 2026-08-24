@@ -7,7 +7,11 @@ import {
   SaleListRowDto,
 } from "../../application/dto/SalesCutReportResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
+import { ReportHeader } from "./ReportHeader";
+import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
+import { ReportFooter } from "./ReportFooter";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
+import { rowStyle } from "@/shared/infrastructure/pdf/rowStyle";
 
 function BreakdownBlock({ title, rows }: { title: string; rows: SalesCutBreakdownRowDto[] }) {
   return (
@@ -25,7 +29,7 @@ function BreakdownBlock({ title, rows }: { title: string; rows: SalesCutBreakdow
             <Text style={s.cellNarrow}>Total</Text>
           </View>
           {rows.map((r, i) => (
-            <View key={r.key} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+            <View key={r.key} style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
               <Text style={s.cellWide}>{r.label}</Text>
               <Text style={s.cellNarrow}>{r.ticketCount}</Text>
               <Text style={s.cellNarrow}>{r.subtotal}</Text>
@@ -56,7 +60,7 @@ function ProductBreakdownBlock({ title, rows }: { title: string; rows: SalesCutP
             <Text style={s.cellNarrow}>Total</Text>
           </View>
           {rows.map((r, i) => (
-            <View key={r.key} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+            <View key={r.key} style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
               <Text style={s.cellWide}>{r.label}</Text>
               <Text style={s.cellNarrow}>{r.ticketCount}</Text>
               <Text style={s.cellNarrow}>{r.quantitySold}</Text>
@@ -86,7 +90,7 @@ function SalesListBlock({ rows }: { rows: SaleListRowDto[] }) {
             <Text style={s.cell}>Forma de pago</Text>
           </View>
           {rows.map((r, i) => (
-            <View key={r.saleId} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+            <View key={r.saleId} style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
               <Text style={s.cell}>{r.folioCode}</Text>
               <Text style={s.cellWide}>{r.customerName ?? "—"}</Text>
               <Text style={s.cellNarrow}>{r.total}</Text>
@@ -99,12 +103,16 @@ function SalesListBlock({ rows }: { rows: SaleListRowDto[] }) {
   );
 }
 
-export function SalesCutReportPdf({ data }: { data: SalesCutReportResponseDto }) {
+interface Props {
+  data: SalesCutReportResponseDto;
+  issuer: PdfIssuer;
+}
+
+export function SalesCutReportPdf({ data, issuer }: Props) {
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={s.page}>
-        <View style={s.header} fixed>
-          <Text style={s.headerTitle}>Corte de Ventas</Text>
+        <ReportHeader title="Corte de Ventas" issuer={issuer}>
           <Text style={s.headerMeta}>
             Periodo: {data.filters.from} — {data.filters.to} | Sucursal:{" "}
             {data.filters.branchId ?? "todas"}
@@ -112,7 +120,7 @@ export function SalesCutReportPdf({ data }: { data: SalesCutReportResponseDto })
           <Text style={s.headerMeta}>
             Generado: {formatDate(data.generatedAt)} | Por: {data.generatedBy.email}
           </Text>
-        </View>
+        </ReportHeader>
 
         <View style={s.totals}>
           <View style={s.totalsRow}>
@@ -165,10 +173,7 @@ export function SalesCutReportPdf({ data }: { data: SalesCutReportResponseDto })
         <ProductBreakdownBlock title="Por producto" rows={data.byProduct} />
         <SalesListBlock rows={data.salesList} />
 
-        <View style={s.footer} fixed>
-          <Text>{data.generatedBy.email}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
-        </View>
+        <ReportFooter generatedByEmail={data.generatedBy.email} />
       </Page>
     </Document>
   );

@@ -11,6 +11,7 @@ import { SegmentedButton } from "../../../../../_components/molecules/SegmentedB
 import { EmptyState } from "../../../../../_components/molecules/EmptyState/EmptyState";
 import { Card } from "../../../../../_components/molecules/Card/Card";
 import { Button } from "../../../../../_components/atoms/Button/Button";
+import { ExportPdfButton } from "../../../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import { Spinner } from "../../../../../_components/atoms/Spinner/Spinner";
 
 type View = "customer" | "ticket";
@@ -57,9 +58,7 @@ export function ByCustomerCollectionsView() {
           onToChange={setTo}
         />
         <div className="flex gap-2">
-          <Button icon="print" onClick={() => exportPdf()} disabled={isExportingPdf || !hasData}>
-            {isExportingPdf ? "Generando…" : "Exportar PDF"}
-          </Button>
+          <ExportPdfButton onClick={() => exportPdf()} loading={isExportingPdf} disabled={!hasData} />
           <Button variant="outlined" icon="summarize" onClick={() => exportXlsx()} disabled={isExportingXlsx || !hasData}>
             {isExportingXlsx ? "Generando…" : "Exportar Excel"}
           </Button>

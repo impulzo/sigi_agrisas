@@ -1,18 +1,13 @@
 import { StyleSheet } from "@react-pdf/renderer";
+import { pdfBaseStyles } from "@/shared/infrastructure/pdf/pdfBaseStyles";
+import { PDF_COLORS } from "@/shared/infrastructure/pdf/pdfTheme";
 
 export const pdfStyles = StyleSheet.create({
-  page: {
-    fontFamily: "Helvetica",
-    fontSize: 9,
-    paddingTop: 30,
-    paddingBottom: 40,
-    paddingHorizontal: 30,
-    color: "#111",
-  },
+  ...pdfBaseStyles,
   header: {
     marginBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
+    borderBottomColor: PDF_COLORS.outlineVariant,
     paddingBottom: 8,
   },
   headerTitle: {
@@ -22,7 +17,25 @@ export const pdfStyles = StyleSheet.create({
   },
   headerMeta: {
     fontSize: 8,
-    color: "#555",
+    color: PDF_COLORS.onSurfaceVariant,
+  },
+  issuerRow: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "flex-start",
+    marginBottom: 4,
+  },
+  issuerBlock: {
+    flexDirection: "column",
+    gap: 1,
+  },
+  issuerName: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+  },
+  issuerMeta: {
+    fontSize: 7,
+    color: PDF_COLORS.onSurfaceVariant,
   },
   section: {
     marginBottom: 12,
@@ -30,7 +43,7 @@ export const pdfStyles = StyleSheet.create({
   branchTitle: {
     fontSize: 11,
     fontFamily: "Helvetica-Bold",
-    backgroundColor: "#f0f0f0",
+    backgroundColor: PDF_COLORS.surfaceContainer,
     padding: "4 6",
     marginBottom: 4,
   },
@@ -40,27 +53,7 @@ export const pdfStyles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 2,
     paddingLeft: 4,
-    color: "#333",
-  },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#e0e0e0",
-    padding: "3 4",
-    fontFamily: "Helvetica-Bold",
-    fontSize: 8,
-  },
-  tableRow: {
-    flexDirection: "row",
-    padding: "2 4",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-  },
-  tableRowAlt: {
-    flexDirection: "row",
-    padding: "2 4",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-    backgroundColor: "#fafafa",
+    color: PDF_COLORS.onSurfaceVariant,
   },
   cell: {
     flex: 1,
@@ -77,19 +70,16 @@ export const pdfStyles = StyleSheet.create({
   subtotal: {
     flexDirection: "row",
     padding: "2 4",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: PDF_COLORS.surfaceContainerLow,
     borderTopWidth: 0.5,
-    borderTopColor: "#ccc",
+    borderTopColor: PDF_COLORS.outline,
     marginBottom: 4,
     fontFamily: "Helvetica-Bold",
     fontSize: 8,
   },
   totals: {
+    ...pdfBaseStyles.totalsBand,
     marginTop: 12,
-    padding: "6 8",
-    backgroundColor: "#e8e8e8",
-    borderTopWidth: 1,
-    borderTopColor: "#999",
     fontFamily: "Helvetica-Bold",
     fontSize: 9,
   },
@@ -104,28 +94,52 @@ export const pdfStyles = StyleSheet.create({
     width: 80,
     textAlign: "right",
   },
-  footer: {
-    position: "absolute",
-    bottom: 20,
-    left: 30,
-    right: 30,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    fontSize: 8,
-    color: "#888",
-    borderTopWidth: 0.5,
-    borderTopColor: "#ccc",
-    paddingTop: 4,
-  },
   emptyMessage: {
     marginTop: 24,
     textAlign: "center",
-    color: "#888",
+    color: PDF_COLORS.onSurfaceVariant,
     fontSize: 11,
   },
   badge: {
     fontSize: 7,
-    color: "#c00",
+    color: PDF_COLORS.error,
     fontFamily: "Helvetica-Bold",
   },
+
+  // Anchos de columna específicos de CashCutReportPdf — plegados aquí desde su
+  // StyleSheet.create local ("cols"); sin equivalente reusable en otros reportes.
+  cashCutHeader: {
+    flexDirection: "row",
+    backgroundColor: PDF_COLORS.surfaceContainer,
+    padding: "3 2",
+    fontFamily: "Helvetica-Bold",
+    fontSize: 7,
+  },
+  cashCutRow: {
+    flexDirection: "row",
+    padding: "2 2",
+    borderBottomWidth: 0.5,
+    borderBottomColor: PDF_COLORS.outlineVariant,
+    fontSize: 7,
+  },
+  cashCutRowAlt: {
+    flexDirection: "row",
+    padding: "2 2",
+    borderBottomWidth: 0.5,
+    borderBottomColor: PDF_COLORS.outlineVariant,
+    backgroundColor: PDF_COLORS.surfaceContainerLow,
+    fontSize: 7,
+  },
+  cashCutCte: { width: 35 },
+  cashCutDocto: { width: 55 },
+  cashCutFactura: { width: 55 },
+  cashCutCliente: { width: 90 },
+  cashCutFecFact: { width: 55 },
+  cashCutDias: { width: 28, textAlign: "right" },
+  cashCutImporte: { width: 55, textAlign: "right" },
+  cashCutFp: { width: 60 },
+  cashCutReferencia: { width: 90 },
+  cashCutFCobro: { width: 55 },
+  cashCutIva: { width: 45, textAlign: "right" },
+  cashCutTasa: { width: 35, textAlign: "right" },
 });

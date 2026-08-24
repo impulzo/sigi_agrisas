@@ -1,6 +1,8 @@
 import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { pdfStyles as s } from "./pdfStyles";
+import { formatPdfCurrency } from "@/shared/infrastructure/formatters/formatPdfCurrency";
+import { PdfLogo } from "@/shared/infrastructure/pdf/PdfLogo";
 
 export interface InvoiceDocumentPdfLine {
   description: string;
@@ -20,6 +22,7 @@ export interface InvoiceDocumentPdfData {
     name: string;
     branchName?: string | null;
     rfc?: string | null;
+    logoUrl?: string | null;
   };
   receiver: {
     rfc: string;
@@ -46,7 +49,7 @@ interface InvoiceDocumentPdfProps {
 }
 
 function money(n: number, currency: string): string {
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(n);
+  return formatPdfCurrency(n, currency);
 }
 
 function pct(n: number): string {
@@ -60,11 +63,12 @@ export function InvoiceDocumentPdf({ data, watermark, folioLabel, isDraft = fals
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        <Text style={s.watermarkBanner}>{watermark}</Text>
+        <Text style={s.watermarkDiagonal}>{watermark}</Text>
 
         <View style={s.header}>
-          <View style={s.issuerBlock}>
-            <View>
+          <View style={s.issuerRow}>
+            <PdfLogo logoUrl={data.issuer.logoUrl} size={40} />
+            <View style={s.issuerBlock}>
               <Text style={s.issuerName}>{data.issuer.name}</Text>
               {data.issuer.branchName && <Text style={s.issuerMeta}>{data.issuer.branchName}</Text>}
               {data.issuer.rfc && <Text style={s.issuerMeta}>RFC: {data.issuer.rfc}</Text>}
@@ -180,8 +184,6 @@ export function InvoiceDocumentPdf({ data, watermark, folioLabel, isDraft = fals
             </View>
           </View>
         )}
-
-        <Text style={s.watermarkFooter}>{watermark}</Text>
       </Page>
     </Document>
   );

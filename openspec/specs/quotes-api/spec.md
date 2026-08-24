@@ -106,9 +106,12 @@ The system SHALL expose `GET /api/v1/admin/quotes/:id` that returns a single quo
 The detail SHALL include `isExpired: boolean` (true if `status='authorized' AND expires_at < NOW()`) as a computed convenience flag for the UI.
 
 The endpoint SHALL accept an optional query parameter `format` with allowed values `json` (default) and `pdf`. Any other value SHALL return HTTP 400. When `format=json` (or omitted), the response behaves exactly as described above (`QuoteDetailDto` as JSON). When `format=pdf`:
-- The system SHALL render a PDF document (`QuotePdf`, via `@react-pdf/renderer`) built from the same `QuoteDetailDto` that `format=json` would return, plus issuer data (`businessName`, `businessRfc`, `businessAddress`, `businessPhone`) resolved server-side from `TicketSettings` (`GetTicketSettingsUseCase`) — never from client input.
+- The system SHALL render a PDF document (`QuotePdf`, via `@react-pdf/renderer`) built from the same `QuoteDetailDto` that `format=json` would return, plus issuer data (`businessName`, `businessRfc`, `businessAddress`, `businessPhone`, `logoUrl`) resolved server-side from `TicketSettings` (`GetTicketSettingsUseCase` → `toPdfIssuer`) — never from client input.
+- The PDF header SHALL render the business logo: the tenant's uploaded logo (`TicketSettings.logoUrl`) when set, falling back to the bundled default logo (`public/logo.png`) when not set, resolved via the shared `resolvePdfLogoSource`/`PdfLogo` infrastructure (never a browser-relative path).
+- The PDF's colors (table headers, alternating rows, totals band, borders, muted text) SHALL come from the shared brand palette (`pdfTheme`) instead of module-specific arbitrary hex values.
 - The response SHALL have `Content-Type: application/pdf` and `Content-Disposition: attachment; filename="cotizacion-<folioCode>-<folioNumber>.pdf"`.
 - All existing checks (UUID validation, `quotes:read`, branch scoping, 404 on not found) SHALL apply identically before the `format` branch, so `format=pdf` cannot be used to bypass authorization or existence checks.
+- The `logoUrl` used SHALL be resolved with the same branch-scoping context already used for `businessName`/`businessRfc` — a caller SHALL never receive another branch's/tenant's logo.
 
 #### Scenario: Authorized fetch
 - **WHEN** a caller with `quotes:read` and access to the quote's branch fetches a valid `:id`
@@ -149,6 +152,18 @@ The endpoint SHALL accept an optional query parameter `format` with allowed valu
 #### Scenario: Invalid format value
 - **WHEN** the `format` query parameter is present with a value other than `json` or `pdf` (e.g. `format=xyz`)
 - **THEN** the system returns HTTP 400
+
+#### Scenario: PDF shows tenant logo when configured
+- **WHEN** `format=pdf` is requested and the resolved `TicketSettings.logoUrl` is a valid `https://` URL
+- **THEN** the generated PDF header renders that URL as the business logo
+
+#### Scenario: PDF falls back to default logo when tenant has none configured
+- **WHEN** `format=pdf` is requested and the resolved `TicketSettings.logoUrl` is `null`
+- **THEN** the generated PDF header renders the bundled default logo (`public/logo.png`) instead of leaving the logo area blank or failing to render
+
+#### Scenario: PDF uses brand color palette
+- **WHEN** `format=pdf` is requested
+- **THEN** the table header, alternating row, and totals band backgrounds in the generated PDF match the shared `pdfTheme` brand colors, not the previous arbitrary grays
 
 ### Requirement: Create quote
 The system SHALL expose `POST /api/v1/admin/quotes` that emits a new quote in `draft` status. Requires `quotes:create`. Required body:

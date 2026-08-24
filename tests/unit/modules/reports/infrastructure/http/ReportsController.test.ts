@@ -105,6 +105,8 @@ import { InMemorySalesByProductRepository } from "@/modules/reports/infrastructu
 import { SalesByProductPage } from "@/modules/reports/domain/value-objects/SalesByProductFilters";
 import { GetCollectionsReportUseCase } from "@/modules/reports/application/use-cases/GetCollectionsReportUseCase";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { InMemoryTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 
 const BASE_URL = "http://localhost:3000/api/v1/admin/reports";
 const BRANCH_ID = "11111111-1111-1111-1111-111111111111";
@@ -202,7 +204,7 @@ function makeStockController(rows: RawStockRow[] = [], authz?: AuthorizationServ
   const payRepo = new InMemoryPaymentReportRepository([]);
   const payUC = new GetPaymentHistoryReportUseCase(payRepo);
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz(), new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()));
 }
 
 function makePaymentController(rows: RawPaymentRow[] = [], authz?: AuthorizationService) {
@@ -211,7 +213,7 @@ function makePaymentController(rows: RawPaymentRow[] = [], authz?: Authorization
   const payRepo = new InMemoryPaymentReportRepository(rows);
   const payUC = new GetPaymentHistoryReportUseCase(payRepo);
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz(), new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()));
 }
 
 function makeAccountController(
@@ -236,7 +238,7 @@ function makeAccountController(
     emptyCashCutUseCase(),
     emptyDepartmentPriceListUseCase(),
     ...NEW_REPORT_USE_CASES(),
-    authz ?? makeAuthz()
+    authz ?? makeAuthz(), new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
   );
 }
 
@@ -244,21 +246,21 @@ function makeSalesCutController(sales: InMemCutSale[] = [], authz?: Authorizatio
   const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
   const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(sales), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(sales), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz(), new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()));
 }
 
 function makeCashCutController(payments: InMemCutPayment[] = [], authz?: AuthorizationService) {
   const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
   const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(payments), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(payments), emptyDepartmentPriceListUseCase(), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz(), new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()));
 }
 
 function makeDepartmentPriceListController(rows: RawPriceListRow[] = [], authz?: AuthorizationService) {
   const stockUC = new GetInventoryStockReportUseCase(new InMemoryInventoryReportRepository([]));
   const payUC = new GetPaymentHistoryReportUseCase(new InMemoryPaymentReportRepository([]));
   const acc = emptyAccountUseCases();
-  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(rows), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz());
+  return new ReportsController(stockUC, payUC, acc.summary, acc.ledger, acc.anticipo, emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(rows), ...NEW_REPORT_USE_CASES(), authz ?? makeAuthz(), new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()));
 }
 
 function makePurchasesController(repo?: InMemoryPurchaseRepository, authz?: AuthorizationService) {
@@ -270,7 +272,7 @@ function makePurchasesController(repo?: InMemoryPurchaseRepository, authz?: Auth
     stockUC, payUC, acc.summary, acc.ledger, acc.anticipo,
     emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(),
     purchasesUC, emptyProviderPaymentsUseCase(), emptySalesByProductUseCase(), emptyCollectionsUseCase(),
-    authz ?? makeAuthz()
+    authz ?? makeAuthz(), new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
   );
 }
 
@@ -283,7 +285,7 @@ function makeProviderPaymentsController(rows: InMemProviderPayment[] = [], authz
     stockUC, payUC, acc.summary, acc.ledger, acc.anticipo,
     emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(),
     emptyPurchasesUseCase(), providerPaymentsUC, emptySalesByProductUseCase(), emptyCollectionsUseCase(),
-    authz ?? makeAuthz()
+    authz ?? makeAuthz(), new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
   );
 }
 
@@ -303,7 +305,7 @@ function makeSalesByProductController(page?: SalesByProductPage, authz?: Authori
     stockUC, payUC, acc.summary, acc.ledger, acc.anticipo,
     emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(),
     emptyPurchasesUseCase(), emptyProviderPaymentsUseCase(), salesByProductUC, emptyCollectionsUseCase(),
-    authz ?? makeAuthz()
+    authz ?? makeAuthz(), new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
   );
 }
 
@@ -316,7 +318,7 @@ function makeCollectionsController(payments: InMemCutPayment[] = [], authz?: Aut
     stockUC, payUC, acc.summary, acc.ledger, acc.anticipo,
     emptySalesCutUseCase(), emptyCashCutUseCase(), emptyDepartmentPriceListUseCase(),
     emptyPurchasesUseCase(), emptyProviderPaymentsUseCase(), emptySalesByProductUseCase(), collectionsUC,
-    authz ?? makeAuthz()
+    authz ?? makeAuthz(), new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import type { WaybillDetail } from "../_logic/types/domain";
+import { DownloadPdfButton } from "../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 
 interface WaybillActionsBarProps {
   waybill: WaybillDetail;
@@ -25,14 +26,7 @@ export function WaybillActionsBar({
     <div className="flex flex-wrap gap-3 justify-end">
       {canDownload && (
         <>
-          <button
-            type="button"
-            onClick={() => onDownload("pdf")}
-            disabled={isDownloading}
-            className="rounded-full border border-outline px-4 py-2 text-label-sm font-medium hover:bg-surface-container transition-colors disabled:opacity-50"
-          >
-            {isDownloading ? "Descargando..." : "Descargar PDF"}
-          </button>
+          <DownloadPdfButton onClick={() => onDownload("pdf")} loading={isDownloading} />
           <button
             type="button"
             onClick={() => onDownload("xml")}

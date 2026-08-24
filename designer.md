@@ -155,6 +155,15 @@ Todas bajo `app/_components/`. Presentational — sin `fetch`, sin `sessionStora
 
 **Regla obligatoria**: todo botón de creación de recurso ("Nuevo/a X", "Crear X", "Agregar X") en cualquier página bajo `(private)` usa `CreateButton` — nunca `Button` instanciado directamente con `variant="filled"` + `icon="add"`. `CreateButton` envuelve `Button` con esas dos props fijas y expone sólo `label: string` (obligatoria, sin default genérico como el antiguo `"Nuevo"`) y `onClick`/`href` (uno de los dos, según abra modal o navegue). El gating por permisos (`canWrite`/`can(...)`) sigue siendo responsabilidad del caller — `CreateButton` no valida autorización.
 
+### `molecules/PdfDownloadButton` — `ExportPdfButton`, `DownloadPdfButton`
+
+```tsx
+<ExportPdfButton onClick={handleExportPdf} loading={isExporting} />
+<DownloadPdfButton onClick={handleDownloadPdf} loading={isDownloading} />
+```
+
+**Regla obligatoria**: todo botón de descarga/exportación de PDF usa uno de estos dos componentes — nunca `Button` instanciado directamente con `icon="picture_as_pdf"`, ni un `<button>` crudo. Ambos envuelven `Button` con `icon="picture_as_pdf"` fijo; sólo exponen `onClick`/`loading`, sin `label`/`children` (el texto es fijo, no configurable). `ExportPdfButton` (`variant="filled"`, leyenda "Exportar a PDF") se usa exclusivamente en las 8 pantallas de `/reports/*`. `DownloadPdfButton` (`variant="outlined"`, leyenda "Descargar PDF") se usa en cualquier otra pantalla que descargue un PDF (facturas, cartas porte, cotizaciones, historial de abonos, kardex).
+
 ### `molecules/DataTable` — `Table`, `THead`, `TBody`, `Tr`, `Th`, `Td`
 
 ```tsx

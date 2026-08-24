@@ -7,7 +7,11 @@ import {
   AccountStatementMovementDto,
 } from "../../application/dto/AccountStatementLedgerResponseDto";
 import { pdfStyles as s } from "./pdfStyles";
+import { ReportHeader } from "./ReportHeader";
+import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
+import { ReportFooter } from "./ReportFooter";
 import { formatDate } from "@/shared/infrastructure/formatters/formatDate";
+import { rowStyle } from "@/shared/infrastructure/pdf/rowStyle";
 
 const TYPE_LABEL: Record<string, string> = {
   sale_credit: "Venta crédito",
@@ -15,17 +19,17 @@ const TYPE_LABEL: Record<string, string> = {
   payment: "Abono",
 };
 
-/** Resumen multi-cliente. */
-export function AccountStatementSummaryPdf({
-  data,
-}: {
+interface AccountStatementSummaryPdfProps {
   data: AccountStatementSummaryResponseDto;
-}) {
+  issuer: PdfIssuer;
+}
+
+/** Resumen multi-cliente. */
+export function AccountStatementSummaryPdf({ data, issuer }: AccountStatementSummaryPdfProps) {
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={s.page}>
-        <View style={s.header} fixed>
-          <Text style={s.headerTitle}>Estados de Cuenta — Resumen</Text>
+        <ReportHeader title="Estados de Cuenta — Resumen" issuer={issuer}>
           <Text style={s.headerMeta}>
             Generado: {formatDate(data.generatedAt)} | Por: {data.generatedBy.email}
           </Text>
@@ -35,7 +39,7 @@ export function AccountStatementSummaryPdf({
             {data.filters.from ? ` | desde=${data.filters.from}` : ""}
             {data.filters.to ? ` | hasta=${data.filters.to}` : ""}
           </Text>
-        </View>
+        </ReportHeader>
 
         {data.items.length === 0 ? (
           <Text style={s.emptyMessage}>Sin clientes para los filtros aplicados</Text>
@@ -51,7 +55,7 @@ export function AccountStatementSummaryPdf({
               <Text style={s.cellNarrow}>Disponible</Text>
             </View>
             {data.items.map((r, i) => (
-              <View key={r.customerId} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+              <View key={r.customerId} style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
                 <Text style={s.cell}>{r.customerCode}</Text>
                 <Text style={s.cellWide}>{r.customerName}</Text>
                 <Text style={s.cellNarrow}>{r.totalCharged}</Text>
@@ -83,10 +87,7 @@ export function AccountStatementSummaryPdf({
           </View>
         </View>
 
-        <View style={s.footer} fixed>
-          <Text>{data.generatedBy.email}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
-        </View>
+        <ReportFooter generatedByEmail={data.generatedBy.email} />
       </Page>
     </Document>
   );
@@ -94,7 +95,7 @@ export function AccountStatementSummaryPdf({
 
 function MovementRow({ m, i }: { m: AccountStatementMovementDto; i: number }) {
   return (
-    <View style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+    <View style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
       <Text style={s.cell}>{formatDate(m.date)}</Text>
       <Text style={s.cell}>{TYPE_LABEL[m.type] ?? m.type}</Text>
       <Text style={s.cell}>{m.folio}</Text>
@@ -129,17 +130,17 @@ function GroupSection({ group }: { group: AccountStatementLedgerGroupDto }) {
   );
 }
 
-/** Desglose (libro mayor) de un cliente. */
-export function AccountStatementLedgerPdf({
-  data,
-}: {
+interface AccountStatementLedgerPdfProps {
   data: AccountStatementLedgerResponseDto;
-}) {
+  issuer: PdfIssuer;
+}
+
+/** Desglose (libro mayor) de un cliente. */
+export function AccountStatementLedgerPdf({ data, issuer }: AccountStatementLedgerPdfProps) {
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={s.page}>
-        <View style={s.header} fixed>
-          <Text style={s.headerTitle}>Estado de Cuenta — {data.customer.name}</Text>
+        <ReportHeader title={`Estado de Cuenta — ${data.customer.name}`} issuer={issuer}>
           <Text style={s.headerMeta}>
             Código: {data.customer.code} | Generado: {formatDate(data.generatedAt)} | Por:{" "}
             {data.generatedBy.email}
@@ -151,7 +152,7 @@ export function AccountStatementLedgerPdf({
             {data.filters.from ? ` | desde=${data.filters.from}` : ""}
             {data.filters.to ? ` | hasta=${data.filters.to}` : ""}
           </Text>
-        </View>
+        </ReportHeader>
 
         {data.movements.length === 0 ? (
           <Text style={s.emptyMessage}>Sin movimientos para el periodo</Text>
@@ -191,10 +192,7 @@ export function AccountStatementLedgerPdf({
           </View>
         </View>
 
-        <View style={s.footer} fixed>
-          <Text>{data.generatedBy.email}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
-        </View>
+        <ReportFooter generatedByEmail={data.generatedBy.email} />
       </Page>
     </Document>
   );

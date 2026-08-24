@@ -15,6 +15,8 @@ import { GetPurchasesReportUseCase } from "../../application/use-cases/GetPurcha
 import { GetProviderPaymentsReportUseCase } from "../../application/use-cases/GetProviderPaymentsReportUseCase";
 import { GetSalesByProductReportUseCase } from "../../application/use-cases/GetSalesByProductReportUseCase";
 import { GetCollectionsReportUseCase } from "../../application/use-cases/GetCollectionsReportUseCase";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { toPdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
 import { StatementCustomerNotFoundError } from "../../domain/errors/StatementCustomerNotFoundError";
 import { AnticipoReceiptNotFoundError } from "../../domain/errors/AnticipoReceiptNotFoundError";
 import { InventoryStockReportPdf } from "../pdf/InventoryStockReportPdf";
@@ -224,7 +226,8 @@ export class ReportsController {
     private readonly providerPaymentsUseCase: GetProviderPaymentsReportUseCase,
     private readonly salesByProductUseCase: GetSalesByProductReportUseCase,
     private readonly collectionsUseCase: GetCollectionsReportUseCase,
-    private readonly authzService: AuthorizationService
+    private readonly authzService: AuthorizationService,
+    private readonly getTicketSettingsUseCase: GetTicketSettingsUseCase
   ) {}
 
   async getInventoryStockReport(req: NextRequest): Promise<NextResponse> {
@@ -255,7 +258,9 @@ export class ReportsController {
       });
 
       if (format === "pdf") {
-        const buffer = await renderToBuffer(createElement(InventoryStockReportPdf, { data: dto }) as never);
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
+        const buffer = await renderToBuffer(createElement(InventoryStockReportPdf, { data: dto, issuer }) as never);
         const date = dto.generatedAt.split("T")[0];
         return new NextResponse(buffer as unknown as BodyInit, {
           status: 200,
@@ -314,8 +319,10 @@ export class ReportsController {
       });
 
       if (format === "pdf") {
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
         const buffer = await renderToBuffer(
-          createElement(PaymentHistoryReportPdf, { data: dto }) as never
+          createElement(PaymentHistoryReportPdf, { data: dto, issuer }) as never
         );
         const date = dto.generatedAt.split("T")[0];
         return new NextResponse(buffer as unknown as BodyInit, {
@@ -383,8 +390,10 @@ export class ReportsController {
       });
 
       if (format === "pdf") {
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
         const buffer = await renderToBuffer(
-          createElement(AccountStatementSummaryPdf, { data: dto }) as never
+          createElement(AccountStatementSummaryPdf, { data: dto, issuer }) as never
         );
         const date = dto.generatedAt.split("T")[0];
         return new NextResponse(buffer as unknown as BodyInit, {
@@ -469,8 +478,10 @@ export class ReportsController {
           });
         }
 
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
         const buffer = await renderToBuffer(
-          createElement(AccountStatementLedgerPdf, { data: dto }) as never
+          createElement(AccountStatementLedgerPdf, { data: dto, issuer }) as never
         );
         return new NextResponse(buffer as unknown as BodyInit, {
           status: 200,
@@ -528,8 +539,10 @@ export class ReportsController {
         generatedBy: { userId, email },
       });
 
+      const settings = await this.getTicketSettingsUseCase.execute();
+      const issuer = toPdfIssuer(settings);
       const buffer = await renderToBuffer(
-        createElement(AnticipoReceiptPdf, { data: dto }) as never
+        createElement(AnticipoReceiptPdf, { data: dto, issuer }) as never
       );
       const date = dto.generatedAt.split("T")[0];
       return new NextResponse(buffer as unknown as BodyInit, {
@@ -593,7 +606,9 @@ export class ReportsController {
       });
 
       if (format === "pdf") {
-        const buffer = await renderToBuffer(createElement(SalesCutReportPdf, { data: dto }) as never);
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
+        const buffer = await renderToBuffer(createElement(SalesCutReportPdf, { data: dto, issuer }) as never);
         return new NextResponse(buffer as unknown as BodyInit, {
           status: 200,
           headers: {
@@ -653,7 +668,9 @@ export class ReportsController {
       });
 
       if (format === "pdf") {
-        const buffer = await renderToBuffer(createElement(CashCutReportPdf, { data: dto }) as never);
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
+        const buffer = await renderToBuffer(createElement(CashCutReportPdf, { data: dto, issuer }) as never);
         return new NextResponse(buffer as unknown as BodyInit, {
           status: 200,
           headers: {
@@ -709,8 +726,10 @@ export class ReportsController {
       const date = dto.generatedAt.split("T")[0];
 
       if (format === "pdf") {
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
         const buffer = await renderToBuffer(
-          createElement(DepartmentPriceListReportPdf, { data: dto }) as never
+          createElement(DepartmentPriceListReportPdf, { data: dto, issuer }) as never
         );
         return new NextResponse(buffer as unknown as BodyInit, {
           status: 200,
@@ -784,7 +803,9 @@ export class ReportsController {
       const date = dto.generatedAt.split("T")[0];
 
       if (format === "pdf") {
-        const buffer = await renderToBuffer(createElement(PurchasesReportPdf, { data: dto }) as never);
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
+        const buffer = await renderToBuffer(createElement(PurchasesReportPdf, { data: dto, issuer }) as never);
         return new NextResponse(buffer as unknown as BodyInit, {
           status: 200,
           headers: {
@@ -857,7 +878,9 @@ export class ReportsController {
       const date = dto.generatedAt.split("T")[0];
 
       if (format === "pdf") {
-        const buffer = await renderToBuffer(createElement(ProviderPaymentsReportPdf, { data: dto }) as never);
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
+        const buffer = await renderToBuffer(createElement(ProviderPaymentsReportPdf, { data: dto, issuer }) as never);
         return new NextResponse(buffer as unknown as BodyInit, {
           status: 200,
           headers: {
@@ -935,7 +958,9 @@ export class ReportsController {
       }
 
       if (format === "pdf") {
-        const buffer = await renderToBuffer(createElement(SalesByProductReportPdf, { data: dto }) as never);
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
+        const buffer = await renderToBuffer(createElement(SalesByProductReportPdf, { data: dto, issuer }) as never);
         return new NextResponse(buffer as unknown as BodyInit, {
           status: 200,
           headers: {
@@ -994,7 +1019,9 @@ export class ReportsController {
       });
 
       if (format === "pdf") {
-        const buffer = await renderToBuffer(createElement(CollectionsReportPdf, { data: dto }) as never);
+        const settings = await this.getTicketSettingsUseCase.execute();
+        const issuer = toPdfIssuer(settings);
+        const buffer = await renderToBuffer(createElement(CollectionsReportPdf, { data: dto, issuer }) as never);
         return new NextResponse(buffer as unknown as BodyInit, {
           status: 200,
           headers: {
