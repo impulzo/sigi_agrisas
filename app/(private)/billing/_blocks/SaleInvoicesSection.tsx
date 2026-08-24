@@ -6,6 +6,7 @@ import { useSaleInvoices } from "../_logic/hooks/useSaleInvoices";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { useInvoiceMutations } from "../_logic/hooks/useInvoiceMutations";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
+import { DownloadPdfButton } from "../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
 
@@ -60,14 +61,7 @@ export function SaleInvoicesSection({ saleId, saleStatus, saleFolioLabel }: Sale
                 <span className="text-label-sm text-on-surface-variant tabular-nums">{MX.format(inv.total)}</span>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => download(inv.id, "pdf")}
-                  disabled={isDownloading}
-                  className="text-label-sm text-on-surface-variant hover:text-on-surface transition-colors disabled:opacity-50"
-                >
-                  PDF
-                </button>
+                <DownloadPdfButton onClick={() => download(inv.id, "pdf")} loading={isDownloading} size="sm" />
                 <button
                   type="button"
                   onClick={() => download(inv.id, "xml")}
