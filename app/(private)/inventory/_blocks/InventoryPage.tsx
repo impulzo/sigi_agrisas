@@ -21,6 +21,8 @@ import { CreateButton } from "../../../_components/molecules/CreateButton/Create
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog/ConfirmDialog";
+import { OfflineBanner } from "../../../_components/molecules/OfflineBanner/OfflineBanner";
+import { useOfflineSync } from "../../_blocks/OfflineSyncProvider";
 import {
   InventoryAlreadyExistsError,
   InventoryTargetInvalidError,
@@ -35,6 +37,7 @@ export function InventoryPage() {
   const { can, branchId: myBranchId } = useCurrentUser();
   const { options: branchOptions, isLoading: branchesLoading } = useBranchesOptions();
   const isBypass = can("branches:access_all");
+  const { isOnline, catalogStalenessMs } = useOfflineSync();
 
   const [branchId, setBranchId] = useState<string | undefined>(undefined);
 
@@ -174,7 +177,7 @@ export function InventoryPage() {
                   <Switch checked={belowReorder} onChange={handleBelowReorderChange} aria-label="Solo bajo punto de reorden" />
                   <span className="text-label-lg text-on-surface-variant">Solo bajo punto de reorden</span>
                 </label>
-                {canWrite === true && (
+                {canWrite === true && isOnline && (
                   <CreateButton
                     label="Asignar producto"
                     onClick={() => { clearError(); setAssignError(null); setModal({ type: "assign", item: null }); }}
@@ -187,6 +190,10 @@ export function InventoryPage() {
         </div>
       }
     >
+      <div className="px-6 pt-4">
+        <OfflineBanner isOnline={isOnline} catalogStalenessMs={catalogStalenessMs} />
+      </div>
+
       {!branchId ? (
         <div className="p-6">
           {isBypass === true ? (
@@ -210,12 +217,12 @@ export function InventoryPage() {
         <>
           <InventoryTable
             items={items}
-            canWrite={canWrite === true}
+            canWrite={canWrite === true && isOnline}
             canViewKardex={canViewKardex === true}
             onAdjust={(item) => { setAdjustError(null); setModal({ type: "adjust", item }); }}
             onEdit={(item) => setModal({ type: "edit", item })}
             onRemove={(item) => setConfirmRemoveId(item.productId)}
-            onEnter={canWrite === true ? (item) => { setAdjustError(null); setModal({ type: "adjust", item }); } : undefined}
+            onEnter={canWrite === true && isOnline ? (item) => { setAdjustError(null); setModal({ type: "adjust", item }); } : undefined}
           />
           <CatalogPagination
             page={page}

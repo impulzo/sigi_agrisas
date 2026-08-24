@@ -1,14 +1,19 @@
 import { authFetch, NetworkError } from "../../../../_lib/authFetch";
 import type { ProductPriceDto } from "../types/api";
+import { isOnline } from "../../../../_lib/offline/connectivity";
+import { getProductPricesFromCache } from "../../../../_lib/offline/catalogCache";
 
 export async function getProductPrices(
   productId: string,
   fetchImpl = authFetch,
 ): Promise<ProductPriceDto[]> {
+  if (!isOnline()) return getProductPricesFromCache(productId);
+
   let res: Response;
   try {
     res = await fetchImpl(`/api/v1/admin/products/${productId}/prices`);
-  } catch {
+  } catch (err) {
+    if (err instanceof NetworkError) return getProductPricesFromCache(productId);
     throw new NetworkError();
   }
 

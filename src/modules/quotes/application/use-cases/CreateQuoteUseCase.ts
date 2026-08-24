@@ -25,6 +25,19 @@ export class CreateQuoteUseCase {
   ) {}
 
   async execute(req: CreateQuoteRequest, creatorId: string): Promise<CreateQuoteResult> {
+    // Idempotent replay: a repeated clientRequestId (e.g. an offline-sync outbox
+    // retry after a lost response) short-circuits before any other validation —
+    // no re-validation, no folio allocation.
+    if (req.clientRequestId) {
+      const existing = await this.repo.findByClientRequestId(req.clientRequestId);
+      if (existing) {
+        return {
+          dto: toQuoteDetailDto(existing.quote, existing.joined),
+          branchId: existing.quote.branchId,
+        };
+      }
+    }
+
     if (!req.items || req.items.length === 0) throw new EmptyQuoteError();
 
     // Validate expiresAt if present
@@ -117,6 +130,7 @@ export class CreateQuoteUseCase {
       creatorId,
       notes: req.notes ?? null,
       expiresAt,
+      clientRequestId: req.clientRequestId ?? null,
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,
       total: totals.total,

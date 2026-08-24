@@ -65,6 +65,7 @@ const createQuoteSchema = z.object({
   folioId: z.string().uuid(),
   notes: z.string().max(1000).nullable().optional(),
   expiresAt: futureIsoDate.nullable().optional(),
+  clientRequestId: z.string().uuid().nullable().optional(),
   items: z.array(quoteItemSchema).min(1, "Quote must include at least one item"),
 });
 

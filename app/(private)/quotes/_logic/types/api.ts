@@ -73,6 +73,8 @@ export interface CreateQuoteBody {
   items: QuoteItemInputBody[];
   expiresAt?: string | null;
   notes?: string | null;
+  /** Idempotency key set by `offline-sync` when this quote was queued offline; omitted for online submissions. */
+  clientRequestId?: string;
 }
 
 export interface UpdateQuoteBody {

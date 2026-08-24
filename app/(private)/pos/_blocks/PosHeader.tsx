@@ -4,6 +4,10 @@ import { useState } from "react";
 import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog/ConfirmDialog";
 import { SegmentedButton } from "../../../_components/molecules/SegmentedButton/SegmentedButton";
 import { Select } from "../../../_components/atoms/Select/Select";
+import { SyncStatusBadge } from "../../../_components/molecules/SyncStatusBadge/SyncStatusBadge";
+import { Button } from "../../../_components/atoms/Button/Button";
+import { useOfflineSync } from "../../_blocks/OfflineSyncProvider";
+import { SyncQueuePanel } from "./SyncQueuePanel";
 import type { BranchOption } from "../_logic/types/api";
 
 type PosMode = "sale" | "quote";
@@ -35,6 +39,21 @@ export function PosHeader({
 }: PosHeaderProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingMode, setPendingMode] = useState<PosMode | null>(null);
+  const [showQueue, setShowQueue] = useState(false);
+  const [fixingBranch, setFixingBranch] = useState(false);
+  const { isOnline, syncing, pendingCount, ownerBranchId, fixWorkingBranch } = useOfflineSync();
+
+  const showFixBranchAction =
+    isBypass && isOnline && Boolean(selectedBranchId) && ownerBranchId !== selectedBranchId;
+
+  async function handleFixWorkingBranch() {
+    setFixingBranch(true);
+    try {
+      await fixWorkingBranch(selectedBranchId);
+    } finally {
+      setFixingBranch(false);
+    }
+  }
 
   function handleModeChange(newMode: PosMode) {
     if (newMode === mode) return;
@@ -63,7 +82,7 @@ export function PosHeader({
       )}
 
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        {isBypass || branches.length > 1 ? (
+        {(isBypass || branches.length > 1) && isOnline ? (
           <Select
             value={selectedBranchId}
             onChange={(e) => onBranchChange(e.target.value)}
@@ -75,9 +94,45 @@ export function PosHeader({
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
           </Select>
-        ) : branches.length === 1 ? (
-          <span className="text-body-sm text-on-surface-variant">{branches[0].name}</span>
+        ) : branches.length >= 1 ? (
+          <span className="text-body-sm text-on-surface-variant">
+            {branches.find((b) => b.id === selectedBranchId)?.name ?? branches[0].name}
+          </span>
         ) : null}
+        {showFixBranchAction && (
+          <Button
+            type="button"
+            variant="text"
+            size="sm"
+            icon="cloud_off"
+            onClick={handleFixWorkingBranch}
+            loading={fixingBranch}
+            title="Fija esta sucursal como tu sucursal de trabajo offline — necesario para poder vender/cotizar sin conexión con este usuario"
+          >
+            Fijar sucursal offline
+          </Button>
+        )}
+        {isBypass && ownerBranchId === selectedBranchId && Boolean(selectedBranchId) && (
+          <span className="text-label-sm text-on-surface-variant whitespace-nowrap">
+            Sucursal offline fijada
+          </span>
+        )}
+      </div>
+
+      <div className="relative shrink-0">
+        <button
+          type="button"
+          onClick={() => setShowQueue((v) => !v)}
+          aria-expanded={showQueue}
+          aria-label="Cola de sincronización offline"
+        >
+          <SyncStatusBadge isOnline={isOnline} syncing={syncing} pendingCount={pendingCount} />
+        </button>
+        {showQueue && (
+          <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto rounded-md border border-outline-variant bg-surface p-3 shadow-lg z-20">
+            <SyncQueuePanel />
+          </div>
+        )}
       </div>
 
       {cartHasItems && (

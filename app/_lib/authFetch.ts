@@ -1,6 +1,7 @@
 import { schedule as scheduleRefresh } from "./session/refreshScheduler";
 import { setAccessToken } from "./session/accessToken";
 import { logoutClient } from "./logout";
+import { reportNetworkSuccess, reportNetworkFailure } from "./offline/connectivity";
 
 export class UnauthenticatedError extends Error {
   constructor() {
@@ -72,8 +73,10 @@ export async function authFetch(
   try {
     const { skipAuth: _skip, _isRetry: _r, ...fetchInit } = init;
     res = await fetch(input, { ...fetchInit, headers });
+    reportNetworkSuccess();
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") throw err;
+    reportNetworkFailure();
     throw new NetworkError();
   }
 

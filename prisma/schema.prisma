@@ -510,6 +510,7 @@ model Sale {
   cancelledAt        DateTime? @map("cancelled_at")
   cancellationReason String?   @map("cancellation_reason") @db.Text
   editedAt           DateTime? @map("edited_at")
+  clientRequestId    String?   @unique @map("client_request_id")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
@@ -634,6 +635,7 @@ model Quote {
   cancellationReason String?   @map("cancellation_reason") @db.Text
   convertedAt        DateTime? @map("converted_at")
   convertedSaleId    String?   @map("converted_sale_id")
+  clientRequestId    String?   @unique @map("client_request_id")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 

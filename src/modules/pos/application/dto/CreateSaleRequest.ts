@@ -13,5 +13,7 @@ export interface CreateSaleRequest {
   folioId: string;
   notes?: string | null;
   quoteId?: string | null;
+  /** Idempotency key from offline-created sales queued via `offline-sync`. */
+  clientRequestId?: string | null;
   items: SaleItemInput[];
 }

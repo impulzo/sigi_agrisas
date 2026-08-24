@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
+import { ServiceWorkerRegistrar } from "./_components/organisms/ServiceWorkerRegistrar/ServiceWorkerRegistrar";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -19,6 +20,11 @@ export const metadata: Metadata = {
   icons: {
     icon: "/logo.png",
   },
+  manifest: "/manifest.json",
+};
+
+export const viewport = {
+  themeColor: "#77574d",
 };
 
 export default function RootLayout({
@@ -27,6 +33,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={`${inter.variable} ${poppins.variable} font-inter`}>
+        <ServiceWorkerRegistrar />
         {children}
       </body>
     </html>

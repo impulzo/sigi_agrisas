@@ -1,6 +1,8 @@
 import { authFetch, NetworkError, ForbiddenError } from "../../../../_lib/authFetch";
 import type { ProductDto } from "../types/api";
 import { SaleScopingForbiddenError } from "../errors";
+import { isOnline } from "../../../../_lib/offline/connectivity";
+import { searchProductsFromCache } from "../../../../_lib/offline/catalogCache";
 
 export interface SearchProductsParams {
   search?: string;
@@ -23,11 +25,20 @@ export async function searchProducts(
   if (trimmed) params.set("search", trimmed);
   if (branchId) params.set("branchId", branchId);
 
+  if (!isOnline() && branchId) {
+    const items = await searchProductsFromCache(branchId, search);
+    return { items, total: items.length, page: 1, pageSize: items.length || pageSize };
+  }
+
   let res: Response;
   try {
     res = await fetchImpl(`/api/v1/admin/products?${params.toString()}`, { signal });
   } catch (err) {
     if ((err as Error).name === "AbortError") throw err;
+    if (err instanceof NetworkError && branchId) {
+      const items = await searchProductsFromCache(branchId, search);
+      return { items, total: items.length, page: 1, pageSize: items.length || pageSize };
+    }
     throw new NetworkError();
   }
 

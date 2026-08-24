@@ -39,6 +39,20 @@ jest.mock("../../../../../../app/_components/molecules/ConfirmDialog/ConfirmDial
     ) : null,
 }));
 
+jest.mock("../../../../../../app/(private)/_blocks/OfflineSyncProvider", () => ({
+  useOfflineSync: () => ({
+    isOnline: true,
+    offlineEnabled: false,
+    ownerBranchId: null,
+    blockedByPendingOutbox: false,
+    pendingCount: 0,
+    syncing: false,
+    catalogStalenessMs: null,
+    refreshCatalogNow: jest.fn(),
+    fixWorkingBranch: jest.fn(),
+  }),
+}));
+
 import { PosHeader } from "../../../../../../app/(private)/pos/_blocks/PosHeader";
 import type { BranchOption } from "../../../../../../app/(private)/pos/_logic/types/api";
 

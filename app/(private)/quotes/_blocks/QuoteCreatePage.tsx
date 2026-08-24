@@ -12,12 +12,13 @@ import { ProductCatalogPanel } from "../../pos/_blocks/ProductCatalogPanel";
 import { QuoteEmitPanel } from "./QuoteEmitPanel";
 import { PriceTierPicker } from "../../pos/_blocks/PriceTierPicker";
 import { CustomerQuickAddModal } from "../../pos/_blocks/CustomerQuickAddModal";
+import { QuoteQueuedModal } from "../../pos/_blocks/QuoteQueuedModal";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import type { ProductDto, ProductPriceDto, CustomerDto, BranchOption } from "../../pos/_logic/types/api";
 import type { FolioOption } from "../../../_hooks/useFoliosOptions";
 
-type Modal = "pricePicker" | "quickAdd" | null;
+type Modal = "pricePicker" | "quickAdd" | "quoteQueued" | null;
 
 interface PricePicker {
   product: ProductDto;
@@ -34,8 +35,8 @@ export function QuoteCreatePage() {
 
   const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
   const { dosificationSurchargePct } = usePricingSettingsOptions();
-  const { lines, totals, addLine, updateQuantity, updateDiscountPct, changeTier, removeLine } = useCart(dosificationSurchargePct);
-  const { status, quote, error: submitError, submit, reset: resetSubmit } = useQuoteSubmission();
+  const { lines, totals, addLine, updateQuantity, updateDiscountPct, changeTier, removeLine, clear } = useCart(dosificationSurchargePct);
+  const { status, quote, queuedQuote, error: submitError, submit, reset: resetSubmit } = useQuoteSubmission();
 
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState("");
@@ -68,7 +69,20 @@ export function QuoteCreatePage() {
     if (status === "succeeded" && quote) {
       router.push(`/quotes/${quote.id}`);
     }
-  }, [status, quote, router]);
+    if (status === "queued-offline" && queuedQuote) {
+      setModal("quoteQueued");
+    }
+  }, [status, quote, queuedQuote, router]);
+
+  function handleNewQuote() {
+    clear();
+    resetSubmit();
+    setSelectedFolioId("");
+    setSelectedCustomerId("");
+    setNotes("");
+    setExpiresAt("");
+    setModal(null);
+  }
 
   async function handleAddProduct(product: ProductDto) {
     const prices = await getProductPrices(product.id);
@@ -204,6 +218,10 @@ export function QuoteCreatePage() {
           }}
           onClose={() => setModal(null)}
         />
+      )}
+
+      {modal === "quoteQueued" && queuedQuote && (
+        <QuoteQueuedModal queued={queuedQuote} onNewQuote={handleNewQuote} />
       )}
 
       {submitError && status === "failed" && (

@@ -78,6 +78,7 @@ function makeRepo(): SaleRepository {
   return {
     findAll: jest.fn(),
     findByIdWithItems: jest.fn(),
+    findByClientRequestId: jest.fn().mockResolvedValue(null),
     createCompleted: jest.fn((data) => Promise.resolve(makeSummary(data))),
     createCompletedFromQuote: jest.fn((data) => Promise.resolve(makeSummary(data))),
     cancel: jest.fn(),

@@ -79,6 +79,7 @@ function makeLookups(overrides?: Partial<PosLookupService>): PosLookupService {
 function makeRepo(initialStatus: SaleStatus): SaleRepository {
   return {
     findAll: jest.fn(),
+    findByClientRequestId: jest.fn(),
     findByIdWithItems: jest.fn().mockResolvedValue(makeSummary(initialStatus)),
     createCompleted: jest.fn(),
     createCompletedFromQuote: jest.fn(),
@@ -120,6 +121,7 @@ describe("EditCompletedSaleUseCase", () => {
   it("lanza SaleNotFoundError cuando la venta no existe", async () => {
     const repo: SaleRepository = {
       findAll: jest.fn(),
+      findByClientRequestId: jest.fn(),
       findByIdWithItems: jest.fn().mockResolvedValue(null),
       createCompleted: jest.fn(),
       createCompletedFromQuote: jest.fn(),
@@ -165,6 +167,7 @@ describe("EditCompletedSaleUseCase", () => {
   it("propaga SaleHasActivePaymentsError cuando el repo la lanza al editar", async () => {
     const repo: SaleRepository = {
       findAll: jest.fn(),
+      findByClientRequestId: jest.fn(),
       findByIdWithItems: jest.fn().mockResolvedValue(makeSummary("completed")),
       createCompleted: jest.fn(),
       createCompletedFromQuote: jest.fn(),

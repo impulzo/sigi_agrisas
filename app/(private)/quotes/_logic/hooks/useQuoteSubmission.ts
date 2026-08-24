@@ -5,12 +5,17 @@ import { createQuote } from "../services/createQuote";
 import type { CreateQuoteBody } from "../types/api";
 import type { QuoteDetail } from "../types/domain";
 import type { CartLine } from "../../../pos/_logic/types/domain";
+import { NetworkError } from "../../../../_lib/authFetch";
+import { isOnline } from "../../../../_lib/offline/connectivity";
+import { enqueueQuote } from "../../../../_lib/offline/outbox";
+import type { OutboxQuoteRecord } from "../../../../_lib/offline/db";
 
-type SubmitStatus = "idle" | "submitting" | "succeeded" | "failed";
+type SubmitStatus = "idle" | "submitting" | "succeeded" | "queued-offline" | "failed";
 
 interface UseQuoteSubmissionResult {
   status: SubmitStatus;
   quote: QuoteDetail | null;
+  queuedQuote: OutboxQuoteRecord | null;
   error: Error | null;
   submit: (draft: {
     branchId: string;
@@ -26,6 +31,7 @@ interface UseQuoteSubmissionResult {
 export function useQuoteSubmission(): UseQuoteSubmissionResult {
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [quote, setQuote] = useState<QuoteDetail | null>(null);
+  const [queuedQuote, setQueuedQuote] = useState<OutboxQuoteRecord | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const submit = useCallback(async (draft: {
@@ -54,11 +60,32 @@ export function useQuoteSubmission(): UseQuoteSubmissionResult {
       })),
     };
 
+    const localTotal = draft.lines.reduce((sum, l) => sum + l.lineSubtotal + l.lineIva + l.lineIeps, 0);
+
+    async function enqueueOffline(): Promise<void> {
+      const record = await enqueueQuote({
+        ownerBranchId: draft.branchId,
+        payload: body as unknown as Record<string, unknown>,
+        localTotal,
+      });
+      setQueuedQuote(record);
+      setStatus("queued-offline");
+    }
+
+    if (!isOnline()) {
+      await enqueueOffline();
+      return;
+    }
+
     try {
       const result = await createQuote(body);
       setQuote(result);
       setStatus("succeeded");
     } catch (err) {
+      if (err instanceof NetworkError) {
+        await enqueueOffline();
+        return;
+      }
       setError(err as Error);
       setStatus("failed");
     }
@@ -67,8 +94,9 @@ export function useQuoteSubmission(): UseQuoteSubmissionResult {
   const reset = useCallback(() => {
     setStatus("idle");
     setQuote(null);
+    setQueuedQuote(null);
     setError(null);
   }, []);
 
-  return { status, quote, error, submit, reset };
+  return { status, quote, queuedQuote, error, submit, reset };
 }

@@ -67,6 +67,7 @@ const createSaleSchema = z.object({
   folioId: z.string().uuid(),
   notes: z.string().max(1000).nullable().optional(),
   quoteId: z.string().uuid().nullable().optional(),
+  clientRequestId: z.string().uuid().nullable().optional(),
   items: z.array(saleItemSchema).min(1, "Sale must include at least one item"),
 });
 

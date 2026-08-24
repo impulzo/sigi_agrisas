@@ -39,6 +39,7 @@ function appendNotes(existing: string | null, appendix: string | null): string |
  */
 export class InMemoryQuoteRepository implements QuoteRepository {
   private store: QuoteSummary[] = [];
+  private clientRequestIndex: Map<string, QuoteSummary> = new Map();
 
   async findAll(opts: FindAllQuotesOptions): Promise<{ items: QuoteSummary[]; total: number }> {
     let items = this.store;
@@ -74,6 +75,10 @@ export class InMemoryQuoteRepository implements QuoteRepository {
 
   async findByIdWithItems(id: string): Promise<QuoteSummary | null> {
     return this.store.find((s) => s.quote.id === id) ?? null;
+  }
+
+  async findByClientRequestId(clientRequestId: string): Promise<QuoteSummary | null> {
+    return this.clientRequestIndex.get(clientRequestId) ?? null;
   }
 
   async createWithItems(data: CreateQuoteData): Promise<QuoteSummary> {
@@ -125,6 +130,7 @@ export class InMemoryQuoteRepository implements QuoteRepository {
     });
     const summary: QuoteSummary = { quote, joined: emptyJoined() };
     this.store.push(summary);
+    if (data.clientRequestId) this.clientRequestIndex.set(data.clientRequestId, summary);
     return summary;
   }
 
@@ -249,6 +255,7 @@ export class InMemoryQuoteRepository implements QuoteRepository {
 
   reset(): void {
     this.store = [];
+    this.clientRequestIndex.clear();
     folioCounter = {};
   }
 }
