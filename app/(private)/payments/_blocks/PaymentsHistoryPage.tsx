@@ -13,7 +13,7 @@ import { PaymentsHistoryToolbar } from "./PaymentsHistoryToolbar";
 import { GroupedPaymentsTable } from "./GroupedPaymentsTable";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
-import { Icon } from "../../../_components/atoms/Icon/Icon";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { SegmentedButton } from "../../../_components/molecules/SegmentedButton/SegmentedButton";
 import { groupPaymentsBySale } from "../_logic/lib/groupPaymentsBySale";
 import type { PaymentStatus } from "../_logic/types/domain";
@@ -114,14 +114,8 @@ export function PaymentsHistoryPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto px-4 py-6">
-      <div className="flex items-center gap-3">
-        <Link href="/payments" className="text-on-surface-variant hover:text-on-surface">
-          <Icon name="arrow_back" size={20} />
-        </Link>
-        <h1 className="text-headline-sm font-semibold text-on-surface">Historial de abonos</h1>
-      </div>
-
+    <PageShell title="Historial de abonos" backHref="/payments">
+      <div className="flex flex-col gap-lg">
       <PaymentsHistoryToolbar
         userId={userId}
         onUserIdChange={(v) => { setUserId(v); setPage(1); }}
@@ -309,6 +303,7 @@ export function PaymentsHistoryPage() {
           {toastError}
         </div>
       )}
-    </div>
+      </div>
+    </PageShell>
   );
 }

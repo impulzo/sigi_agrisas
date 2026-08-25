@@ -5,7 +5,7 @@ import { Spinner } from "../Spinner/Spinner";
 import { Icon } from "../Icon/Icon";
 import type { IconName } from "../Icon/icons";
 
-type Variant = "filled" | "tonal" | "outlined" | "text" | "destructive";
+type Variant = "filled" | "tonal" | "outlined" | "text" | "destructive" | "tertiary";
 type Size = "sm" | "md" | "lg";
 
 const variantClasses: Record<Variant, string> = {
@@ -14,6 +14,7 @@ const variantClasses: Record<Variant, string> = {
   outlined: "border border-outline text-on-surface hover:bg-surface-container",
   text: "text-primary hover:bg-primary-fixed/20",
   destructive: "bg-error-container text-on-error-container hover:bg-error/10",
+  tertiary: "bg-tertiary text-on-tertiary hover:bg-tertiary/90",
 };
 
 const sizeClasses: Record<Size, string> = {

@@ -4,6 +4,7 @@ interface PdfDownloadButtonProps {
   onClick: () => void;
   loading?: boolean;
   disabled?: boolean;
+  size?: "sm" | "md" | "lg";
 }
 
 function PdfButton({
@@ -12,18 +13,38 @@ function PdfButton({
   onClick,
   loading,
   disabled,
-}: PdfDownloadButtonProps & { variant: "filled" | "outlined"; label: string }) {
+  size,
+  className,
+}: PdfDownloadButtonProps & { variant: "tertiary" | "outlined"; label: string; className?: string }) {
   return (
-    <Button variant={variant} icon="picture_as_pdf" onClick={onClick} loading={loading} disabled={disabled}>
+    <Button
+      variant={variant}
+      size={size}
+      icon="picture_as_pdf"
+      onClick={onClick}
+      loading={loading}
+      disabled={disabled}
+      className={className}
+    >
       {label}
     </Button>
   );
 }
 
-export function ExportPdfButton({ onClick, loading, disabled }: PdfDownloadButtonProps) {
-  return <PdfButton variant="filled" label="Exportar a PDF" onClick={onClick} loading={loading} disabled={disabled} />;
+export function ExportPdfButton({ onClick, loading, disabled, size }: PdfDownloadButtonProps) {
+  return <PdfButton variant="tertiary" label="Exportar a PDF" onClick={onClick} loading={loading} disabled={disabled} size={size} />;
 }
 
-export function DownloadPdfButton({ onClick, loading, disabled }: PdfDownloadButtonProps) {
-  return <PdfButton variant="outlined" label="Descargar PDF" onClick={onClick} loading={loading} disabled={disabled} />;
+export function DownloadPdfButton({ onClick, loading, disabled, size }: PdfDownloadButtonProps) {
+  return (
+    <PdfButton
+      variant="outlined"
+      label="Descargar PDF"
+      onClick={onClick}
+      loading={loading}
+      disabled={disabled}
+      size={size}
+      className="border-tertiary text-tertiary hover:bg-tertiary/10"
+    />
+  );
 }

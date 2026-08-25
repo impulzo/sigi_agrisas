@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useAccountStatementLedger } from "../_logic/hooks/useAccountStatementLedger";
 import type { LedgerSort } from "../_logic/types/domain";
@@ -13,8 +12,8 @@ import { ExportPdfButton } from "../../../_components/molecules/PdfDownloadButto
 import { ExportXlsxButton } from "./ExportXlsxButton";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { PageLoading } from "../../../_components/molecules/PageLoading/PageLoading";
+import { PageShell } from "../../../_components/organisms/PageShell";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
-import { Icon } from "../../../_components/atoms/Icon/Icon";
 
 export function LedgerPage({ customerId }: { customerId: string }) {
   const { can } = useCurrentUser();
@@ -82,14 +81,8 @@ export function LedgerPage({ customerId }: { customerId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-lg px-gutter py-lg mx-auto w-full max-w-screen-2xl">
-      <div className="flex items-center gap-3">
-        <Link href="/reports/account-statements" className="text-on-surface-variant hover:text-on-surface">
-          <Icon name="arrow_back" size={20} />
-        </Link>
-        <span className="text-body-sm text-on-surface-variant">Estados de Cuenta</span>
-      </div>
-
+    <PageShell title="Estado de cuenta" backHref="/reports/account-statements">
+      <div className="flex flex-col gap-lg">
       {error ? (
         <div className="bg-error-container/20 rounded px-4 py-3 text-body-sm text-error">
           {error.message}
@@ -150,6 +143,7 @@ export function LedgerPage({ customerId }: { customerId: string }) {
           {toastError}
         </div>
       )}
-    </div>
+      </div>
+    </PageShell>
   );
 }
