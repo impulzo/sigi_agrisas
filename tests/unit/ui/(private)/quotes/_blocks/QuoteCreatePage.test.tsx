@@ -15,13 +15,23 @@ jest.mock("../../../../../../app/_hooks/useFoliosOptions", () => ({
   useFoliosOptions: () => ({ options: [], isLoading: false }),
 }));
 jest.mock("../../../../../../app/(private)/quotes/_logic/hooks/useQuoteSubmission", () => ({
-  useQuoteSubmission: () => ({ status: "idle", quote: null, error: null, submit: jest.fn(), reset: jest.fn() }),
+  useQuoteSubmission: () => ({ status: "idle", quote: null, queuedQuote: null, error: null, submit: jest.fn(), reset: jest.fn() }),
 }));
 jest.mock("../../../../../../app/(private)/pos/_blocks/ProductCatalogPanel", () => ({
   ProductCatalogPanel: () => <div data-testid="catalog-panel" />,
 }));
+const mockQuoteEmitPanel = jest.fn((_props: unknown) => <div data-testid="emit-panel" />);
 jest.mock("../../../../../../app/(private)/quotes/_blocks/QuoteEmitPanel", () => ({
-  QuoteEmitPanel: () => <div data-testid="emit-panel" />,
+  QuoteEmitPanel: (props: unknown) => mockQuoteEmitPanel(props),
+}));
+
+const mockOfflineSyncValue: { isOnline: boolean; offlineEnabled: boolean; ownerBranchId: string | null } = {
+  isOnline: true,
+  offlineEnabled: false,
+  ownerBranchId: null,
+};
+jest.mock("../../../../../../app/(private)/_blocks/OfflineSyncProvider", () => ({
+  useOfflineSync: () => mockOfflineSyncValue,
 }));
 jest.mock("../../../../../../app/_components/atoms/Spinner/Spinner", () => ({
   Spinner: () => <span data-testid="spinner" />,
@@ -53,5 +63,29 @@ describe("QuoteCreatePage — recargo de dosificación", () => {
   it("pasa el dosificationSurchargePct vigente a useCart", () => {
     render(<QuoteCreatePage />);
     expect(mockUseCart).toHaveBeenCalledWith(7);
+  });
+});
+
+describe("QuoteCreatePage — gating offline", () => {
+  beforeEach(() => {
+    mockQuoteEmitPanel.mockClear();
+    mockOfflineSyncValue.isOnline = true;
+    mockOfflineSyncValue.offlineEnabled = false;
+    mockOfflineSyncValue.ownerBranchId = null;
+  });
+
+  it("offlineBlocked=false mientras hay conexión", () => {
+    render(<QuoteCreatePage />);
+    expect(mockQuoteEmitPanel).toHaveBeenCalledWith(
+      expect.objectContaining({ offlineBlocked: false })
+    );
+  });
+
+  it("offlineBlocked=true sin conexión y sin offlineEnabled", () => {
+    mockOfflineSyncValue.isOnline = false;
+    render(<QuoteCreatePage />);
+    expect(mockQuoteEmitPanel).toHaveBeenCalledWith(
+      expect.objectContaining({ offlineBlocked: true })
+    );
   });
 });

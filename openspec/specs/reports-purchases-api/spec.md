@@ -72,7 +72,7 @@ El sistema SHALL exponer `GET /api/v1/admin/reports/purchases/provider-payments`
 ### Requirement: Purchases report PDF and Excel artifacts
 Cuando `?format=pdf` en cualquiera de los dos endpoints, el sistema SHALL generar el PDF con `@react-pdf/renderer` incluyendo encabezado (título, periodo/filtros aplicados, `generatedBy`, fecha de emisión), la tabla de filas, totales agregados y numeración de página. Cuando `?format=xlsx`, SHALL devolver un workbook (`xlsx`/SheetJS) con una fila por registro y fila de totales al final, con `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment`. Un `format` distinto de `json`/`pdf`/`xlsx` SHALL responder `400 {"error":"Invalid format. Allowed: json, pdf, xlsx"}`.
 
-El header del PDF (en ambos endpoints: compras y pagos a proveedores) SHALL incluir el logo del negocio (tamaño reducido), resuelto desde `TicketSettings.logoUrl` con fallback al logo por defecto. Los colores de tabla SHALL provenir de la paleta de marca compartida (`pdfTheme`).
+El header del PDF (en ambos endpoints: compras y pagos a proveedores) SHALL incluir el logo del negocio (tamaño reducido), la razón social (si está configurada), la dirección y el RFC del negocio, resueltos vía `toPdfIssuer` — mismo mecanismo de resolución y fallback que el logo. Cuando dirección o RFC sean `null`, el header SHALL omitir esa línea. Los colores de tabla SHALL provenir de la paleta de marca compartida (`pdfTheme`).
 
 #### Scenario: Export PDF de compras
 - **WHEN** un usuario con permiso agrega `?format=pdf` al endpoint de compras
@@ -89,6 +89,10 @@ El header del PDF (en ambos endpoints: compras y pagos a proveedores) SHALL incl
 #### Scenario: PDF incluye logo del negocio
 - **WHEN** un usuario con permiso agrega `?format=pdf` en cualquiera de los dos endpoints
 - **THEN** el header del PDF incluye el logo del negocio (o el fallback por defecto)
+
+#### Scenario: PDF incluye dirección y RFC del negocio
+- **WHEN** un usuario con permiso agrega `?format=pdf` en cualquiera de los dos endpoints y `TicketSettings.businessAddress`/`businessRfc` tienen valor
+- **THEN** el header muestra ambos datos junto al logo, sin desplazar la tabla de filas ni los totales
 
 ### Requirement: Branch scoping for purchases report
 Ambos endpoints SHALL aplicar `resolveScopedBranchId(req, filters.branchId, authz)`. Sin `branches:access_all`, el listado (compras o pagos a proveedores) SHALL limitarse a `branch_id = x-user-branch-id`.

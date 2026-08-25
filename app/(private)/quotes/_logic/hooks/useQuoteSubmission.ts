@@ -9,8 +9,9 @@ import { NetworkError } from "../../../../_lib/authFetch";
 import { isOnline } from "../../../../_lib/offline/connectivity";
 import { enqueueQuote } from "../../../../_lib/offline/outbox";
 import type { OutboxQuoteRecord } from "../../../../_lib/offline/db";
+import { useOfflineSync } from "../../../_blocks/OfflineSyncProvider";
 
-type SubmitStatus = "idle" | "submitting" | "succeeded" | "queued-offline" | "failed";
+type SubmitStatus = "idle" | "submitting" | "succeeded" | "queued-offline" | "offline-disabled" | "failed";
 
 interface UseQuoteSubmissionResult {
   status: SubmitStatus;
@@ -29,6 +30,7 @@ interface UseQuoteSubmissionResult {
 }
 
 export function useQuoteSubmission(): UseQuoteSubmissionResult {
+  const { offlineEnabled, ownerBranchId } = useOfflineSync();
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [quote, setQuote] = useState<QuoteDetail | null>(null);
   const [queuedQuote, setQueuedQuote] = useState<OutboxQuoteRecord | null>(null);
@@ -63,8 +65,13 @@ export function useQuoteSubmission(): UseQuoteSubmissionResult {
     const localTotal = draft.lines.reduce((sum, l) => sum + l.lineSubtotal + l.lineIva + l.lineIeps, 0);
 
     async function enqueueOffline(): Promise<void> {
+      if (!offlineEnabled || ownerBranchId !== draft.branchId) {
+        setError(new Error("Fija tu sucursal de trabajo antes de cotizar offline."));
+        setStatus("offline-disabled");
+        return;
+      }
       const record = await enqueueQuote({
-        ownerBranchId: draft.branchId,
+        ownerBranchId,
         payload: body as unknown as Record<string, unknown>,
         localTotal,
       });

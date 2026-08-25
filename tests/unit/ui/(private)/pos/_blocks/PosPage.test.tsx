@@ -96,6 +96,9 @@ jest.mock("../../../../../../app/(private)/pos/_logic/services/getProductPrices"
 jest.mock("../../../../../../app/_lib/authFetch", () => ({
   authFetch: jest.fn().mockResolvedValue({ json: () => Promise.resolve({ items: [] }) }),
 }));
+jest.mock("../../../../../../app/(private)/_blocks/OfflineSyncProvider", () => ({
+  useOfflineSync: () => ({ isOnline: true, offlineEnabled: false, ownerBranchId: null }),
+}));
 
 import { PosPage } from "../../../../../../app/(private)/pos/_blocks/PosPage";
 

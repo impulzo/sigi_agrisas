@@ -56,7 +56,7 @@ El sistema SHALL aplicar `resolveScopedBranchId(req, branchId, authz)` en la con
 ---
 
 ### Requirement: Export formats
-El endpoint SHALL aceptar `?format=xlsx` (200, `Content-Type` de spreadsheet, `Content-Disposition: attachment; filename="kardex-<code>-<from>_<to>.xlsx"`, una fila por movimiento) y `?format=pdf` (200 `application/pdf`, `Content-Disposition: attachment`, encabezado + tabla vía `@react-pdf/renderer`). El encabezado del PDF SHALL incluir el logo del negocio (tamaño reducido, junto al título), resuelto desde `TicketSettings.logoUrl` con fallback al logo por defecto (`public/logo.png`) cuando no está configurado. Los colores de tabla (encabezado, bordes, texto mutado) SHALL provenir de la paleta de marca compartida (`pdfTheme`), no de valores hex arbitrarios específicos de este módulo. Un `format` fuera de `json|pdf|xlsx` SHALL responder `400 {"error":"Invalid format. Allowed: json, pdf, xlsx"}`. Si el rango filtrado supera 10 000 movimientos, el sistema SHALL responder `409 {"error":"ReportTooLarge","tooLarge":true}` para cualquier formato.
+El endpoint SHALL aceptar `?format=xlsx` (200, `Content-Type` de spreadsheet, `Content-Disposition: attachment; filename="kardex-<code>-<from>_<to>.xlsx"`, una fila por movimiento) y `?format=pdf` (200 `application/pdf`, `Content-Disposition: attachment`, encabezado + tabla vía `@react-pdf/renderer`). El encabezado del PDF SHALL incluir el logo del negocio (tamaño reducido, junto al título), la razón social (si está configurada), la dirección y el RFC del negocio, resueltos vía `toPdfIssuer` desde `TicketSettings` — mismo mecanismo de resolución y fallback que el logo (`public/logo.png` cuando no está configurado). Cuando dirección o RFC sean `null`, el encabezado SHALL omitir esa línea sin renderizar texto vacío. Los colores de tabla (encabezado, bordes, texto mutado) SHALL provenir de la paleta de marca compartida (`pdfTheme`), no de valores hex arbitrarios específicos de este módulo. Un `format` fuera de `json|pdf|xlsx` SHALL responder `400 {"error":"Invalid format. Allowed: json, pdf, xlsx"}`. Si el rango filtrado supera 10 000 movimientos, el sistema SHALL responder `409 {"error":"ReportTooLarge","tooLarge":true}` para cualquier formato.
 
 #### Scenario: Export Excel
 - **WHEN** un usuario con permiso agrega `?format=xlsx`
@@ -81,6 +81,10 @@ El endpoint SHALL aceptar `?format=xlsx` (200, `Content-Type` de spreadsheet, `C
 #### Scenario: PDF usa colores de marca
 - **WHEN** un usuario con permiso solicita `?format=pdf`
 - **THEN** el color de fondo del encabezado de tabla del PDF corresponde a la paleta de marca compartida, no al azul `#1565C0` anterior
+
+#### Scenario: PDF incluye dirección y RFC del negocio
+- **WHEN** un usuario con permiso solicita `?format=pdf` y `TicketSettings.businessAddress`/`businessRfc` tienen valor
+- **THEN** el encabezado muestra ambos datos junto al logo, sin alterar el layout de las tarjetas de resumen
 
 ### Requirement: Rebuild article balances
 El sistema SHALL exponer `POST /api/v1/admin/inventory/kardex/rebuild` con body `{productId, branchId}` (ambos obligatorios). El sistema SHALL releer todos los movimientos de ese par `(productId, branchId)` ordenados por `(movementAt, sequence)`, recalcular `balanceAfter` acumulado desde `0`, sobrescribir cada fila con el saldo correcto, y actualizar `branch_inventory.quantity` al saldo final recalculado — todo en una transacción. La operación SHALL ser determinística (repetirla sin movimientos nuevos produce el mismo resultado) y SHALL NO insertar movimientos nuevos. La respuesta SHALL incluir `movementsRebuilt`, `previousQuantity`, `newQuantity`.

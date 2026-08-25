@@ -20,6 +20,7 @@ import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { getProductPrices } from "../../pos/_logic/services/getProductPrices";
 import { getProductDosifications } from "../../pos/_logic/services/getProductDosifications";
 import { formatMxCurrency } from "../../pos/_logic/lib/formatMxCurrency";
+import { useOfflineSync } from "../../_blocks/OfflineSyncProvider";
 import type { ProductDto, ProductPriceDto, DosificationOptionDto, CustomerDto } from "../../pos/_logic/types/api";
 import type { EditSaleBody } from "../_logic/types/api";
 import Link from "next/link";
@@ -40,6 +41,7 @@ export function EditSalePage({ id }: EditSalePageProps) {
   const router = useRouter();
   const { can, branchId: userBranchId } = useCurrentUser();
   const { hq, isLoading: hqLoading } = useHeadquarters();
+  const { isOnline, offlineEnabled, ownerBranchId } = useOfflineSync();
 
   const canEditCompleted = can("sales:edit_completed");
   const isBypass = can("branches:access_all");
@@ -232,6 +234,9 @@ export function EditSalePage({ id }: EditSalePageProps) {
             notes={notes}
             isLoadingOptions={foliosLoading || pmLoading}
             isSubmitting={isSaving}
+            isOnline={isOnline}
+            offlineEnabled={offlineEnabled}
+            ownerBranchId={ownerBranchId}
             canCreate={canEditCompleted}
             onFolioChange={() => {}}
             onPaymentMethodChange={setSelectedPaymentMethodId}

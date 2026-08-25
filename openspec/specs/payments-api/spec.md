@@ -283,7 +283,7 @@ Query params (todos opcionales excepto `format`):
 
 Para `format=pdf` o `format=xlsx`: sin paginación, límite duro 10,000 filas compartido entre ambos formatos. Si excede → HTTP 409 `{"error":"ReportTooLarge","limit":10000}`.
 
-Para `format=pdf`: el PDF SHALL generarse con `@react-pdf/renderer`, devuelto con `Content-Type: application/pdf` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.pdf"` (fecha del `generatedAt` UTC). El contenido SHALL agrupar visualmente las filas por ticket (`saleId`): un bloque de encabezado por ticket (folio de venta, cliente, Monto total, Saldo) seguido de las filas de sus abonos, antes de la sección de totales globales. El encabezado del PDF SHALL incluir el logo del negocio (tamaño reducido, junto al título), resuelto desde `TicketSettings.logoUrl` con fallback al logo por defecto (`public/logo.png`) cuando no está configurado. Los colores de tabla (encabezado, bordes, texto mutado) SHALL provenir de la paleta de marca compartida (`pdfTheme`), no de valores hex arbitrarios específicos de este módulo.
+Para `format=pdf`: el PDF SHALL generarse con `@react-pdf/renderer`, devuelto con `Content-Type: application/pdf` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.pdf"` (fecha del `generatedAt` UTC). El contenido SHALL agrupar visualmente las filas por ticket (`saleId`): un bloque de encabezado por ticket (folio de venta, cliente, Monto total, Saldo) seguido de las filas de sus abonos, antes de la sección de totales globales. El encabezado del PDF SHALL incluir el logo del negocio (tamaño reducido, junto al título), la razón social (si está configurada), la dirección y el RFC del negocio, resueltos vía `toPdfIssuer` desde `TicketSettings` — mismo mecanismo de resolución y fallback que el logo (`public/logo.png` cuando no está configurado). Cuando dirección o RFC sean `null`, el encabezado SHALL omitir esa línea sin renderizar texto vacío. Los colores de tabla (encabezado, bordes, texto mutado) SHALL provenir de la paleta de marca compartida (`pdfTheme`), no de valores hex arbitrarios específicos de este módulo.
 
 Para `format=xlsx`: el archivo SHALL generarse como workbook `.xlsx`, devuelto con `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment; filename="payments-history-YYYY-MM-DD.xlsx"`. El contenido SHALL agrupar las filas por ticket con la misma estructura que el PDF (encabezado de ticket + filas de abonos + fila en blanco de separación), y una sección de totales globales al final de la hoja.
 
@@ -336,6 +336,10 @@ Para `format=xlsx`: el archivo SHALL generarse como workbook `.xlsx`, devuelto c
 #### Scenario: PDF usa colores de marca
 - **WHEN** un caller con `payments:report_read` solicita `?format=pdf`
 - **THEN** el color de fondo del encabezado de tabla del PDF corresponde a la paleta de marca compartida, no al azul `#1565C0` anterior
+
+#### Scenario: PDF incluye dirección y RFC del negocio
+- **WHEN** un caller con `payments:report_read` solicita `?format=pdf` y `TicketSettings.businessAddress`/`businessRfc` tienen valor
+- **THEN** el encabezado muestra ambos datos junto al logo, sin desplazar el agrupamiento por ticket ni la sección de totales
 
 ### Requirement: Branch scoping for payments
 

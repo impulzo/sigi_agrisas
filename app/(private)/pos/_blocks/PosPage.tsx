@@ -11,6 +11,7 @@ import { useSaleSubmission } from "../_logic/hooks/useSaleSubmission";
 import { useQuoteSubmission } from "../_logic/hooks/useQuoteSubmission";
 import { usePosKeyboard } from "../_logic/hooks/usePosKeyboard";
 import { canSubmitCart } from "../_logic/lib/canSubmitCart";
+import { useOfflineSync } from "../../_blocks/OfflineSyncProvider";
 import { getProductPrices } from "../_logic/services/getProductPrices";
 import { getProductDosifications } from "../_logic/services/getProductDosifications";
 import { PosHeader } from "./PosHeader";
@@ -43,6 +44,7 @@ export function PosPage() {
   const canCreate = can("sales:create");
   const canQuote = can("quotes:create");
   const isBypass = can("branches:access_all");
+  const { isOnline, offlineEnabled, ownerBranchId } = useOfflineSync();
 
   const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
   const { options: paymentMethods, isLoading: pmLoading } = usePaymentMethodsOptions();
@@ -106,6 +108,9 @@ export function PosPage() {
     selectedPaymentMethodId,
     isQuoteMode,
     isSubmitting,
+    isOnline,
+    offlineEnabled,
+    ownerBranchId,
   });
 
   // If user only has quotes:create and not sales:create, force quote mode
@@ -357,6 +362,9 @@ export function PosPage() {
             isLoadingOptions={foliosLoading || pmLoading}
             isSubmitting={isSubmitting}
             canCreate={mode === "quote" ? canQuote : canCreate}
+            isOnline={isOnline}
+            offlineEnabled={offlineEnabled}
+            ownerBranchId={ownerBranchId}
             mode={mode}
             expiresAt={expiresAt}
             onFolioChange={setSelectedFolioId}

@@ -34,7 +34,7 @@ Users without `branches:access_all` SHALL have the branch filter auto-fixed to t
 ---
 
 ### Requirement: Waybill detail page
-The system SHALL expose `/waybills/[id]` rendering `WaybillDetailPage`, gated by `waybills:read`. For `type='carta_porte'`, it SHALL display: the origin branch and the destination CUSTOMER (name, code, snapshotted address), a link to the originating sale (`/sales/[saleId]`), `WaybillItemsTable` (product, quantity, weight, SAT transport key), vehicle and driver data, CFDI status and UUID, and (for `status='completed'`) buttons to download PDF/XML and cancel (gated additionally by `waybills:cancel`). For `type='simple'`, it SHALL display: origin/destination branch names (no address snapshot, since none is captured), `WaybillItemsTable` restricted to product/quantity columns (no weight/SAT/hazmat columns, since none apply), the transfer date, and notes — it SHALL NOT display any vehicle, driver, distance, CFDI, or sale-link section, and SHALL NOT render the PDF/XML download buttons (a `type='simple'` waybill has no CFDI to download).
+The system SHALL expose `/waybills/[id]` rendering `WaybillDetailPage`, gated by `waybills:read`. For `type='carta_porte'`, it SHALL display: the origin branch and the destination CUSTOMER (name, code, snapshotted address), a link to the originating sale (`/sales/[saleId]`), `WaybillItemsTable` (product, quantity, weight, SAT transport key), vehicle and driver data, CFDI status and UUID, and (for `status='completed'`) buttons to download PDF/XML (the PDF button using the shared `DownloadPdfButton` molecule, `app/_components/molecules/PdfDownloadButton.tsx`, icon `picture_as_pdf`, label "Descargar PDF") and cancel (gated additionally by `waybills:cancel`). For `type='simple'`, it SHALL display: origin/destination branch names (no address snapshot, since none is captured), `WaybillItemsTable` restricted to product/quantity columns (no weight/SAT/hazmat columns, since none apply), the transfer date, and notes — it SHALL NOT display any vehicle, driver, distance, CFDI, or sale-link section, and SHALL NOT render the PDF/XML download buttons (a `type='simple'` waybill has no CFDI to download).
 
 For `status='cancelled'` waybills of either type, the page SHALL show a cancellation banner with reason and date, and SHALL NOT show the cancel button.
 
@@ -53,6 +53,10 @@ For `status='cancelled'` waybills of either type, the page SHALL show a cancella
 #### Scenario: Download PDF or XML (Carta Porte only)
 - **WHEN** the user clicks "Descargar PDF" or "Descargar XML" on a stamped `type='carta_porte'` waybill
 - **THEN** the file downloads via `GET /waybills/:id/download?format=...`, with the filename derived from `Content-Disposition` (fallback `carta-porte-<uuid>.<ext>`)
+
+#### Scenario: Download PDF button uses shared icon
+- **WHEN** the "Descargar PDF" button renders on a stamped `type='carta_porte'` waybill detail
+- **THEN** it shows the `picture_as_pdf` icon provided by the shared `DownloadPdfButton` molecule
 
 ---
 

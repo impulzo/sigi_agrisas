@@ -41,6 +41,7 @@ export function PosHeader({
   const [pendingMode, setPendingMode] = useState<PosMode | null>(null);
   const [showQueue, setShowQueue] = useState(false);
   const [fixingBranch, setFixingBranch] = useState(false);
+  const [fixBranchError, setFixBranchError] = useState<string | null>(null);
   const { isOnline, syncing, pendingCount, ownerBranchId, fixWorkingBranch } = useOfflineSync();
 
   const showFixBranchAction =
@@ -50,6 +51,9 @@ export function PosHeader({
     setFixingBranch(true);
     try {
       await fixWorkingBranch(selectedBranchId);
+      setFixBranchError(null);
+    } catch (err) {
+      setFixBranchError((err as Error).message);
     } finally {
       setFixingBranch(false);
     }
@@ -111,6 +115,11 @@ export function PosHeader({
           >
             Fijar sucursal offline
           </Button>
+        )}
+        {fixBranchError && (
+          <span className="text-label-sm text-error" role="alert">
+            {fixBranchError}
+          </span>
         )}
         {isBypass && ownerBranchId === selectedBranchId && Boolean(selectedBranchId) && (
           <span className="text-label-sm text-on-surface-variant whitespace-nowrap">

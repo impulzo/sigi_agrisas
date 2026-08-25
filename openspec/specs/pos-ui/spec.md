@@ -114,3 +114,91 @@ Adicionalmente, ninguna pantalla que reconstruya el carrito a partir de items ya
 - **WHEN** una línea del carrito tiene cantidad entera y no referencia una dosificación, en cualquiera de las 4 pantallas
 - **THEN** el recargo de dosificación no se aplica a esa línea, igual que antes del cambio
 
+### Requirement: Creación de venta offline respeta el modo offline habilitado
+El flujo de creación de venta en el POS SHALL consultar el estado `offlineEnabled` del contexto de sincronización offline antes de encolar una venta cuando se detecta `NetworkError` o `!isOnline()`. Si `offlineEnabled` es `false`, el sistema SHALL impedir el encolado y mostrar un mensaje explícito indicando que debe fijarse una sucursal de trabajo offline antes de vender sin conexión, en vez de encolar la venta bajo un `ownerBranchId` que no coincide con el contexto offline.
+
+#### Scenario: Venta offline bloqueada para usuario bypass sin sucursal de trabajo fijada
+- **WHEN** un usuario con `branches:access_all` que nunca llamó `fixWorkingBranch` intenta finalizar una venta mientras `NetworkError`/`!isOnline()`
+- **THEN** el sistema no encola la venta, deshabilita o intercepta el submit, y muestra un mensaje explícito de "fija tu sucursal de trabajo antes de vender offline"
+
+#### Scenario: Venta offline permitida con sucursal de trabajo ya fijada
+- **WHEN** un usuario con `branches:access_all` que ya fijó una sucursal de trabajo (o un cajero regular con `branchId` de sesión) intenta finalizar una venta mientras `NetworkError`/`!isOnline()`
+- **THEN** el sistema encola la venta normalmente, sin regresión sobre el comportamiento offline existente
+
+#### Scenario: Venta offline bloqueada aunque el formulario tenga otra sucursal seleccionada
+- **WHEN** un usuario con `branches:access_all` fijó la sucursal de trabajo A, pero mientras aún online seleccionó la sucursal B en el formulario del POS sin volver a fijarla, y luego intenta finalizar venta mientras `NetworkError`/`!isOnline()`
+- **THEN** el sistema bloquea el encolado igual que en el caso sin sucursal fijada — la sucursal de trabajo offline fijada es la única autoridad de scope, no la sucursal seleccionada en el formulario
+
+### Requirement: Registro offline usa el ownerBranchId del contexto de sincronización
+El encolado de una venta offline SHALL usar el `ownerBranchId` resuelto por el contexto de sincronización offline como clave de scope del registro persistido, en vez de la sucursal seleccionada en el formulario de venta.
+
+#### Scenario: Ítem encolado siempre visible en el panel de sincronización
+- **WHEN** una venta se encola offline con `offlineEnabled=true`
+- **THEN** el registro persistido usa el `ownerBranchId` del contexto offline, de forma que aparece siempre en el panel de cola de sincronización y se cuenta en el badge de pendientes, sin excepción
+
+### Requirement: Error al cambiar de sucursal de trabajo offline es visible al usuario
+Cuando el sistema rechaza un cambio de sucursal de trabajo offline por existir ventas o cotizaciones sin sincronizar, el error SHALL mostrarse al usuario de forma visible, no como una falla silenciosa.
+
+#### Scenario: Mensaje de error visible tras intento de cambio rechazado
+- **WHEN** un usuario con `branches:access_all` intenta fijar una nueva sucursal de trabajo mientras existen ítems `pending`/`failed` sin sincronizar de la sucursal de trabajo anterior
+- **THEN** el sistema muestra el mensaje de error ("No se puede cambiar de sucursal de trabajo: hay ventas o cotizaciones sin sincronizar.") de forma visible en la interfaz, y la sucursal de trabajo fijada no cambia
+
+#### Scenario: Sin mensaje de error residual tras un cambio exitoso
+- **WHEN** un usuario con `branches:access_all` fija una nueva sucursal de trabajo sin tener ítems pendientes sin sincronizar
+- **THEN** el cambio se aplica sin mostrar ningún mensaje de error
+
+### Requirement: POS branch selector locked while offline
+While the app is in offline mode (per `offline-sync`'s connectivity detection), the branch selector in the POS screen SHALL be read-only, pinned to the cached `ownerBranchId` of the current offline session, regardless of whether the current user has `branches:access_all`. This includes users who would otherwise be able to freely change branch when online.
+
+#### Scenario: Bypass user branch selector disabled offline
+- **WHEN** a user with `branches:access_all` who has already fixed a working branch (per `offline-sync`'s "Fix a working branch before going offline" requirement) is in the POS screen while offline
+- **THEN** the branch selector is rendered disabled/read-only, showing the fixed `ownerBranchId`'s name, with no way to switch branch until connectivity returns
+
+#### Scenario: Regular cashier branch selector unaffected
+- **WHEN** a cashier without `branches:access_all` (whose branch selector is already read-only online, per existing behavior) goes offline
+- **THEN** no visible change occurs — the selector remains showing their assigned branch, same as online
+
+### Requirement: Sale submission queues offline instead of failing
+The POS sale submission flow (`useSaleSubmission`) SHALL, when `authFetch` throws `NetworkError` (or the app's `isOnline` state is already `false` before attempting the request), enqueue the sale into the `offline-sync` outbox instead of surfacing a submission error to the cashier.
+
+#### Scenario: Sale submitted while offline is queued, not rejected
+- **WHEN** a cashier submits a completed cart while offline
+- **THEN** the sale is written to the `outboxSales` store with `status: "pending"` and a generated `clientRequestId`, the cart resets as it would on a successful online sale, and the confirmation UI shows a provisional ticket state (see "Provisional ticket display for queued sales" below) instead of the normal post-sale confirmation
+
+#### Scenario: Genuine validation errors are not swallowed as offline
+- **WHEN** a cashier submits a cart while online and the server responds with an HTTP 400 (e.g. inactive customer)
+- **THEN** the existing online error-handling behavior applies unchanged — the sale is NOT queued, the error is surfaced to the cashier as before
+
+### Requirement: Provisional ticket display for queued sales
+`SaleConfirmedModal` (or its offline equivalent) SHALL, for a sale in `outboxSales` with `status` other than `"synced"`, display the sale's `provisionalCode` (format `"OFFLINE-<shortId>"`) instead of a fiscal folio code, together with explanatory copy that the real folio will be assigned once the sale synchronizes and MAY NOT follow the chronological order of creation.
+
+#### Scenario: Provisional code shown for a queued sale
+- **WHEN** a sale was queued offline and has not yet synced
+- **THEN** the confirmation UI shows the `provisionalCode`, an indicator that the sale is pending synchronization, and copy stating the folio is not yet final
+
+#### Scenario: Ticket updates to the real folio once synced
+- **WHEN** an outbox sale transitions from `pending`/`syncing` to `synced` while its confirmation UI is still open, or when the cashier revisits it from the sync queue panel afterward
+- **THEN** the UI updates to show the real `serverFolioCode` in place of the provisional code
+
+### Requirement: Sync status badge in POS header
+`PosHeader` SHALL render a persistent sync status indicator reflecting the current `offline-sync` state: offline, syncing (with progress count), N items pending, or fully synced.
+
+#### Scenario: Badge reflects offline state
+- **WHEN** the app detects no connectivity
+- **THEN** the POS header shows a badge reading something equivalent to "Sin conexión — modo offline"
+
+#### Scenario: Badge reflects pending queue count
+- **WHEN** the app is online but the outbox has unsynced items (e.g. still draining, or a previous offline stretch left items behind)
+- **THEN** the badge shows the count of pending items, updating live as items sync
+
+### Requirement: Product search and price lookups fall back to offline cache
+`searchProducts`, `getProductPrices`, and `getProductDosifications` (POS `_logic/services`) SHALL, on `NetworkError` from `authFetch`, fall back to querying the `offline-sync` catalog cache (`catalogProducts`, `catalogPrices`, `catalogDosifications`) for the current `ownerBranchId`, instead of surfacing a network error to the cashier.
+
+#### Scenario: Product search falls back to cache offline
+- **WHEN** a cashier searches for a product while offline
+- **THEN** results come from `catalogProducts` filtered by code/name, including the cached `stock` value from `branchInventory`
+
+#### Scenario: Product not found in cache is reported distinctly from a network error
+- **WHEN** a cashier searches for a product offline that was never cached (e.g. added to the catalog after the last sync)
+- **THEN** the UI shows an explicit "no encontrado en catálogo offline" state, not a generic network-error message
+

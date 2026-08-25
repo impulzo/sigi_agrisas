@@ -8,8 +8,9 @@ import { NetworkError } from "../../../../_lib/authFetch";
 import { isOnline } from "../../../../_lib/offline/connectivity";
 import { enqueueSale, makeProvisionalCode } from "../../../../_lib/offline/outbox";
 import type { OutboxSaleRecord } from "../../../../_lib/offline/db";
+import { useOfflineSync } from "../../../_blocks/OfflineSyncProvider";
 
-type SubmitStatus = "idle" | "submitting" | "succeeded" | "queued-offline" | "failed";
+type SubmitStatus = "idle" | "submitting" | "succeeded" | "queued-offline" | "offline-disabled" | "failed";
 
 interface UseSaleSubmissionResult {
   status: SubmitStatus;
@@ -28,6 +29,7 @@ interface UseSaleSubmissionResult {
 }
 
 export function useSaleSubmission(): UseSaleSubmissionResult {
+  const { offlineEnabled, ownerBranchId } = useOfflineSync();
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [sale, setSale] = useState<SaleDetailDto | null>(null);
   const [queuedSale, setQueuedSale] = useState<OutboxSaleRecord | null>(null);
@@ -61,8 +63,13 @@ export function useSaleSubmission(): UseSaleSubmissionResult {
     const localTotal = draft.lines.reduce((sum, l) => sum + l.lineSubtotal + l.lineIva + l.lineIeps, 0);
 
     async function enqueueOffline(): Promise<void> {
+      if (!offlineEnabled || ownerBranchId !== draft.branchId) {
+        setError(new Error("Fija tu sucursal de trabajo antes de vender offline."));
+        setStatus("offline-disabled");
+        return;
+      }
       const record = await enqueueSale({
-        ownerBranchId: draft.branchId,
+        ownerBranchId,
         payload: body as unknown as Record<string, unknown>,
         localTotal,
       });

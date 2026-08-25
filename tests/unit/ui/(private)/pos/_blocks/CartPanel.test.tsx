@@ -64,6 +64,9 @@ const baseProps = {
   isLoadingOptions: false,
   isSubmitting: false,
   canCreate: true as boolean | "loading",
+  isOnline: true,
+  offlineEnabled: false,
+  ownerBranchId: null as string | null,
   onFolioChange: jest.fn(),
   onPaymentMethodChange: jest.fn(),
   onCustomerChange: jest.fn(),
@@ -147,6 +150,37 @@ describe("CartPanel — botón Finalizar venta", () => {
   it("está deshabilitado cuando isSubmitting=true", () => {
     render(<CartPanel {...baseProps} lines={[baseLine]} selectedFolioId="f1" selectedPaymentMethodId="pm1" isSubmitting={true} />);
     expect(screen.getByRole("button", { name: /Finalizar venta/i })).toBeDisabled();
+  });
+
+  it("está deshabilitado offline sin sucursal de trabajo fijada (offlineEnabled=false)", () => {
+    render(
+      <CartPanel
+        {...baseProps}
+        lines={[baseLine]}
+        selectedFolioId="f1"
+        selectedPaymentMethodId="pm1"
+        isOnline={false}
+        offlineEnabled={false}
+        ownerBranchId={null}
+      />
+    );
+    expect(screen.getByRole("button", { name: /Finalizar venta/i })).toBeDisabled();
+  });
+
+  it("está habilitado offline cuando offlineEnabled=true y ownerBranchId coincide con la sucursal", () => {
+    render(
+      <CartPanel
+        {...baseProps}
+        lines={[baseLine]}
+        selectedFolioId="f1"
+        selectedPaymentMethodId="pm1"
+        selectedBranchId="b1"
+        isOnline={false}
+        offlineEnabled={true}
+        ownerBranchId="b1"
+      />
+    );
+    expect(screen.getByRole("button", { name: /Finalizar venta/i })).not.toBeDisabled();
   });
 
   it("muestra el conteo de artículos en el carrito", () => {

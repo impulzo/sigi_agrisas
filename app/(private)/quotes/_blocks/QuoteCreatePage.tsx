@@ -7,6 +7,7 @@ import { useCart } from "../../pos/_logic/hooks/useCart";
 import { useFoliosOptions } from "../../../_hooks/useFoliosOptions";
 import { usePricingSettingsOptions } from "../../../_hooks/usePricingSettingsOptions";
 import { useQuoteSubmission } from "../_logic/hooks/useQuoteSubmission";
+import { useOfflineSync } from "../../_blocks/OfflineSyncProvider";
 import { getProductPrices } from "../../pos/_logic/services/getProductPrices";
 import { ProductCatalogPanel } from "../../pos/_blocks/ProductCatalogPanel";
 import { QuoteEmitPanel } from "./QuoteEmitPanel";
@@ -32,6 +33,7 @@ export function QuoteCreatePage() {
   const { can, branchId: userBranchId } = useCurrentUser();
   const canCreate = can("quotes:create");
   const isBypass = can("branches:access_all");
+  const { isOnline, offlineEnabled, ownerBranchId } = useOfflineSync();
 
   const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
   const { dosificationSurchargePct } = usePricingSettingsOptions();
@@ -155,6 +157,7 @@ export function QuoteCreatePage() {
   }
 
   const cotFolios: FolioOption[] = folios;
+  const offlineBlocked = !isOnline && (!offlineEnabled || ownerBranchId !== selectedBranchId);
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)]">
@@ -185,6 +188,7 @@ export function QuoteCreatePage() {
             isLoadingOptions={foliosLoading}
             isSubmitting={status === "submitting"}
             canSubmitCreate={canCreate}
+            offlineBlocked={offlineBlocked}
             onFolioChange={setSelectedFolioId}
             onBranchChange={setSelectedBranchId}
             onCustomerChange={(id) => setSelectedCustomerId(id)}
@@ -224,7 +228,7 @@ export function QuoteCreatePage() {
         <QuoteQueuedModal queued={queuedQuote} onNewQuote={handleNewQuote} />
       )}
 
-      {submitError && status === "failed" && (
+      {submitError && (status === "failed" || status === "offline-disabled") && (
         <div className="fixed bottom-4 right-4 z-50 bg-error-container text-on-error-container rounded-md px-4 py-3 text-body-sm shadow-lg max-w-sm">
           {submitError.message}
         </div>
