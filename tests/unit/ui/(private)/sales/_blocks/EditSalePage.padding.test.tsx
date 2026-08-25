@@ -108,6 +108,9 @@ jest.mock("../../../../../../app/_components/molecules/EmptyState/EmptyState", (
 jest.mock("../../../../../../app/_components/atoms/Spinner/Spinner", () => ({
   Spinner: () => <div data-testid="spinner" />,
 }));
+jest.mock("../../../../../../app/(private)/_blocks/OfflineSyncProvider", () => ({
+  useOfflineSync: () => ({ isOnline: true, offlineEnabled: false, ownerBranchId: null }),
+}));
 
 import { EditSalePage } from "../../../../../../app/(private)/sales/_blocks/EditSalePage";
 

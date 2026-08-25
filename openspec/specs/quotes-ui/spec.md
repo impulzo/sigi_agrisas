@@ -118,14 +118,14 @@ The system SHALL provide a screen at `/quotes/[id]` (`QuoteDetailPage`) that req
 
 | status | isExpired | Buttons |
 |---|---|---|
-| `draft` | false | Autorizar (`quotes:authorize`), Editar (`quotes:write`), Cancelar (`quotes:cancel`), Imprimir PDF |
-| `draft` | true | Editar (enabled, `quotes:write`), Cancelar (`quotes:cancel`), Imprimir PDF; Autorizar disabled with tooltip "Extiende la fecha de vencimiento primero" |
-| `authorized` | false | Convertir (`quotes:convert`), Cancelar (`quotes:cancel`), Imprimir PDF |
-| `authorized` | true | Convertir disabled with tooltip "Cotización vencida — cancela y crea otra", Cancelar (`quotes:cancel`), Imprimir PDF |
-| `converted` | n/a | Ver venta generada (link `/sales/[convertedSaleId]`), Imprimir PDF |
-| `cancelled` | n/a | banner, Imprimir PDF |
+| `draft` | false | Autorizar (`quotes:authorize`), Editar (`quotes:write`), Cancelar (`quotes:cancel`), Descargar PDF |
+| `draft` | true | Editar (enabled, `quotes:write`), Cancelar (`quotes:cancel`), Descargar PDF; Autorizar disabled with tooltip "Extiende la fecha de vencimiento primero" |
+| `authorized` | false | Convertir (`quotes:convert`), Cancelar (`quotes:cancel`), Descargar PDF |
+| `authorized` | true | Convertir disabled with tooltip "Cotización vencida — cancela y crea otra", Cancelar (`quotes:cancel`), Descargar PDF |
+| `converted` | n/a | Ver venta generada (link `/sales/[convertedSaleId]`), Descargar PDF |
+| `cancelled` | n/a | banner, Descargar PDF |
 
-Buttons whose required permission is `"loading"` SHALL render disabled with a small spinner. Buttons whose required permission is `false` SHALL NOT render. The "Imprimir PDF" button SHALL render in every status (including `converted` and `cancelled`, which otherwise render no other write actions) since it requires no permission beyond the `quotes:read` already needed to view the screen. While a PDF download is in progress the button SHALL render disabled with a loading indicator; it SHALL re-enable once the download completes (success or failure).
+Buttons whose required permission is `"loading"` SHALL render disabled with a small spinner. Buttons whose required permission is `false` SHALL NOT render. The "Descargar PDF" button (molecule compartido `DownloadPdfButton`, `app/_components/molecules/PdfDownloadButton.tsx`, icono `picture_as_pdf` — antes "Imprimir PDF" con icono `print`) SHALL render in every status (including `converted` and `cancelled`, which otherwise render no other write actions) since it requires no permission beyond the `quotes:read` already needed to view the screen. While a PDF download is in progress the button SHALL render disabled with a loading indicator; it SHALL re-enable once the download completes (success or failure).
 
 #### Scenario: Draft quote shows three actions
 - **WHEN** the quote has `status='draft'` and the caller has all three permissions
@@ -153,23 +153,27 @@ Buttons whose required permission is `"loading"` SHALL render disabled with a sm
 
 #### Scenario: Viewer cannot see write actions
 - **WHEN** the caller has only `quotes:read`
-- **THEN** the action bar renders no write buttons (authorize/edit/cancel/convert), but "Imprimir PDF" still renders enabled
+- **THEN** the action bar renders no write buttons (authorize/edit/cancel/convert), but "Descargar PDF" still renders enabled
 
 #### Scenario: isExpired banner appears
 - **WHEN** the detail returns `isExpired=true`
 - **THEN** an amber banner "Cotización vencida — el precio podría no estar vigente" renders above the totals block
 
-#### Scenario: Imprimir PDF available on converted and cancelled quotes
+#### Scenario: Descargar PDF available on converted and cancelled quotes
 - **WHEN** the quote has `status='converted'` or `status='cancelled'`
-- **THEN** the action bar still renders the "Imprimir PDF" button alongside whatever status-specific content (link or banner) is shown
+- **THEN** the action bar still renders the "Descargar PDF" button alongside whatever status-specific content (link or banner) is shown
 
-#### Scenario: Imprimir PDF click triggers a direct download
-- **WHEN** the caller clicks "Imprimir PDF" on any quote
+#### Scenario: Descargar PDF click triggers a direct download
+- **WHEN** the caller clicks "Descargar PDF" on any quote
 - **THEN** the browser downloads a file named `cotizacion-<folioCode>-<folioNumber>.pdf` without opening any preview modal, and no other action button is disabled by this in-flight download
 
-#### Scenario: Imprimir PDF disables while exporting
-- **WHEN** a PDF download triggered by "Imprimir PDF" is in progress
-- **THEN** the "Imprimir PDF" button renders disabled with a loading indicator until the download settles (success or error)
+#### Scenario: Descargar PDF disables while exporting
+- **WHEN** a PDF download triggered by "Descargar PDF" is in progress
+- **THEN** the "Descargar PDF" button renders disabled with a loading indicator until the download settles (success or error)
+
+#### Scenario: Descargar PDF button uses shared icon
+- **WHEN** the "Descargar PDF" button renders in `QuoteActionsBar`
+- **THEN** it shows the `picture_as_pdf` icon provided by the shared `DownloadPdfButton` molecule, replacing the previous `print` icon
 
 ### Requirement: Quote edit screen rejects non-draft state
 The system SHALL provide a screen at `/quotes/[id]/edit` (`QuoteEditPage`) that requires `quotes:write`. The page SHALL render the same cart-based editor as `/quotes/new` pre-hydrated with the quote's items, `notes`, and `expiresAt`. The fields `branchId`, `customerId`, and `folioId` SHALL appear as read-only (`disabled` inputs showing the original values). If the loaded quote has `status !== 'draft'`, the page SHALL render an inline error "Esta cotización ya no es editable" and redirect to `/quotes/[id]` after 2 seconds (no PATCH dispatched). On submit it SHALL dispatch `PATCH /api/v1/admin/quotes/:id`. On HTTP 409 the page SHALL show a toast "Otro usuario cambió el estado de la cotización. Redirigiendo al detalle…" and navigate to `/quotes/[id]`.
@@ -491,4 +495,51 @@ El módulo frontend de cotizaciones (`app/(private)/quotes/_logic/`) SHALL defin
 
 - **WHEN** el servicio recibe HTTP 400 con un error que NO es `FolioScopeMismatch` (e.g. `{"error":"Folio inactive"}`)
 - **THEN** el comportamiento existente se mantiene sin cambios (otros mapeos de error siguen funcionando)
+
+### Requirement: Creación de cotización offline respeta el modo offline habilitado
+El flujo de creación de cotización SHALL consultar el estado `offlineEnabled` del contexto de sincronización offline antes de encolar una cotización cuando se detecta `NetworkError` o `!isOnline()`. Si `offlineEnabled` es `false`, el sistema SHALL impedir el encolado y mostrar un mensaje explícito indicando que debe fijarse una sucursal de trabajo offline antes de cotizar sin conexión, en vez de encolar la cotización bajo un `ownerBranchId` que no coincide con el contexto offline.
+
+#### Scenario: Cotización offline bloqueada para usuario bypass sin sucursal de trabajo fijada
+- **WHEN** un usuario con `branches:access_all` que nunca llamó `fixWorkingBranch` intenta crear una cotización mientras `NetworkError`/`!isOnline()`
+- **THEN** el sistema no encola la cotización, deshabilita o intercepta el submit, y muestra un mensaje explícito de "fija tu sucursal de trabajo antes de cotizar offline"
+
+#### Scenario: Cotización offline permitida con sucursal de trabajo ya fijada
+- **WHEN** un usuario con `branches:access_all` que ya fijó una sucursal de trabajo (o un cajero regular con `branchId` de sesión) intenta crear una cotización mientras `NetworkError`/`!isOnline()`
+- **THEN** el sistema encola la cotización normalmente, sin regresión sobre el comportamiento offline existente
+
+### Requirement: Registro offline de cotización usa el ownerBranchId del contexto de sincronización
+El encolado de una cotización offline SHALL usar el `ownerBranchId` resuelto por el contexto de sincronización offline como clave de scope del registro persistido, en vez de la sucursal seleccionada en el formulario.
+
+#### Scenario: Ítem de cotización encolado siempre visible en el panel de sincronización
+- **WHEN** una cotización se encola offline con `offlineEnabled=true`
+- **THEN** el registro persistido usa el `ownerBranchId` del contexto offline, de forma que aparece siempre en el panel de cola de sincronización y se cuenta en el badge de pendientes, sin excepción
+
+### Requirement: Quote submission queues offline instead of failing
+The quotes submission flow (`useQuoteSubmission`, consumed by both `/quotes/new` and the POS "Cotización" mode) SHALL, when `authFetch` throws `NetworkError` (or the app's `isOnline` state is already `false`), enqueue the quote into the `offline-sync` outbox instead of surfacing a submission error.
+
+#### Scenario: Quote submitted while offline is queued, not rejected
+- **WHEN** a user submits a completed quote cart while offline
+- **THEN** the quote is written to the `outboxQuotes` store with `status: "pending"` and a generated `clientRequestId`, and the confirmation UI shows a provisional state (see "Provisional state display for queued quotes" below) instead of the normal post-creation confirmation
+
+#### Scenario: Genuine validation errors are not swallowed as offline
+- **WHEN** a user submits a quote while online and the server responds with an HTTP 400 (e.g. inactive customer)
+- **THEN** existing online error-handling behavior applies unchanged — the quote is NOT queued, the error is surfaced as before
+
+### Requirement: Provisional state display for queued quotes
+The quote confirmation/detail UI SHALL, for a quote in `outboxQuotes` with `status` other than `"synced"`, display the quote's `provisionalCode` instead of a fiscal folio code, together with copy explaining the quote is pending synchronization.
+
+#### Scenario: Provisional code shown for a queued quote
+- **WHEN** a quote was queued offline and has not yet synced
+- **THEN** the UI shows the `provisionalCode` and a "pendiente de sincronizar" indicator instead of a real folio
+
+#### Scenario: Quote updates to the real folio once synced
+- **WHEN** an outbox quote transitions to `synced`
+- **THEN** the UI updates to show the real `serverFolioCode`
+
+### Requirement: Failed offline quote sync is surfaced without silent loss
+If a queued quote fails to sync for a business reason (e.g. it expired while offline — see `quotes-api`'s "Quote synced offline discovered expired at sync time"), the quotes UI SHALL surface it in the `offline-sync` queue panel with the server's error, without deleting it from the outbox automatically.
+
+#### Scenario: Expired offline quote surfaces its failure reason
+- **WHEN** an offline-queued quote's sync attempt returns HTTP 400 because it expired
+- **THEN** the outbox item transitions to `status: "failed"` with the error stored, remains visible in the sync queue panel, and offers the user the option to edit-and-retry (adjusting `expiresAt`) or discard — it is never silently dropped
 

@@ -52,6 +52,7 @@ export interface CreateSaleData {
   folioId: string;
   notes: string | null;
   quoteId?: string | null;
+  clientRequestId?: string | null;
   paidAmount: number;
   paymentStatus: string;
   subtotal: number;
@@ -78,6 +79,8 @@ export interface EditSaleData {
 export interface SaleRepository {
   findAll(opts: FindAllSalesOptions): Promise<{ items: SaleSummary[]; total: number }>;
   findByIdWithItems(id: string): Promise<SaleSummary | null>;
+  /** Idempotent-replay lookup for offline-created sales (see pos-api "Idempotent replay via clientRequestId"). */
+  findByClientRequestId(clientRequestId: string): Promise<SaleSummary | null>;
   /** Atomic create: assigns folio number, decrements inventory (allowing negative), persists sale + items. */
   createCompleted(data: CreateSaleData): Promise<SaleSummary>;
   /**

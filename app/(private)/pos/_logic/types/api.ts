@@ -86,6 +86,8 @@ export interface CreateSaleBody {
   paymentMethodId: string;
   items: SaleItemInputBody[];
   notes?: string;
+  /** Idempotency key set by `offline-sync` when this sale was queued offline; omitted for online submissions. */
+  clientRequestId?: string;
 }
 
 export interface SaleItemDto {

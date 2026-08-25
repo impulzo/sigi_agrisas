@@ -42,6 +42,7 @@ export interface CreateQuoteData {
   creatorId: string;
   notes: string | null;
   expiresAt: Date | null;
+  clientRequestId?: string | null;
   subtotal: number;
   taxTotal: number;
   total: number;
@@ -72,6 +73,8 @@ export type TxHandle = Prisma.TransactionClient | undefined;
 export interface QuoteRepository {
   findAll(opts: FindAllQuotesOptions): Promise<{ items: QuoteSummary[]; total: number }>;
   findByIdWithItems(id: string): Promise<QuoteSummary | null>;
+  /** Idempotent-replay lookup for offline-created quotes (see quotes-api "Idempotent replay via clientRequestId"). */
+  findByClientRequestId(clientRequestId: string): Promise<QuoteSummary | null>;
   /** Atomic: increments folio + INSERT quote + INSERT items. NEVER touches inventory. */
   createWithItems(data: CreateQuoteData): Promise<QuoteSummary>;
   /** Atomic: DELETE items + INSERT new items + UPDATE totals/notes/expires. */

@@ -5,20 +5,31 @@ import { useRouter } from "next/navigation";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { formatMxCurrency } from "../_logic/lib/formatMxCurrency";
 import type { SaleDetailDto } from "../_logic/types/api";
+import type { OutboxSaleRecord } from "../../../_lib/offline/db";
 
 interface SaleConfirmedModalProps {
-  sale: SaleDetailDto;
+  /** Present for a synced (online or already-synced offline) sale. */
+  sale?: SaleDetailDto | null;
+  /** Present instead of `sale` while the sale is queued offline, not yet synced. */
+  queued?: OutboxSaleRecord | null;
   onNewSale: () => void;
 }
 
-export function SaleConfirmedModal({ sale, onNewSale }: SaleConfirmedModalProps) {
+export function SaleConfirmedModal({ sale, queued, onNewSale }: SaleConfirmedModalProps) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const newSaleBtnRef = useRef<HTMLButtonElement>(null);
 
-  const folioLabel = sale.folioPrefix
-    ? `${sale.folioPrefix}-${sale.folioNumber}`
-    : String(sale.folioNumber);
+  const isQueued = !sale && Boolean(queued);
+  const folioLabel = isQueued
+    ? queued!.provisionalCode
+    : sale?.folioPrefix
+      ? `${sale.folioPrefix}-${sale.folioNumber}`
+      : String(sale?.folioNumber ?? "");
+  const itemsCount = isQueued
+    ? ((queued!.payload.items as unknown[] | undefined)?.length ?? 0)
+    : sale?.items.length ?? 0;
+  const total = isQueued ? queued!.localTotal : sale?.total ?? 0;
 
   useEffect(() => {
     dialogRef.current?.showModal();
@@ -50,20 +61,28 @@ export function SaleConfirmedModal({ sale, onNewSale }: SaleConfirmedModalProps)
       className="w-full max-w-sm rounded-lg bg-surface p-6 shadow-xl text-center backdrop:bg-black/40"
     >
       <div className="flex justify-center mb-4">
-        <span className="text-5xl text-primary">
-          <Icon name="check_circle" size={64} />
+        <span className={isQueued ? "text-5xl text-secondary" : "text-5xl text-primary"}>
+          <Icon name={isQueued ? "sync" : "check_circle"} size={64} />
         </span>
       </div>
 
       <h2 className="text-title-md font-semibold text-on-surface mb-1">
-        ¡Venta registrada!
+        {isQueued ? "Venta guardada — pendiente de sincronizar" : "¡Venta registrada!"}
       </h2>
 
       <p className="text-body-sm text-on-surface-variant mb-4">
-        Folio <strong className="font-mono">{folioLabel}</strong>
+        {isQueued ? "Ticket" : "Folio"} <strong className="font-mono">{folioLabel}</strong>
       </p>
 
-      {sale.creditLimitExceeded === true && (
+      {isQueued && (
+        <div className="mb-4 rounded-md bg-secondary-container/40 text-on-secondary-container px-4 py-2 text-body-sm text-left">
+          Sin conexión: el folio fiscal definitivo se asignará al sincronizar y puede no
+          seguir el orden cronológico de venta. No cierres ni borres datos de este
+          navegador hasta sincronizar.
+        </div>
+      )}
+
+      {!isQueued && sale?.creditLimitExceeded === true && (
         <div className="mb-4 rounded-md bg-error/10 text-error px-4 py-2 text-body-sm text-left">
           Se ha excedido el límite de crédito establecido para este cliente.
         </div>
@@ -73,10 +92,10 @@ export function SaleConfirmedModal({ sale, onNewSale }: SaleConfirmedModalProps)
         <div className="flex justify-between text-body-sm">
           <span className="text-on-surface-variant">Total</span>
           <span className="font-semibold tabular-nums text-on-surface">
-            {formatMxCurrency(sale.total)}
+            {formatMxCurrency(total)}
           </span>
         </div>
-        {sale.customerName && (
+        {!isQueued && sale?.customerName && (
           <div className="flex justify-between text-body-sm">
             <span className="text-on-surface-variant">Cliente</span>
             <span className="text-on-surface">{sale.customerName}</span>
@@ -84,7 +103,7 @@ export function SaleConfirmedModal({ sale, onNewSale }: SaleConfirmedModalProps)
         )}
         <div className="flex justify-between text-body-sm">
           <span className="text-on-surface-variant">Artículos</span>
-          <span className="text-on-surface">{sale.items.length}</span>
+          <span className="text-on-surface">{itemsCount}</span>
         </div>
       </div>
 
@@ -101,13 +120,15 @@ export function SaleConfirmedModal({ sale, onNewSale }: SaleConfirmedModalProps)
         >
           Nueva venta
         </button>
-        <button
-          type="button"
-          onClick={() => router.push(`/sales/${sale.id}`)}
-          className="flex-1 rounded-full bg-primary py-2 text-body-sm font-medium text-on-primary hover:bg-primary/90 transition-colors"
-        >
-          Ver ticket
-        </button>
+        {!isQueued && sale && (
+          <button
+            type="button"
+            onClick={() => router.push(`/sales/${sale.id}`)}
+            className="flex-1 rounded-full bg-primary py-2 text-body-sm font-medium text-on-primary hover:bg-primary/90 transition-colors"
+          >
+            Ver ticket
+          </button>
+        )}
       </div>
     </dialog>
   );

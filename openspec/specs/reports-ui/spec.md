@@ -343,7 +343,7 @@ Los títulos de las páginas de reporte SHALL usar el mismo nivel que el resto d
 
 Todas las tablas de reportes SHALL usar las primitivas `DataTable` (`Table`, `THead`, `TBody`, `Tr`, `Th`, `Td`). Quedan ELIMINADAS las constantes locales de clases de celda (`th`, `td`, `thRight`, `tdRight`) hoy duplicadas en `purchases/_blocks/PurchasesTable.tsx`, `purchases/_blocks/ProviderPaymentsTable.tsx`, `collections/_blocks/global/CollectionsRowsTable.tsx` y `_blocks/PriceListTable.tsx`, así como el padding de celda divergente `px-3 py-3`.
 
-Las tarjetas de totales/KPI SHALL usar la molécula `Card`. Los botones "Exportar PDF" y "Exportar Excel" SHALL usar el átomo `Button` (`variant="filled"` y `variant="outlined"` respectivamente, con `icon`), no `<button>` crudos con clases inline.
+Las tarjetas de totales/KPI SHALL usar la molécula `Card`. Los botones "Exportar Excel" SHALL usar el átomo `Button` (`variant="outlined"`, con `icon="summarize"`), no `<button>` crudos con clases inline. El botón de exportación a PDF de las 8 pantallas SHALL usar el molecule compartido `ExportPdfButton` (`app/_components/molecules/PdfDownloadButton.tsx`), con leyenda fija "Exportar a PDF" e icono `picture_as_pdf` — ninguna pantalla de reportes SHALL implementar su propio botón de exportación a PDF con `Button` inline ni con `<button>` crudo.
 
 #### Scenario: Un reporte y un listado comparten margen
 
@@ -374,6 +374,16 @@ Las tarjetas de totales/KPI SHALL usar la molécula `Card`. Los botones "Exporta
 
 - **WHEN** se navega entre `/reports`, `/reports/account-statements/[customerId]` y `/reports/purchases`
 - **THEN** las tres comparten el mismo ancho máximo de contenido, provisto por `PageShell`
+
+#### Scenario: Botón de exportar PDF uniforme en las 8 pantallas
+
+- **WHEN** se renderiza el botón de exportación a PDF en cualquiera de las 8 pantallas de `/reports/*`
+- **THEN** muestra el icono `picture_as_pdf` y el texto exacto "Exportar a PDF", provisto por el molecule compartido `ExportPdfButton`
+
+#### Scenario: Exportación PDF en curso deshabilita el botón
+
+- **WHEN** una exportación a PDF está en curso en cualquier pantalla de reportes
+- **THEN** el botón "Exportar a PDF" se muestra deshabilitado con indicador de carga hasta que la descarga termina (éxito o error)
 
 ### Requirement: CustomerFilterCombobox exposes an explicit "all customers" option
 

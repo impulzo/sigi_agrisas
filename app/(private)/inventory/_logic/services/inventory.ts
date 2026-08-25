@@ -14,6 +14,8 @@ import {
   NegativeStockNotAllowedError,
   InventoryTargetInvalidError,
 } from "../errors";
+import { isOnline } from "../../../../_lib/offline/connectivity";
+import { getInventoryItemsFromCache } from "../../../../_lib/offline/catalogCache";
 
 export function toInventoryItem(dto: BranchInventoryDto): InventoryItem {
   return {
@@ -55,10 +57,18 @@ export async function listBranchInventory(
   if (trimmed && trimmed.length >= 1) params.set("search", trimmed);
   if (belowReorder) params.set("belowReorder", "true");
 
+  async function fromCache() {
+    const items = await getInventoryItemsFromCache(branchId, search);
+    return { items, total: items.length, page: 1, pageSize: items.length || pageSize };
+  }
+
+  if (!isOnline()) return fromCache();
+
   let res: Response;
   try {
     res = await fetchImpl(`${BASE(branchId)}?${params.toString()}`, { signal });
   } catch (err) {
+    if (err instanceof NetworkError) return fromCache();
     return safeRethrow(err);
   }
   if (!res.ok) throw new NetworkError();

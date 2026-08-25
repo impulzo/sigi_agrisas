@@ -27,6 +27,7 @@ interface QuoteEmitPanelProps {
   isLoadingOptions: boolean;
   isSubmitting: boolean;
   canSubmitCreate: boolean | "loading";
+  offlineBlocked?: boolean;
   onFolioChange: (id: string) => void;
   onBranchChange: (id: string) => void;
   onCustomerChange: (id: string, customer: CustomerDto | null) => void;
@@ -66,6 +67,7 @@ export function QuoteEmitPanel({
   isLoadingOptions,
   isSubmitting,
   canSubmitCreate,
+  offlineBlocked = false,
   onFolioChange,
   onBranchChange,
   onCustomerChange,
@@ -84,7 +86,8 @@ export function QuoteEmitPanel({
     lines.length > 0 &&
     !!selectedFolioId &&
     !!selectedBranchId &&
-    !isSubmitting;
+    !isSubmitting &&
+    !offlineBlocked;
 
   return (
     <div className="flex flex-col h-full">

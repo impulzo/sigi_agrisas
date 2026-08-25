@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sin conexión — Agrisas Panel</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      color: #1a1c1b;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      text-align: center;
+      padding: 24px;
+    }
+    .card { max-width: 360px; }
+    h1 { font-size: 1.25rem; margin-bottom: 8px; }
+    p { font-size: 0.9rem; color: #444; line-height: 1.5; }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      border-radius: 999px;
+      border: none;
+      background: #0d631b;
+      color: #fff;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sin conexión</h1>
+    <p>
+      Esta pantalla no está disponible sin conexión todavía. Si ya usaste el
+      Punto de Venta antes, intenta abrirlo directamente — el catálogo y las
+      ventas pendientes se conservan localmente.
+    </p>
+    <button onclick="location.reload()">Reintentar</button>
+  </div>
+</body>
+</html>

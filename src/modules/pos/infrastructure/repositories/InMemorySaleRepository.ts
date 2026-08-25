@@ -32,6 +32,7 @@ function emptyJoined() {
  */
 export class InMemorySaleRepository implements SaleRepository {
   private store: SaleSummary[] = [];
+  private clientRequestIndex: Map<string, SaleSummary> = new Map();
 
   async findAll(opts: FindAllSalesOptions): Promise<{ items: SaleSummary[]; total: number }> {
     let items = this.store;
@@ -59,6 +60,10 @@ export class InMemorySaleRepository implements SaleRepository {
 
   async findByIdWithItems(id: string): Promise<SaleSummary | null> {
     return this.store.find((s) => s.sale.id === id) ?? null;
+  }
+
+  async findByClientRequestId(clientRequestId: string): Promise<SaleSummary | null> {
+    return this.clientRequestIndex.get(clientRequestId) ?? null;
   }
 
   async createCompleted(data: CreateSaleData): Promise<SaleSummary> {
@@ -112,6 +117,7 @@ export class InMemorySaleRepository implements SaleRepository {
     });
     const summary: SaleSummary = { sale, joined: emptyJoined() };
     this.store.push(summary);
+    if (data.clientRequestId) this.clientRequestIndex.set(data.clientRequestId, summary);
     return summary;
   }
 
@@ -194,6 +200,7 @@ export class InMemorySaleRepository implements SaleRepository {
 
   reset(): void {
     this.store = [];
+    this.clientRequestIndex.clear();
     idCounter = 0;
     itemIdCounter = 0;
     folioCounter = {};

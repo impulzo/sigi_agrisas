@@ -50,7 +50,7 @@ Empty result → `<EmptyState icon="receipt_long" title="No hay facturas" />`.
 ### Requirement: `/billing/[id]` invoice detail
 The system SHALL expose a private route `/billing/[id]` gated by `billing:read` that fetches `GET /api/v1/admin/invoices/:id` via `getInvoice`. It SHALL render a header (folio fiscal `uuid`, `InvoiceStatusBadge`, link a `/sales/[saleId]` cuando `saleId` no es null), `InvoiceItemsTable` (snapshots por línea con `lineSubtotal/lineIva/lineIeps/lineTotal` y totales `subtotal/taxTotal/total`), `InvoiceMetaPanel` (receptor: `receiverRfc/receiverName/receiverCfdiUse/receiverFiscalRegime/receiverTaxZipCode`, `cfdiUse`, `paymentForm`, `paymentMethod`; banner de cancelación con `cancellationMotive`+`cancelledAt` si `status='cancelled'`), y `InvoiceActionsBar`.
 
-`InvoiceActionsBar` SHALL render "Descargar PDF" y "Descargar XML" siempre, y "Cancelar" sólo cuando `status='stamped'` y `can("billing:cancel")`.
+`InvoiceActionsBar` SHALL render "Descargar PDF" (molecule compartido `DownloadPdfButton`, `app/_components/molecules/PdfDownloadButton.tsx`, icono `picture_as_pdf`) y "Descargar XML" siempre, y "Cancelar" sólo cuando `status='stamped'` y `can("billing:cancel")`.
 
 #### Scenario: Render stamped invoice
 - **WHEN** a user with `billing:read` opens `/billing/[id]` of a `stamped` invoice
@@ -67,6 +67,10 @@ The system SHALL expose a private route `/billing/[id]` gated by `billing:read` 
 #### Scenario: Branch scope violation
 - **WHEN** the backend responds 403 for an invoice outside the user's branch
 - **THEN** the page SHALL render an access-denied message
+
+#### Scenario: Download PDF button uses shared icon
+- **WHEN** the "Descargar PDF" button renders on `/billing/[id]`
+- **THEN** it shows the `picture_as_pdf` icon provided by the shared `DownloadPdfButton` molecule
 
 ---
 
@@ -218,7 +222,7 @@ Because the payload carries no `saleId`, the request SHALL reach the backend sta
 - **THEN** the form blocks submission, shows an inline error on that line, and does NOT call `POST /invoices`
 
 ### Requirement: Invoice preview before stamping
-Both emission forms (`StampSaleForm` and `PartialInvoiceForm`, under `/billing/new`) SHALL render a "Vista previa" button. Clicking it SHALL open `InvoicePreviewModal` (a native `<dialog>`, following the same open/close pattern as `CancelInvoiceModal`) showing: the Agrisas logo (`/logo.png`), a folio placeholder "PENDIENTE DE TIMBRAR", a visible badge "BORRADOR — no válido fiscalmente", the receiver's fiscal data, the line items with per-line and aggregate totals computed client-side via `computeInvoiceTotalsClient`, and three actions: "Volver a editar" (closes the modal without side effects), "Descargar PDF" (downloads the currently-displayed preview as a PDF via `POST /api/v1/admin/invoices/preview/pdf`, sending the same `InvoicePreviewData` already rendered on screen — no side effects, no Facturama call), and "Timbrar ahora" (invokes the same existing `submit()` used by the form's real "Emitir factura" action — it SHALL NOT call Facturama or persist anything on its own).
+Both emission forms (`StampSaleForm` and `PartialInvoiceForm`, under `/billing/new`) SHALL render a "Vista previa" button. Clicking it SHALL open `InvoicePreviewModal` (a native `<dialog>`, following the same open/close pattern as `CancelInvoiceModal`) showing: the Agrisas logo (`/logo.png`), a folio placeholder "PENDIENTE DE TIMBRAR", a visible badge "BORRADOR — no válido fiscalmente", the receiver's fiscal data, the line items with per-line and aggregate totals computed client-side via `computeInvoiceTotalsClient`, and three actions: "Volver a editar" (closes the modal without side effects), "Descargar PDF" (molecule compartido `DownloadPdfButton`, icono `picture_as_pdf` — downloads the currently-displayed preview as a PDF via `POST /api/v1/admin/invoices/preview/pdf`, sending the same `InvoicePreviewData` already rendered on screen — no side effects, no Facturama call), and "Timbrar ahora" (invokes the same existing `submit()` used by the form's real "Emitir factura" action — it SHALL NOT call Facturama or persist anything on its own).
 
 For `PartialInvoiceForm`, the preview data SHALL be built entirely from data already present in the form's local state (customer, lines, payment form/method) — no network request SHALL be made to open the preview.
 
@@ -265,6 +269,10 @@ The preview SHALL never introduce a persisted draft state: `Invoice.status` rema
 #### Scenario: Download failure shown inline
 - **WHEN** `POST /api/v1/admin/invoices/preview/pdf` fails (network error or non-200)
 - **THEN** the modal shows an inline error near the "Descargar PDF" button without closing or clearing the preview, and the error message reflects the backend's actual reason (e.g. a validation detail) rather than a generic connectivity message whenever the backend returned a structured error body
+
+#### Scenario: Preview download button uses shared icon
+- **WHEN** the "Descargar PDF" button renders inside `InvoicePreviewModal`
+- **THEN** it shows the `picture_as_pdf` icon provided by the shared `DownloadPdfButton` molecule, same icon as `/billing/[id]`
 
 ### Requirement: CSD management `/billing/csd`
 The system SHALL expose a private route `/billing/csd` gated by `billing:manage_csd` (admin only). `CsdManagerPage` SHALL display the current CSD status (`GET /api/v1/admin/billing/csd` via `getCsdStatus`) and a form to upload/replace a CSD: `rfc`, a `.cer` file, a `.key` file, and `privateKeyPassword`. Files SHALL be converted to base64 client-side (`FileReader`) and submitted via `POST /api/v1/admin/billing/csd` (`uploadCsd`). The password SHALL NOT be persisted in client storage.

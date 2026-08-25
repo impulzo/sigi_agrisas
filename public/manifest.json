@@ -1,0 +1,14 @@
+{
+  "name": "Agrisas Panel",
+  "short_name": "Agrisas",
+  "description": "Panel de gestión Agrisas — ventas, cotizaciones e inventario, con soporte offline.",
+  "start_url": "/pos",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#77574d",
+  "icons": [
+    { "src": "/logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

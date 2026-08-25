@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 jest.mock("../../../../../../app/_components/molecules/SegmentedButton/SegmentedButton", () => ({
   SegmentedButton: ({ value, options, onChange, "aria-label": ariaLabel }: {
@@ -37,6 +37,33 @@ jest.mock("../../../../../../app/_components/molecules/ConfirmDialog/ConfirmDial
         <button onClick={onCancel}>Cancelar</button>
       </div>
     ) : null,
+}));
+
+const mockFixWorkingBranch = jest.fn();
+const mockOfflineSyncValue: {
+  isOnline: boolean;
+  offlineEnabled: boolean;
+  ownerBranchId: string | null;
+  blockedByPendingOutbox: boolean;
+  pendingCount: number;
+  syncing: boolean;
+  catalogStalenessMs: number | null;
+  refreshCatalogNow: () => Promise<void>;
+  fixWorkingBranch: (branchId: string) => Promise<void>;
+} = {
+  isOnline: true,
+  offlineEnabled: false,
+  ownerBranchId: null,
+  blockedByPendingOutbox: false,
+  pendingCount: 0,
+  syncing: false,
+  catalogStalenessMs: null,
+  refreshCatalogNow: jest.fn(),
+  fixWorkingBranch: mockFixWorkingBranch,
+};
+
+jest.mock("../../../../../../app/(private)/_blocks/OfflineSyncProvider", () => ({
+  useOfflineSync: () => mockOfflineSyncValue,
 }));
 
 import { PosHeader } from "../../../../../../app/(private)/pos/_blocks/PosHeader";
@@ -136,5 +163,39 @@ describe("PosHeader — SegmentedButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(onModeChange).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("PosHeader — fijar sucursal offline", () => {
+  beforeEach(() => {
+    mockFixWorkingBranch.mockReset();
+    mockOfflineSyncValue.isOnline = true;
+    mockOfflineSyncValue.ownerBranchId = null;
+  });
+
+  it("muestra el mensaje de error cuando fixWorkingBranch rechaza", async () => {
+    mockFixWorkingBranch.mockRejectedValue(
+      new Error("No se puede cambiar de sucursal de trabajo: hay ventas o cotizaciones sin sincronizar.")
+    );
+    render(<PosHeader {...baseProps} isBypass={true} canQuote={false} mode="sale" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Fijar sucursal offline" }));
+
+    expect(
+      await screen.findByText("No se puede cambiar de sucursal de trabajo: hay ventas o cotizaciones sin sincronizar.")
+    ).toBeInTheDocument();
+  });
+
+  it("limpia el mensaje de error tras un intento exitoso posterior", async () => {
+    mockFixWorkingBranch.mockRejectedValueOnce(new Error("hay pendientes"));
+    render(<PosHeader {...baseProps} isBypass={true} canQuote={false} mode="sale" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Fijar sucursal offline" }));
+    expect(await screen.findByText("hay pendientes")).toBeInTheDocument();
+
+    mockFixWorkingBranch.mockResolvedValueOnce(undefined);
+    fireEvent.click(screen.getByRole("button", { name: "Fijar sucursal offline" }));
+
+    await waitFor(() => expect(screen.queryByText("hay pendientes")).not.toBeInTheDocument());
   });
 });

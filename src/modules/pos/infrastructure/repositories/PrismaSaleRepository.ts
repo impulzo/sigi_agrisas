@@ -255,6 +255,19 @@ export class PrismaSaleRepository implements SaleRepository {
     return summary;
   }
 
+  async findByClientRequestId(clientRequestId: string): Promise<SaleSummary | null> {
+    const row = await this.prisma.sale.findUnique({
+      where: { clientRequestId },
+      include: includeJoins,
+    });
+    if (!row) return null;
+
+    const summary = toSummary(row as unknown as PrismaSaleWithJoins);
+    const saleItemIds = summary.sale.items.map((i) => i.id);
+    summary.returnedQuantityBySaleItem = await this.aggregateReturnedQty(saleItemIds);
+    return summary;
+  }
+
   private async aggregateReturnedQty(saleItemIds: string[]): Promise<Record<string, number>> {
     if (saleItemIds.length === 0) return {};
     type Row = { sale_item_id: string; total: number };
@@ -326,6 +339,7 @@ export class PrismaSaleRepository implements SaleRepository {
           cashierId: data.cashierId,
           paymentMethodId: data.paymentMethodId,
           quoteId: data.quoteId ?? null,
+          clientRequestId: data.clientRequestId ?? null,
           status: "completed",
           paidAmount: new Prisma.Decimal(data.paidAmount),
           paymentStatus: data.paymentStatus,
@@ -400,6 +414,7 @@ export class PrismaSaleRepository implements SaleRepository {
           cashierId: data.cashierId,
           paymentMethodId: data.paymentMethodId,
           quoteId: data.quoteId,
+          clientRequestId: data.clientRequestId ?? null,
           status: "completed",
           paidAmount: new Prisma.Decimal(data.paidAmount),
           paymentStatus: data.paymentStatus,

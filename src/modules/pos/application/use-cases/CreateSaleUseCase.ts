@@ -34,6 +34,20 @@ export class CreateSaleUseCase {
   ) {}
 
   async execute(req: CreateSaleRequest, cashierId: string): Promise<CreateSaleResult> {
+    // 0. Idempotent replay: a repeated clientRequestId (e.g. an offline-sync outbox
+    //    retry after a lost response) short-circuits before any other validation —
+    //    no re-validation, no folio allocation, no inventory decrement.
+    if (req.clientRequestId) {
+      const existing = await this.saleRepo.findByClientRequestId(req.clientRequestId);
+      if (existing) {
+        return {
+          dto: toSaleDetailDto(existing.sale, existing.joined),
+          branchId: existing.sale.branchId,
+          creditLimitExceeded: false,
+        };
+      }
+    }
+
     if (!req.items || req.items.length === 0) throw new EmptySaleError();
 
     // 1. Validate header resources
@@ -205,6 +219,7 @@ export class CreateSaleUseCase {
           paymentMethodId: req.paymentMethodId,
           folioId: req.folioId,
           notes: req.notes ?? null,
+          clientRequestId: req.clientRequestId ?? null,
           paidAmount,
           paymentStatus,
           subtotal: totals.subtotal,
@@ -219,6 +234,7 @@ export class CreateSaleUseCase {
           paymentMethodId: req.paymentMethodId,
           folioId: req.folioId,
           notes: req.notes ?? null,
+          clientRequestId: req.clientRequestId ?? null,
           paidAmount,
           paymentStatus,
           subtotal: totals.subtotal,

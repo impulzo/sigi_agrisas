@@ -198,6 +198,14 @@ export class PrismaQuoteRepository implements QuoteRepository {
     return row ? toSummary(row as unknown as PrismaQuoteWithJoins) : null;
   }
 
+  async findByClientRequestId(clientRequestId: string): Promise<QuoteSummary | null> {
+    const row = await this.prisma.quote.findUnique({
+      where: { clientRequestId },
+      include: includeJoins,
+    });
+    return row ? toSummary(row as unknown as PrismaQuoteWithJoins) : null;
+  }
+
   async createWithItems(data: CreateQuoteData): Promise<QuoteSummary> {
     const quoteId = randomUUID();
 
@@ -209,7 +217,7 @@ export class PrismaQuoteRepository implements QuoteRepository {
       await tx.$executeRaw`
         INSERT INTO quotes (
           id, folio_id, folio_number, folio_code, branch_id, customer_id, creator_id,
-          status, subtotal, tax_total, total, notes, expires_at, updated_at
+          status, subtotal, tax_total, total, notes, expires_at, client_request_id, updated_at
         ) VALUES (
           ${quoteId}::text,
           ${data.folioId}::text,
@@ -224,6 +232,7 @@ export class PrismaQuoteRepository implements QuoteRepository {
           ${new Prisma.Decimal(data.total)}::decimal,
           ${data.notes ?? null}::text,
           ${data.expiresAt ?? null}::timestamp,
+          ${data.clientRequestId ?? null}::text,
           NOW()
         )
       `;

@@ -44,6 +44,7 @@ describe("CancelSaleUseCase", () => {
     const cancel = jest.fn().mockResolvedValue(makeSummary("cancelled", { reason: "test" }));
     const repo: SaleRepository = {
       findAll: jest.fn(),
+      findByClientRequestId: jest.fn(),
       findByIdWithItems: jest.fn().mockResolvedValue(makeSummary("completed")),
       createCompleted: jest.fn(),
       createCompletedFromQuote: jest.fn(),
@@ -59,6 +60,7 @@ describe("CancelSaleUseCase", () => {
   it("propaga branchId del repo (para que el controller aplique scoping)", async () => {
     const repo: SaleRepository = {
       findAll: jest.fn(),
+      findByClientRequestId: jest.fn(),
       findByIdWithItems: jest.fn().mockResolvedValue(makeSummary("completed")),
       createCompleted: jest.fn(),
       createCompletedFromQuote: jest.fn(),
@@ -73,6 +75,7 @@ describe("CancelSaleUseCase", () => {
   it("lanza SaleNotFoundError cuando el repo no devuelve la venta", async () => {
     const repo: SaleRepository = {
       findAll: jest.fn(),
+      findByClientRequestId: jest.fn(),
       findByIdWithItems: jest.fn().mockResolvedValue(null),
       createCompleted: jest.fn(),
       createCompletedFromQuote: jest.fn(),
@@ -89,6 +92,7 @@ describe("CancelSaleUseCase", () => {
     const cancel = jest.fn().mockResolvedValue(makeSummary("cancelled", { reason: "primera vez" }));
     const repo: SaleRepository = {
       findAll: jest.fn(),
+      findByClientRequestId: jest.fn(),
       findByIdWithItems: jest.fn().mockResolvedValue(makeSummary("cancelled", { reason: "primera vez" })),
       createCompleted: jest.fn(),
       createCompletedFromQuote: jest.fn(),
@@ -105,6 +109,7 @@ describe("CancelSaleUseCase", () => {
     const cancel = jest.fn().mockResolvedValue(makeSummary("cancelled"));
     const repo: SaleRepository = {
       findAll: jest.fn(),
+      findByClientRequestId: jest.fn(),
       findByIdWithItems: jest.fn().mockResolvedValue(makeSummary("completed")),
       createCompleted: jest.fn(),
       createCompletedFromQuote: jest.fn(),
@@ -119,6 +124,7 @@ describe("CancelSaleUseCase", () => {
   it("propaga SaleHasActivePaymentsError cuando el repo la lanza", async () => {
     const repo: SaleRepository = {
       findAll: jest.fn(),
+      findByClientRequestId: jest.fn(),
       findByIdWithItems: jest.fn().mockResolvedValue(makeSummary("completed")),
       createCompleted: jest.fn(),
       createCompletedFromQuote: jest.fn(),
@@ -132,6 +138,7 @@ describe("CancelSaleUseCase", () => {
   it("lanza ReturnedTotalSaleNotCancellableError cuando sale tiene status returned_total", async () => {
     const repo: SaleRepository = {
       findAll: jest.fn(),
+      findByClientRequestId: jest.fn(),
       findByIdWithItems: jest.fn().mockResolvedValue(makeSummary("returned_total")),
       createCompleted: jest.fn(),
       createCompletedFromQuote: jest.fn(),
@@ -147,6 +154,7 @@ describe("CancelSaleUseCase", () => {
   it("no falla la cancelación aunque el notificador rechace", async () => {
     const repo: SaleRepository = {
       findAll: jest.fn(),
+      findByClientRequestId: jest.fn(),
       findByIdWithItems: jest.fn().mockResolvedValue(makeSummary("completed")),
       createCompleted: jest.fn(),
       createCompletedFromQuote: jest.fn(),

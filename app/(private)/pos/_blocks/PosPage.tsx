@@ -11,6 +11,7 @@ import { useSaleSubmission } from "../_logic/hooks/useSaleSubmission";
 import { useQuoteSubmission } from "../_logic/hooks/useQuoteSubmission";
 import { usePosKeyboard } from "../_logic/hooks/usePosKeyboard";
 import { canSubmitCart } from "../_logic/lib/canSubmitCart";
+import { useOfflineSync } from "../../_blocks/OfflineSyncProvider";
 import { getProductPrices } from "../_logic/services/getProductPrices";
 import { getProductDosifications } from "../_logic/services/getProductDosifications";
 import { PosHeader } from "./PosHeader";
@@ -19,13 +20,14 @@ import { CartPanel } from "./CartPanel";
 import { PriceTierPicker } from "./PriceTierPicker";
 import { CustomerQuickAddModal } from "./CustomerQuickAddModal";
 import { SaleConfirmedModal } from "./SaleConfirmedModal";
+import { QuoteQueuedModal } from "./QuoteQueuedModal";
 import { PosShortcutsOverlay } from "./PosShortcutsOverlay";
 import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog/ConfirmDialog";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import type { ProductDto, ProductPriceDto, DosificationOptionDto, CustomerDto, BranchOption } from "../_logic/types/api";
 
-type Modal = "pricePicker" | "quickAdd" | "confirmed" | "shortcuts" | "clearCart" | null;
+type Modal = "pricePicker" | "quickAdd" | "confirmed" | "quoteQueued" | "shortcuts" | "clearCart" | null;
 type PosMode = "sale" | "quote";
 
 interface PricePicker {
@@ -42,6 +44,7 @@ export function PosPage() {
   const canCreate = can("sales:create");
   const canQuote = can("quotes:create");
   const isBypass = can("branches:access_all");
+  const { isOnline, offlineEnabled, ownerBranchId } = useOfflineSync();
 
   const { options: folios, isLoading: foliosLoading } = useFoliosOptions({ scope: "POS" });
   const { options: paymentMethods, isLoading: pmLoading } = usePaymentMethodsOptions();
@@ -58,8 +61,22 @@ export function PosPage() {
     clear,
   } = useCart(dosificationSurchargePct);
 
-  const { status: saleStatus, sale, error: saleError, submit: submitSale, reset: resetSale } = useSaleSubmission();
-  const { status: quoteStatus, quote, error: quoteError, submit: submitQuote, reset: resetQuote } = useQuoteSubmission();
+  const {
+    status: saleStatus,
+    sale,
+    queuedSale,
+    error: saleError,
+    submit: submitSale,
+    reset: resetSale,
+  } = useSaleSubmission();
+  const {
+    status: quoteStatus,
+    quote,
+    queuedQuote,
+    error: quoteError,
+    submit: submitQuote,
+    reset: resetQuote,
+  } = useQuoteSubmission();
 
   const [mode, setMode] = useState<PosMode>(() =>
     canCreate === false && canQuote === true ? "quote" : "sale"
@@ -91,6 +108,9 @@ export function PosPage() {
     selectedPaymentMethodId,
     isQuoteMode,
     isSubmitting,
+    isOnline,
+    offlineEnabled,
+    ownerBranchId,
   });
 
   // If user only has quotes:create and not sales:create, force quote mode
@@ -127,19 +147,22 @@ export function PosPage() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [lines.length]);
 
-  // Handle sale success
+  // Handle sale success (online or queued offline)
   useEffect(() => {
-    if (saleStatus === "succeeded" && sale) {
+    if ((saleStatus === "succeeded" && sale) || (saleStatus === "queued-offline" && queuedSale)) {
       setModal("confirmed");
     }
-  }, [saleStatus, sale]);
+  }, [saleStatus, sale, queuedSale]);
 
-  // Handle quote success → redirect
+  // Handle quote success → redirect (online) or show provisional confirmation (offline)
   useEffect(() => {
     if (quoteStatus === "succeeded" && quote) {
       router.push(`/quotes/${quote.id}`);
     }
-  }, [quoteStatus, quote, router]);
+    if (quoteStatus === "queued-offline" && queuedQuote) {
+      setModal("quoteQueued");
+    }
+  }, [quoteStatus, quote, queuedQuote, router]);
 
   // Restore focus when modal closes
   useEffect(() => {
@@ -255,6 +278,16 @@ export function PosPage() {
     setModal(null);
   }
 
+  function handleNewQuote() {
+    clear();
+    resetQuote();
+    setSelectedFolioId("");
+    setSelectedCustomerId("");
+    setNotes("");
+    setExpiresAt("");
+    setModal(null);
+  }
+
   const submitError = mode === "quote" ? quoteError : saleError;
 
   // Access guard: user must have at least sales:create OR quotes:create
@@ -329,6 +362,9 @@ export function PosPage() {
             isLoadingOptions={foliosLoading || pmLoading}
             isSubmitting={isSubmitting}
             canCreate={mode === "quote" ? canQuote : canCreate}
+            isOnline={isOnline}
+            offlineEnabled={offlineEnabled}
+            ownerBranchId={ownerBranchId}
             mode={mode}
             expiresAt={expiresAt}
             onFolioChange={setSelectedFolioId}
@@ -366,11 +402,16 @@ export function PosPage() {
         />
       )}
 
-      {modal === "confirmed" && sale && (
+      {modal === "confirmed" && (sale || queuedSale) && (
         <SaleConfirmedModal
           sale={sale}
+          queued={queuedSale}
           onNewSale={handleNewSale}
         />
+      )}
+
+      {modal === "quoteQueued" && queuedQuote && (
+        <QuoteQueuedModal queued={queuedQuote} onNewQuote={handleNewQuote} />
       )}
 
       {modal === "shortcuts" && (

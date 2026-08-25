@@ -76,6 +76,7 @@ function makeSummary(overrides: { customerId?: string | null } = {}): SaleSummar
 function makeSaleRepo(summary: SaleSummary | null): SaleRepository {
   return {
     findAll: jest.fn(),
+    findByClientRequestId: jest.fn(),
     findByIdWithItems: jest.fn().mockResolvedValue(summary),
     createCompleted: jest.fn(),
     createCompletedFromQuote: jest.fn(),

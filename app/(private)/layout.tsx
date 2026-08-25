@@ -5,6 +5,7 @@ import { NavigationRail } from "../_components/organisms/NavigationRail/Navigati
 import { TopAppBar } from "../_components/organisms/TopAppBar/TopAppBar";
 import { MaterialSymbolsLoader } from "../_components/organisms/MaterialSymbolsLoader/MaterialSymbolsLoader";
 import { SessionLifecycleProvider } from "./_blocks/SessionLifecycleProvider";
+import { OfflineSyncProvider } from "./_blocks/OfflineSyncProvider";
 
 export default function PrivateLayout({ children }: { children: ReactNode }) {
   const refreshToken = cookies().get("refreshToken")?.value;
@@ -22,7 +23,9 @@ export default function PrivateLayout({ children }: { children: ReactNode }) {
       <NavigationRail />
       <TopAppBar userName={userName} userEmail={userEmail} />
       <main className="pl-20 pt-16 h-full overflow-y-auto">
-        <SessionLifecycleProvider>{children}</SessionLifecycleProvider>
+        <SessionLifecycleProvider>
+          <OfflineSyncProvider>{children}</OfflineSyncProvider>
+        </SessionLifecycleProvider>
       </main>
     </div>
   );

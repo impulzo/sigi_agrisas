@@ -35,6 +35,9 @@ interface CartPanelProps {
   isLoadingOptions: boolean;
   isSubmitting: boolean;
   canCreate: boolean | "loading";
+  isOnline: boolean;
+  offlineEnabled: boolean;
+  ownerBranchId: string | null;
   mode?: PosMode;
   expiresAt?: string;
   onFolioChange: (id: string) => void;
@@ -64,6 +67,9 @@ export function CartPanel({
   isLoadingOptions,
   isSubmitting,
   canCreate,
+  isOnline,
+  offlineEnabled,
+  ownerBranchId,
   mode = "sale",
   expiresAt = "",
   onFolioChange,
@@ -89,6 +95,9 @@ export function CartPanel({
     selectedPaymentMethodId,
     isQuoteMode,
     isSubmitting,
+    isOnline,
+    offlineEnabled,
+    ownerBranchId,
   });
 
   return (

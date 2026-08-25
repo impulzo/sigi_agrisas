@@ -103,6 +103,7 @@ function makeSaleRepo(summary: SaleSummary | null = makeSaleSummary()): SaleRepo
   return {
     findAll: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findByIdWithItems: jest.fn().mockResolvedValue(summary),
+    findByClientRequestId: jest.fn().mockResolvedValue(null),
     createCompleted: jest.fn(),
     createCompletedFromQuote: jest.fn(),
     cancel: jest.fn(),

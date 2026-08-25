@@ -72,6 +72,7 @@ function makeRepo(overrides?: Partial<SaleRepository>): SaleRepository {
   return {
     findAll: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findByIdWithItems: jest.fn().mockResolvedValue(makeSummary("completed")),
+    findByClientRequestId: jest.fn().mockResolvedValue(null),
     createCompleted: jest.fn().mockResolvedValue(makeSummary("completed")),
     createCompletedFromQuote: jest.fn().mockResolvedValue(makeSummary("completed")),
     cancel: jest.fn().mockResolvedValue(makeSummary("cancelled")),
@@ -141,6 +142,7 @@ function makeQuoteRepo(overrides?: Partial<QuoteRepository>): QuoteRepository {
   return {
     findAll: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findByIdWithItems: jest.fn().mockResolvedValue(null),
+    findByClientRequestId: jest.fn().mockResolvedValue(null),
     createWithItems: jest.fn(),
     replaceItemsAndRecalculate: jest.fn(),
     updateMeta: jest.fn(),

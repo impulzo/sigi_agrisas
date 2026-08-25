@@ -8,6 +8,19 @@ jest.mock("../../../../../app/_hooks/useCurrentUser");
 jest.mock("../../../../../app/(private)/inventory/_logic/hooks/useBranchInventory");
 jest.mock("../../../../../app/_hooks/useBranchesOptions");
 jest.mock("../../../../../app/(private)/inventory/_logic/hooks/useInventoryMutations");
+jest.mock("../../../../../app/(private)/_blocks/OfflineSyncProvider", () => ({
+  useOfflineSync: () => ({
+    isOnline: true,
+    offlineEnabled: false,
+    ownerBranchId: null,
+    blockedByPendingOutbox: false,
+    pendingCount: 0,
+    syncing: false,
+    catalogStalenessMs: null,
+    refreshCatalogNow: jest.fn(),
+    fixWorkingBranch: jest.fn(),
+  }),
+}));
 
 import { useCurrentUser } from "../../../../../app/_hooks/useCurrentUser";
 import * as useBranchInventoryModule from "../../../../../app/(private)/inventory/_logic/hooks/useBranchInventory";

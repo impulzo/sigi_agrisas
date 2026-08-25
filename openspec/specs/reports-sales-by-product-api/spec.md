@@ -60,7 +60,7 @@ El endpoint SHALL aceptar `?format=pdf` o `?format=xlsx` para exportar, ignorand
 ### Requirement: Sales-by-product report PDF and Excel artifacts
 El endpoint SHALL aceptar `?format=json` (default), `?format=pdf` o `?format=xlsx`. Con `pdf`, SHALL responder `200 application/pdf` generado con `@react-pdf/renderer`, incluyendo encabezado (periodo, filtros, `generatedBy`), `totals` y la tabla de detalle. Con `xlsx`, SHALL responder `200 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (`xlsx`/SheetJS) con una única hoja "Detalle" (Departamento/Producto/Cliente/Cantidad/Monto) más totales. Ambos formatos SHALL responder con `Content-Disposition: attachment`. Un `format` distinto de `json`/`pdf`/`xlsx` SHALL responder `400 {"error":"Invalid format. Allowed: json, pdf, xlsx"}`.
 
-El header del PDF SHALL incluir el logo del negocio (tamaño reducido), resuelto desde `TicketSettings.logoUrl` con fallback al logo por defecto. Los colores de tabla SHALL provenir de la paleta de marca compartida (`pdfTheme`).
+El header del PDF SHALL incluir el logo del negocio (tamaño reducido), la razón social (si está configurada), la dirección y el RFC del negocio, resueltos vía `toPdfIssuer` — mismo mecanismo de resolución y fallback que el logo. Cuando dirección o RFC sean `null`, el header SHALL omitir esa línea. Los colores de tabla SHALL provenir de la paleta de marca compartida (`pdfTheme`).
 
 #### Scenario: Export PDF
 - **WHEN** un usuario con permiso agrega `?format=pdf`
@@ -77,6 +77,10 @@ El header del PDF SHALL incluir el logo del negocio (tamaño reducido), resuelto
 #### Scenario: PDF incluye logo del negocio
 - **WHEN** un usuario con permiso agrega `?format=pdf`
 - **THEN** el header del PDF incluye el logo del negocio (o el fallback por defecto)
+
+#### Scenario: PDF incluye dirección y RFC del negocio
+- **WHEN** un usuario con permiso agrega `?format=pdf` y `TicketSettings.businessAddress`/`businessRfc` tienen valor
+- **THEN** el header muestra ambos datos junto al logo, sin desplazar `totals` ni la tabla de detalle
 
 ### Requirement: Branch scoping for sales-by-product report
 El endpoint SHALL aplicar `resolveScopedBranchId(req, filters.branchId, authz)`. Sin `branches:access_all`, `rows` y `totals` SHALL limitarse a `branch_id = x-user-branch-id`.
