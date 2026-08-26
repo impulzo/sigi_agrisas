@@ -100,7 +100,7 @@ export function QuoteEditPage({ id }: QuoteEditPageProps) {
   }, [quote, id, router]);
 
   async function handleAddProduct(product: ProductDto) {
-    const prices = await getProductPrices(product.id);
+    const prices = await getProductPrices(product.id, quote?.branchId ?? null);
     setPricePicker({ product, prices, isLoading: false });
     setModal("pricePicker");
   }
@@ -122,7 +122,7 @@ export function QuoteEditPage({ id }: QuoteEditPageProps) {
     };
     setPricePicker({ product: fakeProduct, prices: [], isLoading: true, lineId });
     setModal("pricePicker");
-    getProductPrices(line.productId).then((prices) => {
+    getProductPrices(line.productId, quote?.branchId ?? null).then((prices) => {
       setPricePicker((prev) => prev ? { ...prev, prices, isLoading: false } : null);
     });
   }

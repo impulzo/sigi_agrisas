@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { useCurrentUser } from "../../_hooks/useCurrentUser";
 import { useOnlineStatus } from "../../_lib/offline/connectivity";
 import { resolveBranchScope, fixWorkingBranch as fixWorkingBranchLib } from "../../_lib/offline/branchScope";
-import { refreshCatalogCache, getCatalogStalenessMs } from "../../_lib/offline/catalogCache";
+import { refreshCatalogCache, getCatalogStalenessMs, AUTO_REFRESH_MIN_INTERVAL_MS } from "../../_lib/offline/catalogCache";
 import { countPending } from "../../_lib/offline/outbox";
 import { runSyncPass, startAutoSync, onSyncChange, isSyncing } from "../../_lib/offline/syncEngine";
 
@@ -80,8 +80,10 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
     if (!offlineEnabled || !ownerBranchId) return;
 
     let cancelled = false;
-    const tryRefresh = () => {
+    const tryRefresh = async () => {
       if (!navigator.onLine) return;
+      const staleness = await getCatalogStalenessMs();
+      if (staleness !== null && staleness < AUTO_REFRESH_MIN_INTERVAL_MS) return;
       refreshCatalogCache(ownerBranchId)
         .then(async () => {
           if (!cancelled) await refreshStaleness();

@@ -192,7 +192,7 @@ export function PosPage() {
     lastFocusedRef.current = document.activeElement as HTMLElement;
     // Dosification lines are not supported by the quotes module (out of scope) — only offered in sale mode.
     const [prices, dosifications] = await Promise.all([
-      getProductPrices(product.id),
+      getProductPrices(product.id, selectedBranchId || null),
       isQuoteMode ? Promise.resolve([]) : getProductDosifications(product.id),
     ]);
     setPricePicker({ product, prices, dosifications, isLoading: false });
@@ -217,7 +217,7 @@ export function PosPage() {
     };
     setPricePicker({ product: fakeProduct, prices: [], dosifications: [], isLoading: true, lineId });
     setModal("pricePicker");
-    getProductPrices(line.productId).then((prices) => {
+    getProductPrices(line.productId, selectedBranchId || null).then((prices) => {
       setPricePicker((prev) => prev ? { ...prev, prices, isLoading: false } : null);
     });
   }

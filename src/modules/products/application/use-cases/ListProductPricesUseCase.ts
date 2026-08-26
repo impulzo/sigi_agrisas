@@ -14,11 +14,13 @@ export class ListProductPricesUseCase {
   ) {}
 
   async execute(productId: string, branchId?: string): Promise<ListProductPricesResponse> {
-    const product = await this.productRepo.findById(productId);
-    if (!product) throw new ProductNotFoundError(productId);
+    const [exists, branch] = await Promise.all([
+      this.productRepo.exists(productId),
+      branchId && this.branchRepo ? this.branchRepo.findById(branchId) : Promise.resolve(null),
+    ]);
+    if (!exists) throw new ProductNotFoundError(productId);
 
     if (branchId) {
-      const branch = this.branchRepo ? await this.branchRepo.findById(branchId) : null;
       if (!branch) throw new ProductPriceBranchNotFoundError(branchId);
       const prices = await this.priceRepo.findEffectiveForBranch(productId, branchId);
       return { items: prices.map(toProductPriceDto) };

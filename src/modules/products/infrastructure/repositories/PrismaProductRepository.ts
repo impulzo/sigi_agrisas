@@ -139,6 +139,11 @@ export class PrismaProductRepository implements ProductRepository {
     return toProductWithDepartment(row, null, unitMap.get(row.unit) ?? null);
   }
 
+  async exists(id: string): Promise<boolean> {
+    const row = await this.prisma.product.findUnique({ where: { id }, select: { id: true } });
+    return row !== null;
+  }
+
   async create(data: CreateProductData): Promise<ProductWithDepartment> {
     try {
       const row = await this.prisma.product.create({

@@ -77,6 +77,10 @@ export class InMemoryProductRepository implements ProductRepository {
     return found ? this.wrap(found) : null;
   }
 
+  async exists(id: string): Promise<boolean> {
+    return this.store.some((p) => p.id === id);
+  }
+
   async create(data: CreateProductData): Promise<ProductWithDepartment> {
     if (this.store.some((p) => p.code === data.code)) {
       throw new ProductCodeAlreadyInUseError(data.code);
