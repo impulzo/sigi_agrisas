@@ -138,7 +138,9 @@ The system SHALL provide a detail screen at `/catalogs/products/[id]` reachable 
 - **THEN** the General tab fields are disabled and the "Guardar cambios" button is not rendered
 
 ### Requirement: Product prices management in the Precios tab
-The "Precios" tab SHALL list the product's prices via `GET /api/v1/admin/products/:id/prices` in a table with columns: `Nombre`, `Precio` (currency), `Cantidad mín.` (`minQuantity`), `Descuento` (`discountPct` as `"%"` or `"—"`), `Default` (a badge on the default row), and `Acciones`. A "Nuevo precio" button (gated by `products:write`) SHALL open a `ProductPriceModal` for creation; rows SHALL offer "Editar" and "Eliminar" (hard delete with `ConfirmDialog`). The modal SHALL validate `name` (required), `price >= 0`, `minQuantity >= 1`, `discountPct` 0–100 (or empty → null), and `isDefault` (boolean). After any mutation that changes the default price, the table SHALL re-fetch so the moved default badge is reflected. When the user lacks `products:write`, the table SHALL render read-only with a caption "Solo lectura — requiere products:write".
+The "Precios" tab SHALL show a branch selector above the prices table: "Precio base (todas)" (default selection) plus one option per active branch. Selecting "Precio base" dispatches `GET /api/v1/admin/products/:id/prices` (no `branchId`) and lists only base prices. Selecting a branch dispatches `GET /api/v1/admin/products/:id/prices?branchId=<id>` and lists that branch's effective prices (its own overrides plus inherited base rows).
+
+The table columns are: `Nombre`, `Precio` (currency), `Cantidad mín.` (`minQuantity`), `Descuento` (`discountPct` as `"%"` or `"—"`), `Default` (a badge on the default row of the selected bucket), `Origen` (badge "Base" or "Override <sucursal>" driven by the DTO's `isOverride`), and `Acciones`. A "Nuevo precio" button (gated by `products:write`) SHALL open a `ProductPriceModal` for creation, pre-filling `branchId` with the currently selected branch (or `null` for "Precio base"). Rows SHALL offer "Editar" and "Eliminar" (hard delete with `ConfirmDialog`); when a branch is selected and the row shown is an inherited base row (`isOverride: false`), the row action SHALL instead read "Crear override aquí" — editing an inherited row is not possible without first materializing an override for that branch. The modal SHALL validate `name` (required), `price >= 0`, `minQuantity >= 1`, `discountPct` 0–100 (or empty → null), and `isDefault` (boolean); `branchId` is not editable once a price is created. After any mutation that changes the default price, the table SHALL re-fetch so the moved default badge is reflected. When the user lacks `products:write`, the table SHALL render read-only with a caption "Solo lectura — requiere products:write".
 
 #### Scenario: Prices table lists prices with default badge
 - **WHEN** the Precios tab opens for a product with prices
@@ -167,6 +169,22 @@ The "Precios" tab SHALL list the product's prices via `GET /api/v1/admin/product
 #### Scenario: Viewer sees prices read-only
 - **WHEN** a user with only `products:read` opens the Precios tab
 - **THEN** the "Nuevo precio" button and row actions are not rendered and a "Solo lectura — requiere products:write" caption is shown
+
+#### Scenario: Select a branch shows its effective prices
+- **WHEN** the user selects "Zarioz" from the branch selector for a product with a Zarioz override on "Precio Publico"
+- **THEN** a `GET .../prices?branchId=<Zarioz>` request is dispatched and the "Precio Publico" row shows the override value with an "Override Zarioz" badge
+
+#### Scenario: Inherited row shows base value and offers to create an override
+- **WHEN** a branch is selected and a price name has no override for that branch
+- **THEN** the row shows the base value with a "Base" badge, and its row action reads "Crear override aquí" instead of "Editar"/"Eliminar"
+
+#### Scenario: Creating an override from a branch view pre-fills branchId
+- **WHEN** the user clicks "Crear override aquí" on an inherited row while "Huajuapan" is selected
+- **THEN** `ProductPriceModal` opens pre-filled with that price's `name` and `branchId: <Huajuapan>`, ready to submit a new override
+
+#### Scenario: Switching back to "Precio base" shows only global prices
+- **WHEN** the user switches the selector from a branch back to "Precio base (todas)"
+- **THEN** a `GET .../prices` request without `branchId` is dispatched and only base rows (`branchId: null`) are shown
 
 ---
 

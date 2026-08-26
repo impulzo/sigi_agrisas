@@ -5,6 +5,7 @@ function makePrice(name: string, isDefault: boolean): ProductPrice {
   return ProductPrice.create({
     id: name,
     productId: "p1",
+    branchId: null,
     name,
     price: 100,
     minQuantity: 1,

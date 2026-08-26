@@ -12,6 +12,8 @@ export function toProductPrice(dto: ProductPriceDto): ProductPrice {
   return {
     id: dto.id,
     productId: dto.productId,
+    branchId: dto.branchId,
+    isOverride: dto.isOverride,
     name: dto.name,
     price: dto.price,
     minQuantity: dto.minQuantity,
@@ -34,13 +36,14 @@ async function safeRethrow(err: unknown): Promise<never> {
 }
 
 export async function listPrices(
-  { productId }: { productId: string },
+  { productId, branchId }: { productId: string; branchId?: string | null },
   fetchImpl = authFetch,
   signal?: AbortSignal,
 ): Promise<ProductPrice[]> {
+  const qs = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
   let res: Response;
   try {
-    res = await fetchImpl(`/api/v1/admin/products/${productId}/prices`, { signal });
+    res = await fetchImpl(`/api/v1/admin/products/${productId}/prices${qs}`, { signal });
   } catch (err) {
     return safeRethrow(err);
   }

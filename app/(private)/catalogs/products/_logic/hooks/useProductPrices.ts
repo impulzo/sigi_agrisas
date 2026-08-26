@@ -19,7 +19,7 @@ interface UseProductPricesResult {
   deleteOne: (priceId: string) => Promise<boolean>;
 }
 
-export function useProductPrices(productId: string): UseProductPricesResult {
+export function useProductPrices(productId: string, branchId: string | null = null): UseProductPricesResult {
   const [prices, setPrices] = useState<ProductPrice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function useProductPrices(productId: string): UseProductPricesResult {
     let cancelled = false;
     setIsLoading(true);
     setError(null);
-    listPrices({ productId }, undefined, controller.signal)
+    listPrices({ productId, branchId }, undefined, controller.signal)
       .then((data) => {
         if (!cancelled) setPrices(data);
       })
@@ -47,7 +47,7 @@ export function useProductPrices(productId: string): UseProductPricesResult {
       cancelled = true;
       controller.abort();
     };
-  }, [productId, tick]);
+  }, [productId, branchId, tick]);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const clearSaveError = useCallback(() => setSaveError(null), []);

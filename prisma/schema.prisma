@@ -178,6 +178,7 @@ model Branch {
   inventoryMovements    InventoryMovement[]
   purchases             Purchase[]
   providerPayments      ProviderPayment[]
+  productPrices         ProductPrice[]
 
   @@index([code])
   @@map("branches")
@@ -348,9 +349,19 @@ model SatUnitOfMeasure {
   @@map("sat_units_of_measure")
 }
 
+/// branchId null = precio base (aplica a toda sucursal sin override propio);
+/// branchId no-null = override exclusivo de esa sucursal. La unicidad real de
+/// (productId, name) por ámbito y de "un solo default por ámbito" la enforzan
+/// índices únicos PARCIALES creados a mano en la migración
+/// add_branch_scoped_product_prices (Prisma no soporta índices parciales):
+/// product_price_global_name_idx, product_price_branch_name_idx,
+/// product_default_price_global_idx, product_default_price_branch_idx.
+/// El @@unique de abajo es una red de seguridad más laxa para el tipo
+/// generado por Prisma Client, no la restricción de negocio real.
 model ProductPrice {
   id          String   @id @default(uuid())
   productId   String   @map("product_id")
+  branchId    String?  @map("branch_id")
   name        String   @db.VarChar(60)
   price       Decimal  @db.Decimal(12, 4)
   minQuantity Int      @default(1) @map("min_quantity")
@@ -360,12 +371,14 @@ model ProductPrice {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  branch      Branch?      @relation(fields: [branchId], references: [id], onDelete: Cascade)
   saleItems   SaleItem[]
   quoteItems  QuoteItem[]
   returnItems ReturnItem[]
 
-  @@unique([productId, name])
+  @@unique([productId, branchId, name])
   @@index([productId])
+  @@index([branchId])
   @@map("product_prices")
 }
 

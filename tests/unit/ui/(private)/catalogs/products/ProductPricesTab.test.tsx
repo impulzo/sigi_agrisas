@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = jest.fn(function (this: HTMLDialogElement) {
@@ -14,12 +14,15 @@ jest.mock(
   "../../../../../../app/(private)/catalogs/products/_logic/hooks/useProductPrices",
   () => ({ useProductPrices: jest.fn() })
 );
+jest.mock("../../../../../../app/_hooks/useBranchesOptions");
 
 import { useProductPrices } from "../../../../../../app/(private)/catalogs/products/_logic/hooks/useProductPrices";
+import { useBranchesOptions } from "../../../../../../app/_hooks/useBranchesOptions";
 import { ProductPricesTab } from "../../../../../../app/(private)/catalogs/products/_blocks/ProductPricesTab";
 import type { ProductPrice } from "../../../../../../app/(private)/catalogs/products/_logic/types/domain";
 
 const mockUseProductPrices = useProductPrices as jest.Mock;
+const mockUseBranchesOptions = useBranchesOptions as jest.MockedFunction<typeof useBranchesOptions>;
 
 const BASE_HOOK = {
   prices: [] as ProductPrice[],
@@ -38,6 +41,8 @@ const makePrices = (overrides: Partial<ProductPrice>[] = []): ProductPrice[] => 
   {
     id: "pr1",
     productId: "p1",
+    branchId: null,
+    isOverride: false,
     name: "Menudeo",
     price: 12.0,
     minQuantity: 1,
@@ -50,6 +55,8 @@ const makePrices = (overrides: Partial<ProductPrice>[] = []): ProductPrice[] => 
   {
     id: "pr2",
     productId: "p1",
+    branchId: null,
+    isOverride: false,
     name: "Mayoreo",
     price: 10.0,
     minQuantity: 10,
@@ -61,7 +68,14 @@ const makePrices = (overrides: Partial<ProductPrice>[] = []): ProductPrice[] => 
   },
 ];
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockUseBranchesOptions.mockReturnValue({
+    options: [{ id: "b-zarioz", name: "Zarioz" }, { id: "b-huajuapan", name: "Huajuapan" }],
+    isLoading: false,
+    refresh: jest.fn(),
+  });
+});
 
 describe("ProductPricesTab — badge Default", () => {
   it("muestra badge 'Default' en la fila del precio marcado como default", () => {
@@ -112,5 +126,65 @@ describe("ProductPricesTab — estado vacío", () => {
     render(<ProductPricesTab productId="p1" canWrite={true} />);
 
     expect(screen.getByText(/sin precios configurados/i)).toBeInTheDocument();
+  });
+});
+
+describe("ProductPricesTab — precio por sucursal", () => {
+  it("selector inicia en 'Precio base (todas)' y despacha sin branchId", () => {
+    mockUseProductPrices.mockReturnValue({ ...BASE_HOOK, prices: makePrices() });
+
+    render(<ProductPricesTab productId="p1" canWrite={true} />);
+
+    expect(screen.getByRole("combobox", { name: /sucursal/i })).toHaveValue("");
+    expect(mockUseProductPrices).toHaveBeenCalledWith("p1", null);
+  });
+
+  it("seleccionar una sucursal despacha el hook con su branchId", () => {
+    mockUseProductPrices.mockReturnValue({ ...BASE_HOOK, prices: makePrices() });
+
+    render(<ProductPricesTab productId="p1" canWrite={true} />);
+    fireEvent.change(screen.getByRole("combobox", { name: /sucursal/i }), { target: { value: "b-zarioz" } });
+
+    expect(mockUseProductPrices).toHaveBeenLastCalledWith("p1", "b-zarioz");
+  });
+
+  it("muestra badge 'Override <sucursal>' en una fila override y 'Base' en una heredada", () => {
+    mockUseProductPrices.mockReturnValue({
+      ...BASE_HOOK,
+      prices: makePrices([{ branchId: "b-zarioz", isOverride: true }, {}]),
+    });
+
+    render(<ProductPricesTab productId="p1" canWrite={true} />);
+
+    expect(screen.getByText(/override zarioz/i)).toBeInTheDocument();
+    expect(screen.getByText(/^base$/i)).toBeInTheDocument();
+  });
+
+  it("con sucursal seleccionada, una fila heredada muestra 'Crear override aquí' en vez de Editar/Eliminar", () => {
+    mockUseProductPrices.mockReturnValue({
+      ...BASE_HOOK,
+      prices: makePrices([{ branchId: null, isOverride: false }, {}]),
+    });
+
+    render(<ProductPricesTab productId="p1" canWrite={true} />);
+    fireEvent.change(screen.getByRole("combobox", { name: /sucursal/i }), { target: { value: "b-zarioz" } });
+
+    expect(screen.getAllByRole("button", { name: /crear override aquí/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByTitle("Editar")).not.toBeInTheDocument();
+  });
+
+  it("crear override aquí abre el modal de creación con branchId y nombre pre-cargados", () => {
+    mockUseProductPrices.mockReturnValue({
+      ...BASE_HOOK,
+      prices: makePrices([{ branchId: null, isOverride: false, name: "Precio Publico" }, {}]),
+    });
+
+    render(<ProductPricesTab productId="p1" canWrite={true} />);
+    fireEvent.change(screen.getByRole("combobox", { name: /sucursal/i }), { target: { value: "b-zarioz" } });
+    fireEvent.click(screen.getAllByRole("button", { name: /crear override aquí/i })[0]);
+
+    expect(screen.getByText(/nuevo override de sucursal/i)).toBeInTheDocument();
+    expect(screen.getByText(/sólo aplica a zarioz/i)).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Precio Publico")).toBeInTheDocument();
   });
 });

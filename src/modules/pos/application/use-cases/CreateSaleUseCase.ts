@@ -7,6 +7,7 @@ import { toSaleDetailDto } from "../mappers/toSaleDto";
 import { SaleTotalsCalculator, SaleLineInput } from "../../domain/services/SaleTotalsCalculator";
 import { EmptySaleError } from "../../domain/errors/EmptySaleError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
+import { ProductPriceNotAvailableForBranchError } from "../../domain/errors/ProductPriceNotAvailableForBranchError";
 import { DosificationMismatchError } from "../../domain/errors/DosificationMismatchError";
 import { DosificationRequiresDefaultPriceError } from "../../domain/errors/DosificationRequiresDefaultPriceError";
 import { DosificationPriceCalculator } from "@/modules/products/domain/services/DosificationPriceCalculator";
@@ -131,7 +132,7 @@ export class CreateSaleUseCase {
       let numPartsSnapshot: number | null;
 
       if (item.dosificationId) {
-        const dosification = await this.lookups.getDosificationForSale(item.dosificationId);
+        const dosification = await this.lookups.getDosificationForSale(item.dosificationId, req.branchId);
         if (!dosification) throw new InactiveResourceError("Dosification not found");
         if (dosification.productId !== item.productId) throw new DosificationMismatchError();
         if (!dosification.isActive) throw new InactiveResourceError("Dosification");
@@ -148,6 +149,9 @@ export class CreateSaleUseCase {
         const price = await this.lookups.getProductPrice(item.productPriceId!);
         if (!price) throw new InactiveResourceError("Product price not found");
         if (price.productId !== item.productId) throw new ProductPriceMismatchError();
+        if (price.branchId != null && price.branchId !== req.branchId) {
+          throw new ProductPriceNotAvailableForBranchError();
+        }
 
         if (isFractionalQuantity(item.quantity)) {
           const surchargePct = await this.lookups.getDosificationSurchargePct();

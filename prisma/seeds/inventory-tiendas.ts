@@ -1,0 +1,84 @@
+import path from "node:path";
+import { existsSync } from "node:fs";
+import * as dotenv from "dotenv";
+
+const ENV_LOCAL = path.resolve(__dirname, "..", "..", ".env.local");
+const ENV_FILE = path.resolve(__dirname, "..", "..", ".env");
+if (existsSync(ENV_LOCAL)) {
+  dotenv.config({ path: ENV_LOCAL });
+} else if (existsSync(ENV_FILE)) {
+  dotenv.config({ path: ENV_FILE });
+}
+
+import { PrismaClient } from "@prisma/client";
+import { seedInventoryTiendas, printTiendasSeedReport, type PrismaLike } from "./lib/inventoryTiendasSeedLogic";
+import { AGRISAS_REFRESH_DATA, TIENDAS_INVENTORY_DATA, TLAXIACO_RAW_DATA } from "./data/inventario-tiendas-v3";
+
+const prisma = new PrismaClient();
+
+/**
+ * Adapter sobre PrismaClient real: sólo convierte `ProductPrice.price`
+ * (Decimal en DB) a `number` en la lectura — es el único punto del lib
+ * donde se compara un precio leído, resto de los métodos pasan tal cual.
+ */
+const prismaLike: PrismaLike = {
+  branch: {
+    findUnique: (args) => prisma.branch.findUnique(args as never) as never,
+    upsert: (args) => prisma.branch.upsert(args as never) as never,
+  },
+  department: {
+    upsert: (args) => prisma.department.upsert(args as never) as never,
+  },
+  product: {
+    findUnique: (args) => prisma.product.findUnique(args as never) as never,
+    findMany: (args) => prisma.product.findMany(args as never) as never,
+    upsert: (args) => prisma.product.upsert(args as never) as never,
+  },
+  productPrice: {
+    // NO usar `findUnique`/`upsert` con `productId_branchId_name` cuando `branchId`
+    // es `null` — esta versión de Prisma (5.22) rechaza en runtime cualquier `null`
+    // dentro de esa clave compuesta ("Argument branchId must not be null"), aunque
+    // compile sin error y aunque `upsert` con branchId NO-null funcione perfecto.
+    // Verificado con reproducción directa contra la DB real antes de este fix.
+    findFirstBase: async (args) => {
+      const row = await prisma.productPrice.findFirst({ where: args.where as never, select: args.select as never });
+      if (!row) return null;
+      return { id: (row as { id: string }).id, price: Number((row as { price: unknown }).price) };
+    },
+    updateMany: (args) => prisma.productPrice.updateMany(args as never) as never,
+    upsert: (args) => prisma.productPrice.upsert(args as never) as never,
+    upsertBase: async (args) => {
+      const existing = await prisma.productPrice.findFirst({ where: args.where as never, select: { id: true } });
+      if (existing) {
+        return prisma.productPrice.update({ where: { id: existing.id }, data: args.update as never }) as never;
+      }
+      return prisma.productPrice.create({ data: args.create as never }) as never;
+    },
+  },
+  branchInventory: {
+    upsert: (args) => prisma.branchInventory.upsert(args as never) as never,
+  },
+};
+
+async function main(): Promise<void> {
+  console.log(
+    `[seed:inventory-tiendas] Datos embebidos: Agrisas=${AGRISAS_REFRESH_DATA.length}, Tiendas=${TIENDAS_INVENTORY_DATA.length}, Tlaxiaco=${TLAXIACO_RAW_DATA.length}`
+  );
+
+  const counters = await seedInventoryTiendas(prismaLike, {
+    agrisas: AGRISAS_REFRESH_DATA,
+    tiendas: TIENDAS_INVENTORY_DATA,
+    tlaxiaco: TLAXIACO_RAW_DATA,
+  });
+
+  printTiendasSeedReport(counters);
+}
+
+main()
+  .catch((err) => {
+    console.error("[seed:inventory-tiendas] Error fatal:", err);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

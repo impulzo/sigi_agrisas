@@ -6,6 +6,7 @@ import {
 } from "../../application/ports/ProductPriceRepository";
 import { ProductPrice } from "../../domain/entities/ProductPrice";
 import { sortProductPricesForDisplay } from "../../domain/services/sortProductPricesForDisplay";
+import { resolveEffectivePrices } from "../../domain/services/resolveEffectivePrices";
 import { ProductPriceNotFoundError } from "../../domain/errors/ProductPriceNotFoundError";
 import { DuplicatePriceNameError } from "../../domain/errors/DuplicatePriceNameError";
 import { DuplicateDefaultPriceError } from "../../domain/errors/DuplicateDefaultPriceError";
@@ -14,6 +15,7 @@ function toProductPrice(row: PrismaProductPrice): ProductPrice {
   return ProductPrice.create({
     id: row.id,
     productId: row.productId,
+    branchId: row.branchId,
     name: row.name,
     price: row.price.toNumber(),
     minQuantity: row.minQuantity,
@@ -52,8 +54,15 @@ export class PrismaProductPriceRepository implements ProductPriceRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async findByProductId(productId: string): Promise<ProductPrice[]> {
-    const rows = await this.prisma.productPrice.findMany({ where: { productId } });
+    const rows = await this.prisma.productPrice.findMany({ where: { productId, branchId: null } });
     return sortProductPricesForDisplay(rows.map(toProductPrice));
+  }
+
+  async findEffectiveForBranch(productId: string, branchId: string): Promise<ProductPrice[]> {
+    const rows = await this.prisma.productPrice.findMany({
+      where: { productId, OR: [{ branchId: null }, { branchId }] },
+    });
+    return sortProductPricesForDisplay(resolveEffectivePrices(rows.map(toProductPrice), branchId));
   }
 
   async findById(id: string): Promise<ProductPrice | null> {
@@ -61,8 +70,10 @@ export class PrismaProductPriceRepository implements ProductPriceRepository {
     return row ? toProductPrice(row) : null;
   }
 
-  async findDefaultByProductId(productId: string): Promise<ProductPrice | null> {
-    const row = await this.prisma.productPrice.findFirst({ where: { productId, isDefault: true } });
+  async findDefaultByProductId(productId: string, branchId?: string | null): Promise<ProductPrice | null> {
+    const row = await this.prisma.productPrice.findFirst({
+      where: { productId, branchId: branchId ?? null, isDefault: true },
+    });
     return row ? toProductPrice(row) : null;
   }
 
@@ -71,6 +82,7 @@ export class PrismaProductPriceRepository implements ProductPriceRepository {
       const row = await this.prisma.productPrice.create({
         data: {
           productId: data.productId,
+          branchId: data.branchId ?? null,
           name: data.name,
           price: data.price,
           minQuantity: data.minQuantity,
@@ -103,17 +115,22 @@ export class PrismaProductPriceRepository implements ProductPriceRepository {
     }
   }
 
-  async unsetDefaultForProduct(productId: string, exceptId?: string): Promise<void> {
+  async unsetDefaultForProduct(productId: string, branchId: string | null, exceptId?: string): Promise<void> {
     await this.prisma.productPrice.updateMany({
-      where: { productId, isDefault: true, ...(exceptId ? { id: { not: exceptId } } : {}) },
+      where: { productId, branchId, isDefault: true, ...(exceptId ? { id: { not: exceptId } } : {}) },
       data: { isDefault: false },
     });
   }
 
-  async unsetDefaultAndUpdate(productId: string, priceId: string, data: UpdateProductPriceData): Promise<ProductPrice> {
+  async unsetDefaultAndUpdate(
+    productId: string,
+    branchId: string | null,
+    priceId: string,
+    data: UpdateProductPriceData
+  ): Promise<ProductPrice> {
     const [, row] = await this.prisma.$transaction([
       this.prisma.productPrice.updateMany({
-        where: { productId, isDefault: true, id: { not: priceId } },
+        where: { productId, branchId, isDefault: true, id: { not: priceId } },
         data: { isDefault: false },
       }),
       this.prisma.productPrice.update({

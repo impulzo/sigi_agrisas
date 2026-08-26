@@ -8,11 +8,16 @@ import { ProductNotFoundError } from "../../domain/errors/ProductNotFoundError";
 import { ProductPriceNotFoundError } from "../../domain/errors/ProductPriceNotFoundError";
 import { DuplicatePriceNameError } from "../../domain/errors/DuplicatePriceNameError";
 import { DuplicateDefaultPriceError } from "../../domain/errors/DuplicateDefaultPriceError";
+import { ProductPriceBranchNotFoundError } from "../../domain/errors/ProductPriceBranchNotFoundError";
+import { ProductPriceInvalidBranchError } from "../../domain/errors/ProductPriceInvalidBranchError";
+import { enforceBranchScope } from "@/modules/rbac/infrastructure/http/enforceBranchScope";
 
 const productIdSchema = z.string().uuid("Invalid product ID format");
 const priceIdSchema = z.string().uuid("Invalid price ID format");
+const branchIdQuerySchema = z.string().uuid("Invalid branchId").optional();
 
 const createBodySchema = z.object({
+  branchId: z.string().uuid("Invalid branchId").nullable().optional(),
   name: z.string().min(1).max(60),
   price: z.number().min(0, "price must be >= 0"),
   minQuantity: z.number().int().min(1, "minQuantity must be >= 1").optional(),
@@ -46,16 +51,21 @@ export class ProductPricesController {
     private readonly deleteUseCase: DeleteProductPriceUseCase
   ) {}
 
-  async list(_req: NextRequest, productId: string): Promise<NextResponse> {
+  async list(req: NextRequest, productId: string): Promise<NextResponse> {
     const parsed = productIdSchema.safeParse(productId);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
+    const branchIdParsed = branchIdQuerySchema.safeParse(req.nextUrl.searchParams.get("branchId") ?? undefined);
+    if (!branchIdParsed.success) {
+      return NextResponse.json({ error: branchIdParsed.error.errors[0].message }, { status: 400 });
+    }
     try {
-      const result = await this.listUseCase.execute(parsed.data);
+      const result = await this.listUseCase.execute(parsed.data, branchIdParsed.data);
       return NextResponse.json(result);
     } catch (err) {
       if (err instanceof ProductNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      if (err instanceof ProductPriceBranchNotFoundError) return NextResponse.json({ error: "Branch not found" }, { status: 404 });
       throw err;
     }
   }
@@ -70,11 +80,16 @@ export class ProductPricesController {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
+    if (parsed.data.branchId) {
+      const scopeError = await enforceBranchScope(req, parsed.data.branchId);
+      if (scopeError) return scopeError;
+    }
     try {
       const price = await this.createUseCase.execute(idParsed.data, parsed.data);
       return NextResponse.json(price, { status: 201 });
     } catch (err) {
       if (err instanceof ProductNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      if (err instanceof ProductPriceInvalidBranchError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof DuplicatePriceNameError) return NextResponse.json({ error: err.message }, { status: 409 });
       if (err instanceof DuplicateDefaultPriceError) return NextResponse.json({ error: err.message }, { status: 409 });
       throw err;

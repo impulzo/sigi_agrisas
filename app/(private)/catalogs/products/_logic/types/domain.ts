@@ -25,6 +25,8 @@ export interface Product {
 export interface ProductPrice {
   id: string;
   productId: string;
+  branchId: string | null;
+  isOverride: boolean;
   name: string;
   price: number;
   minQuantity: number;

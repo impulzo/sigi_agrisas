@@ -12,6 +12,7 @@ import { SaleNoEmailError } from "../../domain/errors/SaleNoEmailError";
 import { SaleEmailSendFailedError } from "../../domain/errors/SaleEmailSendFailedError";
 import { EmptySaleError } from "../../domain/errors/EmptySaleError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
+import { ProductPriceNotAvailableForBranchError } from "../../domain/errors/ProductPriceNotAvailableForBranchError";
 import { DosificationMismatchError } from "../../domain/errors/DosificationMismatchError";
 import { DosificationRequiresDefaultPriceError } from "../../domain/errors/DosificationRequiresDefaultPriceError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
@@ -180,6 +181,7 @@ export class SalesController {
     } catch (err) {
       if (err instanceof EmptySaleError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof ProductPriceMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof ProductPriceNotAvailableForBranchError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof DosificationMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof DosificationRequiresDefaultPriceError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof InactiveResourceError) return NextResponse.json({ error: err.message }, { status: 400 });
@@ -267,6 +269,7 @@ export class SalesController {
       if (err instanceof SaleNotEditableHereError) return NextResponse.json({ error: err.message }, { status: 403 });
       if (err instanceof EmptySaleError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof ProductPriceMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
+      if (err instanceof ProductPriceNotAvailableForBranchError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof DosificationMismatchError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof DosificationRequiresDefaultPriceError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof InactiveResourceError) return NextResponse.json({ error: err.message }, { status: 400 });

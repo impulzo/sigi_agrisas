@@ -11,6 +11,7 @@ import { QuoteNotFoundError } from "../../domain/errors/QuoteNotFoundError";
 import { QuoteNotEditableError } from "../../domain/errors/QuoteNotEditableError";
 import { EmptyQuoteError } from "../../domain/errors/EmptyQuoteError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
+import { ProductPriceNotAvailableForBranchError } from "../../domain/errors/ProductPriceNotAvailableForBranchError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { isFractionalQuantity } from "@/modules/products/domain/services/isFractionalQuantity";
 
@@ -80,6 +81,9 @@ export class UpdateQuoteUseCase {
       if (!product.isActive) throw new InactiveResourceError("Product");
       if (!price) throw new InactiveResourceError("Product price not found");
       if (price.productId !== item.productId) throw new ProductPriceMismatchError();
+      if (price.branchId != null && price.branchId !== existing.quote.branchId) {
+        throw new ProductPriceNotAvailableForBranchError();
+      }
 
       let unitPrice = price.price;
       if (isFractionalQuantity(item.quantity)) {

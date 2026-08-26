@@ -5,6 +5,8 @@ export function toProductPriceDto(price: ProductPrice): ProductPriceDto {
   return {
     id: price.id,
     productId: price.productId,
+    branchId: price.branchId,
+    isOverride: price.branchId !== null,
     name: price.name,
     price: price.price,
     minQuantity: price.minQuantity,

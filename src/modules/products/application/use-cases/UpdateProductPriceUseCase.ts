@@ -18,8 +18,9 @@ export class UpdateProductPriceUseCase {
     }
 
     if (req.isDefault === true && !existing.isDefault) {
-      // Atomic: unset old default and set this one in a single DB transaction.
-      const updated = await this.priceRepo.unsetDefaultAndUpdate(productId, priceId, req);
+      // Atomic: unset old default and set this one in a single DB transaction,
+      // scoped to the SAME (productId, branchId) bucket as the edited price.
+      const updated = await this.priceRepo.unsetDefaultAndUpdate(productId, existing.branchId, priceId, req);
       return toProductPriceDto(updated);
     }
 
