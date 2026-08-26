@@ -23,7 +23,7 @@ describe("getProductPrices", () => {
     ];
     const fetchImpl = mockFetch(200, { items });
 
-    const result = await getProductPrices("p1", fetchImpl);
+    const result = await getProductPrices("p1", null, fetchImpl);
 
     expect(result.map((p) => p.name)).toEqual([
       "Precio Publico",
@@ -35,6 +35,18 @@ describe("getProductPrices", () => {
 
   it("throws NetworkError on non-ok response", async () => {
     const fetchImpl = mockFetch(500, {});
-    await expect(getProductPrices("p1", fetchImpl)).rejects.toThrow(NetworkError);
+    await expect(getProductPrices("p1", null, fetchImpl)).rejects.toThrow(NetworkError);
+  });
+
+  it("dispatches ?branchId= when a branch is given", async () => {
+    const fetchImpl = mockFetch(200, { items: [] });
+    await getProductPrices("p1", "branch-1", fetchImpl);
+    expect(fetchImpl).toHaveBeenCalledWith("/api/v1/admin/products/p1/prices?branchId=branch-1");
+  });
+
+  it("omits branchId from the URL when not given", async () => {
+    const fetchImpl = mockFetch(200, { items: [] });
+    await getProductPrices("p1", null, fetchImpl);
+    expect(fetchImpl).toHaveBeenCalledWith("/api/v1/admin/products/p1/prices");
   });
 });

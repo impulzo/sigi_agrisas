@@ -4,6 +4,23 @@ import { isOnline } from "./connectivity";
 import type { ProductDto, ProductPriceDto, DosificationOptionDto, CustomerDto } from "../../(private)/pos/_logic/types/api";
 
 const PAGE_SIZE = 100;
+const PRICE_FETCH_CONCURRENCY = 8;
+/** Minimum age (ms) an automatic refresh trigger requires before running again; manual refresh ignores this. */
+export const AUTO_REFRESH_MIN_INTERVAL_MS = 5 * 60_000;
+
+/** Runs `fn` over `items` with at most `limit` calls in flight at once. */
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
 
 async function paginate<T>(
   fetchPage: (page: number) => Promise<{ items: T[]; total: number }>
@@ -88,8 +105,8 @@ export async function refreshCatalogCache(ownerBranchId: string): Promise<void> 
     pullCustomers(),
   ]);
 
-  const pricesByProduct = await Promise.all(products.map((p) => pullPricesFor(p.id)));
-  const dosificationsByProduct = await Promise.all(products.map((p) => pullDosificationsFor(p.id)));
+  const pricesByProduct = await mapWithConcurrency(products, PRICE_FETCH_CONCURRENCY, (p) => pullPricesFor(p.id));
+  const dosificationsByProduct = await mapWithConcurrency(products, PRICE_FETCH_CONCURRENCY, (p) => pullDosificationsFor(p.id));
 
   const db = await getOfflineDb();
 

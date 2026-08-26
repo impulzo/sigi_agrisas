@@ -3,6 +3,7 @@ import { InMemoryProductPriceRepository } from "@/modules/products/infrastructur
 import { CreateProductPriceUseCase, BranchActiveLookup } from "@/modules/products/application/use-cases/CreateProductPriceUseCase";
 import { ListProductPricesUseCase } from "@/modules/products/application/use-cases/ListProductPricesUseCase";
 import { ProductPriceBranchNotFoundError } from "@/modules/products/domain/errors/ProductPriceBranchNotFoundError";
+import { ProductNotFoundError } from "@/modules/products/domain/errors/ProductNotFoundError";
 
 const DEPT = "11111111-1111-1111-1111-111111111111";
 const ZARIOZ = "22222222-2222-2222-2222-222222222222";
@@ -76,5 +77,13 @@ describe("ListProductPricesUseCase — precio efectivo por sucursal", () => {
 
     const list = new ListProductPricesUseCase(productRepo, priceRepo, new FakeBranchLookup());
     await expect(list.execute(product.id, UNKNOWN_BRANCH)).rejects.toThrow(ProductPriceBranchNotFoundError);
+  });
+
+  it("lanza ProductNotFoundError cuando el producto no existe", async () => {
+    const productRepo = new InMemoryProductRepository();
+    const priceRepo = new InMemoryProductPriceRepository();
+
+    const list = new ListProductPricesUseCase(productRepo, priceRepo, new FakeBranchLookup());
+    await expect(list.execute("00000000-0000-0000-0000-000000000000")).rejects.toThrow(ProductNotFoundError);
   });
 });

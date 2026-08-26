@@ -5,13 +5,18 @@ import { getProductPricesFromCache } from "../../../../_lib/offline/catalogCache
 
 export async function getProductPrices(
   productId: string,
+  branchId?: string | null,
   fetchImpl = authFetch,
 ): Promise<ProductPriceDto[]> {
   if (!isOnline()) return getProductPricesFromCache(productId);
 
+  const url = branchId
+    ? `/api/v1/admin/products/${productId}/prices?branchId=${branchId}`
+    : `/api/v1/admin/products/${productId}/prices`;
+
   let res: Response;
   try {
-    res = await fetchImpl(`/api/v1/admin/products/${productId}/prices`);
+    res = await fetchImpl(url);
   } catch (err) {
     if (err instanceof NetworkError) return getProductPricesFromCache(productId);
     throw new NetworkError();

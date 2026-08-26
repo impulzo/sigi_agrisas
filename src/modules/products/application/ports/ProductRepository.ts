@@ -56,6 +56,8 @@ export interface UpdateProductData {
 export interface ProductRepository {
   findAll(opts: FindAllProductsOptions): Promise<{ items: ProductWithDepartment[]; total: number }>;
   findById(id: string): Promise<ProductWithDepartment | null>;
+  /** Lightweight existence check — no `include`/`unitDescription` resolution. Same criteria as `findById` (does not filter by `isActive`). */
+  exists(id: string): Promise<boolean>;
   create(data: CreateProductData): Promise<ProductWithDepartment>;
   update(id: string, data: UpdateProductData): Promise<ProductWithDepartment>;
   softDelete(id: string): Promise<void>;
