@@ -13,7 +13,12 @@ const BASE_HEIGHT_MM = 120; // logo + header de negocio + meta + totales + foote
 const CUSTOMER_SECTION_HEIGHT_MM = 30;
 const CREDIT_LINE_HEIGHT_MM = 8;
 const PER_ITEM_HEIGHT_MM = 12;
-const SAFETY_MARGIN_MM = 20;
+// Margen ampliado (antes 20) para impresoras térmicas cuyo driver puede sustituir el tamaño de
+// página custom por uno propio (ej. EPSON TM-T20II) — evita que el auto-cutter corte contenido
+// o que el driver agregue una hoja en blanco por subestimar la altura real.
+const SAFETY_MARGIN_MM = 35;
+// Feed final explícito antes del corte automático, además del margen de seguridad de altura.
+const FINAL_FEED_MM = 12;
 
 function computeTicketPageHeightMm(sale: SaleDetail): number {
   return (
@@ -21,7 +26,8 @@ function computeTicketPageHeightMm(sale: SaleDetail): number {
     (sale.customerId ? CUSTOMER_SECTION_HEIGHT_MM : 0) +
     (sale.customerCreditDays != null ? CREDIT_LINE_HEIGHT_MM : 0) +
     sale.items.length * PER_ITEM_HEIGHT_MM +
-    SAFETY_MARGIN_MM
+    SAFETY_MARGIN_MM +
+    FINAL_FEED_MM
   );
 }
 
@@ -49,7 +55,17 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
       <style>{`
         @page { size: ${paperWidth} ${pageHeightMm}mm; margin: 0; }
         @media print {
-          .printable-ticket { width: ${paperWidth}; margin: 0; font-family: monospace; font-size: 10px; }
+          .printable-ticket {
+            width: ${paperWidth};
+            margin: 0 !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            font-family: monospace;
+            font-size: 10px;
+            box-sizing: border-box;
+          }
+          .printable-ticket * { box-sizing: border-box; }
           .printable-ticket img { width: 125px; height: 77px; object-fit: contain; display: block; margin: 0 auto 8px; }
           .printable-ticket table { width: 100%; border-collapse: collapse; }
           .printable-ticket hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
@@ -160,6 +176,9 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
         />
         <p style={{ marginTop: "2px" }}>{folioLabel}</p>
       </div>
+
+      {/* Feed final antes del corte automático — evita que el cutter recorte la última línea */}
+      <div aria-hidden="true" style={{ height: `${FINAL_FEED_MM}mm` }} />
     </div>
   );
 }
