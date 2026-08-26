@@ -11,7 +11,7 @@
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
-    "seed:inventory": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/inventory.ts",
+    "seed:inventory-tiendas": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/inventory-tiendas.ts",
     "seed:folios": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/folios.ts",
     "seed:sat-codes": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/satCodes.ts",
     "seed:sat-catalogs": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/satCatalogs.ts",

@@ -24,6 +24,7 @@ import { SoftDeleteProductDosificationUseCase } from "@/modules/products/applica
 import { ProductsController } from "@/modules/products/infrastructure/http/ProductsController";
 import { ProductPricesController } from "@/modules/products/infrastructure/http/ProductPricesController";
 import { ProductDosificationsController } from "@/modules/products/infrastructure/http/ProductDosificationsController";
+import { branchRepo } from "@/modules/branches/infrastructure/di/container";
 
 const departmentRepo = new PrismaDepartmentRepository(prisma);
 const taxRateRepo = new PrismaTaxRateRepository(prisma);
@@ -44,8 +45,8 @@ export const productsController = new ProductsController(
 );
 
 export const productPricesController = new ProductPricesController(
-  new ListProductPricesUseCase(productRepo, priceRepo),
-  new CreateProductPriceUseCase(productRepo, priceRepo),
+  new ListProductPricesUseCase(productRepo, priceRepo, branchRepo),
+  new CreateProductPriceUseCase(productRepo, priceRepo, branchRepo),
   new UpdateProductPriceUseCase(priceRepo),
   new DeleteProductPriceUseCase(priceRepo)
 );

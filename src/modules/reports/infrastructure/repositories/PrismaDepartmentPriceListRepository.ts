@@ -6,6 +6,7 @@ import {
 } from "../../application/ports/DepartmentPriceListRepository";
 import { DepartmentPriceListFilters } from "../../domain/value-objects/DepartmentPriceListFilters";
 import { resolveUnitDescriptions } from "@/shared/infrastructure/sat-codes/resolveUnitDescriptions";
+import { resolveEffectivePrices } from "@/modules/products/domain/services/resolveEffectivePrices";
 
 export class PrismaDepartmentPriceListRepository implements DepartmentPriceListRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -17,7 +18,12 @@ export class PrismaDepartmentPriceListRepository implements DepartmentPriceListR
       },
       include: {
         department: true,
-        prices: { orderBy: [{ isDefault: "desc" }, { name: "asc" }] },
+        // Sin branchId: sólo precios base. Con branchId: base + overrides propios
+        // de la sucursal, resueltos al conjunto efectivo abajo.
+        prices: {
+          where: filters.branchId ? { OR: [{ branchId: null }, { branchId: filters.branchId }] } : { branchId: null },
+          orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+        },
       },
       orderBy: [
         { department: { name: "asc" } },
@@ -52,7 +58,11 @@ export class PrismaDepartmentPriceListRepository implements DepartmentPriceListR
         acquisitionPrice: product.acquisitionPrice as unknown as Decimal | null,
       };
 
-      if (product.prices.length === 0) {
+      const effectivePrices = filters.branchId
+        ? resolveEffectivePrices(product.prices, filters.branchId)
+        : product.prices;
+
+      if (effectivePrices.length === 0) {
         rows.push({
           ...base,
           priceId: null,
@@ -65,7 +75,7 @@ export class PrismaDepartmentPriceListRepository implements DepartmentPriceListR
         continue;
       }
 
-      for (const price of product.prices) {
+      for (const price of effectivePrices) {
         rows.push({
           ...base,
           priceId: price.id,

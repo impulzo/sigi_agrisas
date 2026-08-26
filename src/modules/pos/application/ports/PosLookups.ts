@@ -11,6 +11,8 @@ export interface ProductLookup {
 export interface ProductPriceLookup {
   id: string;
   productId: string;
+  /** null = precio base (aplica a toda sucursal); no-null = override exclusivo de esa sucursal. */
+  branchId: string | null;
   name: string;
   price: number;
   discountPct: number | null;
@@ -58,7 +60,8 @@ export interface PaymentMethodLookup {
 export interface PosLookupService {
   getProduct(id: string): Promise<ProductLookup | null>;
   getProductPrice(id: string): Promise<ProductPriceLookup | null>;
-  getDosificationForSale(id: string): Promise<DosificationLookup | null>;
+  /** `branchId` resuelve el default de esa sucursal primero, cayendo al default global si no existe. */
+  getDosificationForSale(id: string, branchId: string): Promise<DosificationLookup | null>;
   getCustomer(id: string): Promise<CustomerLookup | null>;
   getBranch(id: string): Promise<BranchLookup | null>;
   getFolio(id: string): Promise<FolioLookup | null>;

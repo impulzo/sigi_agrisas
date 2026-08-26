@@ -70,6 +70,8 @@ export interface UpdateProductBody {
 export interface ProductPriceDto {
   id: string;
   productId: string;
+  branchId: string | null;
+  isOverride: boolean;
   name: string;
   price: number;
   minQuantity: number;
@@ -87,6 +89,7 @@ export interface ListProductPricesResponse {
 }
 
 export interface CreatePriceBody {
+  branchId?: string | null;
   name: string;
   price: number;
   minQuantity?: number;

@@ -43,28 +43,36 @@ export class PrismaPosLookupService implements PosLookupService {
   async getProductPrice(id: string): Promise<ProductPriceLookup | null> {
     const row = await this.prisma.productPrice.findUnique({
       where: { id },
-      select: { id: true, productId: true, name: true, price: true, discountPct: true },
+      select: { id: true, productId: true, branchId: true, name: true, price: true, discountPct: true },
     });
     if (!row) return null;
     return {
       id: row.id,
       productId: row.productId,
+      branchId: row.branchId,
       name: row.name,
       price: Number(row.price),
       discountPct: row.discountPct ? Number(row.discountPct) : null,
     };
   }
 
-  async getDosificationForSale(id: string): Promise<DosificationLookup | null> {
+  async getDosificationForSale(id: string, branchId: string): Promise<DosificationLookup | null> {
     const row = await this.prisma.productDosification.findUnique({
       where: { id },
       select: { id: true, productId: true, name: true, numParts: true, isActive: true },
     });
     if (!row) return null;
-    const defaultPrice = await this.prisma.productPrice.findFirst({
-      where: { productId: row.productId, isDefault: true },
+    // Prefiere el default propio de la sucursal; cae al default global si no existe.
+    const branchDefaultPrice = await this.prisma.productPrice.findFirst({
+      where: { productId: row.productId, branchId, isDefault: true },
       select: { price: true },
     });
+    const defaultPrice =
+      branchDefaultPrice ??
+      (await this.prisma.productPrice.findFirst({
+        where: { productId: row.productId, branchId: null, isDefault: true },
+        select: { price: true },
+      }));
     return {
       id: row.id,
       productId: row.productId,

@@ -1,6 +1,8 @@
 export interface ProductPriceProps {
   id: string;
   productId: string;
+  /** null = precio base (aplica a toda sucursal sin override propio); no-null = override exclusivo de esa sucursal. */
+  branchId: string | null;
   name: string;
   price: number;
   minQuantity: number;
@@ -13,6 +15,7 @@ export interface ProductPriceProps {
 export class ProductPrice {
   readonly id: string;
   readonly productId: string;
+  readonly branchId: string | null;
   readonly name: string;
   readonly price: number;
   readonly minQuantity: number;
@@ -24,6 +27,7 @@ export class ProductPrice {
   private constructor(props: ProductPriceProps) {
     this.id = props.id;
     this.productId = props.productId;
+    this.branchId = props.branchId;
     this.name = props.name;
     this.price = props.price;
     this.minQuantity = props.minQuantity;
