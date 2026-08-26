@@ -8,16 +8,20 @@ import { GetPricingSettingsUseCase } from "@/modules/settings/application/use-ca
 import { UpdatePricingSettingsUseCase } from "@/modules/settings/application/use-cases/UpdatePricingSettingsUseCase";
 import { GetInventoryNotificationSettingsUseCase } from "@/modules/settings/application/use-cases/GetInventoryNotificationSettingsUseCase";
 import { UpdateInventoryNotificationSettingsUseCase } from "@/modules/settings/application/use-cases/UpdateInventoryNotificationSettingsUseCase";
+import { GetBranchPrinterConfigUseCase } from "@/modules/settings/application/use-cases/GetBranchPrinterConfigUseCase";
+import { UpdateBranchPrinterConfigUseCase } from "@/modules/settings/application/use-cases/UpdateBranchPrinterConfigUseCase";
 import { InMemoryTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 import { InMemoryTicketLogoStorage } from "@/modules/settings/infrastructure/services/InMemoryTicketLogoStorage";
 import { InMemoryPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryPricingSettingsRepository";
 import { InMemoryInventoryNotificationSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryInventoryNotificationSettingsRepository";
+import { InMemoryPrinterConfigRepository } from "@/modules/settings/infrastructure/repositories/InMemoryPrinterConfigRepository";
 
 function buildController() {
   const repo = new InMemoryTicketSettingsRepository();
   const storage = new InMemoryTicketLogoStorage();
   const pricingRepo = new InMemoryPricingSettingsRepository();
   const inventoryNotificationsRepo = new InMemoryInventoryNotificationSettingsRepository();
+  const printerConfigRepo = new InMemoryPrinterConfigRepository();
   const controller = new SettingsController(
     new GetTicketSettingsUseCase(repo),
     new UpdateTicketSettingsUseCase(repo),
@@ -26,9 +30,11 @@ function buildController() {
     new GetPricingSettingsUseCase(pricingRepo),
     new UpdatePricingSettingsUseCase(pricingRepo),
     new GetInventoryNotificationSettingsUseCase(inventoryNotificationsRepo),
-    new UpdateInventoryNotificationSettingsUseCase(inventoryNotificationsRepo)
+    new UpdateInventoryNotificationSettingsUseCase(inventoryNotificationsRepo),
+    new GetBranchPrinterConfigUseCase(printerConfigRepo),
+    new UpdateBranchPrinterConfigUseCase(printerConfigRepo)
   );
-  return { controller, repo, storage, pricingRepo, inventoryNotificationsRepo };
+  return { controller, repo, storage, pricingRepo, inventoryNotificationsRepo, printerConfigRepo };
 }
 
 function req(method: string, body?: unknown): NextRequest {
