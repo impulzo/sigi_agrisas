@@ -12,6 +12,7 @@ import { QuoteNotEditableError } from "../../domain/errors/QuoteNotEditableError
 import { EmptyQuoteError } from "../../domain/errors/EmptyQuoteError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
 import { ProductPriceNotAvailableForBranchError } from "../../domain/errors/ProductPriceNotAvailableForBranchError";
+import { ProductNotAvailableInBranchError } from "../../domain/errors/ProductNotAvailableInBranchError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { isFractionalQuantity } from "@/modules/products/domain/services/isFractionalQuantity";
 
@@ -23,7 +24,8 @@ export interface UpdateQuoteResult {
 export class UpdateQuoteUseCase {
   constructor(
     private readonly repo: QuoteRepository,
-    private readonly lookups: PosLookupService
+    private readonly lookups: PosLookupService,
+    private readonly branchScopedInventory: boolean = false
   ) {}
 
   async execute(id: string, req: UpdateQuoteRequest): Promise<UpdateQuoteResult> {
@@ -79,6 +81,14 @@ export class UpdateQuoteUseCase {
       ]);
       if (!product) throw new InactiveResourceError("Product not found");
       if (!product.isActive) throw new InactiveResourceError("Product");
+
+      if (
+        this.branchScopedInventory &&
+        !(await this.lookups.isProductAvailableInBranch(item.productId, existing.quote.branchId))
+      ) {
+        throw new ProductNotAvailableInBranchError();
+      }
+
       if (!price) throw new InactiveResourceError("Product price not found");
       if (price.productId !== item.productId) throw new ProductPriceMismatchError();
       if (price.branchId != null && price.branchId !== existing.quote.branchId) {

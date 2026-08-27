@@ -23,6 +23,10 @@ jest.mock("@/modules/rbac/infrastructure/di/container", () => ({
   },
 }));
 
+jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
+  getEmitterFiscalSettings: jest.fn().mockResolvedValue(null),
+}));
+
 import { NextRequest } from "next/server";
 import { BillingController } from "@/modules/billing/infrastructure/http/BillingController";
 import { InMemoryInvoiceRepository } from "@/modules/billing/infrastructure/repositories/InMemoryInvoiceRepository";
@@ -36,6 +40,11 @@ import { GetInvoiceUseCase } from "@/modules/billing/application/use-cases/GetIn
 import { ListInvoicesBySaleUseCase } from "@/modules/billing/application/use-cases/ListInvoicesBySaleUseCase";
 import { UploadCsdUseCase } from "@/modules/billing/application/use-cases/UploadCsdUseCase";
 import { GetCsdStatusUseCase } from "@/modules/billing/application/use-cases/GetCsdStatusUseCase";
+import { GetEmitterFiscalSettingsUseCase } from "@/modules/billing/application/use-cases/GetEmitterFiscalSettingsUseCase";
+import { SearchSatTaxRegimesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatTaxRegimesUseCase";
+import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCfdiUsesUseCase";
+import { InMemorySatTaxRegimeRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatTaxRegimeRepository";
+import { InMemorySatCfdiUseRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatCfdiUseRepository";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 import type { BillingLookupService, SaleForBilling } from "@/modules/billing/application/ports/BillingLookupService";
 import type { CreateInvoiceData } from "@/modules/billing/application/ports/InvoiceRepository";
@@ -108,7 +117,10 @@ function buildController(opts: {
     authz,
     lookup,
     new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer),
-    new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
+    new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()),
+    new GetEmitterFiscalSettingsUseCase(gateway),
+    new SearchSatTaxRegimesUseCase(new InMemorySatTaxRegimeRepository()),
+    new SearchSatCfdiUsesUseCase(new InMemorySatCfdiUseRepository())
   );
   return { controller, repo };
 }
@@ -150,6 +162,11 @@ function makeInvoiceData(branchId: string, overrides: Partial<CreateInvoiceData>
     receiverCfdiUse: "G03",
     receiverFiscalRegime: "601",
     receiverTaxZipCode: "45010",
+    issuerRfc: null,
+    issuerLegalName: null,
+    issuerFiscalRegime: null,
+    issuerZipCode: null,
+    issuerAddress: null,
     currency: "MXN",
     subtotal: 100,
     taxTotal: 16,

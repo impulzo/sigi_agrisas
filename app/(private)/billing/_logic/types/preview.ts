@@ -15,6 +15,10 @@ export interface InvoicePreviewData {
   issuer: {
     name: string;
     branchName?: string | null;
+    rfc?: string | null;
+    fiscalRegime?: string | null;
+    zipCode?: string | null;
+    address?: string | null;
   };
   receiver: {
     rfc: string;

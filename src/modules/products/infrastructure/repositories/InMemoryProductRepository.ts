@@ -53,11 +53,16 @@ export class InMemoryProductRepository implements ProductRepository {
     search,
     departmentId,
     branchId,
+    branchScoped,
   }: FindAllProductsOptions): Promise<{ items: ProductWithDepartment[]; total: number }> {
     let items = includeInactive ? this.store : this.store.filter((p) => p.isActive);
 
     if (departmentId) {
       items = items.filter((p) => p.departmentId === departmentId);
+    }
+
+    if (branchId && branchScoped) {
+      items = items.filter((p) => this.inventory.has(`${branchId}:${p.id}`));
     }
 
     if (search) {

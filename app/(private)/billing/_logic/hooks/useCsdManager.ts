@@ -21,6 +21,7 @@ interface UseCsdManagerResult {
     legalName?: string;
     fiscalRegime?: string;
     zipCode?: string;
+    address?: string;
   }) => Promise<CsdStatusDto | null>;
 }
 
@@ -57,9 +58,9 @@ export function useCsdManager(): UseCsdManagerResult {
   const refreshStatus = useCallback(() => setTick((t) => t + 1), []);
   const clearUploadError = useCallback(() => setUploadError(null), []);
 
-  const upload = useCallback(async ({ rfc, cerFile, keyFile, password, legalName, fiscalRegime, zipCode }: {
+  const upload = useCallback(async ({ rfc, cerFile, keyFile, password, legalName, fiscalRegime, zipCode, address }: {
     rfc: string; cerFile: File; keyFile: File; password: string;
-    legalName?: string; fiscalRegime?: string; zipCode?: string;
+    legalName?: string; fiscalRegime?: string; zipCode?: string; address?: string;
   }): Promise<CsdStatusDto | null> => {
     setIsUploading(true);
     setUploadError(null);
@@ -77,6 +78,7 @@ export function useCsdManager(): UseCsdManagerResult {
         legalName,
         fiscalRegime,
         zipCode,
+        address,
       });
       setUploadSuccess(true);
       setTick((t) => t + 1);

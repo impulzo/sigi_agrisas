@@ -34,6 +34,14 @@ export interface InvoiceDto {
   receiverCfdiUse: string;
   receiverFiscalRegime: string;
   receiverTaxZipCode: string;
+  issuerRfc: string | null;
+  issuerLegalName: string | null;
+  issuerFiscalRegime: string | null;
+  issuerZipCode: string | null;
+  issuerAddress: string | null;
+  issuerFiscalRegimeLabel?: string | null;
+  receiverFiscalRegimeLabel?: string | null;
+  receiverCfdiUseLabel?: string | null;
   currency: string;
   subtotal: number;
   taxTotal: number;
@@ -105,6 +113,7 @@ export interface UploadCsdRequest {
   legalName?: string;
   fiscalRegime?: string;
   zipCode?: string;
+  address?: string;
 }
 
 export interface CsdStatusDto {
@@ -116,6 +125,7 @@ export interface CsdStatusDto {
   legalName?: string | null;
   fiscalRegime?: string | null;
   zipCode?: string | null;
+  address?: string | null;
   [key: string]: unknown;
 }
 

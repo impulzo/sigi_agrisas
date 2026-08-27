@@ -20,6 +20,8 @@ export interface FindAllProductsOptions {
   departmentId?: string;
   providerId?: string;
   branchId?: string;
+  /** Cuando true y hay `branchId`, restringe el resultado a productos con fila en `branch_inventory` de esa sucursal (no sólo el join de stock). */
+  branchScoped?: boolean;
   satProductCode?: string;
 }
 

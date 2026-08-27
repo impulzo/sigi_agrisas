@@ -116,6 +116,7 @@ function makeLookups(overrides?: Partial<PosLookupService>): PosLookupService {
       basePrice: 100,
     }),
     getDosificationSurchargePct: jest.fn().mockResolvedValue(5),
+    isProductAvailableInBranch: jest.fn().mockResolvedValue(true),
     ...overrides,
   };
 }

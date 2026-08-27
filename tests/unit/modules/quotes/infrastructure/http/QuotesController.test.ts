@@ -85,6 +85,9 @@ function makeLookups(overrides: Partial<PosLookupService> = {}): PosLookupServic
     async getDosificationSurchargePct() {
       return overrides.getDosificationSurchargePct ? overrides.getDosificationSurchargePct() : 5;
     },
+    async isProductAvailableInBranch(productId, branchId) {
+      return overrides.isProductAvailableInBranch ? overrides.isProductAvailableInBranch(productId, branchId) : true;
+    },
   };
 }
 

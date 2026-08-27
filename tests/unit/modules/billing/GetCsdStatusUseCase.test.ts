@@ -24,7 +24,7 @@ describe("GetCsdStatusUseCase", () => {
   });
 
   it("merges Facturama status with persisted fiscal settings", async () => {
-    mockedGet.mockResolvedValue({ legalName: "Agrisas", fiscalRegime: "601", zipCode: "83000" });
+    mockedGet.mockResolvedValue({ legalName: "Agrisas", fiscalRegime: "601", zipCode: "83000", address: "Calle Falsa 123" });
     const gateway = makeGateway({ rfc: "XAXX010101000", expiresAt: "2027-01-01", isValid: true });
     const useCase = new GetCsdStatusUseCase(gateway);
 
@@ -37,6 +37,7 @@ describe("GetCsdStatusUseCase", () => {
       legalName: "Agrisas",
       fiscalRegime: "601",
       zipCode: "83000",
+      address: "Calle Falsa 123",
     });
   });
 
@@ -50,5 +51,6 @@ describe("GetCsdStatusUseCase", () => {
     expect(result.legalName).toBeNull();
     expect(result.fiscalRegime).toBeNull();
     expect(result.zipCode).toBeNull();
+    expect(result.address).toBeNull();
   });
 });

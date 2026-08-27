@@ -794,6 +794,11 @@ model Invoice {
   receiverCfdiUse      String    @map("receiver_cfdi_use") @db.VarChar(8)
   receiverFiscalRegime String    @map("receiver_fiscal_regime") @db.VarChar(4)
   receiverTaxZipCode   String    @map("receiver_tax_zip_code") @db.VarChar(5)
+  issuerRfc            String?   @map("issuer_rfc") @db.VarChar(14)
+  issuerLegalName      String?   @map("issuer_legal_name") @db.VarChar(200)
+  issuerFiscalRegime   String?   @map("issuer_fiscal_regime") @db.VarChar(4)
+  issuerZipCode        String?   @map("issuer_zip_code") @db.VarChar(5)
+  issuerAddress        String?   @map("issuer_address") @db.Text
   currency             String    @default("MXN") @db.VarChar(3)
   subtotal             Decimal   @db.Decimal(14, 4)
   taxTotal             Decimal   @map("tax_total") @db.Decimal(14, 4)
@@ -977,6 +982,7 @@ model EmitterFiscalSettings {
   legalName    String?  @map("legal_name") @db.VarChar(200)
   fiscalRegime String?  @map("fiscal_regime") @db.VarChar(3)
   zipCode      String?  @map("zip_code") @db.VarChar(5)
+  address      String?  @db.Text
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

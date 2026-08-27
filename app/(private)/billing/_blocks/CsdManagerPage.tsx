@@ -17,6 +17,7 @@ export function CsdManagerPage() {
   const [legalName, setLegalName] = useState("");
   const [fiscalRegime, setFiscalRegime] = useState("");
   const [zipCode, setZipCode] = useState("");
+  const [address, setAddress] = useState("");
   const cerRef = useRef<HTMLInputElement>(null);
   const keyRef = useRef<HTMLInputElement>(null);
 
@@ -26,6 +27,7 @@ export function CsdManagerPage() {
     setLegalName((current) => current || status.legalName || "");
     setFiscalRegime((current) => current || status.fiscalRegime || "");
     setZipCode((current) => current || status.zipCode || "");
+    setAddress((current) => current || status.address || "");
   }, [status]);
 
   if (canManage === "loading") {
@@ -51,6 +53,7 @@ export function CsdManagerPage() {
       legalName: legalName.trim() || undefined,
       fiscalRegime: fiscalRegime.trim() || undefined,
       zipCode: zipCode.trim() || undefined,
+      address: address.trim() || undefined,
     });
     setPassword("");
     if (cerRef.current) cerRef.current.value = "";
@@ -77,6 +80,7 @@ export function CsdManagerPage() {
             {status.legalName && <div><dt className="text-label-sm text-on-surface-variant">Razón social</dt><dd>{status.legalName}</dd></div>}
             {status.fiscalRegime && <div><dt className="text-label-sm text-on-surface-variant">Régimen fiscal</dt><dd className="font-mono">{status.fiscalRegime}</dd></div>}
             {status.zipCode && <div><dt className="text-label-sm text-on-surface-variant">Código postal</dt><dd className="font-mono">{status.zipCode}</dd></div>}
+            {status.address && <div><dt className="text-label-sm text-on-surface-variant">Dirección</dt><dd>{status.address}</dd></div>}
             {status.alias && <div><dt className="text-label-sm text-on-surface-variant">Alias</dt><dd>{status.alias}</dd></div>}
             {status.issuedAt && <div><dt className="text-label-sm text-on-surface-variant">Emitido</dt><dd>{status.issuedAt}</dd></div>}
             {status.expiresAt && <div><dt className="text-label-sm text-on-surface-variant">Vence</dt><dd>{status.expiresAt}</dd></div>}
@@ -154,6 +158,18 @@ export function CsdManagerPage() {
                 className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono"
               />
             </div>
+          </div>
+          <div>
+            <label htmlFor="csd-address" className="block text-label-md text-on-surface mb-1">Dirección</label>
+            <textarea
+              id="csd-address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              maxLength={500}
+              rows={2}
+              placeholder="Calle, número, colonia, ciudad, estado"
+              className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
           </div>
           <div>
             <label htmlFor="csd-cer" className="block text-label-md text-on-surface mb-1">Certificado (.cer) <span className="text-error">*</span></label>

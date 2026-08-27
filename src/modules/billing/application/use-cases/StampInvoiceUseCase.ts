@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { resolveIssuerFiscalData } from "../services/resolveIssuerFiscalData";
 import { InvoiceRepository } from "../ports/InvoiceRepository";
 import { FacturamaGateway, FacturamaStampInput, FacturamaItemTaxInput } from "../ports/FacturamaGateway";
 import { BillingLookupService, CustomerForBilling, BranchForBilling } from "../ports/BillingLookupService";
@@ -45,6 +46,23 @@ export class StampInvoiceUseCase {
     private readonly gateway: FacturamaGateway,
     private readonly lookupService: BillingLookupService
   ) {}
+
+  private async resolveIssuerSnapshot(): Promise<{
+    issuerRfc: string | null;
+    issuerLegalName: string | null;
+    issuerFiscalRegime: string | null;
+    issuerZipCode: string | null;
+    issuerAddress: string | null;
+  }> {
+    const issuer = await resolveIssuerFiscalData(this.gateway);
+    return {
+      issuerRfc: issuer.rfc,
+      issuerLegalName: issuer.legalName,
+      issuerFiscalRegime: issuer.fiscalRegime,
+      issuerZipCode: issuer.zipCode,
+      issuerAddress: issuer.address,
+    };
+  }
 
   async execute(input: StampInput, creatorId: string, resolvedBranchId: string): Promise<Invoice> {
     if (input.type === "sale") {
@@ -132,6 +150,7 @@ export class StampInvoiceUseCase {
     };
 
     const result = await this.gateway.stamp(stampPayload);
+    const issuerSnapshot = await this.resolveIssuerSnapshot();
 
     const itemsData = sale.items.map((item, idx) => {
       const ivaRate = item.ivaRate ?? 0;
@@ -175,6 +194,7 @@ export class StampInvoiceUseCase {
       receiverCfdiUse: cfdiUse,
       receiverFiscalRegime: customer!.taxRegime!,
       receiverTaxZipCode: customer!.taxZipCode!,
+      ...issuerSnapshot,
       currency: "MXN",
       subtotal: sale.subtotal,
       taxTotal: sale.taxTotal,
@@ -260,6 +280,7 @@ export class StampInvoiceUseCase {
     };
 
     const result = await this.gateway.stamp(stampPayload);
+    const issuerSnapshot = await this.resolveIssuerSnapshot();
 
     const itemsData = input.items.map((item, idx) => {
       const lt = totalsResult.lines[idx];
@@ -298,6 +319,7 @@ export class StampInvoiceUseCase {
       receiverCfdiUse: input.customer.cfdiUse,
       receiverFiscalRegime: input.customer.fiscalRegime,
       receiverTaxZipCode: input.customer.taxZipCode,
+      ...issuerSnapshot,
       currency: "MXN",
       subtotal: totalsResult.subtotal,
       taxTotal: totalsResult.taxTotal,

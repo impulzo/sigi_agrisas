@@ -15,6 +15,7 @@ import { isFractionalQuantity } from "@/modules/products/domain/services/isFract
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { QuoteLinkInvalidError } from "../../domain/errors/QuoteLinkInvalidError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
+import { ProductNotAvailableInBranchError } from "../../domain/errors/ProductNotAvailableInBranchError";
 
 export interface CreateSaleResult {
   dto: SaleDetailDto;
@@ -31,7 +32,8 @@ export class CreateSaleUseCase {
      * before persisting the sale and the corresponding quote is marked converted
      * inside the same transaction (createCompletedFromQuote path).
      */
-    private readonly quoteRepo?: QuoteRepository
+    private readonly quoteRepo?: QuoteRepository,
+    private readonly branchScopedInventory: boolean = false
   ) {}
 
   async execute(req: CreateSaleRequest, cashierId: string): Promise<CreateSaleResult> {
@@ -123,6 +125,10 @@ export class CreateSaleUseCase {
       const product = await this.lookups.getProduct(item.productId);
       if (!product) throw new InactiveResourceError("Product not found");
       if (!product.isActive) throw new InactiveResourceError("Product");
+
+      if (this.branchScopedInventory && !(await this.lookups.isProductAvailableInBranch(item.productId, req.branchId))) {
+        throw new ProductNotAvailableInBranchError();
+      }
 
       let unitPrice: number;
       let discountPct: number | null;

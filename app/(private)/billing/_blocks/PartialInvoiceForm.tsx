@@ -9,8 +9,10 @@ import { getProductPrices } from "../../pos/_logic/services/getProductPrices";
 import { PartialInvoiceLineRow } from "./PartialInvoiceLineRow";
 import { InvoicePreviewModal } from "./InvoicePreviewModal";
 import { usePartialInvoiceForm } from "../_logic/hooks/usePartialInvoiceForm";
+import { useEmitterFiscalSettings } from "../_logic/hooks/useEmitterFiscalSettings";
 import { buildInvoicePreview } from "../_logic/lib/buildInvoicePreview";
 import { ReceiverFiscalDataIncompleteError, FacturamaStampError } from "../_logic/errors";
+import { SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS } from "@/shared/domain/catalogs/satPaymentCatalogs";
 import type { CustomerDto } from "../../pos/_logic/types/api";
 import type { ProductDto, ProductPriceDto } from "../../pos/_logic/types/api";
 
@@ -23,18 +25,8 @@ interface PricePickerState {
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
 
-const PAYMENT_FORMS = [
-  { value: "03", label: "03 - Transferencia" },
-  { value: "01", label: "01 - Efectivo" },
-  { value: "04", label: "04 - Tarjeta crédito" },
-  { value: "28", label: "28 - Tarjeta débito" },
-  { value: "99", label: "99 - Por definir" },
-];
-
-const PAYMENT_METHODS = [
-  { value: "PUE", label: "PUE - Pago en una exhibición" },
-  { value: "PPD", label: "PPD - Parcialidades o diferido" },
-];
+const PAYMENT_FORMS = SAT_PAYMENT_FORMS.map((e) => ({ value: e.code, label: `${e.code} - ${e.description}` }));
+const PAYMENT_METHODS = SAT_PAYMENT_METHODS.map((e) => ({ value: e.code, label: `${e.code} - ${e.description}` }));
 
 export function PartialInvoiceForm() {
   const {
@@ -51,11 +43,12 @@ export function PartialInvoiceForm() {
   const [pricePicker, setPricePicker] = useState<PricePickerState | null>(null);
 
   const canPreview = lines.length > 0 && !!customer && fiscalMissingFields.length === 0;
+  const emitterFiscal = useEmitterFiscalSettings();
 
   const previewData = useMemo(() => {
     if (!customer) return null;
     return buildInvoicePreview({
-      issuer: { name: "Agrisas" },
+      issuer: { name: "Agrisas", ...emitterFiscal },
       receiver: customer,
       lines: lines.map((l) => ({
         description: l.description,
@@ -70,7 +63,7 @@ export function PartialInvoiceForm() {
       paymentForm,
       paymentMethod,
     });
-  }, [customer, lines, paymentForm, paymentMethod]);
+  }, [customer, lines, paymentForm, paymentMethod, emitterFiscal]);
 
   async function handleConfirmStamp() {
     setShowPreview(false);

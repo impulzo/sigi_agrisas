@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
+import { resolveScopedBranchId } from "@/modules/rbac/infrastructure/http/enforceBranchScope";
+import { isBranchScopedInventory } from "@/shared/infrastructure/config/inventoryScope";
 import { ListProductsUseCase } from "../../application/use-cases/ListProductsUseCase";
 import { GetProductUseCase } from "../../application/use-cases/GetProductUseCase";
 import { CreateProductUseCase } from "../../application/use-cases/CreateProductUseCase";
@@ -136,7 +138,22 @@ export class ProductsController {
     if (!filtersParsed.success) {
       return NextResponse.json({ error: filtersParsed.error.errors[0].message }, { status: 400 });
     }
-    const result = await this.listUseCase.execute({ ...parsed.data, ...filtersParsed.data });
+
+    let branchId = filtersParsed.data.branchId;
+    let branchScoped = false;
+    if (isBranchScopedInventory()) {
+      const scoped = await resolveScopedBranchId(req, branchId);
+      if (scoped instanceof NextResponse) return scoped;
+      branchId = scoped.branchId;
+      branchScoped = true;
+    }
+
+    const result = await this.listUseCase.execute({
+      ...parsed.data,
+      ...filtersParsed.data,
+      branchId,
+      branchScoped,
+    });
     return NextResponse.json(result);
   }
 

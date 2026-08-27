@@ -13,6 +13,10 @@ jest.mock("@/modules/billing/infrastructure/pdf/InvoiceDocumentPdf", () => ({
   InvoiceDocumentPdf: () => null,
 }));
 
+jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
+  getEmitterFiscalSettings: jest.fn().mockResolvedValue(null),
+}));
+
 import { FakeFacturamaGateway } from "../../../../src/modules/billing/infrastructure/services/FakeFacturamaGateway";
 import { GetTicketSettingsUseCase } from "../../../../src/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { InMemoryTicketSettingsRepository } from "../../../../src/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
@@ -168,5 +172,25 @@ describe("FakeFacturamaGateway", () => {
     const gw = new FakeFacturamaGateway();
     const result = await gw.cancel("any-id", "02");
     expect(result.success).toBe(true);
+  });
+
+  it("getCsdStatus resolves gracefully with an empty rfc when no CSD was uploaded — does NOT throw", async () => {
+    const gw = new FakeFacturamaGateway();
+    await expect(gw.getCsdStatus()).resolves.toEqual({ rfc: "", isValid: false });
+  });
+
+  it("getCsdStatus reflects a successful uploadCsd on the same gateway instance", async () => {
+    const gw = new FakeFacturamaGateway();
+    await gw.uploadCsd({
+      rfc: "CAN850101AAA",
+      certificateBase64: "base64cer",
+      privateKeyBase64: "base64key",
+      privateKeyPassword: "secret",
+    });
+
+    const status = await gw.getCsdStatus();
+
+    expect(status.isValid).toBe(true);
+    expect(status.rfc).toBe("FAKE");
   });
 });

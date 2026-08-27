@@ -16,6 +16,11 @@ export interface InvoiceProps {
   receiverCfdiUse: string;
   receiverFiscalRegime: string;
   receiverTaxZipCode: string;
+  issuerRfc: string | null;
+  issuerLegalName: string | null;
+  issuerFiscalRegime: string | null;
+  issuerZipCode: string | null;
+  issuerAddress: string | null;
   currency: string;
   subtotal: number;
   taxTotal: number;
@@ -49,6 +54,11 @@ export class Invoice {
   readonly receiverCfdiUse!: string;
   readonly receiverFiscalRegime!: string;
   readonly receiverTaxZipCode!: string;
+  readonly issuerRfc!: string | null;
+  readonly issuerLegalName!: string | null;
+  readonly issuerFiscalRegime!: string | null;
+  readonly issuerZipCode!: string | null;
+  readonly issuerAddress!: string | null;
   readonly currency!: string;
   readonly subtotal!: number;
   readonly taxTotal!: number;

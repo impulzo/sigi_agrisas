@@ -42,7 +42,13 @@ import { GetInvoiceUseCase } from "@/modules/billing/application/use-cases/GetIn
 import { ListInvoicesBySaleUseCase } from "@/modules/billing/application/use-cases/ListInvoicesBySaleUseCase";
 import { UploadCsdUseCase } from "@/modules/billing/application/use-cases/UploadCsdUseCase";
 import { GetCsdStatusUseCase } from "@/modules/billing/application/use-cases/GetCsdStatusUseCase";
-import { upsertEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
+import { GetEmitterFiscalSettingsUseCase } from "@/modules/billing/application/use-cases/GetEmitterFiscalSettingsUseCase";
+import { TEST_FALLBACK_ISSUER } from "@/modules/billing/application/services/resolveIssuerFiscalData";
+import { SearchSatTaxRegimesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatTaxRegimesUseCase";
+import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCfdiUsesUseCase";
+import { InMemorySatTaxRegimeRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatTaxRegimeRepository";
+import { InMemorySatCfdiUseRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatCfdiUseRepository";
+import { upsertEmitterFiscalSettings, getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
 import type { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 import type { BillingLookupService } from "@/modules/billing/application/ports/BillingLookupService";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
@@ -50,6 +56,7 @@ import { InMemoryTicketSettingsRepository } from "@/modules/settings/infrastruct
 
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 const mockedUpsert = upsertEmitterFiscalSettings as jest.Mock;
+const mockedGetEmitter = getEmitterFiscalSettings as jest.Mock;
 const mockRenderToBuffer = renderToBuffer as jest.MockedFunction<typeof renderToBuffer>;
 
 function makeAuthz(overrides: Partial<AuthorizationService> = {}): AuthorizationService {
@@ -90,7 +97,10 @@ function buildController(authzOverride?: AuthorizationService, ticketSettingsRep
     authz,
     lookup,
     new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer),
-    new GetTicketSettingsUseCase(ticketSettingsRepo ?? new InMemoryTicketSettingsRepository())
+    new GetTicketSettingsUseCase(ticketSettingsRepo ?? new InMemoryTicketSettingsRepository()),
+    new GetEmitterFiscalSettingsUseCase(gateway),
+    new SearchSatTaxRegimesUseCase(new InMemorySatTaxRegimeRepository()),
+    new SearchSatCfdiUsesUseCase(new InMemorySatCfdiUseRepository())
   );
 }
 
@@ -189,6 +199,8 @@ describe("BillingController — previewPdf", () => {
   beforeEach(() => {
     mockRenderToBuffer.mockClear();
     mockRenderToBuffer.mockResolvedValue(Buffer.from("%PDF-1.4 mock"));
+    mockedGetEmitter.mockReset();
+    mockedGetEmitter.mockResolvedValue(null);
   });
 
   it("valid body → 200 application/pdf, does not call FacturamaGateway.stamp nor persist", async () => {
@@ -219,6 +231,25 @@ describe("BillingController — previewPdf", () => {
     expect(element.props.folioLabel).toBe("PENDIENTE DE TIMBRAR");
     expect(element.props.isDraft).toBe(true);
     expect(element.props.data.receiver.rfc).toBe(VALID_PREVIEW_BODY.receiver.rfc);
+  });
+
+  it("includes SAT catalog description labels for issuer/receiver fiscal regime and receiver CFDI use, falling back to raw code when the catalog has no match", async () => {
+    const controller = buildController();
+
+    await controller.previewPdf(previewReq(VALID_PREVIEW_BODY));
+
+    const element = mockRenderToBuffer.mock.calls[0][0] as unknown as {
+      props: {
+        data: {
+          issuer: { fiscalRegimeLabel: string | null };
+          receiver: { fiscalRegimeLabel: string | null; cfdiUseLabel: string | null };
+        };
+      };
+    };
+    // buildController() uses unseeded InMemory SAT catalogs — resolution falls back to the raw code.
+    expect(element.props.data.issuer.fiscalRegimeLabel).toBe(TEST_FALLBACK_ISSUER.fiscalRegime);
+    expect(element.props.data.receiver.fiscalRegimeLabel).toBe(VALID_PREVIEW_BODY.receiver.fiscalRegime);
+    expect(element.props.data.receiver.cfdiUseLabel).toBe(VALID_PREVIEW_BODY.receiver.cfdiUse);
   });
 
   it("resolves logoUrl server-side via GetTicketSettingsUseCase and injects it into issuer data, ignoring any client-supplied logo field", async () => {
@@ -300,5 +331,270 @@ describe("BillingController — previewPdf", () => {
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBeDefined();
+  });
+
+  it("resolves issuer fiscal data server-side via EmitterFiscalSettings, ignoring any client-supplied rfc/fiscalRegime/zipCode", async () => {
+    mockedGetEmitter.mockResolvedValue({
+      rfc: "AGR010101AB1",
+      legalName: "Agrisas SA de CV",
+      fiscalRegime: "601",
+      zipCode: "83000",
+    });
+    const controller = buildController();
+    const bodyWithForgedIssuer = {
+      ...VALID_PREVIEW_BODY,
+      issuer: { ...VALID_PREVIEW_BODY.issuer, rfc: "FAKE010101AAA", fiscalRegime: "999", zipCode: "00000" },
+    };
+
+    await controller.previewPdf(previewReq(bodyWithForgedIssuer));
+
+    expect(mockRenderToBuffer).toHaveBeenCalledTimes(1);
+    const element = mockRenderToBuffer.mock.calls[0][0] as unknown as {
+      props: { data: { issuer: { rfc: string | null; fiscalRegime: string | null; zipCode: string | null } } };
+    };
+    expect(element.props.data.issuer.rfc).toBe("AGR010101AB1");
+    expect(element.props.data.issuer.fiscalRegime).toBe("601");
+    expect(element.props.data.issuer.zipCode).toBe("83000");
+  });
+
+  it("EmitterFiscalSettings incomplete and no CSD loaded → falls back to fixed test-data issuer, still 200", async () => {
+    mockedGetEmitter.mockResolvedValue(null);
+    const controller = buildController();
+
+    const res = await controller.previewPdf(previewReq(VALID_PREVIEW_BODY));
+
+    expect(res.status).toBe(200);
+    const element = mockRenderToBuffer.mock.calls[0][0] as unknown as {
+      props: { data: { issuer: { rfc: string | null } } };
+    };
+    expect(element.props.data.issuer.rfc).toBe(TEST_FALLBACK_ISSUER.rfc);
+  });
+});
+
+describe("BillingController — getEmitterFiscalSettings", () => {
+  beforeEach(() => {
+    mockedGetEmitter.mockReset();
+  });
+
+  function emitterReq(): NextRequest {
+    return new NextRequest("http://localhost/api/v1/admin/billing/emitter-fiscal-settings", {
+      method: "GET",
+      headers: { "x-user-id": USER_ID },
+    });
+  }
+
+  it("with billing:write → 200 with the 5 fiscal fields, falling back to EmitterFiscalSettings when no CSD is loaded", async () => {
+    mockedGetEmitter.mockResolvedValue({
+      rfc: "AGR010101AB1",
+      legalName: "Agrisas SA de CV",
+      fiscalRegime: "601",
+      zipCode: "83000",
+      address: "Dirección de prueba, Culiacán, Sinaloa",
+    });
+    const controller = buildController();
+    const gatewaySpy = jest.spyOn(FakeFacturamaGateway.prototype, "getCsdStatus");
+
+    const res = await controller.getEmitterFiscalSettings(emitterReq());
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({
+      rfc: "AGR010101AB1",
+      legalName: "Agrisas SA de CV",
+      fiscalRegime: "601",
+      zipCode: "83000",
+      address: "Dirección de prueba, Culiacán, Sinaloa",
+    });
+    // Cascade always attempts the CSD tier first — this controller's gateway has no CSD
+    // uploaded, so it resolves with an empty rfc and the cascade falls through to EmitterFiscalSettings.
+    expect(gatewaySpy).toHaveBeenCalled();
+    gatewaySpy.mockRestore();
+  });
+
+  it("EmitterFiscalSettings not captured yet and no CSD loaded → 200 with fixed test-data fields", async () => {
+    mockedGetEmitter.mockResolvedValue(null);
+    const controller = buildController();
+
+    const res = await controller.getEmitterFiscalSettings(emitterReq());
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual(TEST_FALLBACK_ISSUER);
+  });
+
+  it("without billing:write → 403", async () => {
+    const controller = buildController(makeAuthz({ userCan: jest.fn().mockResolvedValue(false) }));
+
+    const res = await controller.getEmitterFiscalSettings(emitterReq());
+
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("BillingController — getById resolves SAT catalog descriptions", () => {
+  const INVOICE_ID = "12345678-1234-1234-1234-123456789012";
+
+  function buildControllerWithSeededCatalogs() {
+    const repo = new InMemoryInvoiceRepository();
+    const gateway = new FakeFacturamaGateway();
+    const authz = makeAuthz();
+    const lookup = makeLookup();
+    const downloadUseCase = new DownloadInvoiceFileUseCase(repo, gateway);
+    const mailer = { send: jest.fn().mockResolvedValue(undefined) };
+
+    const taxRegimeRepo = new InMemorySatTaxRegimeRepository();
+    taxRegimeRepo.seed([{ code: "601", description: "General de Ley Personas Morales" }]);
+    const cfdiUseRepo = new InMemorySatCfdiUseRepository();
+    cfdiUseRepo.seed([{ code: "G03", description: "Gastos en general" }]);
+
+    const controller = new BillingController(
+      new StampInvoiceUseCase(repo, gateway, lookup),
+      new CancelInvoiceUseCase(repo, gateway),
+      downloadUseCase,
+      new ListInvoicesUseCase(repo),
+      new GetInvoiceUseCase(repo),
+      new ListInvoicesBySaleUseCase(repo),
+      new UploadCsdUseCase(gateway),
+      new GetCsdStatusUseCase(gateway),
+      authz,
+      lookup,
+      new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer),
+      new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()),
+      new GetEmitterFiscalSettingsUseCase(gateway),
+      new SearchSatTaxRegimesUseCase(taxRegimeRepo),
+      new SearchSatCfdiUsesUseCase(cfdiUseRepo)
+    );
+    return { controller, repo };
+  }
+
+  function getByIdReq(): NextRequest {
+    return new NextRequest(`http://localhost/api/v1/admin/invoices/${INVOICE_ID}`, {
+      method: "GET",
+      headers: { "x-user-id": USER_ID },
+    });
+  }
+
+  it("resolves known codes to 'code - description' for issuer and receiver", async () => {
+    const { controller, repo } = buildControllerWithSeededCatalogs();
+    await repo.createStamped({
+      id: INVOICE_ID,
+      uuid: "AAA-BBB",
+      facturamaCfdiId: "cfdi-1",
+      status: "stamped",
+      cfdiType: "I",
+      cfdiUse: "G03",
+      paymentForm: "01",
+      paymentMethod: "PUE",
+      receiverRfc: "XAXX010101000",
+      receiverName: "Cliente",
+      receiverCfdiUse: "G03",
+      receiverFiscalRegime: "601",
+      receiverTaxZipCode: "45010",
+      issuerRfc: "AGR010101AB1",
+      issuerLegalName: "Agrisas",
+      issuerFiscalRegime: "601",
+      issuerZipCode: "83000",
+      issuerAddress: "Calle Falsa 123",
+      currency: "MXN",
+      subtotal: 100,
+      taxTotal: 16,
+      total: 116,
+      xmlUrl: null,
+      pdfUrl: null,
+      saleId: null,
+      branchId: "branch-1",
+      customerId: null,
+      creatorId: "creator-1",
+      items: [],
+    });
+
+    const res = await controller.getById(getByIdReq(), INVOICE_ID);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.issuerFiscalRegimeLabel).toBe("601 - General de Ley Personas Morales");
+    expect(body.receiverFiscalRegimeLabel).toBe("601 - General de Ley Personas Morales");
+    expect(body.receiverCfdiUseLabel).toBe("G03 - Gastos en general");
+  });
+
+  it("issuer label is null when the invoice has no issuer snapshot (pre-migration invoice)", async () => {
+    const { controller, repo } = buildControllerWithSeededCatalogs();
+    await repo.createStamped({
+      id: INVOICE_ID,
+      uuid: "AAA-BBB",
+      facturamaCfdiId: "cfdi-1",
+      status: "stamped",
+      cfdiType: "I",
+      cfdiUse: "G03",
+      paymentForm: "01",
+      paymentMethod: "PUE",
+      receiverRfc: "XAXX010101000",
+      receiverName: "Cliente",
+      receiverCfdiUse: "G03",
+      receiverFiscalRegime: "601",
+      receiverTaxZipCode: "45010",
+      issuerRfc: null,
+      issuerLegalName: null,
+      issuerFiscalRegime: null,
+      issuerZipCode: null,
+      issuerAddress: null,
+      currency: "MXN",
+      subtotal: 100,
+      taxTotal: 16,
+      total: 116,
+      xmlUrl: null,
+      pdfUrl: null,
+      saleId: null,
+      branchId: "branch-1",
+      customerId: null,
+      creatorId: "creator-1",
+      items: [],
+    });
+
+    const res = await controller.getById(getByIdReq(), INVOICE_ID);
+
+    const body = await res.json();
+    expect(body.issuerFiscalRegimeLabel).toBeNull();
+  });
+
+  it("unknown code falls back to the raw code", async () => {
+    const { controller, repo } = buildControllerWithSeededCatalogs();
+    await repo.createStamped({
+      id: INVOICE_ID,
+      uuid: "AAA-BBB",
+      facturamaCfdiId: "cfdi-1",
+      status: "stamped",
+      cfdiType: "I",
+      cfdiUse: "G99",
+      paymentForm: "01",
+      paymentMethod: "PUE",
+      receiverRfc: "XAXX010101000",
+      receiverName: "Cliente",
+      receiverCfdiUse: "G99",
+      receiverFiscalRegime: "999",
+      receiverTaxZipCode: "45010",
+      issuerRfc: null,
+      issuerLegalName: null,
+      issuerFiscalRegime: null,
+      issuerZipCode: null,
+      issuerAddress: null,
+      currency: "MXN",
+      subtotal: 100,
+      taxTotal: 16,
+      total: 116,
+      xmlUrl: null,
+      pdfUrl: null,
+      saleId: null,
+      branchId: "branch-1",
+      customerId: null,
+      creatorId: "creator-1",
+      items: [],
+    });
+
+    const res = await controller.getById(getByIdReq(), INVOICE_ID);
+
+    const body = await res.json();
+    expect(body.receiverFiscalRegimeLabel).toBe("999");
+    expect(body.receiverCfdiUseLabel).toBe("G99");
   });
 });

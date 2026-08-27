@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { shouldNotifyLowStock } from "@/shared/domain/services/checkAndNotifyLowStock";
 import { resolveUnitDescriptions } from "@/shared/infrastructure/sat-codes/resolveUnitDescriptions";
+import { BranchInventoryRowMissingError } from "@/shared/domain/errors/BranchInventoryRowMissingError";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -39,6 +40,8 @@ export interface RecordInventoryMovementData {
   sourceId: string;
   notes?: string | null;
   createdBy?: string | null;
+  /** false → si no existe fila de branch_inventory, lanza BranchInventoryRowMissingError en vez de crearla. Default true. */
+  allowRowCreation?: boolean;
 }
 
 export interface LowStockSignal {
@@ -88,6 +91,9 @@ export async function recordInventoryMovement(
   let reorderPoint: number;
   let lastLowStockNotifiedAt: Date | null;
   if (rows.length === 0) {
+    if (data.allowRowCreation === false) {
+      throw new BranchInventoryRowMissingError(data.branchId, data.productId);
+    }
     const created = await tx.branchInventory.create({
       data: {
         branchId: data.branchId,

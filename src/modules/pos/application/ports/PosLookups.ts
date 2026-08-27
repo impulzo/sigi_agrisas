@@ -68,4 +68,6 @@ export interface PosLookupService {
   getPaymentMethod(id: string): Promise<PaymentMethodLookup | null>;
   /** Currently configured dosification surcharge percentage (settings-api), default 5 when unconfigured. */
   getDosificationSurchargePct(): Promise<number>;
+  /** true si existe fila de branch_inventory para (branchId, productId) — asignación del producto a la sucursal (modo INVENTORY_SCOPE_MODE=branch). */
+  isProductAvailableInBranch(productId: string, branchId: string): Promise<boolean>;
 }

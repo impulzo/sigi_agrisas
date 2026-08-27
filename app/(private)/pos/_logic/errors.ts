@@ -25,6 +25,13 @@ export class ProductPriceMismatchError extends Error {
   constructor() { super("El precio no corresponde al producto"); this.name = "ProductPriceMismatchError"; }
 }
 
+export class ProductNotAvailableInBranchError extends Error {
+  constructor() {
+    super("Producto no disponible en esta sucursal — asígnalo desde Inventario");
+    this.name = "ProductNotAvailableInBranchError";
+  }
+}
+
 export class EmptyCartError extends Error {
   constructor() { super("El carrito está vacío"); this.name = "EmptyCartError"; }
 }

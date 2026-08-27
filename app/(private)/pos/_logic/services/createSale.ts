@@ -8,6 +8,7 @@ import {
   PaymentMethodInactiveError,
   ProductInactiveError,
   ProductPriceMismatchError,
+  ProductNotAvailableInBranchError,
   EmptyCartError,
   SaleScopingForbiddenError,
   SaleCreateForbiddenError,
@@ -19,6 +20,7 @@ function mapErrorMessage(message: string): Error {
   if (msg.includes("branch") && msg.includes("inactive")) return new BranchInactiveError();
   if (msg.includes("folio") && msg.includes("inactive")) return new FolioInactiveError();
   if (msg.includes("payment") && msg.includes("inactive")) return new PaymentMethodInactiveError();
+  if (msg.includes("not available in this branch")) return new ProductNotAvailableInBranchError();
   if (msg.includes("product") && msg.includes("inactive")) return new ProductInactiveError();
   if (msg.includes("price") && msg.includes("mismatch")) return new ProductPriceMismatchError();
   if (msg.includes("empty") || msg.includes("no items")) return new EmptyCartError();

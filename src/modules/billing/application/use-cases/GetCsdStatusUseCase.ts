@@ -5,6 +5,7 @@ export interface CsdStatusWithFiscalData extends FacturamaCsdStatus {
   legalName: string | null;
   fiscalRegime: string | null;
   zipCode: string | null;
+  address: string | null;
 }
 
 export class GetCsdStatusUseCase {
@@ -20,6 +21,7 @@ export class GetCsdStatusUseCase {
       legalName: fiscalSettings?.legalName ?? null,
       fiscalRegime: fiscalSettings?.fiscalRegime ?? null,
       zipCode: fiscalSettings?.zipCode ?? null,
+      address: fiscalSettings?.address ?? null,
     };
   }
 }

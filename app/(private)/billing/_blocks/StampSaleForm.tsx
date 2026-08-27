@@ -7,19 +7,10 @@ import { InvoicePreviewModal } from "./InvoicePreviewModal";
 import { useStampSaleForm } from "../_logic/hooks/useStampSaleForm";
 import { useInvoicePreview } from "../_logic/hooks/useInvoicePreview";
 import { SaleAlreadyInvoicedError, ReceiverFiscalDataIncompleteError, FacturamaStampError } from "../_logic/errors";
+import { SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS } from "@/shared/domain/catalogs/satPaymentCatalogs";
 
-const PAYMENT_FORMS = [
-  { value: "01", label: "01 - Efectivo" },
-  { value: "03", label: "03 - Transferencia" },
-  { value: "04", label: "04 - Tarjeta de crédito" },
-  { value: "28", label: "28 - Tarjeta de débito" },
-  { value: "99", label: "99 - Por definir" },
-];
-
-const PAYMENT_METHODS = [
-  { value: "PUE", label: "PUE - Pago en una exhibición" },
-  { value: "PPD", label: "PPD - Pago en parcialidades o diferido" },
-];
+const PAYMENT_FORMS = SAT_PAYMENT_FORMS.map((e) => ({ value: e.code, label: `${e.code} - ${e.description}` }));
+const PAYMENT_METHODS = SAT_PAYMENT_METHODS.map((e) => ({ value: e.code, label: `${e.code} - ${e.description}` }));
 
 const CFDI_USES = [
   { value: "G01", label: "G01 - Adquisición de mercancias" },

@@ -15,6 +15,7 @@ import { isFractionalQuantity } from "@/modules/products/domain/services/isFract
 import { CancelledSaleNotEditableError } from "../../domain/errors/CancelledSaleNotEditableError";
 import { ReturnedTotalSaleNotEditableError } from "../../domain/errors/ReturnedTotalSaleNotEditableError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
+import { ProductNotAvailableInBranchError } from "../../domain/errors/ProductNotAvailableInBranchError";
 
 export interface EditCompletedSaleResult {
   dto: SaleDetailDto;
@@ -24,7 +25,8 @@ export interface EditCompletedSaleResult {
 export class EditCompletedSaleUseCase {
   constructor(
     private readonly saleRepo: SaleRepository,
-    private readonly lookups: PosLookupService
+    private readonly lookups: PosLookupService,
+    private readonly branchScopedInventory: boolean = false
   ) {}
 
   async execute(id: string, req: EditCompletedSaleRequest): Promise<EditCompletedSaleResult> {
@@ -59,6 +61,13 @@ export class EditCompletedSaleUseCase {
       const product = await this.lookups.getProduct(item.productId);
       if (!product) throw new InactiveResourceError("Product not found");
       if (!product.isActive) throw new InactiveResourceError("Product");
+
+      if (
+        this.branchScopedInventory &&
+        !(await this.lookups.isProductAvailableInBranch(item.productId, existing.sale.branchId))
+      ) {
+        throw new ProductNotAvailableInBranchError();
+      }
 
       let unitPrice: number;
       let discountPct: number | null;

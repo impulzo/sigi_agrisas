@@ -12,11 +12,12 @@ import {
 } from "../../application/ports/FacturamaGateway";
 import { InvoiceDocumentPdf, InvoiceDocumentPdfData } from "../pdf/InvoiceDocumentPdf";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
 
 const MOCK_WATERMARK = "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL";
 
 const FALLBACK_INVOICE_DATA: InvoiceDocumentPdfData = {
-  issuer: { name: "Agrisas", rfc: "AGR010101AB1" },
+  issuer: { name: "Agrisas", rfc: "AGR010101AB1", fiscalRegime: "601", zipCode: "83000" },
   receiver: {
     rfc: "XAXX010101000",
     name: "Cliente de prueba",
@@ -48,7 +49,7 @@ const FALLBACK_INVOICE_DATA: InvoiceDocumentPdfData = {
 
 function toInvoiceDocumentPdfData(input: FacturamaStampInput, uuid: string): InvoiceDocumentPdfData {
   return {
-    issuer: { name: "Agrisas (mock)", rfc: "AGR010101AB1" },
+    issuer: { name: "Agrisas (mock)", rfc: "AGR010101AB1", fiscalRegime: "601", zipCode: "83000" },
     receiver: {
       rfc: input.receiver.rfc,
       name: input.receiver.name,
@@ -121,6 +122,7 @@ function buildFakeXml(input: FacturamaStampInput | null, uuid: string): string {
 export class FakeFacturamaGateway implements FacturamaGateway {
   private cancelledIds = new Set<string>();
   private stampedInputs = new Map<string, { input: FacturamaStampInput; uuid: string }>();
+  private csdUploaded = false;
 
   constructor(private readonly getTicketSettingsUseCase?: GetTicketSettingsUseCase) {}
 
@@ -152,10 +154,20 @@ export class FakeFacturamaGateway implements FacturamaGateway {
     }
 
     const baseData = stored ? toInvoiceDocumentPdfData(stored.input, uuid) : { ...FALLBACK_INVOICE_DATA, uuid };
-    const logoUrl = this.getTicketSettingsUseCase
-      ? (await this.getTicketSettingsUseCase.execute()).logoUrl
-      : null;
-    const data = { ...baseData, issuer: { ...baseData.issuer, logoUrl } };
+    const [logoUrl, emitter] = await Promise.all([
+      this.getTicketSettingsUseCase ? this.getTicketSettingsUseCase.execute().then((s) => s.logoUrl) : null,
+      getEmitterFiscalSettings(),
+    ]);
+    const data = {
+      ...baseData,
+      issuer: {
+        ...baseData.issuer,
+        logoUrl,
+        rfc: emitter?.rfc ?? baseData.issuer.rfc,
+        fiscalRegime: emitter?.fiscalRegime ?? baseData.issuer.fiscalRegime,
+        zipCode: emitter?.zipCode ?? baseData.issuer.zipCode,
+      },
+    };
     const buffer = await renderToBuffer(
       createElement(InvoiceDocumentPdf, { data, watermark: MOCK_WATERMARK, folioLabel: uuid }) as never
     );
@@ -163,6 +175,7 @@ export class FakeFacturamaGateway implements FacturamaGateway {
   }
 
   async uploadCsd(_input: FacturamaCsdInput): Promise<FacturamaCsdStatus> {
+    this.csdUploaded = true;
     return {
       rfc: _input.rfc,
       expiresAt: "2027-01-01T00:00:00",
@@ -171,7 +184,14 @@ export class FakeFacturamaGateway implements FacturamaGateway {
     };
   }
 
+  // Mirrors real Facturama behavior: no rfc/issuer without a CSD actually uploaded to this
+  // account — but resolves successfully (empty rfc), not an error. The `/billing/csd` status
+  // page and the issuer cascade both need to distinguish "no CSD yet" from a real API failure;
+  // only a genuine Facturama error should reject this call.
   async getCsdStatus(rfc?: string): Promise<FacturamaCsdStatus> {
+    if (!this.csdUploaded) {
+      return { rfc: "", isValid: false };
+    }
     return {
       rfc: rfc ?? "FAKE",
       expiresAt: "2027-01-01T00:00:00",

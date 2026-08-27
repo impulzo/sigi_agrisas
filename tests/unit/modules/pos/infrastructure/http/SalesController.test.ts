@@ -92,6 +92,7 @@ function makeLookups(): PosLookupService {
     getPaymentMethod: jest.fn(),
     getDosificationForSale: jest.fn(),
     getDosificationSurchargePct: jest.fn().mockResolvedValue(5),
+    isProductAvailableInBranch: jest.fn().mockResolvedValue(true),
   };
 }
 
@@ -345,6 +346,7 @@ describe("SalesController — quoteId link (task 10.8)", () => {
       getDosificationForSale: jest.fn(),
       getPaymentMethod: jest.fn().mockResolvedValue({ id: VALID_UUID, isActive: true }),
       getDosificationSurchargePct: jest.fn().mockResolvedValue(5),
+      isProductAvailableInBranch: jest.fn().mockResolvedValue(true),
     };
   }
 
@@ -537,6 +539,7 @@ describe("SalesController — Flujo de crédito y abonos activos", () => {
       getPaymentMethod: jest.fn().mockResolvedValue({ id: VALID_UUID, isActive: true, isCredit: true }),
       getDosificationForSale: jest.fn(),
       getDosificationSurchargePct: jest.fn().mockResolvedValue(5),
+      isProductAvailableInBranch: jest.fn().mockResolvedValue(true),
     };
   }
 

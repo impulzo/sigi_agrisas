@@ -9,11 +9,19 @@ jest.mock("../../../../../app/(private)/billing/_logic/services/downloadInvoiceP
   downloadInvoicePreviewPdf: jest.fn(),
 }));
 
+jest.mock("../../../../../app/(private)/billing/_logic/services/resolveSatDescription", () => ({
+  resolveFiscalRegimeDescription: jest.fn((code: string) => Promise.resolve(code)),
+  resolveCfdiUseDescription: jest.fn((code: string) => Promise.resolve(code)),
+}));
+
 import { InvoicePreviewModal } from "../../../../../app/(private)/billing/_blocks/InvoicePreviewModal";
 import { downloadInvoicePreviewPdf } from "../../../../../app/(private)/billing/_logic/services/downloadInvoicePreviewPdf";
+import { resolveFiscalRegimeDescription, resolveCfdiUseDescription } from "../../../../../app/(private)/billing/_logic/services/resolveSatDescription";
 import type { InvoicePreviewData } from "../../../../../app/(private)/billing/_logic/types/preview";
 
 const mockDownload = downloadInvoicePreviewPdf as jest.MockedFunction<typeof downloadInvoicePreviewPdf>;
+const mockResolveFiscalRegime = resolveFiscalRegimeDescription as jest.MockedFunction<typeof resolveFiscalRegimeDescription>;
+const mockResolveCfdiUse = resolveCfdiUseDescription as jest.MockedFunction<typeof resolveCfdiUseDescription>;
 
 HTMLDialogElement.prototype.showModal = jest.fn(function (this: HTMLDialogElement) {
   this.setAttribute("open", "");
@@ -24,7 +32,7 @@ HTMLDialogElement.prototype.close = jest.fn(function (this: HTMLDialogElement) {
 
 function makeData(overrides: Partial<InvoicePreviewData> = {}): InvoicePreviewData {
   return {
-    issuer: { name: "Agrisas", branchName: "Matriz" },
+    issuer: { name: "Agrisas", branchName: "Matriz", rfc: "AGR010101AB1", fiscalRegime: "601", zipCode: "83000", address: "Calle Falsa 123, CDMX" },
     receiver: { rfc: "XAXX010101000", name: "Cliente", cfdiUse: "G03", fiscalRegime: "601", taxZipCode: "45010" },
     lines: [
       { description: "Fertilizante", productCode: "SKU1", quantity: 1, unitPrice: 100, discountPct: 0, ivaRate: 0.16, iepsRate: 0, lineSubtotal: 86.21, lineTotal: 100 },
@@ -177,6 +185,92 @@ describe("InvoicePreviewModal", () => {
     );
 
     expect(screen.getByRole("button", { name: /timbrar ahora/i })).toBeDisabled();
+  });
+
+  it("renders the issuer section with RFC, razón social, régimen fiscal and CP", () => {
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={makeData()}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    expect(screen.getByText("Datos del emisor")).toBeInTheDocument();
+    expect(screen.getByText("AGR010101AB1")).toBeInTheDocument();
+    expect(screen.getAllByText("601").length).toBe(2); // issuer + receiver share the same mock fiscalRegime
+    expect(screen.getByText("83000")).toBeInTheDocument();
+  });
+
+  it("renders dashes in the issuer section when the fiscal lookup is unresolved", () => {
+    const data = makeData({ issuer: { name: "Agrisas" } });
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={data}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    const emisorHeading = screen.getByText("Datos del emisor");
+    const emisorSection = emisorHeading.closest("div")!.parentElement!;
+    expect(emisorSection.textContent).toContain("—");
+  });
+
+  it("shows 'Factura' as the header title instead of the company name, plus the issuer's address", () => {
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={makeData()}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    expect(screen.getByText("Factura")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Agrisas" })).not.toBeInTheDocument();
+    expect(screen.getByText("Dirección")).toBeInTheDocument();
+    expect(screen.getByText("Calle Falsa 123, CDMX")).toBeInTheDocument();
+  });
+
+  it("resolves and shows the fiscal regime / CFDI use descriptions once available", async () => {
+    mockResolveFiscalRegime.mockImplementation((code) =>
+      Promise.resolve(code === "601" ? "601 - General de Ley Personas Morales" : code)
+    );
+    mockResolveCfdiUse.mockResolvedValue("G03 - Gastos en general");
+
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={makeData()}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    expect(await screen.findByText("G03 - Gastos en general")).toBeInTheDocument();
+    expect(screen.getAllByText("601 - General de Ley Personas Morales").length).toBe(2);
+  });
+
+  it("renders the receiver's zip code alongside the rest of its fiscal data", () => {
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={makeData()}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    expect(screen.getAllByText("Código postal").length).toBeGreaterThan(0);
+    expect(screen.getByText("45010")).toBeInTheDocument();
   });
 
   it("shows load error and disables Timbrar ahora", () => {

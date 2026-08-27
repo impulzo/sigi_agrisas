@@ -72,6 +72,7 @@ function makeLookups(overrides?: Partial<PosLookupService>): PosLookupService {
       basePrice: 100,
     }),
     getDosificationSurchargePct: jest.fn().mockResolvedValue(7),
+    isProductAvailableInBranch: jest.fn().mockResolvedValue(true),
     ...overrides,
   };
 }
@@ -213,6 +214,28 @@ describe("EditCompletedSaleUseCase", () => {
       await new EditCompletedSaleUseCase(repo, makeLookups()).execute("sale-1", baseReq); // quantity: 1
       const callArg = (repo.replaceItemsAndRecalculate as jest.Mock).mock.calls[0][1] as EditSaleData;
       expect(callArg.items[0].unitPrice).toBe(100);
+    });
+  });
+
+  describe("gate de disponibilidad por sucursal (branchScopedInventory)", () => {
+    it("rechaza producto no asignado a la sucursal cuando branchScopedInventory=true", async () => {
+      const lookups = makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(false) });
+      await expect(
+        new EditCompletedSaleUseCase(makeRepo("completed"), lookups, true).execute("sale-1", baseReq)
+      ).rejects.toThrow("Product is not available in this branch");
+    });
+
+    it("permite producto asignado cuando branchScopedInventory=true", async () => {
+      const lookups = makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(true) });
+      const result = await new EditCompletedSaleUseCase(makeRepo("completed"), lookups, true).execute("sale-1", baseReq);
+      expect(result.dto.status).toBe("edited");
+    });
+
+    it("no aplica el gate cuando branchScopedInventory=false (default)", async () => {
+      const lookups = makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(false) });
+      const result = await new EditCompletedSaleUseCase(makeRepo("completed"), lookups).execute("sale-1", baseReq);
+      expect(result.dto.status).toBe("edited");
+      expect(lookups.isProductAvailableInBranch).not.toHaveBeenCalled();
     });
   });
 });

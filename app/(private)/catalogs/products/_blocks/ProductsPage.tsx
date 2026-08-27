@@ -8,6 +8,7 @@ import { useProducts } from "../_logic/hooks/useProducts";
 import { useProductMutations } from "../_logic/hooks/useProductMutations";
 import { useDepartmentsOptions } from "../../../../_hooks/useDepartmentsOptions";
 import { useProvidersOptions } from "../../../../_hooks/useProvidersOptions";
+import { useInventoryScopeMode } from "../../../../_hooks/useInventoryScopeMode";
 import { ProductsTable } from "./ProductsTable";
 import { ProductEditModal } from "./ProductEditModal";
 import { PageShell } from "../../../../_components/organisms/PageShell";
@@ -33,6 +34,7 @@ interface ModalState {
 export function ProductsPage() {
   const router = useRouter();
   const { can } = useCurrentUser();
+  const { mode: inventoryScopeMode } = useInventoryScopeMode();
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -213,6 +215,13 @@ export function ProductsPage() {
         description="Gestiona el catálogo de productos, precios y dosificaciones."
         toolbar={toolbar}
       >
+        {inventoryScopeMode === "branch" && (
+          <div className="px-6 pt-4">
+            <p className="text-body-sm text-on-surface-variant">
+              Inventario por sucursal activo: los productos deben asignarse a cada sucursal desde Inventario para poder venderse ahí.
+            </p>
+          </div>
+        )}
         {isLoading ? (
           <div className="p-6 space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (

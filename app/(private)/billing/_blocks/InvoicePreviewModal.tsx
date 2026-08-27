@@ -5,6 +5,7 @@ import { Button } from "../../../_components/atoms/Button/Button";
 import { DownloadPdfButton } from "../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { downloadInvoicePreviewPdf } from "../_logic/services/downloadInvoicePreviewPdf";
+import { resolveFiscalRegimeDescription, resolveCfdiUseDescription } from "../_logic/services/resolveSatDescription";
 import type { InvoicePreviewData } from "../_logic/types/preview";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
@@ -33,6 +34,30 @@ export function InvoicePreviewModal({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<Error | null>(null);
+  const [labels, setLabels] = useState<{
+    issuerFiscalRegime: string;
+    receiverFiscalRegime: string;
+    receiverCfdiUse: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!data) {
+      setLabels(null);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([
+      resolveFiscalRegimeDescription(data.issuer.fiscalRegime ?? ""),
+      resolveFiscalRegimeDescription(data.receiver.fiscalRegime),
+      resolveCfdiUseDescription(data.receiver.cfdiUse),
+    ]).then(([issuerFiscalRegime, receiverFiscalRegime, receiverCfdiUse]) => {
+      if (cancelled) return;
+      setLabels({ issuerFiscalRegime, receiverFiscalRegime, receiverCfdiUse });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [data]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -80,7 +105,7 @@ export function InvoicePreviewModal({
           <img src="/logo.png" alt="Agrisas" className="h-10 w-auto" />
           <div>
             <h2 id="invoice-preview-modal-title" className="text-title-md font-semibold text-on-surface">
-              {data?.issuer.name ?? "Agrisas"}
+              Factura
             </h2>
             {data?.issuer.branchName && (
               <p className="text-label-sm text-on-surface-variant">{data.issuer.branchName}</p>
@@ -110,6 +135,32 @@ export function InvoicePreviewModal({
       {data && !isLoading && (
         <div className="space-y-4">
           <div className="bg-surface-container-low rounded-lg border border-outline-variant p-4">
+            <h3 className="text-title-sm font-semibold text-on-surface mb-3">Datos del emisor</h3>
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div>
+                <dt className="text-label-sm text-on-surface-variant">RFC</dt>
+                <dd className="text-body-sm text-on-surface font-mono">{data.issuer.rfc || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-label-sm text-on-surface-variant">Razón social</dt>
+                <dd className="text-body-sm text-on-surface">{data.issuer.name || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-label-sm text-on-surface-variant">Régimen fiscal</dt>
+                <dd className="text-body-sm text-on-surface">{labels?.issuerFiscalRegime || data.issuer.fiscalRegime || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-label-sm text-on-surface-variant">Código postal</dt>
+                <dd className="text-body-sm text-on-surface">{data.issuer.zipCode || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-label-sm text-on-surface-variant">Dirección</dt>
+                <dd className="text-body-sm text-on-surface">{data.issuer.address || "—"}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="bg-surface-container-low rounded-lg border border-outline-variant p-4">
             <h3 className="text-title-sm font-semibold text-on-surface mb-3">Datos del receptor</h3>
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
@@ -122,11 +173,15 @@ export function InvoicePreviewModal({
               </div>
               <div>
                 <dt className="text-label-sm text-on-surface-variant">Uso CFDI</dt>
-                <dd className="text-body-sm text-on-surface">{data.receiver.cfdiUse || "—"}</dd>
+                <dd className="text-body-sm text-on-surface">{labels?.receiverCfdiUse || data.receiver.cfdiUse || "—"}</dd>
               </div>
               <div>
                 <dt className="text-label-sm text-on-surface-variant">Régimen fiscal</dt>
-                <dd className="text-body-sm text-on-surface">{data.receiver.fiscalRegime || "—"}</dd>
+                <dd className="text-body-sm text-on-surface">{labels?.receiverFiscalRegime || data.receiver.fiscalRegime || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-label-sm text-on-surface-variant">Código postal</dt>
+                <dd className="text-body-sm text-on-surface">{data.receiver.taxZipCode || "—"}</dd>
               </div>
             </dl>
           </div>

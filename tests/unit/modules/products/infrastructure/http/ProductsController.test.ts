@@ -1,4 +1,16 @@
+jest.mock("@/modules/rbac/infrastructure/di/container", () => ({
+  rbacContainer: {
+    authorizationService: {
+      userCan: jest.fn().mockResolvedValue(false),
+      listUserPermissions: jest.fn().mockResolvedValue([]),
+      invalidate: jest.fn(),
+      invalidateByRole: jest.fn().mockResolvedValue(undefined),
+    },
+  },
+}));
+
 import { NextRequest } from "next/server";
+import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
 import { ProductsController } from "@/modules/products/infrastructure/http/ProductsController";
 import { InMemoryProductRepository } from "@/modules/products/infrastructure/repositories/InMemoryProductRepository";
 import { InMemoryDepartmentRepository } from "@/modules/departments/infrastructure/repositories/InMemoryDepartmentRepository";
@@ -29,7 +41,7 @@ async function buildController() {
     new UploadProductImageUseCase(productRepo, noopStorage),
     new DeleteProductImageUseCase(productRepo, noopStorage),
   );
-  return { ctrl, departmentId: dept.id };
+  return { ctrl, departmentId: dept.id, productRepo };
 }
 
 function makeCreateReq(body: unknown) {
@@ -40,13 +52,23 @@ function makeCreateReq(body: unknown) {
   });
 }
 
-function makeListReq(params: Record<string, string> = {}) {
+function makeListReq(params: Record<string, string> = {}, headers: Record<string, string> = {}) {
   const url = new URL("http://localhost/api/v1/admin/products");
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  return new NextRequest(url.toString());
+  return new NextRequest(url.toString(), { headers });
 }
 
 describe("ProductsController — Zod validation", () => {
+  // Estas pruebas asumen modo general (sin auth headers en makeListReq) — forzar el
+  // modo aquí evita que hereden INVENTORY_SCOPE_MODE del proceso (ver task 6.2 del
+  // change inventory-branch-scope-mode, que corre la suite con la env var en "branch").
+  const originalMode = process.env.INVENTORY_SCOPE_MODE;
+  beforeAll(() => { delete process.env.INVENTORY_SCOPE_MODE; });
+  afterAll(() => {
+    if (originalMode === undefined) delete process.env.INVENTORY_SCOPE_MODE;
+    else process.env.INVENTORY_SCOPE_MODE = originalMode;
+  });
+
   it("rejects an invalid code format", async () => {
     const { ctrl, departmentId } = await buildController();
     const res = await ctrl.create(makeCreateReq({ code: "arroz 001!", name: "Arroz", unit: "kg", departmentId }));
@@ -273,5 +295,105 @@ describe("ProductsController — Zod validation", () => {
       id,
     );
     expect(res.status).toBe(400);
+  });
+});
+
+describe("ProductsController.list — branch scope mode", () => {
+  const userCanMock = rbacContainer.authorizationService.userCan as jest.Mock;
+  const BRANCH_A = "55555555-5555-5555-5555-555555555555";
+  const BRANCH_B = "66666666-6666-6666-6666-666666666666";
+  const USER_ID = "77777777-7777-7777-7777-777777777777";
+  const originalMode = process.env.INVENTORY_SCOPE_MODE;
+
+  beforeEach(() => {
+    userCanMock.mockReset();
+    userCanMock.mockResolvedValue(false);
+  });
+
+  afterEach(() => {
+    if (originalMode === undefined) delete process.env.INVENTORY_SCOPE_MODE;
+    else process.env.INVENTORY_SCOPE_MODE = originalMode;
+  });
+
+  it("general mode (default): branchId does not filter, and does not require auth headers", async () => {
+    delete process.env.INVENTORY_SCOPE_MODE;
+    const { ctrl, departmentId } = await buildController();
+    await ctrl.create(makeCreateReq({ code: "P1", name: "Arroz", unit: "kg", departmentId }));
+    const res = await ctrl.list(makeListReq({ branchId: BRANCH_A }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.total).toBe(1);
+  });
+
+  it("branch mode: unauthenticated request (no x-user-id) is rejected", async () => {
+    process.env.INVENTORY_SCOPE_MODE = "branch";
+    const { ctrl } = await buildController();
+    const res = await ctrl.list(makeListReq({ branchId: BRANCH_A }));
+    expect(res.status).toBe(401);
+  });
+
+  it("branch mode: operator without branches:access_all is scoped to their own branch when branchId is omitted", async () => {
+    process.env.INVENTORY_SCOPE_MODE = "branch";
+    userCanMock.mockResolvedValue(false);
+    const { ctrl, departmentId } = await buildController();
+    const created = await ctrl.create(makeCreateReq({ code: "P1", name: "Arroz", unit: "kg", departmentId }));
+    const { id: productId } = await created.json();
+
+    const res = await ctrl.list(makeListReq({}, { "x-user-id": USER_ID, "x-user-branch-id": BRANCH_A }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // Sin fila de inventario en BRANCH_A (su sucursal), el catálogo queda vacío
+    expect(body.total).toBe(0);
+    expect(body.items.find((p: { id: string }) => p.id === productId)).toBeUndefined();
+  });
+
+  it("branch mode: operator without branches:access_all requesting a different branchId is rejected (not silently overridden)", async () => {
+    process.env.INVENTORY_SCOPE_MODE = "branch";
+    userCanMock.mockResolvedValue(false);
+    const { ctrl } = await buildController();
+
+    const res = await ctrl.list(
+      makeListReq({ branchId: BRANCH_B }, { "x-user-id": USER_ID, "x-user-branch-id": BRANCH_A })
+    );
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.required).toBe("branches:access_all");
+  });
+
+  it("branch mode: operator without an assigned branch is forbidden", async () => {
+    process.env.INVENTORY_SCOPE_MODE = "branch";
+    userCanMock.mockResolvedValue(false);
+    const { ctrl } = await buildController();
+    const res = await ctrl.list(makeListReq({}, { "x-user-id": USER_ID, "x-user-branch-id": "" }));
+    expect(res.status).toBe(403);
+  });
+
+  it("branch mode: excludes products without a branch_inventory row", async () => {
+    process.env.INVENTORY_SCOPE_MODE = "branch";
+    userCanMock.mockResolvedValue(false);
+    const { ctrl, departmentId, productRepo } = await buildController();
+    const created = await ctrl.create(makeCreateReq({ code: "P1", name: "Arroz", unit: "kg", departmentId }));
+    const { id: productId } = await created.json();
+    productRepo.setStock(BRANCH_A, productId, 0);
+
+    const res = await ctrl.list(makeListReq({}, { "x-user-id": USER_ID, "x-user-branch-id": BRANCH_A }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.total).toBe(1);
+    expect(body.items[0].id).toBe(productId);
+    expect(body.items[0].stock).toBe(0);
+  });
+
+  it("branch mode: admin with branches:access_all and no branchId sees the full catalog", async () => {
+    process.env.INVENTORY_SCOPE_MODE = "branch";
+    userCanMock.mockResolvedValue(true);
+    const { ctrl, departmentId } = await buildController();
+    await ctrl.create(makeCreateReq({ code: "P1", name: "Arroz", unit: "kg", departmentId }));
+    await ctrl.create(makeCreateReq({ code: "P2", name: "Frijol", unit: "kg", departmentId }));
+
+    const res = await ctrl.list(makeListReq({}, { "x-user-id": USER_ID }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.total).toBe(2);
   });
 });

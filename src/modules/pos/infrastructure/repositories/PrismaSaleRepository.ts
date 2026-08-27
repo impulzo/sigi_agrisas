@@ -17,6 +17,7 @@ import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
 import { recordInventoryMovement, type LowStockSignal } from "@/shared/infrastructure/inventory/recordInventoryMovement";
 import { inventoryQuantityOf } from "@/shared/domain/services/inventoryQuantityOf";
 import type { AdminNotificationService } from "@/shared/application/services/AdminNotificationService";
+import { isBranchScopedInventory } from "@/shared/infrastructure/config/inventoryScope";
 
 /** Suma `days` días naturales a una fecha, devolviendo una nueva instancia. */
 function addDays(base: Date, days: number): Date {
@@ -309,6 +310,7 @@ export class PrismaSaleRepository implements SaleRepository {
           folioNumber,
           sourceType: "sale",
           sourceId: saleId,
+          allowRowCreation: !isBranchScopedInventory(),
         });
         if (lowStockSignal) lowStockSignals.push(lowStockSignal);
       }
@@ -384,6 +386,7 @@ export class PrismaSaleRepository implements SaleRepository {
           folioNumber,
           sourceType: "sale",
           sourceId: saleId,
+          allowRowCreation: !isBranchScopedInventory(),
         });
         if (lowStockSignal) lowStockSignals.push(lowStockSignal);
       }
@@ -572,6 +575,7 @@ export class PrismaSaleRepository implements SaleRepository {
           folioNumber: current.folioNumber,
           sourceType: "sale",
           sourceId: id,
+          allowRowCreation: !isBranchScopedInventory(),
         });
         if (lowStockSignal) lowStockSignals.push(lowStockSignal);
         await tx.saleItem.create({

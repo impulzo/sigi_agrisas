@@ -13,6 +13,7 @@ import { CancelQuoteUseCase } from "@/modules/quotes/application/use-cases/Cance
 import { ConvertQuoteToSaleUseCase } from "@/modules/quotes/application/use-cases/ConvertQuoteToSaleUseCase";
 import { QuotesController } from "@/modules/quotes/infrastructure/http/QuotesController";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
+import { isBranchScopedInventory } from "@/shared/infrastructure/config/inventoryScope";
 
 // Local instances — we do NOT import the pos `salesController`/`saleRepo` from
 // pos/di to avoid a circular import (pos container also needs to know about
@@ -24,14 +25,15 @@ const saleRepo = new PrismaSaleRepository(prisma);
 const lookups = new PrismaPosLookupService(prisma);
 const ticketSettingsRepo = new PrismaTicketSettingsRepository(prisma);
 const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketSettingsRepo);
+const branchScopedInventory = isBranchScopedInventory();
 
 const listUseCase = new ListQuotesUseCase(quoteRepo);
 const getUseCase = new GetQuoteUseCase(quoteRepo);
-const createUseCase = new CreateQuoteUseCase(quoteRepo, lookups);
-const updateUseCase = new UpdateQuoteUseCase(quoteRepo, lookups);
+const createUseCase = new CreateQuoteUseCase(quoteRepo, lookups, branchScopedInventory);
+const updateUseCase = new UpdateQuoteUseCase(quoteRepo, lookups, branchScopedInventory);
 const authorizeUseCase = new AuthorizeQuoteUseCase(quoteRepo);
 const cancelUseCase = new CancelQuoteUseCase(quoteRepo);
-const convertUseCase = new ConvertQuoteToSaleUseCase(quoteRepo, saleRepo, lookups);
+const convertUseCase = new ConvertQuoteToSaleUseCase(quoteRepo, saleRepo, lookups, branchScopedInventory);
 
 export const quotesController = new QuotesController(
   listUseCase,

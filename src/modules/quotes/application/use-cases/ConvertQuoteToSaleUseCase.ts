@@ -9,6 +9,7 @@ import { QuoteNotAuthorizedError } from "../../domain/errors/QuoteNotAuthorizedE
 import { QuoteExpiredError } from "../../domain/errors/QuoteExpiredError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
+import { ProductNotAvailableInBranchError } from "../../domain/errors/ProductNotAvailableInBranchError";
 
 export interface ConvertQuoteResult {
   dto: SaleDetailDto;
@@ -20,7 +21,8 @@ export class ConvertQuoteToSaleUseCase {
   constructor(
     private readonly quoteRepo: QuoteRepository,
     private readonly saleRepo: SaleRepository,
-    private readonly lookups: PosLookupService
+    private readonly lookups: PosLookupService,
+    private readonly branchScopedInventory: boolean = false
   ) {}
 
   async execute(
@@ -53,6 +55,18 @@ export class ConvertQuoteToSaleUseCase {
     }
     if (existing.quote.expiresAt && existing.quote.expiresAt < new Date()) {
       throw new QuoteExpiredError();
+    }
+
+    // Availability may have changed since the quote was created/authorized (e.g. an
+    // admin unassigned the product from this branch in the meantime) — re-check here
+    // so conversion fails with a clear 400 instead of falling through to the raw
+    // write-layer guard in PrismaSaleRepository.createCompletedFromQuote.
+    if (this.branchScopedInventory) {
+      for (const item of existing.quote.items) {
+        if (!(await this.lookups.isProductAvailableInBranch(item.productId, existing.quote.branchId))) {
+          throw new ProductNotAvailableInBranchError();
+        }
+      }
     }
 
     // Validate fiscal folio + payment method

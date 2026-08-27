@@ -13,6 +13,10 @@ import { GetInvoiceUseCase } from "../../application/use-cases/GetInvoiceUseCase
 import { ListInvoicesBySaleUseCase } from "../../application/use-cases/ListInvoicesBySaleUseCase";
 import { UploadCsdUseCase } from "../../application/use-cases/UploadCsdUseCase";
 import { GetCsdStatusUseCase } from "../../application/use-cases/GetCsdStatusUseCase";
+import { GetEmitterFiscalSettingsUseCase } from "../../application/use-cases/GetEmitterFiscalSettingsUseCase";
+import { SearchSatTaxRegimesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatTaxRegimesUseCase";
+import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCfdiUsesUseCase";
+import { resolveSatDescription } from "../services/resolveSatDescription";
 import { BillingLookupService } from "../../application/ports/BillingLookupService";
 import { toInvoiceDto } from "../../application/mappers/toInvoiceDto";
 import {
@@ -136,6 +140,7 @@ const csdSchema = z.object({
   legalName: z.string().max(200).optional(),
   fiscalRegime: z.string().regex(/^\d{3}$/, "Invalid fiscal regime format").optional(),
   zipCode: z.string().regex(/^\d{5}$/, "Invalid zip code format").optional(),
+  address: z.string().max(500).optional(),
 });
 
 export class BillingController {
@@ -151,7 +156,10 @@ export class BillingController {
     private readonly authz: AuthorizationService,
     private readonly lookupService: BillingLookupService,
     private readonly sendEmailUseCase: SendInvoiceEmailUseCase,
-    private readonly getTicketSettingsUseCase: GetTicketSettingsUseCase
+    private readonly getTicketSettingsUseCase: GetTicketSettingsUseCase,
+    private readonly getEmitterFiscalSettingsUseCase: GetEmitterFiscalSettingsUseCase,
+    private readonly searchSatTaxRegimesUseCase: SearchSatTaxRegimesUseCase,
+    private readonly searchSatCfdiUsesUseCase: SearchSatCfdiUsesUseCase
   ) {}
 
   async list(req: NextRequest): Promise<NextResponse> {
@@ -277,7 +285,21 @@ export class BillingController {
       const invoice = await this.getUseCase.execute(id);
       const scopeError = await enforceBranchScope(req, invoice.branchId, this.authz);
       if (scopeError) return scopeError;
-      return NextResponse.json(toInvoiceDto(invoice));
+
+      const [issuerFiscalRegimeLabel, receiverFiscalRegimeLabel, receiverCfdiUseLabel] = await Promise.all([
+        invoice.issuerFiscalRegime
+          ? resolveSatDescription(this.searchSatTaxRegimesUseCase, invoice.issuerFiscalRegime)
+          : null,
+        resolveSatDescription(this.searchSatTaxRegimesUseCase, invoice.receiverFiscalRegime),
+        resolveSatDescription(this.searchSatCfdiUsesUseCase, invoice.receiverCfdiUse),
+      ]);
+
+      return NextResponse.json({
+        ...toInvoiceDto(invoice),
+        issuerFiscalRegimeLabel,
+        receiverFiscalRegimeLabel,
+        receiverCfdiUseLabel,
+      });
     } catch (err) {
       if (err instanceof InvoiceNotFoundError) {
         return NextResponse.json({ error: "InvoiceNotFound" }, { status: 404 });
@@ -459,10 +481,35 @@ export class BillingController {
     }
 
     try {
-      const { logoUrl } = await this.getTicketSettingsUseCase.execute();
+      const [{ logoUrl }, emitter] = await Promise.all([
+        this.getTicketSettingsUseCase.execute(),
+        this.getEmitterFiscalSettingsUseCase.execute(),
+      ]);
+      const [issuerFiscalRegimeLabel, receiverFiscalRegimeLabel, receiverCfdiUseLabel] = await Promise.all([
+        resolveSatDescription(this.searchSatTaxRegimesUseCase, emitter.fiscalRegime),
+        resolveSatDescription(this.searchSatTaxRegimesUseCase, parsed.data.receiver.fiscalRegime),
+        resolveSatDescription(this.searchSatCfdiUsesUseCase, parsed.data.receiver.cfdiUse),
+      ]);
       const rendered = await renderToBuffer(
         createElement(InvoiceDocumentPdf, {
-          data: { ...parsed.data, issuer: { ...parsed.data.issuer, logoUrl } },
+          data: {
+            ...parsed.data,
+            issuer: {
+              name: parsed.data.issuer.name,
+              branchName: parsed.data.issuer.branchName,
+              logoUrl,
+              rfc: emitter.rfc,
+              fiscalRegime: emitter.fiscalRegime,
+              fiscalRegimeLabel: issuerFiscalRegimeLabel,
+              zipCode: emitter.zipCode,
+              address: emitter.address,
+            },
+            receiver: {
+              ...parsed.data.receiver,
+              fiscalRegimeLabel: receiverFiscalRegimeLabel,
+              cfdiUseLabel: receiverCfdiUseLabel,
+            },
+          },
           watermark: "BORRADOR — no válido fiscalmente",
           folioLabel: "PENDIENTE DE TIMBRAR",
           isDraft: true,
@@ -523,5 +570,13 @@ export class BillingController {
       }
       throw err;
     }
+  }
+
+  async getEmitterFiscalSettings(req: NextRequest): Promise<NextResponse> {
+    const authError = await requirePermission(req, "billing:write", this.authz);
+    if (authError) return authError;
+
+    const settings = await this.getEmitterFiscalSettingsUseCase.execute();
+    return NextResponse.json(settings);
   }
 }
