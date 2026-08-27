@@ -1,5 +1,9 @@
 # add-escpos-ticket-printing
 
+**Estado: implementación completa (23/23 tareas), PENDIENTE DE ARCHIVAR.**
+
+No correr `opsx:archive` sobre este change hasta que el cliente confirme, imprimiendo en la EPSON TM-T20II física con el agente de referencia (`tools/escpos-print-agent/`) apuntando a esa impresora real, que el ticket sale completo — sin corte, sin descuadre de ancho, sin margen superior en blanco. Ver tasks.md 6.4 y design.md (Risks) para el detalle de qué falta verificar. Excluir este change de corridas batch de verify/archive hasta entonces.
+
 ## Historia de Usuario
 
 | # | Rol | Tarea | Motivo | Criterios de Aceptación | Criterios de Seguridad |
