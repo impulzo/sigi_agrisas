@@ -74,4 +74,36 @@ describe("ListProductsUseCase", () => {
       expect(result.items[0].stock).toBeNull();
     });
   });
+
+  describe("branchScoped (modo inventario por sucursal)", () => {
+    const BRANCH_A = "44444444-4444-4444-4444-444444444444";
+
+    it("sin branchScoped, branchId sólo afecta stock — el catálogo no se filtra", async () => {
+      const result = await useCase.execute({ page: 1, pageSize: 20, includeInactive: false, branchId: BRANCH_A });
+      expect(result.total).toBe(3);
+    });
+
+    it("con branchScoped, excluye productos sin fila de inventario en la sucursal", async () => {
+      const all = await useCase.execute({ page: 1, pageSize: 20, includeInactive: false });
+      const arroz = all.items.find((p) => p.code === "ARROZ_001")!;
+      repo.setStock(BRANCH_A, arroz.id, 0);
+
+      const result = await useCase.execute({
+        page: 1,
+        pageSize: 20,
+        includeInactive: false,
+        branchId: BRANCH_A,
+        branchScoped: true,
+      });
+      expect(result.total).toBe(1);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].code).toBe("ARROZ_001");
+      expect(result.items[0].stock).toBe(0);
+    });
+
+    it("con branchScoped pero sin branchId, no filtra (nada que scopear)", async () => {
+      const result = await useCase.execute({ page: 1, pageSize: 20, includeInactive: false, branchScoped: true });
+      expect(result.total).toBe(3);
+    });
+  });
 });

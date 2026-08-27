@@ -120,6 +120,7 @@ function makeLookups(overrides?: Partial<PosLookupService>): PosLookupService {
     // en los tests existentes de dosificación — este test verifica el "plumbing" del
     // use case, no el valor default de settings (cubierto en DosificationPriceCalculator.test.ts).
     getDosificationSurchargePct: jest.fn().mockResolvedValue(7),
+    isProductAvailableInBranch: jest.fn().mockResolvedValue(true),
     ...overrides,
   };
 }
@@ -376,6 +377,28 @@ describe("CreateSaleUseCase", () => {
       const result = await new CreateSaleUseCase(repo, lookups).execute(baseReq, "user-1");
       expect(result.dto.paymentStatus).toBe("pending");
       expect(result.creditLimitExceeded).toBe(false);
+    });
+  });
+
+  describe("gate de disponibilidad por sucursal (branchScopedInventory)", () => {
+    it("rechaza producto no asignado a la sucursal cuando branchScopedInventory=true", async () => {
+      const lookups = makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(false) });
+      await expect(
+        new CreateSaleUseCase(makeRepo(), lookups, undefined, true).execute(baseReq, "user-1")
+      ).rejects.toThrow("Product is not available in this branch");
+    });
+
+    it("permite producto asignado (aunque con stock 0) cuando branchScopedInventory=true", async () => {
+      const lookups = makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(true) });
+      const result = await new CreateSaleUseCase(makeRepo(), lookups, undefined, true).execute(baseReq, "user-1");
+      expect(result.dto.status).toBe("completed");
+    });
+
+    it("no aplica el gate cuando branchScopedInventory=false (default)", async () => {
+      const lookups = makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(false) });
+      const result = await new CreateSaleUseCase(makeRepo(), lookups).execute(baseReq, "user-1");
+      expect(result.dto.status).toBe("completed");
+      expect(lookups.isProductAvailableInBranch).not.toHaveBeenCalled();
     });
   });
 });

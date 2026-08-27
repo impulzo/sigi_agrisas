@@ -12,6 +12,12 @@ jest.mock("@/modules/billing/infrastructure/pdf/InvoiceDocumentPdf", () => ({
   InvoiceDocumentPdf: () => null,
 }));
 
+jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
+  getEmitterFiscalSettings: jest.fn(),
+}));
+
+import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
+import { TEST_FALLBACK_ISSUER } from "../../../../src/modules/billing/application/services/resolveIssuerFiscalData";
 import { StampInvoiceUseCase } from "../../../../src/modules/billing/application/use-cases/StampInvoiceUseCase";
 import { InMemoryInvoiceRepository } from "../../../../src/modules/billing/infrastructure/repositories/InMemoryInvoiceRepository";
 import { FakeFacturamaGateway } from "../../../../src/modules/billing/infrastructure/services/FakeFacturamaGateway";
@@ -21,6 +27,16 @@ import {
   ReceiverFiscalDataIncompleteError,
 } from "../../../../src/modules/billing/domain/errors";
 import type { BillingLookupService, SaleForBilling } from "../../../../src/modules/billing/application/ports/BillingLookupService";
+
+const mockedGetEmitterFiscalSettings = getEmitterFiscalSettings as jest.Mock;
+
+const EMITTER = {
+  rfc: "AGR010101AB1",
+  legalName: "Agrisas SA de CV",
+  fiscalRegime: "601",
+  zipCode: "83000",
+  address: "Av. Siempre Viva 742, Culiacán, Sinaloa",
+};
 
 const BRANCH_ID = "branch-uuid-1";
 const CREATOR_ID = "creator-uuid-1";
@@ -78,6 +94,11 @@ function makeLookup(sale: SaleForBilling | null = makeSale()): BillingLookupServ
 }
 
 describe("StampInvoiceUseCase", () => {
+  beforeEach(() => {
+    mockedGetEmitterFiscalSettings.mockReset();
+    mockedGetEmitterFiscalSettings.mockResolvedValue(EMITTER);
+  });
+
   describe("sale-linked", () => {
     it("stamps from completed sale — creates invoice with saleId", async () => {
       const repo = new InMemoryInvoiceRepository();
@@ -185,6 +206,77 @@ describe("StampInvoiceUseCase", () => {
       const inRepo = await repo.list({ branchId: BRANCH_ID });
       expect(inRepo.total).toBe(0);
     });
+
+    it("snapshots issuer fiscal data from EmitterFiscalSettings", async () => {
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+
+      const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
+
+      expect(invoice.issuerRfc).toBe(EMITTER.rfc);
+      expect(invoice.issuerLegalName).toBe(EMITTER.legalName);
+      expect(invoice.issuerFiscalRegime).toBe(EMITTER.fiscalRegime);
+      expect(invoice.issuerZipCode).toBe(EMITTER.zipCode);
+      expect(invoice.issuerAddress).toBe(EMITTER.address);
+    });
+
+    it("CSD loaded — rfc/legalName come from the certificate, fiscalRegime/zipCode/address still from EmitterFiscalSettings", async () => {
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      await gateway.uploadCsd({
+        rfc: "CSD010101AB1",
+        certificateBase64: "cert",
+        privateKeyBase64: "key",
+        privateKeyPassword: "pass",
+      });
+      jest.spyOn(gateway, "getCsdStatus").mockResolvedValue({
+        rfc: "CSD010101AB1",
+        issuer: "Emisor Certificado SA de CV",
+        isValid: true,
+      });
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+
+      const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
+
+      expect(invoice.issuerRfc).toBe("CSD010101AB1");
+      expect(invoice.issuerLegalName).toBe("Emisor Certificado SA de CV");
+      expect(invoice.issuerFiscalRegime).toBe(EMITTER.fiscalRegime);
+      expect(invoice.issuerZipCode).toBe(EMITTER.zipCode);
+      expect(invoice.issuerAddress).toBe(EMITTER.address);
+    });
+
+    it("CSD lookup fails — falls through to EmitterFiscalSettings for rfc/legalName too", async () => {
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      // No uploadCsd() call — getCsdStatus() resolves with an empty rfc by default (no CSD loaded).
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+
+      const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
+
+      expect(invoice.issuerRfc).toBe(EMITTER.rfc);
+      expect(invoice.issuerLegalName).toBe(EMITTER.legalName);
+    });
+
+    it("stamps successfully with the fixed test-data issuer fallback when EmitterFiscalSettings is incomplete and no CSD is loaded", async () => {
+      mockedGetEmitterFiscalSettings.mockResolvedValue(null);
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+
+      const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
+
+      expect(invoice.status).toBe("stamped");
+      expect(invoice.issuerRfc).toBe(TEST_FALLBACK_ISSUER.rfc);
+      expect(invoice.issuerLegalName).toBe(TEST_FALLBACK_ISSUER.legalName);
+      expect(invoice.issuerFiscalRegime).toBe(TEST_FALLBACK_ISSUER.fiscalRegime);
+      expect(invoice.issuerZipCode).toBe(TEST_FALLBACK_ISSUER.zipCode);
+      expect(invoice.issuerAddress).toBe(TEST_FALLBACK_ISSUER.address);
+    });
   });
 
   describe("standalone", () => {
@@ -231,6 +323,60 @@ describe("StampInvoiceUseCase", () => {
 
       // lookup.findSaleWithItems is NEVER called for standalone
       expect(lookup.findSaleWithItems).not.toHaveBeenCalled();
+    });
+
+    it("snapshots issuer fiscal data from EmitterFiscalSettings", async () => {
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+
+      const invoice = await uc.execute(standaloneInput, CREATOR_ID, BRANCH_ID);
+
+      expect(invoice.issuerRfc).toBe(EMITTER.rfc);
+      expect(invoice.issuerLegalName).toBe(EMITTER.legalName);
+      expect(invoice.issuerFiscalRegime).toBe(EMITTER.fiscalRegime);
+      expect(invoice.issuerZipCode).toBe(EMITTER.zipCode);
+      expect(invoice.issuerAddress).toBe(EMITTER.address);
+    });
+
+    it("stamps successfully with the fixed test-data issuer fallback when EmitterFiscalSettings is incomplete and no CSD is loaded", async () => {
+      mockedGetEmitterFiscalSettings.mockResolvedValue(null);
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+
+      const invoice = await uc.execute(standaloneInput, CREATOR_ID, BRANCH_ID);
+
+      expect(invoice.status).toBe("stamped");
+      expect(invoice.issuerRfc).toBe(TEST_FALLBACK_ISSUER.rfc);
+      expect(invoice.issuerLegalName).toBe(TEST_FALLBACK_ISSUER.legalName);
+      expect(invoice.issuerFiscalRegime).toBe(TEST_FALLBACK_ISSUER.fiscalRegime);
+      expect(invoice.issuerZipCode).toBe(TEST_FALLBACK_ISSUER.zipCode);
+      expect(invoice.issuerAddress).toBe(TEST_FALLBACK_ISSUER.address);
+    });
+
+    it("issuer fiscal data changes later — existing invoice keeps the snapshot from when it was stamped", async () => {
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+
+      mockedGetEmitterFiscalSettings.mockResolvedValue(EMITTER);
+      const firstInvoice = await uc.execute(standaloneInput, CREATOR_ID, BRANCH_ID);
+
+      // EmitterFiscalSettings changes after the first invoice was already stamped
+      // (e.g. an admin re-uploads the CSD with a new fiscal regime).
+      const UPDATED_EMITTER = { ...EMITTER, fiscalRegime: "612", zipCode: "01000" };
+      mockedGetEmitterFiscalSettings.mockResolvedValue(UPDATED_EMITTER);
+      const secondInvoice = await uc.execute(standaloneInput, CREATOR_ID, BRANCH_ID);
+
+      const refetchedFirstInvoice = await repo.findById(firstInvoice.id);
+      expect(refetchedFirstInvoice!.issuerFiscalRegime).toBe(EMITTER.fiscalRegime);
+      expect(refetchedFirstInvoice!.issuerZipCode).toBe(EMITTER.zipCode);
+      expect(secondInvoice.issuerFiscalRegime).toBe(UPDATED_EMITTER.fiscalRegime);
+      expect(secondInvoice.issuerZipCode).toBe(UPDATED_EMITTER.zipCode);
     });
   });
 });

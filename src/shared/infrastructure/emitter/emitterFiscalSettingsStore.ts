@@ -10,6 +10,7 @@ export interface EmitterFiscalData {
   legalName: string;
   fiscalRegime: string;
   zipCode: string;
+  address: string;
 }
 
 export type PartialEmitterFiscalData = Partial<EmitterFiscalData>;
@@ -22,6 +23,7 @@ export async function getEmitterFiscalSettings(tx: TxClient = prisma): Promise<P
     legalName: row.legalName ?? undefined,
     fiscalRegime: row.fiscalRegime ?? undefined,
     zipCode: row.zipCode ?? undefined,
+    address: row.address ?? undefined,
   };
 }
 
@@ -37,12 +39,14 @@ export async function upsertEmitterFiscalSettings(
       legalName: data.legalName ?? null,
       fiscalRegime: data.fiscalRegime ?? null,
       zipCode: data.zipCode ?? null,
+      address: data.address ?? null,
     },
     update: {
       ...(data.rfc !== undefined ? { rfc: data.rfc } : {}),
       ...(data.legalName !== undefined ? { legalName: data.legalName } : {}),
       ...(data.fiscalRegime !== undefined ? { fiscalRegime: data.fiscalRegime } : {}),
       ...(data.zipCode !== undefined ? { zipCode: data.zipCode } : {}),
+      ...(data.address !== undefined ? { address: data.address } : {}),
     },
   });
 }

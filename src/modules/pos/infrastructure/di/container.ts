@@ -13,18 +13,20 @@ import { branchRepo } from "@/modules/branches/infrastructure/di/container";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
 import { adminNotificationService } from "@/shared/infrastructure/di/adminNotificationContainer";
 import { mailer } from "@/shared/infrastructure/di/mailerContainer";
+import { isBranchScopedInventory } from "@/shared/infrastructure/config/inventoryScope";
 
 const saleRepo = new PrismaSaleRepository(prisma, adminNotificationService);
 const lookups = new PrismaPosLookupService(prisma);
 // Local quote repo to validate `quoteId` when `POST /sales` includes one.
 // Instantiated here (not imported from quotes/di) to avoid a circular module dependency.
 const quoteRepo = new PrismaQuoteRepository(prisma);
+const branchScopedInventory = isBranchScopedInventory();
 
 const listUseCase = new ListSalesUseCase(saleRepo);
 const getUseCase = new GetSaleUseCase(saleRepo);
-const createUseCase = new CreateSaleUseCase(saleRepo, lookups, quoteRepo);
+const createUseCase = new CreateSaleUseCase(saleRepo, lookups, quoteRepo, branchScopedInventory);
 const cancelUseCase = new CancelSaleUseCase(saleRepo, adminNotificationService);
-const editUseCase = new EditCompletedSaleUseCase(saleRepo, lookups);
+const editUseCase = new EditCompletedSaleUseCase(saleRepo, lookups, branchScopedInventory);
 const sendTicketEmailUseCase = new SendSaleTicketEmailUseCase(saleRepo, lookups, mailer);
 
 export const salesController = new SalesController(

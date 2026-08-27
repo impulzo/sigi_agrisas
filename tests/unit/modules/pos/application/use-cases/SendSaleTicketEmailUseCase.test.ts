@@ -96,6 +96,7 @@ function makeLookups(email: string | null): PosLookupService {
     getFolio: jest.fn(),
     getPaymentMethod: jest.fn(),
     getDosificationSurchargePct: jest.fn().mockResolvedValue(5),
+    isProductAvailableInBranch: jest.fn().mockResolvedValue(true),
   };
 }
 

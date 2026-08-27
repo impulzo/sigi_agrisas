@@ -3,6 +3,7 @@ import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { pdfStyles as s } from "./pdfStyles";
 import { formatPdfCurrency } from "@/shared/infrastructure/formatters/formatPdfCurrency";
 import { PdfLogo } from "@/shared/infrastructure/pdf/PdfLogo";
+import { describePaymentForm, describePaymentMethod } from "@/shared/domain/catalogs/satPaymentCatalogs";
 
 export interface InvoiceDocumentPdfLine {
   description: string;
@@ -22,13 +23,19 @@ export interface InvoiceDocumentPdfData {
     name: string;
     branchName?: string | null;
     rfc?: string | null;
+    fiscalRegime?: string | null;
+    fiscalRegimeLabel?: string | null;
+    zipCode?: string | null;
+    address?: string | null;
     logoUrl?: string | null;
   };
   receiver: {
     rfc: string;
     name: string;
     cfdiUse: string;
+    cfdiUseLabel?: string | null;
     fiscalRegime: string;
+    fiscalRegimeLabel?: string | null;
     taxZipCode: string;
   };
   lines: InvoiceDocumentPdfLine[];
@@ -69,9 +76,8 @@ export function InvoiceDocumentPdf({ data, watermark, folioLabel, isDraft = fals
           <View style={s.issuerRow}>
             <PdfLogo logoUrl={data.issuer.logoUrl} size={40} />
             <View style={s.issuerBlock}>
-              <Text style={s.issuerName}>{data.issuer.name}</Text>
+              <Text style={s.issuerName}>Factura</Text>
               {data.issuer.branchName && <Text style={s.issuerMeta}>{data.issuer.branchName}</Text>}
-              {data.issuer.rfc && <Text style={s.issuerMeta}>RFC: {data.issuer.rfc}</Text>}
             </View>
           </View>
           <View style={s.invoiceMeta}>
@@ -83,6 +89,32 @@ export function InvoiceDocumentPdf({ data, watermark, folioLabel, isDraft = fals
                 <Text style={s.invoiceMetaValue}>{data.uuid}</Text>
               </>
             )}
+          </View>
+        </View>
+
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Emisor</Text>
+          <View style={s.receiverGrid}>
+            <View style={s.receiverField}>
+              <Text style={s.receiverLabel}>RFC</Text>
+              <Text style={s.receiverValue}>{data.issuer.rfc || "—"}</Text>
+            </View>
+            <View style={s.receiverField}>
+              <Text style={s.receiverLabel}>Razón social</Text>
+              <Text style={s.receiverValue}>{data.issuer.name || "—"}</Text>
+            </View>
+            <View style={s.receiverField}>
+              <Text style={s.receiverLabel}>Régimen fiscal</Text>
+              <Text style={s.receiverValue}>{data.issuer.fiscalRegimeLabel || data.issuer.fiscalRegime || "—"}</Text>
+            </View>
+            <View style={s.receiverField}>
+              <Text style={s.receiverLabel}>Código postal</Text>
+              <Text style={s.receiverValue}>{data.issuer.zipCode || "—"}</Text>
+            </View>
+            <View style={s.receiverField}>
+              <Text style={s.receiverLabel}>Dirección</Text>
+              <Text style={s.receiverValue}>{data.issuer.address || "—"}</Text>
+            </View>
           </View>
         </View>
 
@@ -99,19 +131,23 @@ export function InvoiceDocumentPdf({ data, watermark, folioLabel, isDraft = fals
             </View>
             <View style={s.receiverField}>
               <Text style={s.receiverLabel}>Uso CFDI</Text>
-              <Text style={s.receiverValue}>{data.receiver.cfdiUse || "—"}</Text>
+              <Text style={s.receiverValue}>{data.receiver.cfdiUseLabel || data.receiver.cfdiUse || "—"}</Text>
             </View>
             <View style={s.receiverField}>
               <Text style={s.receiverLabel}>Régimen fiscal</Text>
-              <Text style={s.receiverValue}>{data.receiver.fiscalRegime || "—"}</Text>
+              <Text style={s.receiverValue}>{data.receiver.fiscalRegimeLabel || data.receiver.fiscalRegime || "—"}</Text>
             </View>
             <View style={s.receiverField}>
               <Text style={s.receiverLabel}>Código postal</Text>
               <Text style={s.receiverValue}>{data.receiver.taxZipCode || "—"}</Text>
             </View>
             <View style={s.receiverField}>
-              <Text style={s.receiverLabel}>Forma / método de pago</Text>
-              <Text style={s.receiverValue}>{data.paymentForm} / {data.paymentMethod}</Text>
+              <Text style={s.receiverLabel}>Forma de pago</Text>
+              <Text style={s.receiverValue}>{describePaymentForm(data.paymentForm)}</Text>
+            </View>
+            <View style={s.receiverField}>
+              <Text style={s.receiverLabel}>Método de pago</Text>
+              <Text style={s.receiverValue}>{describePaymentMethod(data.paymentMethod)}</Text>
             </View>
           </View>
         </View>

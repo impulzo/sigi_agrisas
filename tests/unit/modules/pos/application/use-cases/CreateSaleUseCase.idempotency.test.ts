@@ -25,6 +25,7 @@ function makeLookups(): PosLookupService {
     getPaymentMethod: jest.fn().mockResolvedValue({ id: "pm1", isActive: true, isCredit: false }),
     getDosificationForSale: jest.fn(),
     getDosificationSurchargePct: jest.fn().mockResolvedValue(5),
+    isProductAvailableInBranch: jest.fn().mockResolvedValue(true),
   };
 }
 

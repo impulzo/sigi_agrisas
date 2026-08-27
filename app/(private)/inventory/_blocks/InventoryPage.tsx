@@ -5,6 +5,7 @@ import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useDebounce } from "../../../_hooks/useDebounce";
 import { useBranchInventory } from "../_logic/hooks/useBranchInventory";
 import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
+import { useInventoryScopeMode } from "../../../_hooks/useInventoryScopeMode";
 import { useInventoryMutations } from "../_logic/hooks/useInventoryMutations";
 import { InventoryTable } from "./InventoryTable";
 import { InventoryAssignModal } from "./InventoryAssignModal";
@@ -18,6 +19,7 @@ import { Input } from "../../../_components/atoms/Input/Input";
 import { Select } from "../../../_components/atoms/Select/Select";
 import { Button } from "../../../_components/atoms/Button/Button";
 import { CreateButton } from "../../../_components/molecules/CreateButton/CreateButton";
+import { Badge } from "../../../_components/atoms/Badge/Badge";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
 import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog/ConfirmDialog";
@@ -38,6 +40,7 @@ export function InventoryPage() {
   const { options: branchOptions, isLoading: branchesLoading } = useBranchesOptions();
   const isBypass = can("branches:access_all");
   const { isOnline, catalogStalenessMs } = useOfflineSync();
+  const { mode: inventoryScopeMode } = useInventoryScopeMode();
 
   const [branchId, setBranchId] = useState<string | undefined>(undefined);
 
@@ -136,6 +139,11 @@ export function InventoryPage() {
       description="Gestión de stock por sucursal."
       toolbar={
         <div className="flex flex-col gap-3">
+          {inventoryScopeMode === "branch" && (
+            <div>
+              <Badge variant="neutral">Inventario por sucursal</Badge>
+            </div>
+          )}
           <div className="flex items-center gap-3 flex-wrap">
             {isBypass === true ? (
               <div className="flex items-center gap-2 min-w-[220px]">

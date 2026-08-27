@@ -38,6 +38,9 @@ function makeLookups(overrides: Partial<PosLookupService> = {}): PosLookupServic
     async getDosificationSurchargePct() {
       return 5;
     },
+    async isProductAvailableInBranch() {
+      return true;
+    },
     ...overrides,
   };
 }

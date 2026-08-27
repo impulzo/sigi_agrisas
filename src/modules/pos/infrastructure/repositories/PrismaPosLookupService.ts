@@ -122,4 +122,12 @@ export class PrismaPosLookupService implements PosLookupService {
     });
     return row ?? null;
   }
+
+  async isProductAvailableInBranch(productId: string, branchId: string): Promise<boolean> {
+    const row = await this.prisma.branchInventory.findUnique({
+      where: { branchId_productId: { branchId, productId } },
+      select: { productId: true },
+    });
+    return row !== null;
+  }
 }

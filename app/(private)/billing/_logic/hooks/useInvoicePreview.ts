@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { getInvoicePreviewSource } from "../services/getInvoicePreviewSource";
+import { getEmitterFiscalSettings } from "../services/getEmitterFiscalSettings";
 import { buildInvoicePreview } from "../lib/buildInvoicePreview";
 import type { InvoicePreviewData } from "../types/preview";
 
@@ -23,9 +24,19 @@ export function useInvoicePreview(): UseInvoicePreviewResult {
     setError(null);
     setData(null);
     try {
-      const source = await getInvoicePreviewSource(saleId);
+      const [source, emitterFiscal] = await Promise.all([
+        getInvoicePreviewSource(saleId),
+        getEmitterFiscalSettings().catch(() => ({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null })),
+      ]);
       const preview = buildInvoicePreview({
-        issuer: { name: "Agrisas", branchName: source.sale.branchName },
+        issuer: {
+          name: "Agrisas",
+          branchName: source.sale.branchName,
+          rfc: emitterFiscal.rfc,
+          fiscalRegime: emitterFiscal.fiscalRegime,
+          zipCode: emitterFiscal.zipCode,
+          address: emitterFiscal.address,
+        },
         receiver: {
           rfc: source.customer.rfc,
           name: source.customer.name,

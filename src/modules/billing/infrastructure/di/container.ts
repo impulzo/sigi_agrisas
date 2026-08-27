@@ -12,7 +12,12 @@ import { GetInvoiceUseCase } from "../../application/use-cases/GetInvoiceUseCase
 import { ListInvoicesBySaleUseCase } from "../../application/use-cases/ListInvoicesBySaleUseCase";
 import { UploadCsdUseCase } from "../../application/use-cases/UploadCsdUseCase";
 import { GetCsdStatusUseCase } from "../../application/use-cases/GetCsdStatusUseCase";
+import { GetEmitterFiscalSettingsUseCase } from "../../application/use-cases/GetEmitterFiscalSettingsUseCase";
 import { BillingController } from "../http/BillingController";
+import { PrismaSatTaxRegimeRepository } from "@/modules/sat-codes/infrastructure/repositories/PrismaSatTaxRegimeRepository";
+import { PrismaSatCfdiUseRepository } from "@/modules/sat-codes/infrastructure/repositories/PrismaSatCfdiUseRepository";
+import { SearchSatTaxRegimesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatTaxRegimesUseCase";
+import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCfdiUsesUseCase";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
 import { mailer } from "@/shared/infrastructure/di/mailerContainer";
 import type { FacturamaGateway } from "../../application/ports/FacturamaGateway";
@@ -38,6 +43,9 @@ const getUseCase = new GetInvoiceUseCase(invoiceRepo);
 const listBySaleUseCase = new ListInvoicesBySaleUseCase(invoiceRepo);
 const uploadCsdUseCase = new UploadCsdUseCase(gateway);
 const getCsdStatusUseCase = new GetCsdStatusUseCase(gateway);
+const getEmitterFiscalSettingsUseCase = new GetEmitterFiscalSettingsUseCase(gateway);
+const searchSatTaxRegimesUseCase = new SearchSatTaxRegimesUseCase(new PrismaSatTaxRegimeRepository(prisma));
+const searchSatCfdiUsesUseCase = new SearchSatCfdiUsesUseCase(new PrismaSatCfdiUseRepository(prisma));
 
 export const billingController = new BillingController(
   stampUseCase,
@@ -51,5 +59,8 @@ export const billingController = new BillingController(
   rbacContainer.authorizationService,
   lookupService,
   sendEmailUseCase,
-  getTicketSettingsUseCase
+  getTicketSettingsUseCase,
+  getEmitterFiscalSettingsUseCase,
+  searchSatTaxRegimesUseCase,
+  searchSatCfdiUsesUseCase
 );

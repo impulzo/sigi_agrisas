@@ -8,6 +8,7 @@ jest.mock("../../../../../app/_hooks/useCurrentUser");
 jest.mock("../../../../../app/(private)/inventory/_logic/hooks/useBranchInventory");
 jest.mock("../../../../../app/_hooks/useBranchesOptions");
 jest.mock("../../../../../app/(private)/inventory/_logic/hooks/useInventoryMutations");
+jest.mock("../../../../../app/_hooks/useInventoryScopeMode");
 jest.mock("../../../../../app/(private)/_blocks/OfflineSyncProvider", () => ({
   useOfflineSync: () => ({
     isOnline: true,
@@ -26,6 +27,7 @@ import { useCurrentUser } from "../../../../../app/_hooks/useCurrentUser";
 import * as useBranchInventoryModule from "../../../../../app/(private)/inventory/_logic/hooks/useBranchInventory";
 import * as useBranchesOptionsModule from "../../../../../app/_hooks/useBranchesOptions";
 import * as useInventoryMutationsModule from "../../../../../app/(private)/inventory/_logic/hooks/useInventoryMutations";
+import * as useInventoryScopeModeModule from "../../../../../app/_hooks/useInventoryScopeMode";
 import { InventoryPage } from "../../../../../app/(private)/inventory/_blocks/InventoryPage";
 
 const mockUseCurrentUser = useCurrentUser as jest.MockedFunction<typeof useCurrentUser>;
@@ -76,6 +78,14 @@ function setupInventoryMutations() {
   });
 }
 
+function setupInventoryScopeMode(mode: "general" | "branch" = "general") {
+  jest.spyOn(useInventoryScopeModeModule, "useInventoryScopeMode").mockReturnValue({
+    mode,
+    isLoading: false,
+    refresh: jest.fn(),
+  });
+}
+
 describe("InventoryPage — gating del selector de sucursal", () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -85,6 +95,7 @@ describe("InventoryPage — gating del selector de sucursal", () => {
     const useBranchInventorySpy = jest.spyOn(useBranchInventoryModule, "useBranchInventory");
     setupBranchInventory();
     setupInventoryMutations();
+    setupInventoryScopeMode();
 
     render(<InventoryPage />);
 
@@ -100,6 +111,7 @@ describe("InventoryPage — gating del selector de sucursal", () => {
     setupBranchesOptions([]);
     setupBranchInventory();
     setupInventoryMutations();
+    setupInventoryScopeMode();
 
     render(<InventoryPage />);
 
@@ -115,6 +127,7 @@ describe("InventoryPage — gating del selector de sucursal", () => {
     ]);
     setupBranchInventory();
     setupInventoryMutations();
+    setupInventoryScopeMode();
 
     render(<InventoryPage />);
 
@@ -129,9 +142,38 @@ describe("InventoryPage — gating del selector de sucursal", () => {
     setupBranchesOptions([]);
     setupBranchInventory();
     setupInventoryMutations();
+    setupInventoryScopeMode();
 
     render(<InventoryPage />);
 
     expect(screen.getByText("Sin acceso")).toBeInTheDocument();
+  });
+});
+
+describe("InventoryPage — badge de modo de inventario", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("muestra el badge 'Inventario por sucursal' cuando el modo es branch", () => {
+    setupCurrentUser(["inventory:read"], "branch-1");
+    setupBranchesOptions([{ id: "branch-1", name: "Sucursal Centro" }]);
+    setupBranchInventory();
+    setupInventoryMutations();
+    setupInventoryScopeMode("branch");
+
+    render(<InventoryPage />);
+
+    expect(screen.getByText("Inventario por sucursal")).toBeInTheDocument();
+  });
+
+  it("no muestra el badge cuando el modo es general", () => {
+    setupCurrentUser(["inventory:read"], "branch-1");
+    setupBranchesOptions([{ id: "branch-1", name: "Sucursal Centro" }]);
+    setupBranchInventory();
+    setupInventoryMutations();
+    setupInventoryScopeMode("general");
+
+    render(<InventoryPage />);
+
+    expect(screen.queryByText("Inventario por sucursal")).not.toBeInTheDocument();
   });
 });

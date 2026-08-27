@@ -5,6 +5,7 @@ export interface UploadCsdRequest extends FacturamaCsdInput {
   legalName?: string;
   fiscalRegime?: string;
   zipCode?: string;
+  address?: string;
 }
 
 export class UploadCsdUseCase {
@@ -20,6 +21,7 @@ export class UploadCsdUseCase {
       legalName: input.legalName,
       fiscalRegime: input.fiscalRegime,
       zipCode: input.zipCode,
+      address: input.address,
     });
 
     return status;

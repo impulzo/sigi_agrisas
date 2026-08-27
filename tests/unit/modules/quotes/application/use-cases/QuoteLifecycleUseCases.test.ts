@@ -72,6 +72,10 @@ function makeLookups(overrides: Partial<PosLookupService> = {}): PosLookupServic
       // 8% (not the 5% default) to distinguish "surcharge applied" from "surcharge default" in assertions.
       return 8;
     },
+    async isProductAvailableInBranch(productId, branchId) {
+      if (overrides.isProductAvailableInBranch) return overrides.isProductAvailableInBranch(productId, branchId);
+      return true;
+    },
   };
 }
 
@@ -201,6 +205,29 @@ describe("CreateQuoteUseCase", () => {
     const { dto } = await uc.execute(baseCreateReq, USER_ID); // quantity: 2
     expect(dto.items[0].unitPrice).toBe(100);
   });
+
+  describe("gate de disponibilidad por sucursal (branchScopedInventory)", () => {
+    it("rechaza producto no asignado a la sucursal cuando branchScopedInventory=true", async () => {
+      const lookups = makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(false) });
+      const uc = new CreateQuoteUseCase(repo, lookups, true);
+      await expect(uc.execute(baseCreateReq, USER_ID)).rejects.toThrow("Product is not available in this branch");
+    });
+
+    it("permite producto asignado cuando branchScopedInventory=true", async () => {
+      const lookups = makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(true) });
+      const uc = new CreateQuoteUseCase(repo, lookups, true);
+      const { dto } = await uc.execute(baseCreateReq, USER_ID);
+      expect(dto.status).toBe("draft");
+    });
+
+    it("no aplica el gate cuando branchScopedInventory=false (default)", async () => {
+      const isProductAvailableInBranch = jest.fn().mockResolvedValue(false);
+      const uc = new CreateQuoteUseCase(repo, makeLookups({ isProductAvailableInBranch }));
+      const { dto } = await uc.execute(baseCreateReq, USER_ID);
+      expect(dto.status).toBe("draft");
+      expect(isProductAvailableInBranch).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe("ListQuotesUseCase / GetQuoteUseCase", () => {
@@ -292,6 +319,35 @@ describe("UpdateQuoteUseCase", () => {
       items: [{ productId: PRODUCT_ID, productPriceId: PRICE_ID, quantity: 2.5 }],
     });
     expect(dto.items[0].unitPrice).toBeCloseTo(108, 10); // 100 * 1.08 (mock surcharge)
+  });
+
+  describe("gate de disponibilidad por sucursal (branchScopedInventory)", () => {
+    it("rechaza producto no asignado a la sucursal cuando branchScopedInventory=true", async () => {
+      const lookups = makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(false) });
+      const uc = new UpdateQuoteUseCase(repo, lookups, true);
+      await expect(
+        uc.execute(id, { items: [{ productId: PRODUCT_ID, productPriceId: PRICE_ID, quantity: 1 }] })
+      ).rejects.toThrow("Product is not available in this branch");
+    });
+
+    it("permite producto asignado cuando branchScopedInventory=true", async () => {
+      const lookups = makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(true) });
+      const uc = new UpdateQuoteUseCase(repo, lookups, true);
+      const { dto } = await uc.execute(id, {
+        items: [{ productId: PRODUCT_ID, productPriceId: PRICE_ID, quantity: 1 }],
+      });
+      expect(dto.status).toBe("draft");
+    });
+
+    it("no aplica el gate cuando branchScopedInventory=false (default)", async () => {
+      const isProductAvailableInBranch = jest.fn().mockResolvedValue(false);
+      const uc = new UpdateQuoteUseCase(repo, makeLookups({ isProductAvailableInBranch }));
+      const { dto } = await uc.execute(id, {
+        items: [{ productId: PRODUCT_ID, productPriceId: PRICE_ID, quantity: 1 }],
+      });
+      expect(dto.status).toBe("draft");
+      expect(isProductAvailableInBranch).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -529,5 +585,53 @@ describe("ConvertQuoteToSaleUseCase", () => {
     const err = await uc.execute(id, { paymentMethodId: PAYMENT_ID, folioId: FISCAL_FOLIO_ID }, USER_ID).catch((e) => e);
     expect(err).toBeInstanceOf(FolioScopeMismatchError);
     expect(err.actual).toBe("INVENTORY");
+  });
+
+  describe("gate de disponibilidad por sucursal (branchScopedInventory)", () => {
+    it("rechaza la conversión si el producto dejó de estar asignado a la sucursal desde que se creó la cotización", async () => {
+      const uc = new ConvertQuoteToSaleUseCase(
+        qRepo,
+        sRepo,
+        makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(false) }),
+        true
+      );
+      await expect(
+        uc.execute(id, { paymentMethodId: PAYMENT_ID, folioId: FISCAL_FOLIO_ID }, USER_ID)
+      ).rejects.toThrow("Product is not available in this branch");
+
+      const after = (await qRepo.findByIdWithItems(id))!;
+      expect(after.quote.status).toBe("authorized");
+      expect(after.quote.convertedSaleId).toBeNull();
+    });
+
+    it("permite la conversión cuando el producto sigue asignado", async () => {
+      const uc = new ConvertQuoteToSaleUseCase(
+        qRepo,
+        sRepo,
+        makeLookups({ isProductAvailableInBranch: jest.fn().mockResolvedValue(true) }),
+        true
+      );
+      const { dto } = await uc.execute(id, { paymentMethodId: PAYMENT_ID, folioId: FISCAL_FOLIO_ID }, USER_ID);
+      expect(dto.status).toBe("completed");
+    });
+
+    it("no aplica el gate cuando branchScopedInventory=false (default)", async () => {
+      const isProductAvailableInBranch = jest.fn().mockResolvedValue(false);
+      const uc = new ConvertQuoteToSaleUseCase(qRepo, sRepo, makeLookups({ isProductAvailableInBranch }));
+      const { dto } = await uc.execute(id, { paymentMethodId: PAYMENT_ID, folioId: FISCAL_FOLIO_ID }, USER_ID);
+      expect(dto.status).toBe("completed");
+      expect(isProductAvailableInBranch).not.toHaveBeenCalled();
+    });
+
+    it("conversión idempotente no re-evalúa el gate en la segunda llamada", async () => {
+      const isProductAvailableInBranch = jest.fn().mockResolvedValue(true);
+      const uc = new ConvertQuoteToSaleUseCase(qRepo, sRepo, makeLookups({ isProductAvailableInBranch }), true);
+      const first = await uc.execute(id, { paymentMethodId: PAYMENT_ID, folioId: FISCAL_FOLIO_ID }, USER_ID);
+      const callsAfterFirst = isProductAvailableInBranch.mock.calls.length;
+
+      const second = await uc.execute(id, { paymentMethodId: PAYMENT_ID, folioId: FISCAL_FOLIO_ID }, USER_ID);
+      expect(second.dto.id).toBe(first.dto.id);
+      expect(isProductAvailableInBranch.mock.calls.length).toBe(callsAfterFirst);
+    });
   });
 });

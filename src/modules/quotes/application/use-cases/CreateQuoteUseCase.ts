@@ -10,6 +10,7 @@ import {
 import { EmptyQuoteError } from "../../domain/errors/EmptyQuoteError";
 import { ProductPriceMismatchError } from "../../domain/errors/ProductPriceMismatchError";
 import { ProductPriceNotAvailableForBranchError } from "../../domain/errors/ProductPriceNotAvailableForBranchError";
+import { ProductNotAvailableInBranchError } from "../../domain/errors/ProductNotAvailableInBranchError";
 import { InactiveResourceError } from "../../domain/errors/InactiveResourceError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 import { isFractionalQuantity } from "@/modules/products/domain/services/isFractionalQuantity";
@@ -22,7 +23,8 @@ export interface CreateQuoteResult {
 export class CreateQuoteUseCase {
   constructor(
     private readonly repo: QuoteRepository,
-    private readonly lookups: PosLookupService
+    private readonly lookups: PosLookupService,
+    private readonly branchScopedInventory: boolean = false
   ) {}
 
   async execute(req: CreateQuoteRequest, creatorId: string): Promise<CreateQuoteResult> {
@@ -83,6 +85,11 @@ export class CreateQuoteUseCase {
       ]);
       if (!product) throw new InactiveResourceError("Product not found");
       if (!product.isActive) throw new InactiveResourceError("Product");
+
+      if (this.branchScopedInventory && !(await this.lookups.isProductAvailableInBranch(item.productId, req.branchId))) {
+        throw new ProductNotAvailableInBranchError();
+      }
+
       if (!price) throw new InactiveResourceError("Product price not found");
       if (price.productId !== item.productId) throw new ProductPriceMismatchError();
       if (price.branchId != null && price.branchId !== req.branchId) {

@@ -5,5 +5,6 @@ export interface ListProductsRequest {
   search?: string;
   departmentId?: string;
   branchId?: string;
+  branchScoped?: boolean;
   satProductCode?: string;
 }

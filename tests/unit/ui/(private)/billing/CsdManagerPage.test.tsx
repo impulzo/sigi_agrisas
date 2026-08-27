@@ -47,28 +47,30 @@ function setupCsd(overrides: Partial<ReturnType<typeof useCsdManager>> = {}) {
 describe("CsdManagerPage — fiscal data fields", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("renders the 3 new fiscal fields", () => {
+  it("renders the 4 new fiscal fields", () => {
     setupUser();
     setupCsd();
     render(<CsdManagerPage />);
     expect(screen.getByLabelText(/Razón social/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Régimen fiscal/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Código postal/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Dirección/i)).toBeInTheDocument();
   });
 
   it("pre-fills the fields from a previously persisted status", () => {
     setupUser();
     setupCsd({
-      status: { rfc: "XAXX010101000", legalName: "Agrisas", fiscalRegime: "601", zipCode: "83000" },
+      status: { rfc: "XAXX010101000", legalName: "Agrisas", fiscalRegime: "601", zipCode: "83000", address: "Calle Falsa 123" },
     });
     render(<CsdManagerPage />);
     expect(screen.getByLabelText(/RFC del CSD/i)).toHaveValue("XAXX010101000");
     expect(screen.getByLabelText(/Razón social/i)).toHaveValue("Agrisas");
     expect(screen.getByLabelText(/Régimen fiscal/i)).toHaveValue("601");
     expect(screen.getByLabelText(/Código postal/i)).toHaveValue("83000");
+    expect(screen.getByLabelText(/Dirección/i)).toHaveValue("Calle Falsa 123");
   });
 
-  it("sends the 3 fiscal fields on submit", async () => {
+  it("sends the 4 fiscal fields on submit", async () => {
     const user = userEvent.setup();
     setupUser();
     const upload = setupCsd();
@@ -78,6 +80,7 @@ describe("CsdManagerPage — fiscal data fields", () => {
     await user.type(screen.getByLabelText(/Razón social/i), "Agrisas");
     await user.type(screen.getByLabelText(/Régimen fiscal/i), "601");
     await user.type(screen.getByLabelText(/Código postal/i), "83000");
+    await user.type(screen.getByLabelText(/Dirección/i), "Calle Falsa 123");
     await user.type(screen.getByLabelText(/Contraseña de la llave/i), "secret");
 
     const cerInput = screen.getByLabelText(/Certificado \(\.cer\)/i) as HTMLInputElement;
@@ -95,6 +98,7 @@ describe("CsdManagerPage — fiscal data fields", () => {
         legalName: "Agrisas",
         fiscalRegime: "601",
         zipCode: "83000",
+        address: "Calle Falsa 123",
         password: "secret",
       })
     );

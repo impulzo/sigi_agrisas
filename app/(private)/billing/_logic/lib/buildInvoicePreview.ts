@@ -13,7 +13,14 @@ interface BuildInvoicePreviewLineInput {
 }
 
 interface BuildInvoicePreviewInput {
-  issuer: { name: string; branchName?: string | null };
+  issuer: {
+    name: string;
+    branchName?: string | null;
+    rfc?: string | null;
+    fiscalRegime?: string | null;
+    zipCode?: string | null;
+    address?: string | null;
+  };
   receiver: { rfc: string; name: string; cfdiUse: string; fiscalRegime: string; taxZipCode: string };
   lines: BuildInvoicePreviewLineInput[];
   paymentForm: string;
