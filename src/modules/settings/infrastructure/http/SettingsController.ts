@@ -8,8 +8,24 @@ import { GetPricingSettingsUseCase } from "../../application/use-cases/GetPricin
 import { UpdatePricingSettingsUseCase } from "../../application/use-cases/UpdatePricingSettingsUseCase";
 import { GetInventoryNotificationSettingsUseCase } from "../../application/use-cases/GetInventoryNotificationSettingsUseCase";
 import { UpdateInventoryNotificationSettingsUseCase } from "../../application/use-cases/UpdateInventoryNotificationSettingsUseCase";
+import { GetBranchPrinterConfigUseCase } from "../../application/use-cases/GetBranchPrinterConfigUseCase";
+import { UpdateBranchPrinterConfigUseCase, IncompletePrinterConfigError } from "../../application/use-cases/UpdateBranchPrinterConfigUseCase";
 import { InvalidImageFormatError } from "../../domain/errors/InvalidImageFormatError";
 import { ImageTooLargeError } from "../../domain/errors/ImageTooLargeError";
+import { enforceBranchScope } from "@/modules/rbac/infrastructure/http/enforceBranchScope";
+
+const branchIdSchema = z.string().uuid("Invalid branch ID format");
+
+const updatePrinterConfigSchema = z.object({
+  printMode: z.enum(["browser", "escpos"]).optional(),
+  agentUrl: z
+    .string()
+    .regex(/^https?:\/\/(localhost|127\.0\.0\.1):\d+$/, "agentUrl must be http(s)://localhost:<port> or http(s)://127.0.0.1:<port>")
+    .nullable()
+    .optional(),
+  printerHost: z.string().min(1).max(200).nullable().optional(),
+  printerPort: z.number().int().min(1).max(65535).nullable().optional(),
+});
 
 const updateTicketSchema = z.object({
   footerText: z.string().max(500).nullable().optional(),
@@ -39,7 +55,9 @@ export class SettingsController {
     private readonly getPricingUseCase: GetPricingSettingsUseCase,
     private readonly updatePricingUseCase: UpdatePricingSettingsUseCase,
     private readonly getInventoryNotificationsUseCase: GetInventoryNotificationSettingsUseCase,
-    private readonly updateInventoryNotificationsUseCase: UpdateInventoryNotificationSettingsUseCase
+    private readonly updateInventoryNotificationsUseCase: UpdateInventoryNotificationSettingsUseCase,
+    private readonly getPrinterConfigUseCase: GetBranchPrinterConfigUseCase,
+    private readonly updatePrinterConfigUseCase: UpdateBranchPrinterConfigUseCase
   ) {}
 
   async getTicket(): Promise<NextResponse> {
@@ -141,6 +159,43 @@ export class SettingsController {
       return NextResponse.json(settings);
     } catch (err) {
       if (err instanceof EmptyUpdateError) return NextResponse.json({ error: err.message }, { status: 400 });
+      throw err;
+    }
+  }
+
+  async getPrinterConfig(req: NextRequest, branchId: string): Promise<NextResponse> {
+    const idParsed = branchIdSchema.safeParse(branchId);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+    const scope = await enforceBranchScope(req, idParsed.data);
+    if (scope) return scope;
+    const config = await this.getPrinterConfigUseCase.execute(idParsed.data);
+    return NextResponse.json(config);
+  }
+
+  async updatePrinterConfig(req: NextRequest, branchId: string): Promise<NextResponse> {
+    const idParsed = branchIdSchema.safeParse(branchId);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+    const parsed = updatePrinterConfigSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+    const scope = await enforceBranchScope(req, idParsed.data);
+    if (scope) return scope;
+    try {
+      const config = await this.updatePrinterConfigUseCase.execute(idParsed.data, parsed.data);
+      return NextResponse.json(config);
+    } catch (err) {
+      if (err instanceof IncompletePrinterConfigError) return NextResponse.json({ error: err.message }, { status: 400 });
       throw err;
     }
   }

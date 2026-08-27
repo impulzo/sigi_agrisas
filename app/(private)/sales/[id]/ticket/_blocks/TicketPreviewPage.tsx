@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useSaleDetail } from "../../../_logic/hooks/useSaleDetail";
 import { getTicketSettings } from "../../../../settings/_logic/services/getTicketSettings";
 import type { TicketSettingsDto } from "../../../../settings/_logic/types/api";
+import { getBranchPrinterConfig } from "../../../_logic/services/getBranchPrinterConfig";
+import { buildTicketPrintJob } from "../../../_logic/lib/buildTicketPrintJob";
+import { sendTicketPrintJob } from "../../../_logic/services/sendTicketPrintJob";
 import { PrintableTicket } from "../../../_blocks/PrintableTicket";
 import { SendTicketEmailModal } from "./SendTicketEmailModal";
 import { EmptyState } from "../../../../../_components/molecules/EmptyState/EmptyState";
@@ -26,12 +29,51 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
   const { sale, isLoading, error } = useSaleDetail(id);
   const [ticketSettings, setTicketSettings] = useState<TicketSettingsDto | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [printMode, setPrintMode] = useState<"browser" | "escpos">("browser");
+  const [agentUrl, setAgentUrl] = useState<string | null>(null);
+  const [printFailed, setPrintFailed] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     getTicketSettings()
       .then(setTicketSettings)
       .catch(() => setTicketSettings(null));
   }, []);
+
+  useEffect(() => {
+    if (!sale) return;
+    getBranchPrinterConfig(sale.branchId).then((config) => {
+      setPrintMode(config.printMode);
+      setAgentUrl(config.agentUrl);
+    });
+  }, [sale]);
+
+  async function handlePrintEscPos() {
+    if (!sale || !agentUrl) return;
+    setIsPrinting(true);
+    setPrintFailed(false);
+    try {
+      const job = buildTicketPrintJob(sale, ticketSettings, window.location.origin);
+      await sendTicketPrintJob(agentUrl, job);
+    } catch {
+      setPrintFailed(true);
+    } finally {
+      setIsPrinting(false);
+    }
+  }
+
+  function handlePrintBrowser() {
+    setPrintFailed(false);
+    window.print();
+  }
+
+  function handlePrintClick() {
+    if (printMode === "escpos" && agentUrl) {
+      void handlePrintEscPos();
+    } else {
+      handlePrintBrowser();
+    }
+  }
 
   if (isLoading) {
     return (
@@ -223,11 +265,12 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
       <div className="flex justify-center gap-3">
         <button
           type="button"
-          onClick={() => window.print()}
-          className="bg-primary hover:opacity-90 text-on-primary text-label-lg py-2 px-6 rounded-full shadow-sm transition-all flex items-center gap-2"
+          onClick={handlePrintClick}
+          disabled={isPrinting}
+          className="bg-primary hover:opacity-90 text-on-primary text-label-lg py-2 px-6 rounded-full shadow-sm transition-all flex items-center gap-2 disabled:opacity-60"
         >
           <Icon name="print" size={18} />
-          Imprimir Ticket
+          {isPrinting ? "Imprimiendo…" : "Imprimir Ticket"}
         </button>
         <button
           type="button"
@@ -238,6 +281,28 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
           Enviar por Correo
         </button>
       </div>
+
+      {printFailed && (
+        <div className="bg-error-container text-on-error-container rounded-md p-4 flex flex-col items-center gap-3 text-center">
+          <p className="text-body-sm">No se pudo conectar con la impresora.</p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => void handlePrintEscPos()}
+              className="bg-primary text-on-primary text-label-md py-1.5 px-4 rounded-full"
+            >
+              Reintentar
+            </button>
+            <button
+              type="button"
+              onClick={handlePrintBrowser}
+              className="border border-outline text-label-md py-1.5 px-4 rounded-full"
+            >
+              Imprimir desde el navegador
+            </button>
+          </div>
+        </div>
+      )}
 
       {showEmailModal && (
         <SendTicketEmailModal saleId={sale.id} open={showEmailModal} onClose={() => setShowEmailModal(false)} />

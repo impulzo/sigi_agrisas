@@ -179,9 +179,25 @@ model Branch {
   purchases             Purchase[]
   providerPayments      ProviderPayment[]
   productPrices         ProductPrice[]
+  printerConfig         BranchPrinterConfig?
 
   @@index([code])
   @@map("branches")
+}
+
+model BranchPrinterConfig {
+  id          String   @id @default(uuid())
+  branchId    String   @unique @map("branch_id")
+  printMode   String   @default("browser") @map("print_mode") @db.VarChar(10)
+  agentUrl    String?  @map("agent_url") @db.VarChar(200)
+  printerHost String?  @map("printer_host") @db.VarChar(200)
+  printerPort Int?     @default(9100) @map("printer_port")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("branch_printer_configs")
 }
 
 model Vehicle {

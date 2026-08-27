@@ -1,0 +1,16 @@
+{
+  "name": "escpos-print-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agente local de referencia: recibe un TicketPrintJob por HTTP y lo imprime vía ESC/POS crudo en una impresora de red (puerto 9100).",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "node-thermal-printer": "^4.4.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
