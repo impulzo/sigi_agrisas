@@ -15,6 +15,7 @@ import {
   StampStandaloneInvoiceRequest,
   StandaloneInvoiceItemInput,
 } from "../dto/InvoiceDto";
+import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 
 type StampInput =
   | ({ type: "sale" } & StampInvoiceFromSaleRequest)
@@ -44,7 +45,8 @@ export class StampInvoiceUseCase {
   constructor(
     private readonly invoiceRepo: InvoiceRepository,
     private readonly gateway: FacturamaGateway,
-    private readonly lookupService: BillingLookupService
+    private readonly lookupService: BillingLookupService,
+    private readonly getTicketSettingsUseCase?: GetTicketSettingsUseCase
   ) {}
 
   private async resolveIssuerSnapshot(): Promise<{
@@ -54,7 +56,7 @@ export class StampInvoiceUseCase {
     issuerZipCode: string | null;
     issuerAddress: string | null;
   }> {
-    const issuer = await resolveIssuerFiscalData(this.gateway);
+    const issuer = await resolveIssuerFiscalData(this.gateway, this.getTicketSettingsUseCase);
     return {
       issuerRfc: issuer.rfc,
       issuerLegalName: issuer.legalName,

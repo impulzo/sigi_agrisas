@@ -30,7 +30,7 @@ export function useInvoicePreview(): UseInvoicePreviewResult {
       ]);
       const preview = buildInvoicePreview({
         issuer: {
-          name: "Agrisas",
+          name: emitterFiscal.legalName,
           branchName: source.sale.branchName,
           rfc: emitterFiscal.rfc,
           fiscalRegime: emitterFiscal.fiscalRegime,

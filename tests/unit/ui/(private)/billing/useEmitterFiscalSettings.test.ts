@@ -28,10 +28,16 @@ describe("useEmitterFiscalSettings", () => {
 
     const { result } = renderHook(() => useEmitterFiscalSettings());
 
-    expect(result.current).toEqual({ rfc: null, fiscalRegime: null, zipCode: null, address: null });
+    expect(result.current).toEqual({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null });
 
     await waitFor(() =>
-      expect(result.current).toEqual({ rfc: "AGR010101AB1", fiscalRegime: "601", zipCode: "83000", address: "Calle Falsa 123" })
+      expect(result.current).toEqual({
+        rfc: "AGR010101AB1",
+        legalName: "Agrisas SA de CV",
+        fiscalRegime: "601",
+        zipCode: "83000",
+        address: "Calle Falsa 123",
+      })
     );
   });
 
@@ -41,6 +47,6 @@ describe("useEmitterFiscalSettings", () => {
     const { result } = renderHook(() => useEmitterFiscalSettings());
 
     await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(1));
-    expect(result.current).toEqual({ rfc: null, fiscalRegime: null, zipCode: null, address: null });
+    expect(result.current).toEqual({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null });
   });
 });

@@ -67,3 +67,7 @@ Hoy el receptor de una factura ya está completamente desglosado (RFC, nombre, u
 - `app/(private)/billing/_blocks/{InvoiceMetaPanel.tsx, InvoicePreviewModal.tsx, CsdManagerPage.tsx, StampSaleForm.tsx, PartialInvoiceForm.tsx}`
 - `app/(private)/billing/_logic/{types/domain.ts, types/api.ts, types/preview.ts, lib/buildInvoicePreview.ts, services/{getInvoicePreviewSource.ts, getCsdStatus.ts, uploadCsd.ts}, hooks/useInvoicePreview.ts}`
 - `openspec/specs/billing-api/spec.md`, `openspec/specs/billing-ui/spec.md`
+
+## Ronda 3 — pivote de la historia 5: sin datos de prueba fijos, TicketSettings como tercera fuente real
+
+La historia 5 de arriba (cascada de 3 niveles terminando en "datos de prueba fijos") queda **superada**: el usuario ordenó explícitamente eliminar ese tercer nivel — nunca inventar datos ni código duro. El nivel 3 pasa a ser `TicketSettings` (`Configuración > Ticket de venta` — datos reales de la empresa, ya capturados por el admin para el ticket de venta impreso), y lo que ninguna de las 3 fuentes reales (CSD, `EmitterFiscalSettings`, `TicketSettings`) tenga queda `null` (la UI ya sabe mostrar "—" para nulos, patrón ya establecido para el resto de campos opcionales del sistema). Ver `design.md` § "Ronda 3" y `tasks.md` tarea 23.

@@ -113,7 +113,7 @@ const previewLineSchema = z.object({
 
 const previewPdfSchema = z.object({
   issuer: z.object({
-    name: z.string().min(1),
+    name: z.string().nullable(),
     branchName: z.string().nullable().optional(),
   }),
   receiver: z.object({
@@ -486,7 +486,7 @@ export class BillingController {
         this.getEmitterFiscalSettingsUseCase.execute(),
       ]);
       const [issuerFiscalRegimeLabel, receiverFiscalRegimeLabel, receiverCfdiUseLabel] = await Promise.all([
-        resolveSatDescription(this.searchSatTaxRegimesUseCase, emitter.fiscalRegime),
+        emitter.fiscalRegime ? resolveSatDescription(this.searchSatTaxRegimesUseCase, emitter.fiscalRegime) : null,
         resolveSatDescription(this.searchSatTaxRegimesUseCase, parsed.data.receiver.fiscalRegime),
         resolveSatDescription(this.searchSatCfdiUsesUseCase, parsed.data.receiver.cfdiUse),
       ]);

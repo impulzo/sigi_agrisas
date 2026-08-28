@@ -1,4 +1,4 @@
-interface SatCodeSearchUseCase {
+export interface SatCodeSearchUseCase {
   execute(query: string | undefined): Promise<{ items: Array<{ code: string; description: string }> }>;
 }
 

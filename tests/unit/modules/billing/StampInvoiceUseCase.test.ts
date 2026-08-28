@@ -17,7 +17,6 @@ jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
 }));
 
 import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
-import { TEST_FALLBACK_ISSUER } from "../../../../src/modules/billing/application/services/resolveIssuerFiscalData";
 import { StampInvoiceUseCase } from "../../../../src/modules/billing/application/use-cases/StampInvoiceUseCase";
 import { InMemoryInvoiceRepository } from "../../../../src/modules/billing/infrastructure/repositories/InMemoryInvoiceRepository";
 import { FakeFacturamaGateway } from "../../../../src/modules/billing/infrastructure/services/FakeFacturamaGateway";
@@ -27,6 +26,8 @@ import {
   ReceiverFiscalDataIncompleteError,
 } from "../../../../src/modules/billing/domain/errors";
 import type { BillingLookupService, SaleForBilling } from "../../../../src/modules/billing/application/ports/BillingLookupService";
+import { GetTicketSettingsUseCase } from "../../../../src/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { InMemoryTicketSettingsRepository } from "../../../../src/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 
 const mockedGetEmitterFiscalSettings = getEmitterFiscalSettings as jest.Mock;
 
@@ -261,7 +262,7 @@ describe("StampInvoiceUseCase", () => {
       expect(invoice.issuerLegalName).toBe(EMITTER.legalName);
     });
 
-    it("stamps successfully with the fixed test-data issuer fallback when EmitterFiscalSettings is incomplete and no CSD is loaded", async () => {
+    it("stamps successfully with null issuer fields when nothing is captured anywhere — never invents data", async () => {
       mockedGetEmitterFiscalSettings.mockResolvedValue(null);
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
@@ -271,11 +272,51 @@ describe("StampInvoiceUseCase", () => {
       const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
       expect(invoice.status).toBe("stamped");
-      expect(invoice.issuerRfc).toBe(TEST_FALLBACK_ISSUER.rfc);
-      expect(invoice.issuerLegalName).toBe(TEST_FALLBACK_ISSUER.legalName);
-      expect(invoice.issuerFiscalRegime).toBe(TEST_FALLBACK_ISSUER.fiscalRegime);
-      expect(invoice.issuerZipCode).toBe(TEST_FALLBACK_ISSUER.zipCode);
-      expect(invoice.issuerAddress).toBe(TEST_FALLBACK_ISSUER.address);
+      expect(invoice.issuerRfc).toBeNull();
+      expect(invoice.issuerLegalName).toBeNull();
+      expect(invoice.issuerFiscalRegime).toBeNull();
+      expect(invoice.issuerZipCode).toBeNull();
+      expect(invoice.issuerAddress).toBeNull();
+    });
+
+    it("falls through to TicketSettings (business data already captured for ticket printing) when EmitterFiscalSettings is empty and no CSD is loaded", async () => {
+      mockedGetEmitterFiscalSettings.mockResolvedValue(null);
+      const ticketRepo = new InMemoryTicketSettingsRepository();
+      await ticketRepo.update({
+        businessName: "IVAN ENRIQUE OLIVERA RAMIREZ",
+        businessRfc: "OIRI8506123Y7",
+        businessAddress: "LIBRES # 105 CENTRO, OCOTLAN DE MORELOS, OAXACA. C.P. 71510",
+        businessTaxRegime: "612 Personas Físicas con Actividad Empresarial",
+      });
+      const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase);
+
+      const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
+
+      expect(invoice.issuerRfc).toBe("OIRI8506123Y7");
+      expect(invoice.issuerLegalName).toBe("IVAN ENRIQUE OLIVERA RAMIREZ");
+      expect(invoice.issuerFiscalRegime).toBe("612 Personas Físicas con Actividad Empresarial");
+      expect(invoice.issuerAddress).toBe("LIBRES # 105 CENTRO, OCOTLAN DE MORELOS, OAXACA. C.P. 71510");
+      // TicketSettings has no zip-code field, and neither CSD/EmitterFiscalSettings has one here — stays null.
+      expect(invoice.issuerZipCode).toBeNull();
+    });
+
+    it("EmitterFiscalSettings still wins over TicketSettings when both are present", async () => {
+      const ticketRepo = new InMemoryTicketSettingsRepository();
+      await ticketRepo.update({ businessName: "Should not be used", businessRfc: "XXXX000000XXX" });
+      const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase);
+
+      const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
+
+      expect(invoice.issuerRfc).toBe(EMITTER.rfc);
+      expect(invoice.issuerLegalName).toBe(EMITTER.legalName);
     });
   });
 
@@ -340,7 +381,7 @@ describe("StampInvoiceUseCase", () => {
       expect(invoice.issuerAddress).toBe(EMITTER.address);
     });
 
-    it("stamps successfully with the fixed test-data issuer fallback when EmitterFiscalSettings is incomplete and no CSD is loaded", async () => {
+    it("stamps successfully with null issuer fields when nothing is captured anywhere — never invents data", async () => {
       mockedGetEmitterFiscalSettings.mockResolvedValue(null);
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
@@ -350,11 +391,11 @@ describe("StampInvoiceUseCase", () => {
       const invoice = await uc.execute(standaloneInput, CREATOR_ID, BRANCH_ID);
 
       expect(invoice.status).toBe("stamped");
-      expect(invoice.issuerRfc).toBe(TEST_FALLBACK_ISSUER.rfc);
-      expect(invoice.issuerLegalName).toBe(TEST_FALLBACK_ISSUER.legalName);
-      expect(invoice.issuerFiscalRegime).toBe(TEST_FALLBACK_ISSUER.fiscalRegime);
-      expect(invoice.issuerZipCode).toBe(TEST_FALLBACK_ISSUER.zipCode);
-      expect(invoice.issuerAddress).toBe(TEST_FALLBACK_ISSUER.address);
+      expect(invoice.issuerRfc).toBeNull();
+      expect(invoice.issuerLegalName).toBeNull();
+      expect(invoice.issuerFiscalRegime).toBeNull();
+      expect(invoice.issuerZipCode).toBeNull();
+      expect(invoice.issuerAddress).toBeNull();
     });
 
     it("issuer fiscal data changes later — existing invoice keeps the snapshot from when it was stamped", async () => {

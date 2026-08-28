@@ -57,6 +57,43 @@ export interface FacturamaDownloadResult {
   contentType: string;
 }
 
+export interface FacturamaInvoiceSnapshotItem {
+  description: string;
+  productCode: string;
+  satProductCode?: string | null;
+  quantity: number;
+  unitPrice: number;
+  discountPct: number;
+  ivaRate: number;
+  iepsRate: number;
+  lineSubtotal: number;
+  lineTotal: number;
+}
+
+// The already-stamped invoice's own persisted data — same source of truth the
+// detail page reads. Passed to `download` so a re-download always renders the
+// exact numbers shown on screen, never a gateway's own (possibly stale or
+// process-local) reconstruction. The real Facturama gateway ignores it: the
+// stamped document on Facturama's servers is already the source of truth.
+export interface FacturamaInvoiceSnapshot {
+  uuid: string;
+  issuer: {
+    rfc: string | null;
+    legalName: string | null;
+    fiscalRegime: string | null;
+    zipCode: string | null;
+    address: string | null;
+  };
+  receiver: FacturamaReceiverInput;
+  items: FacturamaInvoiceSnapshotItem[];
+  paymentForm: string;
+  paymentMethod: string;
+  currency: string;
+  subtotal: number;
+  taxTotal: number;
+  total: number;
+}
+
 export interface FacturamaCsdInput {
   rfc: string;
   certificateBase64: string;
@@ -74,7 +111,7 @@ export interface FacturamaCsdStatus {
 export interface FacturamaGateway {
   stamp(input: FacturamaStampInput): Promise<FacturamaStampResult>;
   cancel(cfdiId: string, motive: string, uuidReplacement?: string | null): Promise<FacturamaCancelResult>;
-  download(format: "pdf" | "xml", cfdiId: string): Promise<FacturamaDownloadResult>;
+  download(format: "pdf" | "xml", cfdiId: string, snapshot?: FacturamaInvoiceSnapshot): Promise<FacturamaDownloadResult>;
   uploadCsd(input: FacturamaCsdInput): Promise<FacturamaCsdStatus>;
   getCsdStatus(rfc?: string): Promise<FacturamaCsdStatus>;
 }

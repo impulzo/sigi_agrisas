@@ -20,7 +20,7 @@ export interface InvoiceDocumentPdfLine {
 
 export interface InvoiceDocumentPdfData {
   issuer: {
-    name: string;
+    name: string | null;
     branchName?: string | null;
     rfc?: string | null;
     fiscalRegime?: string | null;

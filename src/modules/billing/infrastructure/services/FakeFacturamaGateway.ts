@@ -9,10 +9,12 @@ import {
   FacturamaDownloadResult,
   FacturamaCsdInput,
   FacturamaCsdStatus,
+  FacturamaInvoiceSnapshot,
 } from "../../application/ports/FacturamaGateway";
 import { InvoiceDocumentPdf, InvoiceDocumentPdfData } from "../pdf/InvoiceDocumentPdf";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
+import { resolveSatDescription, SatCodeSearchUseCase } from "./resolveSatDescription";
 
 const MOCK_WATERMARK = "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL";
 
@@ -85,6 +87,38 @@ function toInvoiceDocumentPdfData(input: FacturamaStampInput, uuid: string): Inv
   };
 }
 
+function toInvoiceDocumentPdfDataFromSnapshot(snapshot: FacturamaInvoiceSnapshot): InvoiceDocumentPdfData {
+  return {
+    issuer: {
+      name: snapshot.issuer.legalName,
+      rfc: snapshot.issuer.rfc,
+      fiscalRegime: snapshot.issuer.fiscalRegime,
+      zipCode: snapshot.issuer.zipCode,
+      address: snapshot.issuer.address,
+    },
+    receiver: snapshot.receiver,
+    lines: snapshot.items.map((item) => ({
+      description: item.description,
+      productCode: item.productCode,
+      satProductCode: item.satProductCode,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      discountPct: item.discountPct,
+      ivaRate: item.ivaRate,
+      iepsRate: item.iepsRate,
+      lineSubtotal: item.lineSubtotal,
+      lineTotal: item.lineTotal,
+    })),
+    paymentForm: snapshot.paymentForm,
+    paymentMethod: snapshot.paymentMethod,
+    subtotal: snapshot.subtotal,
+    taxTotal: snapshot.taxTotal,
+    total: snapshot.total,
+    currency: snapshot.currency,
+    uuid: snapshot.uuid,
+  };
+}
+
 function escapeXml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -124,7 +158,11 @@ export class FakeFacturamaGateway implements FacturamaGateway {
   private stampedInputs = new Map<string, { input: FacturamaStampInput; uuid: string }>();
   private csdUploaded = false;
 
-  constructor(private readonly getTicketSettingsUseCase?: GetTicketSettingsUseCase) {}
+  constructor(
+    private readonly getTicketSettingsUseCase?: GetTicketSettingsUseCase,
+    private readonly searchSatTaxRegimesUseCase?: SatCodeSearchUseCase,
+    private readonly searchSatCfdiUsesUseCase?: SatCodeSearchUseCase
+  ) {}
 
   // Each call returns a fresh random UUID — unique per stamp, not identical across calls.
   async stamp(input: FacturamaStampInput): Promise<FacturamaStampResult> {
@@ -144,19 +182,42 @@ export class FakeFacturamaGateway implements FacturamaGateway {
     return { success: true };
   }
 
-  async download(format: "pdf" | "xml", cfdiId: string): Promise<FacturamaDownloadResult> {
+  // When `snapshot` is given (the caller already has the persisted invoice — the
+  // normal case via DownloadInvoiceFileUseCase), it is the single source of
+  // truth: the exact data the detail page/preview already rendered, frozen at
+  // stamping time. It always wins over this gateway's own in-memory stamp
+  // cache (which is process-local and lost on every dev-server restart) and
+  // over a live re-read of EmitterFiscalSettings (which could have changed
+  // since stamping — the issuer snapshot must not drift, per spec). The
+  // in-memory cache/live-fetch path only serves calls made without a
+  // snapshot (e.g. tests exercising the gateway directly).
+  async download(format: "pdf" | "xml", cfdiId: string, snapshot?: FacturamaInvoiceSnapshot): Promise<FacturamaDownloadResult> {
     const stored = this.stampedInputs.get(cfdiId);
-    const uuid = stored?.uuid ?? randomUUID().toUpperCase();
+    const uuid = snapshot?.uuid ?? stored?.uuid ?? randomUUID().toUpperCase();
 
     if (format === "xml") {
       const xml = buildFakeXml(stored?.input ?? null, uuid);
       return { contentBase64: Buffer.from(xml).toString("base64"), contentType: "application/xml" };
     }
 
-    const baseData = stored ? toInvoiceDocumentPdfData(stored.input, uuid) : { ...FALLBACK_INVOICE_DATA, uuid };
-    const [logoUrl, emitter] = await Promise.all([
-      this.getTicketSettingsUseCase ? this.getTicketSettingsUseCase.execute().then((s) => s.logoUrl) : null,
-      getEmitterFiscalSettings(),
+    const baseData = snapshot
+      ? toInvoiceDocumentPdfDataFromSnapshot(snapshot)
+      : stored
+        ? toInvoiceDocumentPdfData(stored.input, uuid)
+        : { ...FALLBACK_INVOICE_DATA, uuid };
+    const emitter = snapshot ? null : await getEmitterFiscalSettings();
+    const logoUrl = this.getTicketSettingsUseCase ? await this.getTicketSettingsUseCase.execute().then((s) => s.logoUrl) : null;
+    const issuerFiscalRegime = emitter?.fiscalRegime ?? baseData.issuer.fiscalRegime;
+    const [issuerFiscalRegimeLabel, receiverFiscalRegimeLabel, receiverCfdiUseLabel] = await Promise.all([
+      this.searchSatTaxRegimesUseCase && issuerFiscalRegime
+        ? resolveSatDescription(this.searchSatTaxRegimesUseCase, issuerFiscalRegime)
+        : issuerFiscalRegime,
+      this.searchSatTaxRegimesUseCase
+        ? resolveSatDescription(this.searchSatTaxRegimesUseCase, baseData.receiver.fiscalRegime)
+        : baseData.receiver.fiscalRegime,
+      this.searchSatCfdiUsesUseCase
+        ? resolveSatDescription(this.searchSatCfdiUsesUseCase, baseData.receiver.cfdiUse)
+        : baseData.receiver.cfdiUse,
     ]);
     const data = {
       ...baseData,
@@ -164,8 +225,15 @@ export class FakeFacturamaGateway implements FacturamaGateway {
         ...baseData.issuer,
         logoUrl,
         rfc: emitter?.rfc ?? baseData.issuer.rfc,
-        fiscalRegime: emitter?.fiscalRegime ?? baseData.issuer.fiscalRegime,
+        fiscalRegime: issuerFiscalRegime,
+        fiscalRegimeLabel: issuerFiscalRegimeLabel,
         zipCode: emitter?.zipCode ?? baseData.issuer.zipCode,
+        address: emitter?.address ?? baseData.issuer.address,
+      },
+      receiver: {
+        ...baseData.receiver,
+        fiscalRegimeLabel: receiverFiscalRegimeLabel,
+        cfdiUseLabel: receiverCfdiUseLabel,
       },
     };
     const buffer = await renderToBuffer(
