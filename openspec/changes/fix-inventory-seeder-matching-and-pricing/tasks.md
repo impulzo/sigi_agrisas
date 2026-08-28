@@ -37,6 +37,6 @@
 ## 5. Verificación final
 
 - [x] 5.1 `npm test` completo — confirmar que ningún test existente se rompe y toda la suite pasa
-- [x] 5.2 Verificación manual contra servidor real con DB de desarrollo: correr `npm run seed:inventory-tiendas` dos veces (idempotencia) y comparar conteo de productos/departamentos INNOVAK antes/después del fix — confirmar que los ~50 casos de espaciado + 5 alias de producto dejan de crear duplicados, y que los 7 pares de departamento se fusionan
-- [x] 5.3 Confirmar en DB real que ningún `ProductPrice.price = 0` se creó para las filas con precio vacío de la corrida de verificación
+- [x] 5.2 Verificación manual contra servidor real con DB de desarrollo: `npm run seed:inventory-tiendas` corrido dos veces consecutivas (pass 1 `bir0sq9sc` 01:15, pass 2 `bqkfsos15` 01:35) — resumen final **idéntico byte a byte** entre ambas corridas: `Productos creados: 0` en ambas (idempotencia confirmada, sin duplicados), `Sucursales creadas: 0`, `nameMismatch: 33` (mismo valor, los casos de espaciado/alias ya no generan duplicado nuevo), `Matriz refrescada: 509`, `Tlaxiaco matcheados por nombre: 367`, `Inventario upserted: 1817`, mismos overrides por sucursal (CHICHICAPAM 55, HUAJUAPAN 46, PRADERA 55, ZARIOZ 56, TLAXIACO 343)
+- [x] 5.3 Confirmar en DB real que ningún `ProductPrice.price = 0` se creó para las filas con precio vacío: ambas corridas reportan `Filas con precio vacío/0 (no se escribió ProductPrice): 0`; verificado además por SQL directo (`SELECT COUNT(*) FROM product_prices WHERE branch_id IS NOT NULL AND price = 0` → `0`)
 - [x] 5.4 `npm run build` — sin errores de tipos
