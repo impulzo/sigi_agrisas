@@ -48,13 +48,13 @@ Empty result → `<EmptyState icon="receipt_long" title="No hay facturas" />`.
 ---
 
 ### Requirement: `/billing/[id]` invoice detail
-The system SHALL expose a private route `/billing/[id]` gated by `billing:read` that fetches `GET /api/v1/admin/invoices/:id` via `getInvoice`. It SHALL render a header (folio fiscal `uuid`, `InvoiceStatusBadge`, link a `/sales/[saleId]` cuando `saleId` no es null), `InvoiceItemsTable` (snapshots por línea con `lineSubtotal/lineIva/lineIeps/lineTotal` y totales `subtotal/taxTotal/total`), `InvoiceMetaPanel` (receptor: `receiverRfc/receiverName/receiverCfdiUse/receiverFiscalRegime/receiverTaxZipCode`, `cfdiUse`, `paymentForm`, `paymentMethod`; banner de cancelación con `cancellationMotive`+`cancelledAt` si `status='cancelled'`), y `InvoiceActionsBar`.
+The system SHALL expose a private route `/billing/[id]` gated by `billing:read` that fetches `GET /api/v1/admin/invoices/:id` via `getInvoice`. It SHALL render a header (folio fiscal `uuid`, `InvoiceStatusBadge`, link a `/sales/[saleId]` cuando `saleId` no es null), `InvoiceItemsTable` (snapshots por línea con `lineSubtotal/lineIva/lineIeps/lineTotal` y totales `subtotal/taxTotal/total`), `InvoiceMetaPanel` (una sección "Datos del emisor": `issuerRfc/issuerLegalName/issuerFiscalRegime/issuerZipCode/issuerAddress`, mostrando el régimen fiscal como "código - descripción" (resuelto vía `SatTaxRegimeRepository`, ver `billing-api`) y "—" para cualquier campo `null`; una sección "Datos del receptor": `receiverRfc/receiverName/receiverCfdiUse/receiverFiscalRegime/receiverTaxZipCode`, con `receiverFiscalRegime` y `receiverCfdiUse` también como "código - descripción"; `paymentForm`/`paymentMethod` como "código - descripción" vía el catálogo compartido `SAT_PAYMENT_FORMS`/`SAT_PAYMENT_METHODS`; banner de cancelación con `cancellationMotive`+`cancelledAt` si `status='cancelled'`), y `InvoiceActionsBar`.
 
 `InvoiceActionsBar` SHALL render "Descargar PDF" (molecule compartido `DownloadPdfButton`, `app/_components/molecules/PdfDownloadButton.tsx`, icono `picture_as_pdf`) y "Descargar XML" siempre, y "Cancelar" sólo cuando `status='stamped'` y `can("billing:cancel")`.
 
 #### Scenario: Render stamped invoice
 - **WHEN** a user with `billing:read` opens `/billing/[id]` of a `stamped` invoice
-- **THEN** items, totales, receptor y los botones de descarga SHALL render; "Cancelar" SHALL render only if the user has `billing:cancel`
+- **THEN** items, totales, emisor, receptor y los botones de descarga SHALL render; "Cancelar" SHALL render only if the user has `billing:cancel`
 
 #### Scenario: Cancelled invoice shows banner, no cancel
 - **WHEN** the invoice `status='cancelled'`
@@ -71,6 +71,14 @@ The system SHALL expose a private route `/billing/[id]` gated by `billing:read` 
 #### Scenario: Download PDF button uses shared icon
 - **WHEN** the "Descargar PDF" button renders on `/billing/[id]`
 - **THEN** it shows the `picture_as_pdf` icon provided by the shared `DownloadPdfButton` molecule
+
+#### Scenario: Issuer section shows dashes for a pre-migration invoice
+- **WHEN** the invoice was stamped before the issuer snapshot existed and its `issuerRfc`/`issuerLegalName`/`issuerFiscalRegime`/`issuerZipCode`/`issuerAddress` are all `null`
+- **THEN** the "Datos del emisor" section SHALL render with "—" in each field instead of a blank space or a crash
+
+#### Scenario: Fiscal regime and CFDI use show their description, not just the code
+- **WHEN** a stamped invoice has `receiverFiscalRegime="601"` and `receiverCfdiUse="G03"`
+- **THEN** the detail page SHALL show "601 - General de Ley Personas Morales" and "G03 - Gastos en general" (or their current catalog descriptions), not the raw codes alone — same treatment for the issuer's fiscal regime
 
 ---
 
@@ -222,9 +230,11 @@ Because the payload carries no `saleId`, the request SHALL reach the backend sta
 - **THEN** the form blocks submission, shows an inline error on that line, and does NOT call `POST /invoices`
 
 ### Requirement: Invoice preview before stamping
-Both emission forms (`StampSaleForm` and `PartialInvoiceForm`, under `/billing/new`) SHALL render a "Vista previa" button. Clicking it SHALL open `InvoicePreviewModal` (a native `<dialog>`, following the same open/close pattern as `CancelInvoiceModal`) showing: the Agrisas logo (`/logo.png`), a folio placeholder "PENDIENTE DE TIMBRAR", a visible badge "BORRADOR — no válido fiscalmente", the receiver's fiscal data, the line items with per-line and aggregate totals computed client-side via `computeInvoiceTotalsClient`, and three actions: "Volver a editar" (closes the modal without side effects), "Descargar PDF" (molecule compartido `DownloadPdfButton`, icono `picture_as_pdf` — downloads the currently-displayed preview as a PDF via `POST /api/v1/admin/invoices/preview/pdf`, sending the same `InvoicePreviewData` already rendered on screen — no side effects, no Facturama call), and "Timbrar ahora" (invokes the same existing `submit()` used by the form's real "Emitir factura" action — it SHALL NOT call Facturama or persist anything on its own).
+Both emission forms (`StampSaleForm` and `PartialInvoiceForm`, under `/billing/new`) SHALL render a "Vista previa" button. Clicking it SHALL open `InvoicePreviewModal` (a native `<dialog>`, following the same open/close pattern as `CancelInvoiceModal`) showing: the logo and the fixed title "Factura" (NOT the company name — the company's identity lives only in the "Datos del emisor" section below), a folio placeholder "PENDIENTE DE TIMBRAR", a visible badge "BORRADOR — no válido fiscalmente", a "Datos del emisor" section (RFC, razón social, régimen fiscal as "code - description", código postal, dirección — resolved as described below), the receiver's fiscal data including its zip code (`taxZipCode`) and its `fiscalRegime`/`cfdiUse` as "code - description", the line items with per-line and aggregate totals computed client-side via `computeInvoiceTotalsClient`, and three actions: "Volver a editar" (closes the modal without side effects), "Descargar PDF" (molecule compartido `DownloadPdfButton`, icono `picture_as_pdf` — downloads the currently-displayed preview as a PDF via `POST /api/v1/admin/invoices/preview/pdf`, sending the same `InvoicePreviewData` already rendered on screen — no side effects, no Facturama call), and "Timbrar ahora" (invokes the same existing `submit()` used by the form's real "Emitir factura" action — it SHALL NOT call Facturama or persist anything on its own).
 
-For `PartialInvoiceForm`, the preview data SHALL be built entirely from data already present in the form's local state (customer, lines, payment form/method) — no network request SHALL be made to open the preview.
+The issuer's fiscal identity (`rfc`, `legalName`, `fiscalRegime`, `zipCode`, `address`) SHALL be resolved by calling `GET /api/v1/admin/billing/emitter-fiscal-settings` (requires only `billing:write`, already held by whoever can open this form — NOT `billing:manage_csd`) when the preview is opened, for BOTH forms. That endpoint's cascade (CSD en vivo → `EmitterFiscalSettings` → `TicketSettings`, ver `billing-api`) draws only from real data the admin has actually captured — it SHALL NEVER return a hardcoded/invented placeholder. A field with no value in any of the three sources renders as "—" in the UI; the same "—" also covers the case where the network call itself fails (see below) — the UI cannot distinguish "nothing captured" from "the lookup failed", and SHALL NOT need to. The receiver's `fiscalRegime`/`cfdiUse` descriptions SHALL be resolved client-side by querying the existing search endpoints `GET /api/v1/admin/sat-codes/regimen-fiscal?search=<code>` and `.../uso-cfdi?search=<code>` with the exact code, reusing them as an exact-match lookup. This resolution SHALL happen once per modal open and SHALL NOT block rendering the rest of the preview if any of it fails — a failure to resolve issuer data or a catalog description SHALL NOT prevent "Descargar PDF" or "Timbrar ahora" (the backend independently re-resolves everything server-side for the actual PDF render).
+
+For `PartialInvoiceForm`, the receiver/lines preview data SHALL be built entirely from data already present in the form's local state (customer, lines, payment form/method) — no network request beyond the issuer fiscal lookup above SHALL be made to open the preview.
 
 For `StampSaleForm`, which does not hold line items or the receiver's fiscal data in its local state, opening the preview SHALL resolve that data by reading `GET /api/v1/admin/sales/:id` and (when the sale has a `customerId`) `GET /api/v1/admin/customers/:id` — both already-existing read endpoints, reused unmodified. When mapping the sale's items to preview lines, any `discountPct`, `ivaRate`, or `iepsRate` that is `null` on the source sale item (e.g. a line without a discount, or an IEPS-exempt product) SHALL be normalized to `0` — the preview payload SHALL NEVER carry a `null` for these fields, since the preview PDF endpoint's contract requires non-nullable numbers (see `billing-api`'s "Invoice preview PDF endpoint"). While resolving, the modal SHALL show a loading state. If the selected sale has no `customerId`, the modal SHALL show the message "Esta venta no tiene cliente asociado, no se puede facturar" and SHALL disable "Timbrar ahora" AND "Descargar PDF".
 
@@ -232,11 +242,11 @@ The preview SHALL never introduce a persisted draft state: `Invoice.status` rema
 
 #### Scenario: Preview from partial invoice form (no network)
 - **WHEN** the user has picked a fiscally-complete customer and added at least one line in `PartialInvoiceForm`, then clicks "Vista previa"
-- **THEN** the modal SHALL open immediately (no HTTP request) showing the logo, "BORRADOR" badge, "PENDIENTE DE TIMBRAR" folio, receiver data, lines and totals matching the form's live totals
+- **THEN** the modal SHALL open showing the logo, the "Factura" title, "BORRADOR" badge, "PENDIENTE DE TIMBRAR" folio, issuer data (resolved via the emitter fiscal settings lookup, including address), receiver data (including zip code and fiscal-regime/CFDI-use descriptions), lines and totals matching the form's live totals
 
 #### Scenario: Preview from stamp-sale form (resolves sale + customer)
 - **WHEN** the user has selected a `completed` sale with an associated customer in `StampSaleForm`, then clicks "Vista previa"
-- **THEN** the modal SHALL show a brief loading state, then render the sale's lines and the customer's real fiscal data
+- **THEN** the modal SHALL show a brief loading state, then render the sale's lines, the customer's real fiscal data, and the issuer's fiscal data
 
 #### Scenario: Sale without customer blocks preview confirmation and download
 - **WHEN** the user clicks "Vista previa" in `StampSaleForm` for a sale with no `customerId`
@@ -252,7 +262,7 @@ The preview SHALL never introduce a persisted draft state: `Invoice.status` rema
 
 #### Scenario: Download PDF from partial invoice preview
 - **WHEN** the user, with a partial-invoice preview open, clicks "Descargar PDF"
-- **THEN** the browser downloads a PDF containing the same receiver, lines, and totals shown in the modal, watermarked "BORRADOR — no válido fiscalmente", without closing the modal or calling `POST /invoices`
+- **THEN** the browser downloads a PDF containing the same issuer, receiver, lines, and totals shown in the modal, watermarked "BORRADOR — no válido fiscalmente", without closing the modal or calling `POST /invoices`
 
 #### Scenario: Download PDF from stamp-sale preview
 - **WHEN** the user, with a stamp-sale preview open (customer resolved), clicks "Descargar PDF"
@@ -274,8 +284,20 @@ The preview SHALL never introduce a persisted draft state: `Invoice.status` rema
 - **WHEN** the "Descargar PDF" button renders inside `InvoicePreviewModal`
 - **THEN** it shows the `picture_as_pdf` icon provided by the shared `DownloadPdfButton` molecule, same icon as `/billing/[id]`
 
+#### Scenario: Issuer lookup failure does not block the preview
+- **WHEN** `GET /api/v1/admin/billing/emitter-fiscal-settings` fails (network error) while opening the preview
+- **THEN** the modal SHALL still open showing "—" for the issuer's RFC/razón social/régimen fiscal/CP/dirección, and "Descargar PDF"/"Timbrar ahora" SHALL remain enabled (the actual PDF resolves the issuer server-side regardless, via the same cascade, so it will not be blank there even if it was in the modal)
+
+#### Scenario: Modal header shows "Factura", not the company name
+- **WHEN** the preview modal renders (either form)
+- **THEN** its header SHALL show the logo and the text "Factura" — it SHALL NOT show the issuer's name or "Agrisas" as a title; the issuer's identity is shown only inside the "Datos del emisor" section below
+
+#### Scenario: Catalog description lookup failure falls back to raw code
+- **WHEN** a search call to `/api/v1/admin/sat-codes/regimen-fiscal` or `.../uso-cfdi` fails or returns no match for the exact code
+- **THEN** the modal SHALL display the raw code alone for that field, without blocking the rest of the preview
+
 ### Requirement: CSD management `/billing/csd`
-The system SHALL expose a private route `/billing/csd` gated by `billing:manage_csd` (admin only). `CsdManagerPage` SHALL display the current CSD status (`GET /api/v1/admin/billing/csd` via `getCsdStatus`) and a form to upload/replace a CSD: `rfc`, a `.cer` file, a `.key` file, and `privateKeyPassword`. Files SHALL be converted to base64 client-side (`FileReader`) and submitted via `POST /api/v1/admin/billing/csd` (`uploadCsd`). The password SHALL NOT be persisted in client storage.
+The system SHALL expose a private route `/billing/csd` gated by `billing:manage_csd` (admin only). `CsdManagerPage` SHALL display the current CSD status (`GET /api/v1/admin/billing/csd` via `getCsdStatus`) and a form to upload/replace a CSD: `rfc`, razón social, régimen fiscal, CP, a "Dirección" field (free text, optional), a `.cer` file, a `.key` file, and `privateKeyPassword`. Files SHALL be converted to base64 client-side (`FileReader`) and submitted via `POST /api/v1/admin/billing/csd` (`uploadCsd`). The password SHALL NOT be persisted in client storage. The fiscal text fields (razón social, régimen fiscal, CP, dirección) SHALL be prefilled on load from `GET /api/v1/admin/billing/csd` and follow partial-upsert semantics: an empty submission for any of them leaves the previously stored value unchanged.
 
 The service SHALL map 422 `FacturamaCsdError{detail}` → `FacturamaCsdError(detail)`.
 
@@ -291,6 +313,13 @@ The service SHALL map 422 `FacturamaCsdError{detail}` → `FacturamaCsdError(det
 - **WHEN** a non-admin without `billing:manage_csd` navigates to `/billing/csd`
 - **THEN** the page SHALL render `null` (or redirect) after the check resolves
 
+#### Scenario: Address prefilled from current settings
+- **WHEN** `CsdManagerPage` loads and `EmitterFiscalSettings.address` already has a value
+- **THEN** the "Dirección" field SHALL be prefilled with that value
+
+#### Scenario: Address submitted alongside CSD upload
+- **WHEN** the admin fills "Dirección" and submits the CSD form
+- **THEN** the value SHALL be sent in the `POST /billing/csd` body and, on success, reflected in the next `GET /billing/csd` response
 ---
 
 ### Requirement: Sale detail billing integration

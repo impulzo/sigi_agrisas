@@ -73,7 +73,7 @@ The issuer snapshot (`issuerRfc`/`issuerLegalName`/`issuerFiscalRegime`/`issuerZ
 
 #### Scenario: Issuer fiscal data snapshotted at stamping time
 - **WHEN** an invoice is stamped (from sale or standalone)
-- **THEN** the created invoice's `issuerRfc`/`issuerLegalName`/`issuerFiscalRegime`/`issuerZipCode`/`issuerAddress` SHALL equal the values resolved by the cascade at that instant, and none of them SHALL be `null`
+- **THEN** the created invoice's `issuerRfc`/`issuerLegalName`/`issuerFiscalRegime`/`issuerZipCode`/`issuerAddress` SHALL equal the values resolved by the cascade at that instant — each field is `null` if and only if the cascade itself resolved it to `null` (no real source had it), never a fabricated substitute
 
 #### Scenario: Issuer fiscal data changes later, existing invoices unaffected
 - **WHEN** `EmitterFiscalSettings` or the loaded CSD change (e.g. a new CSD upload with a different fiscal regime) after an invoice was already stamped
@@ -126,3 +126,14 @@ Before rendering, the system SHALL resolve `logoUrl` server-side via `GetTicketS
 #### Scenario: Omitted address leaves the stored value unchanged
 - **WHEN** a subsequent CSD upload omits `address`
 - **THEN** the previously stored `address` SHALL remain unchanged
+
+### Requirement: Facturama gateway abstraction with mock mode
+`FakeFacturamaGateway.download(format, cfdiId, snapshot?)` SHALL accept an optional third parameter — the already-stamped invoice's own persisted data (issuer/receiver/items/payment/totals, the same fields `Invoice`/`InvoiceItem` already store). When the caller provides it, `download` SHALL use it as the sole source for the rendered document — resolving SAT catalog descriptions and copying the issuer's `address` from it, exactly as "Resolve SAT catalog descriptions for invoice display" specifies — and SHALL NOT fall back to its own in-memory `stampedInputs` map or re-read `EmitterFiscalSettings`/`TicketSettings` live for that call. This guarantees the downloaded PDF always matches what the invoice detail screen already rendered from the same persisted row, even across a process restart (the in-memory map is lost on restart; the snapshot is not). `DownloadInvoiceFileUseCase` SHALL always build and pass this snapshot from the `Invoice` it already loaded — it is the only caller of `gateway.download` in the system, so both direct PDF/XML download and email attachment go through this path. `FacturamaRestGateway` ignores the parameter (Facturama's own servers are the real gateway's source of truth). When no snapshot is provided (e.g. a test exercising the gateway directly), `download` SHALL fall back to its existing in-memory-map/placeholder behavior unchanged.
+
+#### Scenario: Downloaded PDF matches the detail screen even after a process restart
+- **WHEN** an invoice was stamped in a previous process (or the dev server restarted since), and its PDF is downloaded via `DownloadInvoiceFileUseCase`
+- **THEN** the rendered PDF's receiver, line items, totals, and issuer data (including resolved SAT descriptions and address) SHALL exactly match what `GET` on the invoice already returns — never the generic placeholder/fallback data
+
+#### Scenario: Gateway call without a snapshot keeps prior mock behavior
+- **WHEN** `gateway.download(format, cfdiId)` is called without a third argument (e.g. a unit test against `FakeFacturamaGateway` directly)
+- **THEN** the system behaves as before this requirement's snapshot addition — consulting its in-memory `stampedInputs` map, then the fixed mock placeholder if the ID isn't found

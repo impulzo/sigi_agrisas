@@ -181,7 +181,7 @@ Returns HTTP 200 `{"sentTo": "<resolved-email>"}` on success.
 ### Requirement: Manage CSD (Certificado de Sello Digital)
 The system SHALL expose `POST /api/v1/admin/billing/csd` to upload or replace a CSD for an emitter RFC via Facturama, and `GET /api/v1/admin/billing/csd` to read its status. Requires `billing:manage_csd` (admin only). POST body: `{ rfc: string, certificateBase64: string, privateKeyBase64: string, privateKeyPassword: string, legalName?: string (max 200), fiscalRegime?: string (regex ^\d{3}$, SAT c_RegimenFiscal key), zipCode?: string (regex ^\d{5}$) }`. The CSD cryptographic material (`certificateBase64`, `privateKeyBase64`, `privateKeyPassword`) is forwarded to Facturama and **never persisted in the local database**; secrets are redacted from logs. `rfc`/`legalName`/`fiscalRegime`/`zipCode` are NOT secrets and, on a successful CSD upload, ARE persisted to `EmitterFiscalSettings` (a singleton row) so `FacturamaRestGateway` (both `billing` and `waybills` modules) can resolve the CFDI `Emisor` node from the database instead of environment variables. Persistence happens ONLY after Facturama accepts the CSD (`gateway.uploadCsd` resolves) — if Facturama rejects it, neither the CSD nor the fiscal fields are persisted. Persistence is a partial upsert: omitted optional fields (`legalName`/`fiscalRegime`/`zipCode`) leave the previously stored values unchanged (same semantics as `PATCH /settings/ticket`), while a resend of `rfc` always updates it. Returns HTTP 200 on success.
 
-`GET /api/v1/admin/billing/csd` SHALL return the merge of Facturama's live CSD status (expiration, validity) and the currently persisted `legalName`/`fiscalRegime`/`zipCode` (all `null` if never captured), so the CSD manager UI can pre-fill the form.
+`GET /api/v1/admin/billing/csd` SHALL return the merge of Facturama's live CSD status (expiration, validity) and the currently persisted `legalName`/`fiscalRegime`/`zipCode`/`address` (all `null` if never captured), so the CSD manager UI can pre-fill the form. `address` (free text, no format restriction) follows the same partial-upsert semantics as the other optional fields: omitted on `POST` leaves the previously stored value unchanged.
 
 #### Scenario: Upload CSD persists fiscal data on success
 - **WHEN** an admin posts a valid `.cer`/`.key` pair (base64) with the private key password, RFC, legal name, fiscal regime, and zip code
@@ -201,16 +201,82 @@ The system SHALL expose `POST /api/v1/admin/billing/csd` to upload or replace a 
 
 #### Scenario: Get CSD status includes persisted fiscal data
 - **WHEN** an admin calls `GET /api/v1/admin/billing/csd`
-- **THEN** the system returns HTTP 200 with the emitter's CSD status (e.g., expiration, RFC) merged with the currently persisted `legalName`/`fiscalRegime`/`zipCode` (`null` for any field never captured)
+- **THEN** the system returns HTTP 200 with the emitter's CSD status (e.g., expiration, RFC) merged with the currently persisted `legalName`/`fiscalRegime`/`zipCode`/`address` (`null` for any field never captured)
 
 #### Scenario: Non-admin forbidden
 - **WHEN** a user without `billing:manage_csd` calls either endpoint
 - **THEN** the system returns HTTP 403 `{"error":"Forbidden","required":"billing:manage_csd"}`
 
+### Requirement: Read emitter fiscal settings (lightweight)
+The system SHALL expose `GET /api/v1/admin/billing/emitter-fiscal-settings`. Requires `billing:write` (not `billing:manage_csd`) so that any role able to stamp an invoice (`admin`, `operator`) can resolve the issuer's fiscal identity for previewing an invoice before stamping, without requiring the CSD-management permission. The endpoint SHALL resolve the issuer using the cascade described in "Resolve issuer fiscal data (cascade)" and return `{ rfc: string | null, legalName: string | null, fiscalRegime: string | null, zipCode: string | null, address: string | null }` — a field is `null` when none of the real sources have it. The system SHALL NEVER substitute invented or hardcoded placeholder data for a missing field.
+
+#### Scenario: Operator resolves emitter fiscal data for preview
+- **WHEN** a user with `billing:write` (e.g. `operator`, who lacks `billing:manage_csd`) calls `GET /api/v1/admin/billing/emitter-fiscal-settings`
+- **THEN** the system returns HTTP 200 with the 5 fields, resolved via the cascade (CSD status → `EmitterFiscalSettings` → `TicketSettings`)
+
+#### Scenario: Nothing captured anywhere — all fields null
+- **WHEN** there is no CSD loaded in the Facturama account, `EmitterFiscalSettings` has no row (or all fields `null`), and `TicketSettings`' business fields are also unset
+- **THEN** the system returns HTTP 200 with `{ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null }` — never a fabricated value
+
+#### Scenario: Forbidden without billing:write
+- **WHEN** an authenticated user without `billing:write` calls the endpoint
+- **THEN** the system returns HTTP 403 `{"error":"Forbidden","required":"billing:write"}`
+
+### Requirement: Resolve issuer fiscal data (cascade)
+The system SHALL resolve the issuer's fiscal identity (`rfc`, `legalName`, `fiscalRegime`, `zipCode`, `address`) via a single shared, pure resolution function consumed by both "Read emitter fiscal settings (lightweight)" and "Persist invoice with fiscal snapshot", using this cascade, per field, drawing only from real data the admin has actually captured — **never a hardcoded/invented placeholder**:
+1. **CSD status** — `FacturamaGateway.getCsdStatus()`. If it succeeds and returns a value, it SHALL be used for `rfc` and `legalName` (`issuer` field in the gateway's response) ONLY — `getCsdStatus()` does not expose `fiscalRegime`, `zipCode`, or `address`, so those 3 fields always fall through to tier 2 regardless of whether tier 1 succeeded.
+2. **`EmitterFiscalSettings`** (local, `/billing/csd`) — used for any field tier 1 did not resolve. This is where `fiscalRegime`/`zipCode`/`address` normally come from, since the real Facturama CSD-status API doesn't expose them at all.
+3. **`TicketSettings`** (`Configuración > Ticket de venta` — `businessRfc`/`businessName`/`businessTaxRegime`/`businessAddress`) — used for `rfc`/`legalName`/`fiscalRegime`/`address` when tiers 1–2 leave them unresolved. `TicketSettings` has no zip-code field, so `zipCode` only has tiers 1–2.
+4. **`null`** — any field still unresolved after all applicable tiers stays `null`. The system SHALL NOT substitute a fixed/synthetic value.
+
+A failure in tier 1 (network error, no CSD loaded, timeout) SHALL be caught and SHALL NOT propagate as an error to the caller — resolution silently continues to tier 2/3.
+
+#### Scenario: CSD loaded — rfc and legalName come from the certificate
+- **WHEN** `getCsdStatus()` succeeds and returns `rfc`/`issuer`
+- **THEN** the resolved `rfc`/`legalName` SHALL equal those values, while `fiscalRegime`/`zipCode`/`address` SHALL still come from `EmitterFiscalSettings` (or `TicketSettings` where applicable)
+
+#### Scenario: No CSD loaded — falls through to EmitterFiscalSettings
+- **WHEN** `getCsdStatus()` fails or returns no usable `rfc`/`issuer`
+- **THEN** `rfc`/`legalName` SHALL come from `EmitterFiscalSettings`, or from `TicketSettings` if that row is also empty for those fields
+
+#### Scenario: EmitterFiscalSettings empty — falls through to TicketSettings
+- **WHEN** `EmitterFiscalSettings` has no row (or the relevant field is `null`) and no CSD is loaded
+- **THEN** `rfc`/`legalName`/`fiscalRegime`/`address` SHALL come from `TicketSettings`' `businessRfc`/`businessName`/`businessTaxRegime`/`businessAddress` respectively
+
+#### Scenario: Nothing resolvable anywhere — field stays null, never invented
+- **WHEN** none of CSD, `EmitterFiscalSettings`, and (where applicable) `TicketSettings` have a value for a given field
+- **THEN** that field SHALL be `null` in the response — the system never substitutes a hardcoded or synthetic value
+
+### Requirement: Resolve SAT catalog descriptions for invoice display
+The system SHALL resolve human-readable descriptions for SAT-coded fields shown in the invoice detail (`toInvoiceDto`), the real invoice PDF, and the preview PDF, using the already-existing `SatTaxRegimeRepository`/`SatCfdiUseRepository` (module `sat-codes`, tables `sat_tax_regimes`/`sat_cfdi_uses`):
+- Issuer's `fiscalRegime` and receiver's `fiscalRegime` — resolved against `SatTaxRegimeRepository`.
+- Receiver's `cfdiUse` — resolved against `SatCfdiUseRepository`.
+- `paymentForm` and `paymentMethod` — resolved against the shared, non-database catalog `SAT_PAYMENT_FORMS`/`SAT_PAYMENT_METHODS` (no SAT table exists for these in this project).
+
+Resolution SHALL be an exact-code lookup (reusing each repository's existing `search(code, limit)` method with the exact code as the query — codes are fixed-length, so this is effectively an exact match). If a code has no matching catalog entry, the system SHALL fall back to displaying the raw code alone, without failing the request or the render.
+
+#### Scenario: Known code resolved to description
+- **WHEN** `fiscalRegime="601"` is displayed
+- **THEN** the system SHALL show "601 - General de Ley Personas Morales" (or the current `sat_tax_regimes` description for that code), not just "601"
+
+#### Scenario: Unknown code falls back to raw code
+- **WHEN** a `fiscalRegime`/`cfdiUse` code has no match in the local catalog table
+- **THEN** the system SHALL display the raw code alone, without an error
+
 ### Requirement: Facturama gateway abstraction with mock mode
 The system SHALL define a `FacturamaGateway` port with operations `stamp`, `cancel`, `download`, `uploadCsd`, `getCsdStatus`. The REST implementation `FacturamaRestGateway` SHALL authenticate with HTTP Basic Auth built from `FACTURAMA_USER`/`FACTURAMA_PASSWORD`, target `FACTURAMA_BASE_URL` (sandbox default), accept an injectable `fetchImpl` for tests, and normalize Facturama HTTP errors to typed domain errors. When `FACTURAMA_MOCK=true` (default) the DI container SHALL use `FakeFacturamaGateway`, which returns deterministic fake `uuid`/`facturamaCfdiId` and, for `download`, a realistic-looking CFDI document rendered from the same data passed to `stamp()` (see below) instead of a network call. `FacturamaRestGateway` SHALL fail fast at construction only when `FACTURAMA_MOCK=false` and credentials are missing.
 
-`FakeFacturamaGateway.stamp(input)` SHALL retain the received `input` (issuer/receiver/lines data) in an in-memory map keyed by the generated `cfdiId`, for the lifetime of the process. `FakeFacturamaGateway.download(format, cfdiId)` SHALL render that retained input through `InvoiceDocumentPdf` (for `format="pdf"`) — producing a document with issuer, receiver, a concepts table, tax breakdown, and totals, prominently watermarked "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL" as a translucent gray diagonal background watermark (not a solid-colored banner) — or an XML reflecting the same issuer/receiver/concepts data (for `format="xml"`), instead of the fixed placeholder strings used before this change. If `cfdiId` is not found in the map (e.g. process restarted between `stamp` and `download`), the system SHALL fall back to a minimal but still realistically laid-out placeholder document (not the prior single-line stub), still carrying the same watermark.
+`FakeFacturamaGateway.stamp(input)` SHALL retain the received `input` (issuer/receiver/lines data) in an in-memory map keyed by the generated `cfdiId`, for the lifetime of the process. `FakeFacturamaGateway.download(format, cfdiId, snapshot?)` SHALL accept an optional third parameter — the already-stamped invoice's own persisted data (issuer/receiver/items/payment/totals, the same fields `Invoice`/`InvoiceItem` already store). When the caller provides it, `download` SHALL use it as the sole source for the rendered document — resolving SAT catalog descriptions and copying the issuer's `address` from it, per "Resolve SAT catalog descriptions for invoice display" — and SHALL NOT fall back to its in-memory `stampedInputs` map or re-read `EmitterFiscalSettings`/`TicketSettings` live for that call. This guarantees the downloaded PDF always matches what the invoice detail screen already rendered from the same persisted row, even across a process restart (the in-memory map is lost on restart; the snapshot is not). `DownloadInvoiceFileUseCase` SHALL always build and pass this snapshot from the `Invoice` it already loaded — it is the only caller of `gateway.download` in the system, so both direct PDF/XML download and email attachment go through this path. `FacturamaRestGateway` ignores the parameter (Facturama's own servers are the real gateway's source of truth).
+
+Without a snapshot (e.g. a test exercising the gateway directly, or the `format="xml"` path which does not yet accept one), `FakeFacturamaGateway.download` SHALL render the retained `stamp()` input through `InvoiceDocumentPdf` (for `format="pdf"`) — producing a document with issuer, receiver, a concepts table, tax breakdown, and totals, prominently watermarked "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL" as a translucent gray diagonal background watermark (not a solid-colored banner) — or an XML reflecting the same issuer/receiver/concepts data (for `format="xml"`). If `cfdiId` is not found in the map (e.g. process restarted between `stamp` and `download`, and no snapshot given), the system SHALL fall back to a minimal but still realistically laid-out placeholder document, still carrying the same watermark.
+
+#### Scenario: Downloaded PDF matches the detail screen even after a process restart
+- **WHEN** an invoice was stamped in a previous process (or the dev server restarted since), and its PDF is downloaded via `DownloadInvoiceFileUseCase`
+- **THEN** the rendered PDF's receiver, line items, totals, and issuer data (including resolved SAT descriptions and address) SHALL exactly match what `GET` on the invoice already returns — never the generic placeholder/fallback data
+
+#### Scenario: Gateway call without a snapshot keeps prior mock behavior
+- **WHEN** `gateway.download(format, cfdiId)` is called without a third argument (e.g. a unit test against `FakeFacturamaGateway` directly)
+- **THEN** the system behaves as before the snapshot addition — consulting its in-memory `stampedInputs` map, then the fixed mock placeholder if the ID isn't found
 
 `FakeFacturamaGateway` SHALL accept an optional `GetTicketSettingsUseCase` dependency via its constructor. When provided, `download("pdf", cfdiId)` SHALL resolve `logoUrl` from it and include the business logo in the rendered PDF's header, following the same positioning rule as the preview PDF endpoint (never overlapping the diagonal watermark). When the dependency is not provided (e.g. existing test call sites constructing `new FakeFacturamaGateway()` with no arguments), the behavior SHALL be unchanged from before this requirement's logo addition — no error, no logo rendered.
 
@@ -259,7 +325,9 @@ The system SHALL define a `FacturamaGateway` port with operations `stamp`, `canc
 - **THEN** the "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL" text renders as a translucent gray diagonal watermark spanning the page background, and no solid red (`PDF_COLORS.error`) banner appears at the top or bottom of the page
 
 ### Requirement: Persist invoice with fiscal snapshot
-The system SHALL persist `invoices` and `invoice_items` such that each invoice retains a snapshot of receiver fiscal data (`receiverRfc`, `receiverName`, `receiverCfdiUse`, `receiverFiscalRegime`, `receiverTaxZipCode`), monetary totals (`subtotal`, `taxTotal`, `total` as `Decimal(14,4)`), and per-line snapshots (`productCodeSnapshot`, `productNameSnapshot`, `satProductCode`, `satUnitCode`, `unit`, `quantity`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`, `taxObject`, line totals). `saleId` is nullable with `ON DELETE SET NULL`. Snapshots SHALL survive subsequent changes or deletion of the source sale, customer or products.
+The system SHALL persist `invoices` and `invoice_items` such that each invoice retains a snapshot of receiver fiscal data (`receiverRfc`, `receiverName`, `receiverCfdiUse`, `receiverFiscalRegime`, `receiverTaxZipCode`), a snapshot of the issuer's fiscal identity at stamping time (`issuerRfc`, `issuerLegalName`, `issuerFiscalRegime`, `issuerZipCode`, `issuerAddress`, all nullable at the schema level), monetary totals (`subtotal`, `taxTotal`, `total` as `Decimal(14,4)`), and per-line snapshots (`productCodeSnapshot`, `productNameSnapshot`, `satProductCode`, `satUnitCode`, `unit`, `quantity`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`, `taxObject`, line totals). `saleId` is nullable with `ON DELETE SET NULL`. Snapshots SHALL survive subsequent changes or deletion of the source sale, customer, products, or the issuer's own fiscal settings.
+
+The issuer snapshot (`issuerRfc`/`issuerLegalName`/`issuerFiscalRegime`/`issuerZipCode`/`issuerAddress`) SHALL be resolved server-side, inside the stamping use case (both "stamp from sale" and "stamp standalone" flows), using the cascade described in "Resolve issuer fiscal data (cascade)" — NEVER from a client-supplied value in the stamp request body. Any `issuer*` column the cascade could not resolve from a real source (CSD, `EmitterFiscalSettings`, `TicketSettings`) SHALL be persisted as `null` — the system SHALL NOT invent a value to fill it. `null` therefore appears both on invoices stamped before this capability existed AND on invoices stamped after it when the admin genuinely has not captured that field anywhere.
 
 #### Scenario: Source sale deleted
 - **WHEN** a sale linked to an invoice is deleted
@@ -268,6 +336,18 @@ The system SHALL persist `invoices` and `invoice_items` such that each invoice r
 #### Scenario: Product renamed after invoicing
 - **WHEN** a product's name changes after the invoice is stamped
 - **THEN** the invoice's `productNameSnapshot` retains the original name
+
+#### Scenario: Issuer fiscal data snapshotted at stamping time
+- **WHEN** an invoice is stamped (from sale or standalone)
+- **THEN** the created invoice's `issuerRfc`/`issuerLegalName`/`issuerFiscalRegime`/`issuerZipCode`/`issuerAddress` SHALL equal the values resolved by the cascade at that instant — each field is `null` if and only if the cascade itself resolved it to `null` (no real source had it), never a fabricated substitute
+
+#### Scenario: Issuer fiscal data changes later, existing invoices unaffected
+- **WHEN** `EmitterFiscalSettings` or the loaded CSD change (e.g. a new CSD upload with a different fiscal regime) after an invoice was already stamped
+- **THEN** the previously stamped invoice's `issuer*` snapshot SHALL remain unchanged, reflecting what the cascade resolved when it was stamped
+
+#### Scenario: Pre-existing invoices have null issuer snapshot
+- **WHEN** an invoice stamped before this capability existed is read
+- **THEN** its `issuerRfc`/`issuerLegalName`/`issuerFiscalRegime`/`issuerZipCode`/`issuerAddress` SHALL be `null` (no retroactive backfill), and reading/mapping it SHALL NOT fail
 
 ### Requirement: RBAC permissions for billing
 The system SHALL register permissions `billing:read`, `billing:write`, `billing:cancel`, `billing:manage_csd` in the RBAC seed. Role assignments: `admin` → all four; `operator` → `billing:read`, `billing:write`, `billing:cancel`; `viewer` → `billing:read` only.
@@ -283,7 +363,7 @@ The system SHALL register permissions `billing:read`, `billing:write`, `billing:
 ### Requirement: Invoice preview PDF endpoint
 The system SHALL expose `POST /api/v1/admin/invoices/preview/pdf`. Requires `billing:write`. The request body SHALL be the client-resolved preview data (mirroring `InvoicePreviewData`): `{ issuer: { name, branchName? }, receiver: { rfc, name, cfdiUse, fiscalRegime, taxZipCode }, lines: Array<{ description, productCode, satProductCode?, quantity, unitPrice, discountPct, ivaRate, iepsRate, lineSubtotal, lineTotal }>, paymentForm, paymentMethod, subtotal, taxTotal, total, currency }`. `discountPct`, `ivaRate`, and `iepsRate` per line SHALL be non-nullable numbers at this endpoint's boundary — the client is responsible for normalizing any `null` value coming from the underlying sale (e.g. items without a discount, IEPS-exempt products) to `0` before sending the request. Zod SHALL validate the body's shape (types, required fields) but the system SHALL NOT re-derive totals from a `saleId`, re-validate business rules already enforced client-side (receiver fiscal completeness, price ≥ 0), or persist anything — it renders `InvoiceDocumentPdf` with the data as received and returns it watermarked "BORRADOR — no válido fiscalmente" and folio placeholder "PENDIENTE DE TIMBRAR". No Facturama call occurs. Returns HTTP 200 with `Content-Type: application/pdf` and `Content-Disposition: attachment; filename="factura-borrador.pdf"`. Any exception raised while rendering the PDF (e.g. `renderToBuffer` failure) SHALL be caught and returned as HTTP 500 with a JSON body (`{ "error": "PdfRenderError" }` or equivalent), never as an unhandled exception with no JSON body.
 
-Before rendering, the system SHALL resolve `logoUrl` server-side via `GetTicketSettingsUseCase` (never from the request body) and inject it into the issuer data passed to `InvoiceDocumentPdf`. The rendered PDF's header SHALL include the business logo (the tenant's uploaded logo when set, falling back to the bundled default logo when not set). The "BORRADOR — no válido fiscalmente" text SHALL render as a single diagonal watermark of translucent gray text (from the shared brand palette, `pdfTheme`'s `outlineVariant`) spanning the background of the page — NOT as a solid-colored banner — positioned so it never overlaps, shrinks, or repositions the logo or any other content, and so it never renders in the brand error/red color (`PDF_COLORS.error`), which is reserved for genuine error messaging elsewhere in the UI. The PDF's non-watermark colors (section titles, table header, alternating rows, totals band, borders, muted text) SHALL come from the shared brand palette (`pdfTheme`) instead of module-specific arbitrary hex values.
+Before rendering, the system SHALL resolve `logoUrl` server-side via `GetTicketSettingsUseCase` (never from the request body) and inject it into the issuer data passed to `InvoiceDocumentPdf`, the issuer's fiscal identity (`rfc`, `fiscalRegime`, `zipCode`, `address`) via the cascade described in "Resolve issuer fiscal data (cascade)", and the human-readable descriptions for `fiscalRegime` (issuer and receiver) and `receiver.cfdiUse` via "Resolve SAT catalog descriptions for invoice display" — NEVER from the request body for any of these. Any `rfc`/`fiscalRegime`/`zipCode`/`address` present under `issuer` in the request body SHALL be ignored. The rendered PDF's header SHALL include the business logo (the tenant's uploaded logo when set, falling back to the bundled default logo when not set) and the fixed title "Factura" — NOT the issuer's name or "Agrisas" as a title — followed by the "Emisor" section and then the "Receptor" section. The "BORRADOR — no válido fiscalmente" text SHALL render as a single diagonal watermark of translucent gray text (from the shared brand palette, `pdfTheme`'s `outlineVariant`) spanning the background of the page — NOT as a solid-colored banner — positioned so it never overlaps, shrinks, or repositions the logo or any other content, and so it never renders in the brand error/red color (`PDF_COLORS.error`), which is reserved for genuine error messaging elsewhere in the UI. The PDF's non-watermark colors (section titles, table header, alternating rows, totals band, borders, muted text) SHALL come from the shared brand palette (`pdfTheme`) instead of module-specific arbitrary hex values.
 
 #### Scenario: Preview PDF generated from client-resolved data
 - **WHEN** an authenticated user with `billing:write` posts a well-formed preview payload
@@ -320,4 +400,12 @@ Before rendering, the system SHALL resolve `logoUrl` server-side via `GetTicketS
 #### Scenario: Watermark renders as a gray diagonal background, not a red banner
 - **WHEN** the preview PDF endpoint is called
 - **THEN** the "BORRADOR — no válido fiscalmente" text renders as a translucent gray diagonal watermark spanning the page background, and no solid red (`PDF_COLORS.error`) banner appears at the top or bottom of the page
+
+#### Scenario: Issuer fiscal data always server-resolved, never from body
+- **WHEN** the request body's `issuer` object includes `rfc`, `fiscalRegime`, `zipCode`, or `address` with arbitrary client-supplied values
+- **THEN** the rendered PDF's issuer section SHALL show the values resolved by the cascade, never the client-supplied values
+
+#### Scenario: Preview PDF shows full issuer breakdown with header "Factura"
+- **WHEN** the preview PDF is rendered
+- **THEN** the header SHALL show the logo and the title "Factura" (not a company name), followed by an "Emisor" section with RFC, legal name, fiscal regime (code + description), zip code, and address — populated from whichever of CSD/`EmitterFiscalSettings`/`TicketSettings` actually has each field; a field with no real source anywhere renders as "—", never a fabricated value
 
