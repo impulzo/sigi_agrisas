@@ -10,7 +10,6 @@ export interface AdminUserUpdateData {
 export interface AdminUserCreateData {
   name: string;
   email: string;
-  passwordHash: string;
   avatarUrl?: string | null;
   branchId?: string | null;
   roleIds?: string[];

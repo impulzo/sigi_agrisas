@@ -4,6 +4,7 @@ import { TokenService } from "@/modules/auth/application/ports/TokenService";
 import { LoginRequest } from "@/modules/auth/application/dto/LoginRequest";
 import { AuthResponse } from "@/modules/auth/application/dto/AuthResponse";
 import { InvalidCredentialsError } from "@/modules/auth/domain/errors/InvalidCredentialsError";
+import { PasswordNotSetError } from "@/modules/auth/domain/errors/PasswordNotSetError";
 
 export class LoginUseCase {
   constructor(
@@ -15,6 +16,7 @@ export class LoginUseCase {
   async execute(req: LoginRequest): Promise<AuthResponse> {
     const user = await this.userRepo.findByEmail(req.email.toLowerCase());
     if (!user) throw new InvalidCredentialsError();
+    if (user.passwordHash === null) throw new PasswordNotSetError();
 
     const valid = await this.hasher.compare(req.password, user.passwordHash);
     if (!valid) throw new InvalidCredentialsError();

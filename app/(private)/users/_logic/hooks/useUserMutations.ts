@@ -6,6 +6,7 @@ import { updateUser } from "../services/updateUser";
 import { deleteUser } from "../services/deleteUser";
 import { assignRoleToUser } from "../services/assignRoleToUser";
 import { revokeRoleFromUser } from "../services/revokeRoleFromUser";
+import { resendSetPasswordEmail as resendSetPasswordEmailService } from "../services/resendSetPasswordEmail";
 import type { User } from "../types/domain";
 import type { RoleOption } from "../services/listAvailableRoles";
 
@@ -26,7 +27,6 @@ interface SaveDiffParams {
 interface CreateUserParams {
   name: string;
   email: string;
-  password: string;
   avatarUrlInput: string;
   branchId: string | null;
   stagedRoleIds: Set<string>;
@@ -40,15 +40,22 @@ interface UseUserMutationsResult {
   createNewUser: (params: CreateUserParams) => Promise<User | null>;
   saveUserDiff: (params: SaveDiffParams) => Promise<User | null>;
   removeUser: (userId: string) => Promise<boolean>;
+  isSendingSetPasswordEmail: boolean;
+  setPasswordEmailError: string | null;
+  setPasswordEmailSuccess: string | null;
+  resendSetPasswordEmail: (userId: string) => Promise<boolean>;
 }
 
 export function useUserMutations(): UseUserMutationsResult {
   const [isSaving, setIsSaving] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [isSendingSetPasswordEmail, setIsSendingSetPasswordEmail] = useState(false);
+  const [setPasswordEmailError, setSetPasswordEmailError] = useState<string | null>(null);
+  const [setPasswordEmailSuccess, setSetPasswordEmailSuccess] = useState<string | null>(null);
 
   const clearError = useCallback(() => setMutationError(null), []);
 
-  const createNewUser = useCallback(async ({ name, email, password, avatarUrlInput, branchId, stagedRoleIds, catalog }: CreateUserParams): Promise<User | null> => {
+  const createNewUser = useCallback(async ({ name, email, avatarUrlInput, branchId, stagedRoleIds, catalog }: CreateUserParams): Promise<User | null> => {
     setIsSaving(true);
     setMutationError(null);
     try {
@@ -56,7 +63,6 @@ export function useUserMutations(): UseUserMutationsResult {
       const created = await createUserService({
         name: name.trim(),
         email,
-        password,
         avatarUrl: avatarUrlInput || undefined,
         branchId,
         roleIds: roleIds.length > 0 ? roleIds : undefined,
@@ -137,5 +143,32 @@ export function useUserMutations(): UseUserMutationsResult {
     }
   }, []);
 
-  return { isSaving, mutationError, clearError, createNewUser, saveUserDiff, removeUser };
+  const resendSetPasswordEmail = useCallback(async (userId: string): Promise<boolean> => {
+    setIsSendingSetPasswordEmail(true);
+    setSetPasswordEmailError(null);
+    setSetPasswordEmailSuccess(null);
+    try {
+      const { sentTo } = await resendSetPasswordEmailService(userId);
+      setSetPasswordEmailSuccess(`Correo enviado a ${sentTo}`);
+      return true;
+    } catch (err: unknown) {
+      setSetPasswordEmailError(err instanceof Error ? err.message : "Error al enviar el correo");
+      return false;
+    } finally {
+      setIsSendingSetPasswordEmail(false);
+    }
+  }, []);
+
+  return {
+    isSaving,
+    mutationError,
+    clearError,
+    createNewUser,
+    saveUserDiff,
+    removeUser,
+    isSendingSetPasswordEmail,
+    setPasswordEmailError,
+    setPasswordEmailSuccess,
+    resendSetPasswordEmail,
+  };
 }

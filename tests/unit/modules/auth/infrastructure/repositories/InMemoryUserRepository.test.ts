@@ -50,4 +50,17 @@ describe("InMemoryUserRepository", () => {
     const found = await repo.findById("id-1");
     expect(found?.email).toBe("updated@b.com");
   });
+
+  it("updatePasswordHash sets the new hash and preserves other fields", async () => {
+    const user = makeUser();
+    await repo.save(user);
+    await repo.updatePasswordHash("id-1", "new-hash");
+    const found = await repo.findById("id-1");
+    expect(found?.passwordHash).toBe("new-hash");
+    expect(found?.email).toBe("a@b.com");
+  });
+
+  it("updatePasswordHash is a no-op when the user does not exist", async () => {
+    await expect(repo.updatePasswordHash("missing-id", "new-hash")).resolves.toBeUndefined();
+  });
 });

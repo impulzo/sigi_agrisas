@@ -11,6 +11,9 @@ import { SelfModificationError } from "@/modules/users/domain/errors/SelfModific
 import { EmailAlreadyInUseError } from "@/modules/users/domain/errors/EmailAlreadyInUseError";
 import { BranchNotFoundForUserError } from "@/modules/users/domain/errors/BranchNotFoundForUserError";
 import { RoleNotFoundError } from "@/modules/rbac/domain/errors/RoleNotFoundError";
+import { UserNotFoundError as AuthUserNotFoundError } from "@/modules/auth/domain/errors/UserNotFoundError";
+import { SetPasswordEmailSendFailedError } from "@/modules/auth/domain/errors/SetPasswordEmailSendFailedError";
+import type { SendSetPasswordEmailUseCase } from "@/modules/auth/application/use-cases/SendSetPasswordEmailUseCase";
 
 const uuidParamSchema = z.string().uuid("Invalid user ID format");
 
@@ -33,7 +36,6 @@ const updateUserBodySchema = z
 const createUserBodySchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
-  password: z.string().min(8),
   avatarUrl: z.string().url().nullable().optional(),
   branchId: z.string().uuid().nullable().optional(),
   roleIds: z.array(z.string().uuid()).optional(),
@@ -45,7 +47,8 @@ export class UsersController {
     private readonly getUserUseCase: GetUserUseCase,
     private readonly createUserUseCase: CreateAdminUserUseCase,
     private readonly updateUserUseCase: UpdateUserUseCase,
-    private readonly deleteUserUseCase: DeleteUserUseCase
+    private readonly deleteUserUseCase: DeleteUserUseCase,
+    private readonly sendSetPasswordEmailUseCase: SendSetPasswordEmailUseCase
   ) {}
 
   async createUser(req: NextRequest): Promise<NextResponse> {
@@ -56,11 +59,34 @@ export class UsersController {
     }
     try {
       const user = await this.createUserUseCase.execute(parsed.data);
+      this.sendSetPasswordEmailUseCase.execute(user.id).catch((err) => {
+        console.error("[UsersController.createUser] failed to send set-password email:", err);
+      });
       return NextResponse.json(user, { status: 201 });
     } catch (err) {
       if (err instanceof EmailAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
       if (err instanceof BranchNotFoundForUserError) return NextResponse.json({ error: err.message }, { status: 400 });
       if (err instanceof RoleNotFoundError) return NextResponse.json({ error: err.message }, { status: 400 });
+      throw err;
+    }
+  }
+
+  async resendSetPasswordEmail(req: NextRequest, id: string): Promise<NextResponse> {
+    const parsed = uuidParamSchema.safeParse(id);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+    try {
+      await this.getUserUseCase.execute(parsed.data);
+      const { sentTo } = await this.sendSetPasswordEmailUseCase.execute(parsed.data);
+      return NextResponse.json({ sentTo }, { status: 200 });
+    } catch (err) {
+      if (err instanceof UserNotFoundError || err instanceof AuthUserNotFoundError) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      if (err instanceof SetPasswordEmailSendFailedError) {
+        return NextResponse.json({ error: "EmailDeliveryFailed" }, { status: 502 });
+      }
       throw err;
     }
   }

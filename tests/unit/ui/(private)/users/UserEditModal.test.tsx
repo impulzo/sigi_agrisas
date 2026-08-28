@@ -140,6 +140,45 @@ describe("UserEditModal", () => {
       fireEvent.click(screen.getByRole("button", { name: "Guardar Cambios" }));
       expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ branchId: "b1" }));
     });
+
+    it("muestra el botón de reenvío de correo de contraseña", () => {
+      setup();
+      expect(
+        screen.getByRole("button", { name: "Enviar correo para establecer/restablecer contraseña" })
+      ).toBeInTheDocument();
+    });
+
+    it("pide confirmación y llama onResendSetPasswordEmail con el id del usuario al confirmar", () => {
+      const onResendSetPasswordEmail = jest.fn();
+      setup({ onResendSetPasswordEmail });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Enviar correo para establecer/restablecer contraseña" })
+      );
+      expect(onResendSetPasswordEmail).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
+      expect(onResendSetPasswordEmail).toHaveBeenCalledWith("u1");
+    });
+
+    it("no llama onResendSetPasswordEmail si se cancela la confirmación", () => {
+      const onResendSetPasswordEmail = jest.fn();
+      setup({ onResendSetPasswordEmail });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Enviar correo para establecer/restablecer contraseña" })
+      );
+      const cancelButtons = screen.getAllByRole("button", { name: "Cancelar" });
+      fireEvent.click(cancelButtons[cancelButtons.length - 1]);
+      expect(onResendSetPasswordEmail).not.toHaveBeenCalled();
+    });
+
+    it("muestra mensaje de éxito del reenvío", () => {
+      setup({ setPasswordEmailSuccess: "Correo enviado a alice@test.com" });
+      expect(screen.getByText("Correo enviado a alice@test.com")).toBeInTheDocument();
+    });
+
+    it("muestra mensaje de error del reenvío", () => {
+      setup({ setPasswordEmailError: "Failed to deliver the set-password email" });
+      expect(screen.getByText("Failed to deliver the set-password email")).toBeInTheDocument();
+    });
   });
 
   describe("modo create", () => {
@@ -152,9 +191,12 @@ describe("UserEditModal", () => {
       expect(screen.getByRole("heading", { name: "Crear usuario" })).toBeInTheDocument();
     });
 
-    it("muestra campo de contraseña", () => {
+    it("no muestra campo de contraseña, sólo el copy informativo", () => {
       setupCreate();
-      expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Contraseña")).not.toBeInTheDocument();
+      expect(
+        screen.getByText("Se enviará un correo al nuevo usuario para que establezca su propia contraseña.")
+      ).toBeInTheDocument();
     });
 
     it("no muestra botón 'Resetear a Gravatar'", () => {
@@ -168,35 +210,23 @@ describe("UserEditModal", () => {
       expect(screen.getByRole("button", { name: "Crear usuario" })).toBeDisabled();
     });
 
-    it("habilita el botón cuando name/email/password son válidos", () => {
+    it("habilita el botón cuando name/email son válidos", () => {
       setupCreate();
       fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Ana" } });
       fireEvent.change(screen.getByLabelText("Email"), { target: { value: "ana@test.com" } });
-      fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "supersecret" } });
       expect(screen.getByRole("button", { name: "Crear usuario" })).not.toBeDisabled();
-    });
-
-    it("muestra error de validación si el password es corto y mantiene el botón deshabilitado", () => {
-      setupCreate();
-      fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Ana" } });
-      fireEvent.change(screen.getByLabelText("Email"), { target: { value: "ana@test.com" } });
-      fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "short" } });
-      expect(screen.getByText("La contraseña debe tener al menos 8 caracteres")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Crear usuario" })).toBeDisabled();
     });
 
     it("dispara onSave con los datos del nuevo usuario, incluida la sucursal", () => {
       const { onSave } = setupCreate();
       fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Ana" } });
       fireEvent.change(screen.getByLabelText("Email"), { target: { value: "ana@test.com" } });
-      fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "supersecret" } });
       fireEvent.change(screen.getByLabelText("Sucursal"), { target: { value: "b2" } });
       fireEvent.click(screen.getByRole("button", { name: "Crear usuario" }));
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({
           name: "Ana",
           email: "ana@test.com",
-          password: "supersecret",
           branchId: "b2",
         })
       );

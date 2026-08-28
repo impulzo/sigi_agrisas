@@ -6,8 +6,12 @@ import { RegisterUseCase } from "@/modules/auth/application/use-cases/RegisterUs
 import { LoginUseCase } from "@/modules/auth/application/use-cases/LoginUseCase";
 import { RefreshTokenUseCase } from "@/modules/auth/application/use-cases/RefreshTokenUseCase";
 import { LogoutUseCase } from "@/modules/auth/application/use-cases/LogoutUseCase";
+import { CompletePasswordSetupUseCase } from "@/modules/auth/application/use-cases/CompletePasswordSetupUseCase";
 import { EmailAlreadyInUseError } from "@/modules/auth/domain/errors/EmailAlreadyInUseError";
 import { InvalidCredentialsError } from "@/modules/auth/domain/errors/InvalidCredentialsError";
+import { PasswordNotSetError } from "@/modules/auth/domain/errors/PasswordNotSetError";
+import { PasswordSetupTokenInvalidError } from "@/modules/auth/domain/errors/PasswordSetupTokenInvalidError";
+import { PasswordSetupTokenExpiredError } from "@/modules/auth/domain/errors/PasswordSetupTokenExpiredError";
 import {
   REFRESH_TOKEN_COOKIE,
   refreshCookieOptions,
@@ -25,12 +29,18 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const setPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8),
+});
+
 export class AuthController {
   constructor(
     private readonly registerUseCase: RegisterUseCase,
     private readonly loginUseCase: LoginUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
-    private readonly logoutUseCase: LogoutUseCase
+    private readonly logoutUseCase: LogoutUseCase,
+    private readonly completePasswordSetupUseCase: CompletePasswordSetupUseCase
   ) {}
 
   async register(req: NextRequest): Promise<NextResponse> {
@@ -98,7 +108,51 @@ export class AuthController {
       if (err instanceof InvalidCredentialsError) {
         return NextResponse.json({ error: err.message }, { status: 401 });
       }
+      if (err instanceof PasswordNotSetError) {
+        return NextResponse.json({ error: "PasswordNotSet" }, { status: 403 });
+      }
       console.error("[AuthController.login] unexpected error:", err);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+  }
+
+  async completeSetPassword(req: NextRequest): Promise<NextResponse> {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const parsed = setPasswordSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const { refreshToken, ...publicResult } = await this.completePasswordSetupUseCase.execute(
+        parsed.data
+      );
+      const res = NextResponse.json(publicResult, { status: 200 });
+      res.headers.set(
+        "Set-Cookie",
+        serialize(REFRESH_TOKEN_COOKIE, refreshToken, refreshCookieOptions)
+      );
+      return res;
+    } catch (err) {
+      if (err instanceof PasswordSetupTokenExpiredError) {
+        return NextResponse.json({ error: "PasswordSetupTokenExpired" }, { status: 400 });
+      }
+      if (err instanceof PasswordSetupTokenInvalidError) {
+        return NextResponse.json({ error: "PasswordSetupTokenInvalid" }, { status: 400 });
+      }
+      if (err instanceof Error) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      console.error("[AuthController.completeSetPassword] unexpected error:", err);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
   }
