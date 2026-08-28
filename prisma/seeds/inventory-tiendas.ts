@@ -14,7 +14,13 @@ import { PrismaClient } from "@prisma/client";
 import { seedInventoryTiendas, printTiendasSeedReport, type PrismaLike } from "./lib/inventoryTiendasSeedLogic";
 import { AGRISAS_REFRESH_DATA, TIENDAS_INVENTORY_DATA, TLAXIACO_RAW_DATA } from "./data/inventario-tiendas-v3";
 
-const prisma = new PrismaClient();
+// Conexión directa (sin pooler PgBouncer) — mismo patrón que `prisma/seed.ts`: esta
+// corrida hace ~4 000 round-trips secuenciales sin transacción, carga larga para la
+// que el pooler en modo transacción es problemático. Fallback a DATABASE_URL si
+// DIRECT_URL no está definida, sin fallar al arrancar.
+const prisma = new PrismaClient({
+  datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } },
+});
 
 /**
  * Adapter sobre PrismaClient real: sólo convierte `ProductPrice.price`
@@ -33,6 +39,10 @@ const prismaLike: PrismaLike = {
     findUnique: (args) => prisma.product.findUnique(args as never) as never,
     findMany: (args) => prisma.product.findMany(args as never) as never,
     upsert: (args) => prisma.product.upsert(args as never) as never,
+  },
+  branchInventory: {
+    upsert: (args) => prisma.branchInventory.upsert(args as never) as never,
+    findMany: (args) => prisma.branchInventory.findMany(args as never) as never,
   },
   productPrice: {
     // NO usar `findUnique`/`upsert` con `productId_branchId_name` cuando `branchId`
@@ -54,9 +64,6 @@ const prismaLike: PrismaLike = {
       }
       return prisma.productPrice.create({ data: args.create as never }) as never;
     },
-  },
-  branchInventory: {
-    upsert: (args) => prisma.branchInventory.upsert(args as never) as never,
   },
 };
 
