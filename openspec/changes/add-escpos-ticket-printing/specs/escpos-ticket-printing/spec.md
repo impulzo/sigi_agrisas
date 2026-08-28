@@ -38,6 +38,10 @@ Cuando la sucursal de la venta tiene `printMode: 'escpos'`, el navegador SHALL c
 - **WHEN** el cajero imprime con `printMode: 'escpos'` configurado
 - **THEN** en ningún momento se invoca `window.print()` ni se renderiza `PrintableTicket` para impresión — el flujo termina en el `POST` al agente local
 
+#### Scenario: Formateo de texto y márgenes de impresión
+- **WHEN** el agente procesa un job de impresión
+- **THEN** el contenido impreso SHALL respetar el ancho de columna (ej. 48/42 caracteres para 80mm o 32 para 58mm) aplicando ajuste de línea (word-wrap) a nombres/direcciones largas y márgenes para evitar que el texto quede cortado en los bordes laterales del papel.
+
 ### Requirement: Reintento y fallback ante fallas del agente local
 Si el agente local no responde dentro de un tiempo de espera acotado, o rechaza la conexión, el sistema SHALL mostrar al cajero un mensaje de error claro con dos acciones explícitas: reintentar el envío al agente, o imprimir con el mecanismo de navegador existente (`window.print()`) sin perder el contexto de la venta. El sistema NO SHALL reintentar automáticamente contra el agente sin acción explícita del cajero.
 
