@@ -60,6 +60,8 @@ function makeFakePrisma(seed?: { branches?: FakeBranch[]; products?: FakeProduct
         return p ? { id: p.id, name: p.name } : null;
       },
       findMany: async () => products.map((p) => ({ id: p.id, code: p.code, name: p.name })),
+      // Nota: el fake no modela `isActive` de producto — todos los productos creados
+      // en estos tests se consideran activos, `where: {isActive: true}` no filtra nada.
       upsert: async ({ where, create, update }) => {
         let p = products.find((x) => x.code === where.code);
         if (!p) {
@@ -145,6 +147,7 @@ function makeFakePrisma(seed?: { branches?: FakeBranch[]; products?: FakeProduct
         }
         return { id: inv.id };
       },
+      findMany: async () => inventory.map((inv) => ({ productId: inv.productId })),
     },
   };
 
@@ -410,5 +413,47 @@ describe("seedInventoryTiendas", () => {
     expect(sinDepartamento).toHaveLength(1);
     expect(products).toHaveLength(2);
     expect(products[0].departmentId).toBe(products[1].departmentId);
+  });
+
+  it("producto nuevo de tienda sin departmentName se crea con fallback en vez de omitirse", async () => {
+    const { prisma, products, departments } = makeFakePrisma();
+    const counters = await seedInventoryTiendas(prisma, {
+      agrisas: [],
+      tiendas: [tiendaRow({ code: "NEW1", name: "PRODUCTO SIN DEPTO", departmentName: null })],
+      tlaxiaco: [],
+    });
+    expect(products).toHaveLength(1);
+    expect(departments.find((d) => d.code === "SIN_DEPARTAMENTO")).toBeDefined();
+    expect(products[0].departmentId).toBe(departments.find((d) => d.code === "SIN_DEPARTAMENTO")?.id);
+    expect(counters.branchFallbackDepartment).toBe(1);
+    expect(counters.errors).toHaveLength(0);
+  });
+
+  it("producto existente de tienda sin departmentName en la fila conserva su departmentId actual", async () => {
+    const { prisma, products } = makeFakePrisma({
+      products: [
+        { id: "p1", code: "AK1", name: "ALGAK 1L", unit: "H87", satProductCode: null, departmentId: "dept-original", ivaRate: 0, iepsRate: 0 },
+      ],
+    });
+    const counters = await seedInventoryTiendas(prisma, {
+      agrisas: [],
+      tiendas: [tiendaRow({ code: "AK1", name: "ALGAK 1L", departmentName: null })],
+      tlaxiaco: [],
+    });
+    expect(products[0].departmentId).toBe("dept-original");
+    expect(counters.branchFallbackDepartment).toBe(0);
+  });
+
+  it("Tlaxiaco matchea contra un producto creado en la misma corrida por otra tienda (orden determinístico)", async () => {
+    const { prisma, products } = makeFakePrisma();
+    const counters = await seedInventoryTiendas(prisma, {
+      agrisas: [],
+      tiendas: [tiendaRow({ code: "AK1", name: "ALGAK 1L", branchCode: "CHICHICAPAM" })],
+      tlaxiaco: [tlaxiacoRow({ name: "ALGAK DE 1L" })],
+    });
+    expect(products).toHaveLength(1); // Tlaxiaco no auto-crea un duplicado
+    expect(products[0].code).toBe("AK1");
+    expect(counters.tlaxiacoMatched).toBe(1);
+    expect(counters.tlaxiacoCreated).toBe(0);
   });
 });

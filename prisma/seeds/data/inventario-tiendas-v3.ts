@@ -2,37 +2,7 @@
 // Fuente: INVENTARIOS TIENDAS.xlsx. Regenerar con:
 //   npx ts-node --project prisma/seeds/tsconfig.json prisma/seeds/data/generate-inventario-tiendas-data.ts
 
-export interface TiendaInventoryRow {
-  code: string;
-  name: string;
-  unit: string;
-  satCode: string | null;
-  price: number;
-  departmentName: string | null;
-  branchCode: string;
-}
-
-export interface AgrisasRefreshRow {
-  code: string;
-  name: string;
-  unit: string;
-  satCode: string | null;
-  departmentName: string;
-  ivaRaw: number;
-  iepsRaw: number;
-  existencia: number;
-  prices: Array<{ tierName: string; value: number; isDefault?: boolean }>;
-}
-
-export interface TlaxiacoRawRow {
-  tlaxiacoRawCode: number | string;
-  name: string;
-  unit: string;
-  satCode: string | null;
-  price: number;
-  departmentName: string | null;
-  branchCode: "TLAXIACO";
-}
+import type { AgrisasRefreshRow, TiendaInventoryRow, TlaxiacoRawRow } from "./inventarioTiendasTypes";
 
 export const AGRISAS_REFRESH_DATA: AgrisasRefreshRow[] = [
   {

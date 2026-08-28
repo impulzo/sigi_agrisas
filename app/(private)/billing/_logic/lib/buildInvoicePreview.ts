@@ -14,7 +14,7 @@ interface BuildInvoicePreviewLineInput {
 
 interface BuildInvoicePreviewInput {
   issuer: {
-    name: string;
+    name: string | null;
     branchName?: string | null;
     rfc?: string | null;
     fiscalRegime?: string | null;

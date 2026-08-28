@@ -22,6 +22,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import * as XLSX from "xlsx";
 import { CODE_REGEX, isBlank, normalizeProductCode } from "../lib/normalize";
 import { mapUnitCode } from "../lib/unitCodeMap";
+import type { AgrisasRefreshRow, TiendaInventoryRow, TlaxiacoRawRow } from "./inventarioTiendasTypes";
 
 const EXCEL_PATH = path.resolve(__dirname, "INVENTARIOS TIENDAS.xlsx");
 const OUT_PATH = path.resolve(__dirname, "inventario-tiendas-v3.ts");
@@ -113,38 +114,6 @@ const SHEET_CONFIGS: Record<string, SheetConfig> = {
     columns: { code: 2, name: 3, unit: 4, satCode: 5, price: 6 },
   },
 };
-
-export interface TiendaInventoryRow {
-  code: string;
-  name: string;
-  unit: string;
-  satCode: string | null;
-  price: number;
-  departmentName: string | null;
-  branchCode: string;
-}
-
-export interface AgrisasRefreshRow {
-  code: string;
-  name: string;
-  unit: string;
-  satCode: string | null;
-  departmentName: string;
-  ivaRaw: number;
-  iepsRaw: number;
-  existencia: number;
-  prices: Array<{ tierName: string; value: number; isDefault?: boolean }>;
-}
-
-export interface TlaxiacoRawRow {
-  tlaxiacoRawCode: number | string;
-  name: string;
-  unit: string;
-  satCode: string | null;
-  price: number;
-  departmentName: string | null;
-  branchCode: "TLAXIACO";
-}
 
 function toFiniteNumber(raw: unknown): number | null {
   if (raw == null) return null;
@@ -372,37 +341,7 @@ function main(): void {
 // Fuente: INVENTARIOS TIENDAS.xlsx. Regenerar con:
 //   npx ts-node --project prisma/seeds/tsconfig.json prisma/seeds/data/generate-inventario-tiendas-data.ts
 
-export interface TiendaInventoryRow {
-  code: string;
-  name: string;
-  unit: string;
-  satCode: string | null;
-  price: number;
-  departmentName: string | null;
-  branchCode: string;
-}
-
-export interface AgrisasRefreshRow {
-  code: string;
-  name: string;
-  unit: string;
-  satCode: string | null;
-  departmentName: string;
-  ivaRaw: number;
-  iepsRaw: number;
-  existencia: number;
-  prices: Array<{ tierName: string; value: number; isDefault?: boolean }>;
-}
-
-export interface TlaxiacoRawRow {
-  tlaxiacoRawCode: number | string;
-  name: string;
-  unit: string;
-  satCode: string | null;
-  price: number;
-  departmentName: string | null;
-  branchCode: "TLAXIACO";
-}
+import type { AgrisasRefreshRow, TiendaInventoryRow, TlaxiacoRawRow } from "./inventarioTiendasTypes";
 
 export const AGRISAS_REFRESH_DATA: AgrisasRefreshRow[] = ${JSON.stringify(agrisasData, null, 2)};
 

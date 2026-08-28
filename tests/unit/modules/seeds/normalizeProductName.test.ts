@@ -28,4 +28,21 @@ describe("normalizeProductNameForMatching", () => {
   it("quita CON y Y como tokens completos", () => {
     expect(normalizeProductNameForMatching("PRODUCTO CON Y SIN RELLENO")).toBe("PRODUCTO SIN RELLENO");
   });
+
+  it("colapsa espacio entre dígito y unidad corta — mismo valor con o sin espacio", () => {
+    expect(normalizeProductNameForMatching("ATP UP DE 10L")).toBe(normalizeProductNameForMatching("ATP UP 10 L"));
+    expect(normalizeProductNameForMatching("ATP UP DE 10L")).toBe("ATP UP 10L");
+  });
+
+  it("colapsa dígito+unidad de 2 letras (KG)", () => {
+    expect(normalizeProductNameForMatching("MYCOROOT DE 1KG")).toBe(normalizeProductNameForMatching("MYCOROOT 1 KG"));
+  });
+
+  it("no colapsa dígito seguido de palabra larga (no es unidad)", () => {
+    expect(normalizeProductNameForMatching("FIAT 25 4 TIEMPOS")).toBe("FIAT 25 4 TIEMPOS");
+  });
+
+  it("no colapsa espacio entre palabras completas sin dígito", () => {
+    expect(normalizeProductNameForMatching("CARBOXY MIN L")).toBe("CARBOXY MIN L");
+  });
 });

@@ -43,7 +43,6 @@ import { ListInvoicesBySaleUseCase } from "@/modules/billing/application/use-cas
 import { UploadCsdUseCase } from "@/modules/billing/application/use-cases/UploadCsdUseCase";
 import { GetCsdStatusUseCase } from "@/modules/billing/application/use-cases/GetCsdStatusUseCase";
 import { GetEmitterFiscalSettingsUseCase } from "@/modules/billing/application/use-cases/GetEmitterFiscalSettingsUseCase";
-import { TEST_FALLBACK_ISSUER } from "@/modules/billing/application/services/resolveIssuerFiscalData";
 import { SearchSatTaxRegimesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatTaxRegimesUseCase";
 import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCfdiUsesUseCase";
 import { InMemorySatTaxRegimeRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatTaxRegimeRepository";
@@ -85,6 +84,7 @@ function buildController(authzOverride?: AuthorizationService, ticketSettingsRep
   const lookup = makeLookup();
   const downloadUseCase = new DownloadInvoiceFileUseCase(repo, gateway);
   const mailer = { send: jest.fn().mockResolvedValue(undefined) };
+  const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketSettingsRepo ?? new InMemoryTicketSettingsRepository());
   return new BillingController(
     new StampInvoiceUseCase(repo, gateway, lookup),
     new CancelInvoiceUseCase(repo, gateway),
@@ -97,8 +97,8 @@ function buildController(authzOverride?: AuthorizationService, ticketSettingsRep
     authz,
     lookup,
     new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer),
-    new GetTicketSettingsUseCase(ticketSettingsRepo ?? new InMemoryTicketSettingsRepository()),
-    new GetEmitterFiscalSettingsUseCase(gateway),
+    getTicketSettingsUseCase,
+    new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase),
     new SearchSatTaxRegimesUseCase(new InMemorySatTaxRegimeRepository()),
     new SearchSatCfdiUsesUseCase(new InMemorySatCfdiUseRepository())
   );
@@ -246,8 +246,8 @@ describe("BillingController — previewPdf", () => {
         };
       };
     };
-    // buildController() uses unseeded InMemory SAT catalogs — resolution falls back to the raw code.
-    expect(element.props.data.issuer.fiscalRegimeLabel).toBe(TEST_FALLBACK_ISSUER.fiscalRegime);
+    // buildController() has no EmitterFiscalSettings/TicketSettings/CSD captured — issuer fiscalRegime is null, nothing to resolve.
+    expect(element.props.data.issuer.fiscalRegimeLabel).toBeNull();
     expect(element.props.data.receiver.fiscalRegimeLabel).toBe(VALID_PREVIEW_BODY.receiver.fiscalRegime);
     expect(element.props.data.receiver.cfdiUseLabel).toBe(VALID_PREVIEW_BODY.receiver.cfdiUse);
   });
@@ -357,7 +357,7 @@ describe("BillingController — previewPdf", () => {
     expect(element.props.data.issuer.zipCode).toBe("83000");
   });
 
-  it("EmitterFiscalSettings incomplete and no CSD loaded → falls back to fixed test-data issuer, still 200", async () => {
+  it("EmitterFiscalSettings/TicketSettings empty and no CSD loaded → issuer fields render null, still 200 (never invents data)", async () => {
     mockedGetEmitter.mockResolvedValue(null);
     const controller = buildController();
 
@@ -367,7 +367,7 @@ describe("BillingController — previewPdf", () => {
     const element = mockRenderToBuffer.mock.calls[0][0] as unknown as {
       props: { data: { issuer: { rfc: string | null } } };
     };
-    expect(element.props.data.issuer.rfc).toBe(TEST_FALLBACK_ISSUER.rfc);
+    expect(element.props.data.issuer.rfc).toBeNull();
   });
 });
 
@@ -411,7 +411,7 @@ describe("BillingController — getEmitterFiscalSettings", () => {
     gatewaySpy.mockRestore();
   });
 
-  it("EmitterFiscalSettings not captured yet and no CSD loaded → 200 with fixed test-data fields", async () => {
+  it("nothing captured anywhere (no CSD, no EmitterFiscalSettings, no TicketSettings) → 200 with all fields null", async () => {
     mockedGetEmitter.mockResolvedValue(null);
     const controller = buildController();
 
@@ -419,7 +419,31 @@ describe("BillingController — getEmitterFiscalSettings", () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual(TEST_FALLBACK_ISSUER);
+    expect(body).toEqual({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null });
+  });
+
+  it("falls through to TicketSettings when EmitterFiscalSettings is empty and no CSD is loaded", async () => {
+    mockedGetEmitter.mockResolvedValue(null);
+    const ticketRepo = new InMemoryTicketSettingsRepository();
+    await ticketRepo.update({
+      businessName: "IVAN ENRIQUE OLIVERA RAMIREZ",
+      businessRfc: "OIRI8506123Y7",
+      businessAddress: "LIBRES # 105 CENTRO, OCOTLAN DE MORELOS, OAXACA. C.P. 71510",
+      businessTaxRegime: "612 Personas Físicas con Actividad Empresarial",
+    });
+    const controller = buildController(undefined, ticketRepo);
+
+    const res = await controller.getEmitterFiscalSettings(emitterReq());
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({
+      rfc: "OIRI8506123Y7",
+      legalName: "IVAN ENRIQUE OLIVERA RAMIREZ",
+      fiscalRegime: "612 Personas Físicas con Actividad Empresarial",
+      zipCode: null,
+      address: "LIBRES # 105 CENTRO, OCOTLAN DE MORELOS, OAXACA. C.P. 71510",
+    });
   });
 
   it("without billing:write → 403", async () => {

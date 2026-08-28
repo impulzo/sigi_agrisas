@@ -90,11 +90,47 @@ describe("DownloadInvoiceFileUseCase", () => {
 
     const result = await uc.execute(INVOICE_ID, "pdf");
 
-    expect(gateway.download).toHaveBeenCalledWith("pdf", "cfdi-1");
+    expect(gateway.download).toHaveBeenCalledWith(
+      "pdf",
+      "cfdi-1",
+      expect.objectContaining({
+        uuid: "UUID-1234",
+        receiver: expect.objectContaining({ rfc: "XAXX010101000" }),
+      })
+    );
     expect(result).toEqual({
       contentBase64: "AAAA",
       contentType: "application/pdf",
       filename: "UUID-1234.pdf",
+    });
+  });
+
+  it("passes the invoice's own persisted data as the download snapshot — never the gateway's own state", async () => {
+    const invoice = makeInvoice({ uuid: "UUID-1234" });
+    const repo = makeInvoiceRepo(invoice);
+    const gateway = makeGateway();
+    const uc = new DownloadInvoiceFileUseCase(repo, gateway);
+
+    await uc.execute(INVOICE_ID, "pdf");
+
+    const [, , snapshot] = (gateway.download as jest.Mock).mock.calls[0];
+    expect(snapshot).toEqual({
+      uuid: "UUID-1234",
+      issuer: { rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null },
+      receiver: {
+        rfc: "XAXX010101000",
+        name: "Cliente",
+        cfdiUse: "G03",
+        fiscalRegime: "601",
+        taxZipCode: "45010",
+      },
+      items: [],
+      paymentForm: "01",
+      paymentMethod: "PUE",
+      currency: "MXN",
+      subtotal: 100,
+      taxTotal: 16,
+      total: 116,
     });
   });
 

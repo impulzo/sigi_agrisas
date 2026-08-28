@@ -67,7 +67,7 @@ describe("useInvoicePreview", () => {
 
     await waitFor(() => expect(result.current.data).not.toBeNull());
     expect(result.current.data!.issuer).toEqual({
-      name: "Agrisas",
+      name: "Agrisas SA de CV",
       branchName: "Matriz",
       rfc: "AGR010101AB1",
       fiscalRegime: "601",
@@ -77,7 +77,27 @@ describe("useInvoicePreview", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("issuer lookup failure does not block the preview — falls back to null fiscal fields", async () => {
+  it("uses the resolved legalName as razón social — not a hardcoded company name (regression: this used to ignore legalName entirely)", async () => {
+    mockedSource.mockResolvedValue(SOURCE);
+    mockedEmitter.mockResolvedValue({
+      rfc: "OIRI8506123Y7",
+      legalName: "IVAN ENRIQUE OLIVERA RAMIREZ",
+      fiscalRegime: "612 Personas Físicas con Actividad Empresarial",
+      zipCode: null,
+      address: "LIBRES # 105 CENTRO, OCOTLAN DE MORELOS, OAXACA. C.P. 71510",
+    });
+
+    const { result } = renderHook(() => useInvoicePreview());
+
+    await act(async () => {
+      await result.current.load("sale-1", { paymentForm: "01", paymentMethod: "PUE" });
+    });
+
+    await waitFor(() => expect(result.current.data).not.toBeNull());
+    expect(result.current.data!.issuer.name).toBe("IVAN ENRIQUE OLIVERA RAMIREZ");
+  });
+
+  it("issuer lookup failure does not block the preview — falls back to null fiscal fields, never an invented issuer name", async () => {
     mockedSource.mockResolvedValue(SOURCE);
     mockedEmitter.mockRejectedValue(new Error("network error"));
 
@@ -89,6 +109,7 @@ describe("useInvoicePreview", () => {
 
     await waitFor(() => expect(result.current.data).not.toBeNull());
     expect(result.current.error).toBeNull();
+    expect(result.current.data!.issuer.name).toBeNull();
     expect(result.current.data!.issuer.rfc).toBeNull();
     expect(result.current.data!.issuer.fiscalRegime).toBeNull();
     expect(result.current.data!.issuer.zipCode).toBeNull();

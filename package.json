@@ -12,11 +12,13 @@
     "test:e2e": "playwright test",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "seed:inventory-tiendas": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/inventory-tiendas.ts",
+    "seed:generate-inventory": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/data/generate-inventario-tiendas-data.ts",
     "seed:folios": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/folios.ts",
     "seed:sat-codes": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/satCodes.ts",
     "seed:sat-catalogs": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/satCatalogs.ts",
     "seed:sat-units": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/satUnits.ts",
-    "seed:ticket-settings": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/ticketSettings.ts"
+    "seed:ticket-settings": "ts-node --project prisma/seeds/tsconfig.json prisma/seeds/ticketSettings.ts",
+    "seed:all": "npm run seed && npm run seed:folios && npm run seed:sat-units && npm run seed:sat-codes && npm run seed:sat-catalogs && npm run seed:ticket-settings && npm run seed:inventory-tiendas"
   },
   "prisma": {
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"

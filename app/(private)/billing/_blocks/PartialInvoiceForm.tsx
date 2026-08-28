@@ -48,7 +48,7 @@ export function PartialInvoiceForm() {
   const previewData = useMemo(() => {
     if (!customer) return null;
     return buildInvoicePreview({
-      issuer: { name: "Agrisas", ...emitterFiscal },
+      issuer: { name: emitterFiscal.legalName, ...emitterFiscal },
       receiver: customer,
       lines: lines.map((l) => ({
         description: l.description,

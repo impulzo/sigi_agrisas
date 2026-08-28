@@ -25,16 +25,18 @@ import { PrismaTicketSettingsRepository } from "@/modules/settings/infrastructur
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 
 const getTicketSettingsUseCase = new GetTicketSettingsUseCase(new PrismaTicketSettingsRepository(prisma));
+const searchSatTaxRegimesUseCase = new SearchSatTaxRegimesUseCase(new PrismaSatTaxRegimeRepository(prisma));
+const searchSatCfdiUsesUseCase = new SearchSatCfdiUsesUseCase(new PrismaSatCfdiUseRepository(prisma));
 
 const isMock = process.env.FACTURAMA_MOCK !== "false";
 const gateway: FacturamaGateway = isMock
-  ? new FakeFacturamaGateway(getTicketSettingsUseCase)
+  ? new FakeFacturamaGateway(getTicketSettingsUseCase, searchSatTaxRegimesUseCase, searchSatCfdiUsesUseCase)
   : new FacturamaRestGateway();
 
 const invoiceRepo = new PrismaInvoiceRepository(prisma);
 const lookupService = new PrismaBillingLookupService(prisma);
 
-const stampUseCase = new StampInvoiceUseCase(invoiceRepo, gateway, lookupService);
+const stampUseCase = new StampInvoiceUseCase(invoiceRepo, gateway, lookupService, getTicketSettingsUseCase);
 const cancelUseCase = new CancelInvoiceUseCase(invoiceRepo, gateway);
 const downloadUseCase = new DownloadInvoiceFileUseCase(invoiceRepo, gateway);
 const sendEmailUseCase = new SendInvoiceEmailUseCase(invoiceRepo, lookupService, downloadUseCase, mailer);
@@ -43,9 +45,7 @@ const getUseCase = new GetInvoiceUseCase(invoiceRepo);
 const listBySaleUseCase = new ListInvoicesBySaleUseCase(invoiceRepo);
 const uploadCsdUseCase = new UploadCsdUseCase(gateway);
 const getCsdStatusUseCase = new GetCsdStatusUseCase(gateway);
-const getEmitterFiscalSettingsUseCase = new GetEmitterFiscalSettingsUseCase(gateway);
-const searchSatTaxRegimesUseCase = new SearchSatTaxRegimesUseCase(new PrismaSatTaxRegimeRepository(prisma));
-const searchSatCfdiUsesUseCase = new SearchSatCfdiUsesUseCase(new PrismaSatCfdiUseRepository(prisma));
+const getEmitterFiscalSettingsUseCase = new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase);
 
 export const billingController = new BillingController(
   stampUseCase,
