@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Avatar } from "../../../_components/atoms/Avatar/Avatar";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { Skeleton } from "../../../_components/atoms/Skeleton/Skeleton";
+import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog";
 import { useBranchesOptions } from "../../../_hooks/useBranchesOptions";
 import { updateUserSchema } from "../_logic/schemas/updateUser.schema";
 import { createUserSchema } from "../_logic/schemas/createUser.schema";
@@ -21,19 +22,21 @@ interface UserEditModalProps {
   onSave: (params: {
     name: string;
     email: string;
-    password: string;
     avatarUrlInput: string;
     avatarReset: boolean;
     branchId: string | null;
     stagedRoleIds: Set<string>;
   }) => void;
   onClose: () => void;
+  onResendSetPasswordEmail?: (userId: string) => void;
+  isSendingSetPasswordEmail?: boolean;
+  setPasswordEmailError?: string | null;
+  setPasswordEmailSuccess?: string | null;
 }
 
 interface ValidationErrors {
   name?: string;
   email?: string;
-  password?: string;
   avatarUrl?: string;
 }
 
@@ -47,18 +50,22 @@ export function UserEditModal({
   mutationError,
   onSave,
   onClose,
+  onResendSetPasswordEmail,
+  isSendingSetPasswordEmail,
+  setPasswordEmailError,
+  setPasswordEmailSuccess,
 }: UserEditModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const { options: branchOptions } = useBranchesOptions();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [avatarUrlInput, setAvatarUrlInput] = useState("");
   const [avatarReset, setAvatarReset] = useState(false);
   const [branchId, setBranchId] = useState<string | null>(null);
   const [stagedRoleIds, setStagedRoleIds] = useState<Set<string>>(new Set());
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [confirmResendOpen, setConfirmResendOpen] = useState(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -77,10 +84,10 @@ export function UserEditModal({
 
   useEffect(() => {
     if (!open) return;
-    setPassword("");
     setAvatarUrlInput("");
     setAvatarReset(false);
     setValidationErrors({});
+    setConfirmResendOpen(false);
     if (mode === "edit" && user) {
       setName(user.name ?? "");
       setEmail(user.email);
@@ -115,14 +122,13 @@ export function UserEditModal({
       stagedRoleIds.size !== originalRoleIds.size ||
       [...stagedRoleIds].some((id) => !originalRoleIds.has(id)));
 
-  const isCreateValid = name.trim() !== "" && email.trim() !== "" && password.length >= 8;
+  const isCreateValid = name.trim() !== "" && email.trim() !== "";
 
   function validate(): boolean {
     if (mode === "create") {
       const result = createUserSchema.safeParse({
         name,
         email,
-        password,
         avatarUrl: avatarUrlInput || undefined,
       });
       if (!result.success) {
@@ -131,7 +137,6 @@ export function UserEditModal({
           const key = issue.path[0];
           if (key === "email") errs.email = issue.message;
           if (key === "avatarUrl") errs.avatarUrl = issue.message;
-          if (key === "password") errs.password = issue.message;
           if (key === "name") errs.name = issue.message;
         }
         setValidationErrors(errs);
@@ -162,7 +167,12 @@ export function UserEditModal({
 
   function handleSave() {
     if (!validate()) return;
-    onSave({ name, email, password, avatarUrlInput, avatarReset, branchId, stagedRoleIds });
+    onSave({ name, email, avatarUrlInput, avatarReset, branchId, stagedRoleIds });
+  }
+
+  function handleConfirmResend() {
+    setConfirmResendOpen(false);
+    if (user) onResendSetPasswordEmail?.(user.id);
   }
 
   function toggleRole(roleId: string) {
@@ -182,6 +192,7 @@ export function UserEditModal({
     : !isEditDirty || isBusy || Object.keys(validationErrors).length > 0;
 
   return (
+    <>
     <dialog
       ref={dialogRef}
       className="rounded-lg bg-surface-container p-0 shadow-lg w-full max-w-lg backdrop:bg-black/40"
@@ -266,23 +277,37 @@ export function UserEditModal({
           )}
         </div>
 
-        {/* Password (create only) */}
+        {/* Password (create only): informativo, no se captura */}
         {mode === "create" && (
+          <p className="text-body-sm text-on-surface-variant bg-surface-container-low px-3 py-2 rounded-md">
+            Se enviará un correo al nuevo usuario para que establezca su propia contraseña.
+          </p>
+        )}
+
+        {/* Password (edit only): solo reenvío, nunca edición directa */}
+        {mode === "edit" && user && (
           <div>
-            <label className="block text-label-lg text-on-surface-variant mb-1" htmlFor="create-password">
-              Contraseña
-            </label>
-            <input
-              id="create-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded-md border border-outline-variant bg-surface-container-lowest text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            {(validationErrors.password || (password.length > 0 && password.length < 8)) && (
-              <p className="text-label-sm text-error mt-1">
-                {validationErrors.password ?? "La contraseña debe tener al menos 8 caracteres"}
-              </p>
+            <p className="block text-label-lg text-on-surface-variant mb-1">Contraseña</p>
+            <button
+              type="button"
+              onClick={() => setConfirmResendOpen(true)}
+              disabled={isSendingSetPasswordEmail}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-outline text-label-lg text-on-surface font-medium hover:bg-surface-container-high transition-colors disabled:opacity-40"
+            >
+              {isSendingSetPasswordEmail ? (
+                <>
+                  <Icon name="progress_activity" size={16} className="animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                "Enviar correo para establecer/restablecer contraseña"
+              )}
+            </button>
+            {setPasswordEmailSuccess && (
+              <p className="text-label-sm text-primary mt-1">{setPasswordEmailSuccess}</p>
+            )}
+            {setPasswordEmailError && (
+              <p className="text-label-sm text-error mt-1">{setPasswordEmailError}</p>
             )}
           </div>
         )}
@@ -367,5 +392,16 @@ export function UserEditModal({
         </button>
       </div>
     </dialog>
+    {mode === "edit" && user && (
+      <ConfirmDialog
+        open={confirmResendOpen}
+        title="Enviar correo de contraseña"
+        description={`Se enviará un correo a ${user.email} con un enlace para establecer/restablecer su contraseña. El enlace anterior (si existía) dejará de funcionar.`}
+        confirmLabel="Enviar"
+        onConfirm={handleConfirmResend}
+        onCancel={() => setConfirmResendOpen(false)}
+      />
+    )}
+    </>
   );
 }

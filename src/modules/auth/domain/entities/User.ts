@@ -3,7 +3,7 @@ import { Entity } from "@/shared/domain/Entity";
 interface UserProps {
   name?: string;
   email: string;
-  passwordHash: string;
+  passwordHash: string | null;
   roles: string[];
   branchId: string | null;
   createdAt: Date;
@@ -30,7 +30,7 @@ export class User extends Entity<string> {
     return this.props.email;
   }
 
-  get passwordHash(): string {
+  get passwordHash(): string | null {
     return this.props.passwordHash;
   }
 

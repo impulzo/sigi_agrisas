@@ -9,6 +9,11 @@ export interface RegisterPayload {
   password: string;
 }
 
+export interface SetPasswordPayload {
+  token: string;
+  password: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   user: {

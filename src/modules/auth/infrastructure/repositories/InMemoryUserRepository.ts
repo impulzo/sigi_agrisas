@@ -19,6 +19,23 @@ export class InMemoryUserRepository implements UserRepository {
     this.store.set(user.id, user);
   }
 
+  async updatePasswordHash(userId: string, passwordHash: string): Promise<void> {
+    const user = this.store.get(userId);
+    if (!user) return;
+    this.store.set(
+      userId,
+      User.create(userId, {
+        name: user.name,
+        email: user.email,
+        passwordHash,
+        roles: user.roles,
+        branchId: user.branchId,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })
+    );
+  }
+
   clear(): void {
     this.store.clear();
   }

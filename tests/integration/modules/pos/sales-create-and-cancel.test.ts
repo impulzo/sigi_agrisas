@@ -19,6 +19,7 @@ import { CreateProductPriceUseCase } from "@/modules/products/application/use-ca
 import { CreateSaleUseCase } from "@/modules/pos/application/use-cases/CreateSaleUseCase";
 import { CancelSaleUseCase } from "@/modules/pos/application/use-cases/CancelSaleUseCase";
 import { GetSaleUseCase } from "@/modules/pos/application/use-cases/GetSaleUseCase";
+import { isBranchScopedInventory } from "@/shared/infrastructure/config/inventoryScope";
 
 const P = "POSTEST_";
 
@@ -43,7 +44,9 @@ afterAll(async () => {
 
 jest.setTimeout(60_000);
 
-describe("Sales — crear y cancelar (integration real DB)", () => {
+// Asume alta automática de fila de inventario al vender (allowRowCreation=true) — sólo válido en modo `general`.
+// En modo `branch` la venta sin fila previa se rechaza a propósito (ver ProductNotAvailableInBranchError).
+(isBranchScopedInventory() ? describe.skip : describe)("Sales — crear y cancelar (integration real DB)", () => {
   const branchRepo = new PrismaBranchRepository(prisma);
   const deptRepo = new PrismaDepartmentRepository(prisma);
   const productRepo = new PrismaProductRepository(prisma);

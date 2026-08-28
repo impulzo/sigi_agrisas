@@ -26,6 +26,12 @@ import { CreateQuoteUseCase } from "@/modules/quotes/application/use-cases/Creat
 import { AuthorizeQuoteUseCase } from "@/modules/quotes/application/use-cases/AuthorizeQuoteUseCase";
 import { CreateSaleUseCase } from "@/modules/pos/application/use-cases/CreateSaleUseCase";
 import { QuoteLinkInvalidError } from "@/modules/pos/domain/errors/QuoteLinkInvalidError";
+import { isBranchScopedInventory } from "@/shared/infrastructure/config/inventoryScope";
+
+// Estos 3 tests venden sin seedear fila previa en branch_inventory para el producto/sucursal —
+// válido en modo `general` (allowRowCreation=true). En modo `branch` la venta se rechaza a propósito
+// (ver ProductNotAvailableInBranchError), así que sólo corren en modo `general`.
+const itGeneralOnly = isBranchScopedInventory() ? it.skip : it;
 
 jest.setTimeout(30000);
 
@@ -116,7 +122,7 @@ describe("Sales — POST /sales con quoteId (integration real DB)", () => {
     return dto.id;
   }
 
-  it("happy path: POST /sales con quoteId válido enlaza ambas direcciones y decrementa stock", async () => {
+  itGeneralOnly("happy path: POST /sales con quoteId válido enlaza ambas direcciones y decrementa stock", async () => {
     const quoteId = await newAuthorizedQuote({});
     const invBefore = await prisma.branchInventory.findFirst({ where: { branchId, productId } });
     const stockBefore = Number(invBefore?.quantity ?? 0);
@@ -144,7 +150,7 @@ describe("Sales — POST /sales con quoteId (integration real DB)", () => {
     expect(Number(invAfter!.quantity)).toBe(stockBefore - 5);
   });
 
-  it("rechaza quoteId ya converted (reason: wrong_status)", async () => {
+  itGeneralOnly("rechaza quoteId ya converted (reason: wrong_status)", async () => {
     const quoteId = await newAuthorizedQuote({});
     // primera venta consume la cotización
     await createSale.execute(
@@ -196,7 +202,7 @@ describe("Sales — POST /sales con quoteId (integration real DB)", () => {
     }
   });
 
-  it("POST /sales sin quoteId (compat): sale.quoteId queda null", async () => {
+  itGeneralOnly("POST /sales sin quoteId (compat): sale.quoteId queda null", async () => {
     const { dto: sale } = await createSale.execute(
       {
         branchId,

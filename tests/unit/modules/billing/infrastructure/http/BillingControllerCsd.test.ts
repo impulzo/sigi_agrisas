@@ -440,7 +440,7 @@ describe("BillingController — getEmitterFiscalSettings", () => {
     expect(body).toEqual({
       rfc: "OIRI8506123Y7",
       legalName: "IVAN ENRIQUE OLIVERA RAMIREZ",
-      fiscalRegime: "612 Personas Físicas con Actividad Empresarial",
+      fiscalRegime: "612",
       zipCode: null,
       address: "LIBRES # 105 CENTRO, OCOTLAN DE MORELOS, OAXACA. C.P. 71510",
     });

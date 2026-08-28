@@ -19,6 +19,13 @@ export class BranchNotFoundError extends Error {
   }
 }
 
+export class EmailDeliveryFailedError extends Error {
+  constructor() {
+    super("Failed to deliver the set-password email");
+    this.name = "EmailDeliveryFailedError";
+  }
+}
+
 export class SelfModificationError extends Error {
   action: "modify" | "delete";
   constructor(action: "modify" | "delete") {

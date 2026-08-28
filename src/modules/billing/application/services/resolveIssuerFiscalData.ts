@@ -10,6 +10,31 @@ export interface IssuerFiscalData {
   address: string | null;
 }
 
+// Matches Invoice.issuerFiscalRegime's VarChar(4) column (prisma/schema.prisma) — a
+// pure SAT code, never the full label.
+const SAT_FISCAL_REGIME_CODE_MAX_LENGTH = 4;
+
+// SAT fiscal-regime codes are always 3 digits in the local catalog (see openspec
+// admin-* specs' `taxRegime`/`fiscalRegime` regex `^\d{3}$`); this stays 3-4 to also
+// accept a legacy/future 4-digit code without rejecting it outright.
+const SAT_FISCAL_REGIME_CODE_PATTERN = /^(\d{3,4})(?:\s|$)/;
+
+/**
+ * TicketSettings.businessTaxRegime is free text captured for the printed ticket —
+ * a leading SAT code followed by its description, but the separator is not
+ * consistent across capture paths (`SatCatalogCombobox` in TicketSettingsForm.tsx
+ * writes `"<code> — <description>"`; seeded/legacy data can be plain
+ * `"<code> <description>"`). Extracts only the leading numeric code so it fits the
+ * SAT-code column it ultimately feeds. Returns null (never a truncated/invented
+ * value) when no leading code can be recovered.
+ */
+export function extractSatCodeFromTicketRegime(businessTaxRegime: string | null): string | null {
+  if (!businessTaxRegime) return null;
+  const match = businessTaxRegime.match(SAT_FISCAL_REGIME_CODE_PATTERN);
+  const code = match?.[1];
+  return code && code.length <= SAT_FISCAL_REGIME_CODE_MAX_LENGTH ? code : null;
+}
+
 /**
  * Resolves the issuer's fiscal identity from the two real sources the admin
  * actually captures data in — never a synthetic/hardcoded placeholder. Per
@@ -43,7 +68,7 @@ export async function resolveIssuerFiscalData(
   return {
     rfc: csdRfc ?? settings?.rfc ?? ticket?.businessRfc ?? null,
     legalName: csdLegalName ?? settings?.legalName ?? ticket?.businessName ?? null,
-    fiscalRegime: settings?.fiscalRegime ?? ticket?.businessTaxRegime ?? null,
+    fiscalRegime: settings?.fiscalRegime ?? extractSatCodeFromTicketRegime(ticket?.businessTaxRegime ?? null),
     zipCode: settings?.zipCode ?? null,
     address: settings?.address ?? ticket?.businessAddress ?? null,
   };

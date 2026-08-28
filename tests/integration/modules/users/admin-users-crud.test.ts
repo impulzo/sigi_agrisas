@@ -15,8 +15,6 @@ const TEST_ID = randomUUID();
 const TEST_EMAIL = `test_admin_crud_${Date.now()}@test.local`;
 const createdUserIds: string[] = [];
 
-const stubHasher = { hash: async (p: string) => `hashed-${p}`, compare: async () => true };
-
 beforeAll(async () => {
   await prisma.user.create({ data: { id: TEST_ID, email: TEST_EMAIL, passwordHash: "hash-test" } });
 });
@@ -33,22 +31,22 @@ describe("Admin users CRUD integration", () => {
   const repo = new PrismaAdminUserRepository(prisma);
   const branchRepo = new PrismaBranchRepository(prisma);
 
-  it("create crea un usuario con password hasheado", async () => {
+  it("create crea un usuario sin contraseña (passwordHash null)", async () => {
     const email = `test_create_crud_${Date.now()}@test.local`;
-    const useCase = new CreateAdminUserUseCase(repo, branchRepo, stubHasher);
-    const created = await useCase.execute({ name: "Test Create", email, password: "supersecret" });
+    const useCase = new CreateAdminUserUseCase(repo, branchRepo);
+    const created = await useCase.execute({ name: "Test Create", email });
     createdUserIds.push(created.id);
     expect(created.name).toBe("Test Create");
     expect(created.branchId).toBeNull();
 
     const stored = await prisma.user.findUniqueOrThrow({ where: { id: created.id } });
-    expect(stored.passwordHash).toBe("hashed-supersecret");
+    expect(stored.passwordHash).toBeNull();
   });
 
   it("create lanza EmailAlreadyInUseError si el email ya existe", async () => {
-    const useCase = new CreateAdminUserUseCase(repo, branchRepo, stubHasher);
+    const useCase = new CreateAdminUserUseCase(repo, branchRepo);
     await expect(
-      useCase.execute({ name: "Dup", email: TEST_EMAIL, password: "supersecret" })
+      useCase.execute({ name: "Dup", email: TEST_EMAIL })
     ).rejects.toThrow(EmailAlreadyInUseError);
   });
 

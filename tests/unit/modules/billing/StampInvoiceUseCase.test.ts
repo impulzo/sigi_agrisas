@@ -298,10 +298,44 @@ describe("StampInvoiceUseCase", () => {
 
       expect(invoice.issuerRfc).toBe("OIRI8506123Y7");
       expect(invoice.issuerLegalName).toBe("IVAN ENRIQUE OLIVERA RAMIREZ");
-      expect(invoice.issuerFiscalRegime).toBe("612 Personas Físicas con Actividad Empresarial");
+      // businessTaxRegime is free text ("<código> <descripción>", no reliable separator) —
+      // only the leading SAT code is extracted, never the full label (would overflow
+      // Invoice.issuerFiscalRegime VarChar(4) otherwise).
+      expect(invoice.issuerFiscalRegime).toBe("612");
       expect(invoice.issuerAddress).toBe("LIBRES # 105 CENTRO, OCOTLAN DE MORELOS, OAXACA. C.P. 71510");
       // TicketSettings has no zip-code field, and neither CSD/EmitterFiscalSettings has one here — stays null.
       expect(invoice.issuerZipCode).toBeNull();
+    });
+
+    it("TicketSettings businessTaxRegime with em-dash separator (form format) also resolves to just the code", async () => {
+      mockedGetEmitterFiscalSettings.mockResolvedValue(null);
+      const ticketRepo = new InMemoryTicketSettingsRepository();
+      await ticketRepo.update({ businessTaxRegime: "612 — Personas Físicas con Actividad Empresarial" });
+      const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase);
+
+      const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
+
+      expect(invoice.issuerFiscalRegime).toBe("612");
+    });
+
+    it("TicketSettings businessTaxRegime without a leading SAT code stamps successfully with fiscalRegime null", async () => {
+      mockedGetEmitterFiscalSettings.mockResolvedValue(null);
+      const ticketRepo = new InMemoryTicketSettingsRepository();
+      await ticketRepo.update({ businessTaxRegime: "Régimen no capturado con código" });
+      const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase);
+
+      const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
+
+      expect(invoice.status).toBe("stamped");
+      expect(invoice.issuerFiscalRegime).toBeNull();
     });
 
     it("EmitterFiscalSettings still wins over TicketSettings when both are present", async () => {
