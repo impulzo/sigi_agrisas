@@ -77,7 +77,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-lg px-gutter py-lg mx-auto w-full max-w-4xl">
       <div className="flex items-start gap-3">
         <Link
           href="/catalogs/products"
