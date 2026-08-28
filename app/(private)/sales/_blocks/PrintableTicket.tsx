@@ -61,11 +61,13 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
-            font-family: monospace;
+            font-family: monospace, monospace;
             font-size: 10px;
+            color: #000000 !important;
+            background: #ffffff !important;
             box-sizing: border-box;
           }
-          .printable-ticket * { box-sizing: border-box; }
+          .printable-ticket * { box-sizing: border-box; color: #000000 !important; }
           .printable-ticket img { width: 125px; height: 77px; object-fit: contain; display: block; margin: 0 auto 8px; }
           .printable-ticket table { width: 100%; border-collapse: collapse; }
           .printable-ticket hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
