@@ -36,3 +36,24 @@ export class NetworkError extends AuthError {
     this.name = "NetworkError";
   }
 }
+
+export class PasswordNotSetError extends AuthError {
+  constructor() {
+    super("Debes establecer tu contraseña. Revisa tu correo o pide al administrador reenviarlo.");
+    this.name = "PasswordNotSetError";
+  }
+}
+
+export class PasswordSetupTokenInvalidError extends AuthError {
+  constructor() {
+    super("Este enlace ya no es válido. Pide al administrador que te reenvíe el correo.");
+    this.name = "PasswordSetupTokenInvalidError";
+  }
+}
+
+export class PasswordSetupTokenExpiredError extends AuthError {
+  constructor() {
+    super("Este enlace expiró. Pide al administrador que te reenvíe el correo.");
+    this.name = "PasswordSetupTokenExpiredError";
+  }
+}

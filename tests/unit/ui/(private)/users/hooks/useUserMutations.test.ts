@@ -124,7 +124,6 @@ describe("useUserMutations", () => {
       created = await result.current.createNewUser({
         name: "Ana",
         email: "ana@test.com",
-        password: "supersecret",
         avatarUrlInput: "",
         branchId: "b1",
         stagedRoleIds: new Set(["r2"]),
@@ -134,7 +133,6 @@ describe("useUserMutations", () => {
     expect(spy).toHaveBeenCalledWith({
       name: "Ana",
       email: "ana@test.com",
-      password: "supersecret",
       avatarUrl: undefined,
       branchId: "b1",
       roleIds: ["r2"],
@@ -151,7 +149,6 @@ describe("useUserMutations", () => {
       created = await result.current.createNewUser({
         name: "Ana",
         email: "ana@test.com",
-        password: "supersecret",
         avatarUrlInput: "",
         branchId: null,
         stagedRoleIds: new Set(),

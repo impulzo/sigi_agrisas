@@ -4,7 +4,7 @@ export interface UserPrismaModel {
   id: string;
   name?: string | null;
   email: string;
-  passwordHash: string;
+  passwordHash: string | null;
   branchId?: string | null;
   roles?: { role: { name: string } }[];
   createdAt: Date;

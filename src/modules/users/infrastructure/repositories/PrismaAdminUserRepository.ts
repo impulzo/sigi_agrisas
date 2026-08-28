@@ -76,7 +76,7 @@ export class PrismaAdminUserRepository implements AdminUserRepository {
           data: {
             name: data.name,
             email: data.email,
-            passwordHash: data.passwordHash,
+            passwordHash: null,
             avatarUrl: data.avatarUrl ?? null,
             branchId: data.branchId ?? null,
           },

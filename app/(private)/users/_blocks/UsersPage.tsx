@@ -31,7 +31,18 @@ export function UsersPage() {
 
   const { users, total, isLoading, error, refresh } = useUsers({ page, pageSize });
   const { roles: catalog, isLoading: catalogLoading } = useRolesCatalog();
-  const { isSaving, mutationError, clearError, createNewUser, saveUserDiff, removeUser } = useUserMutations();
+  const {
+    isSaving,
+    mutationError,
+    clearError,
+    createNewUser,
+    saveUserDiff,
+    removeUser,
+    isSendingSetPasswordEmail,
+    setPasswordEmailError,
+    setPasswordEmailSuccess,
+    resendSetPasswordEmail,
+  } = useUserMutations();
 
   const availableRoles = useMemo(() => {
     const roleSet = new Set<string>();
@@ -97,7 +108,6 @@ export function UsersPage() {
     async (params: {
       name: string;
       email: string;
-      password: string;
       avatarUrlInput: string;
       avatarReset: boolean;
       branchId: string | null;
@@ -107,7 +117,6 @@ export function UsersPage() {
         const created = await createNewUser({
           name: params.name,
           email: params.email,
-          password: params.password,
           avatarUrlInput: params.avatarUrlInput,
           branchId: params.branchId,
           stagedRoleIds: params.stagedRoleIds,
@@ -235,6 +244,10 @@ export function UsersPage() {
         mutationError={mutationError}
         onSave={handleSave}
         onClose={handleCloseModal}
+        onResendSetPasswordEmail={resendSetPasswordEmail}
+        isSendingSetPasswordEmail={isSendingSetPasswordEmail}
+        setPasswordEmailError={setPasswordEmailError}
+        setPasswordEmailSuccess={setPasswordEmailSuccess}
       />
 
       <ConfirmDialog

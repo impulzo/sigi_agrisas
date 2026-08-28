@@ -3,6 +3,7 @@ import { InMemoryUserRepository } from "@/modules/auth/infrastructure/repositori
 import { PasswordHasher } from "@/modules/auth/application/ports/PasswordHasher";
 import { TokenService, TokenPayload } from "@/modules/auth/application/ports/TokenService";
 import { InvalidCredentialsError } from "@/modules/auth/domain/errors/InvalidCredentialsError";
+import { PasswordNotSetError } from "@/modules/auth/domain/errors/PasswordNotSetError";
 import { User } from "@/modules/auth/domain/entities/User";
 
 const fakeHasher: PasswordHasher = {
@@ -58,5 +59,25 @@ describe("LoginUseCase", () => {
     await expect(
       useCase.execute({ email: "nobody@example.com", password: "pass" })
     ).rejects.toThrow(InvalidCredentialsError);
+  });
+
+  it("throws PasswordNotSetError without calling hasher.compare when passwordHash is null", async () => {
+    const now = new Date();
+    await repo.save(
+      User.create("user-2", {
+        email: "invited@example.com",
+        passwordHash: null,
+        roles: [],
+        branchId: null,
+        createdAt: now,
+        updatedAt: now,
+      })
+    );
+    const compareSpy = jest.spyOn(fakeHasher, "compare");
+
+    await expect(
+      useCase.execute({ email: "invited@example.com", password: "anything" })
+    ).rejects.toThrow(PasswordNotSetError);
+    expect(compareSpy).not.toHaveBeenCalled();
   });
 });

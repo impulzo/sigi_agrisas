@@ -5,7 +5,6 @@ import { EmailAlreadyInUseError } from "@/modules/users/domain/errors/EmailAlrea
 import { BranchNotFoundForUserError } from "@/modules/users/domain/errors/BranchNotFoundForUserError";
 import { BranchRepository } from "@/modules/branches/application/ports/BranchRepository";
 import { Branch } from "@/modules/branches/domain/entities/Branch";
-import { PasswordHasher } from "@/modules/auth/application/ports/PasswordHasher";
 
 function makeUser(overrides?: Partial<{ branchId: string | null; branchName: string | null; roles: string[] }>): AdminUser {
   return AdminUser.create("uid-new", {
@@ -43,44 +42,23 @@ function makeBranchRepo(impl?: Partial<BranchRepository>): BranchRepository {
   };
 }
 
-function makeHasher(impl?: Partial<PasswordHasher>): PasswordHasher {
-  return {
-    hash: jest.fn().mockResolvedValue("hashed-password"),
-    compare: jest.fn(),
-    ...impl,
-  };
-}
-
 describe("CreateAdminUserUseCase", () => {
-  it("crea un usuario con campos mínimos (sin branchId ni roleIds)", async () => {
+  it("crea un usuario con campos mínimos (sin branchId ni roleIds) y sin passwordHash", async () => {
     const repo = makeRepo();
-    const result = await new CreateAdminUserUseCase(repo, makeBranchRepo(), makeHasher()).execute({
+    const result = await new CreateAdminUserUseCase(repo, makeBranchRepo()).execute({
       name: "Ana Pérez",
       email: "ana@example.com",
-      password: "supersecret",
     });
     expect(result.id).toBe("uid-new");
     expect(repo.create).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "Ana Pérez",
         email: "ana@example.com",
-        passwordHash: "hashed-password",
         branchId: undefined,
         roleIds: undefined,
       })
     );
-  });
-
-  it("hashea el password antes de delegar al repositorio", async () => {
-    const hasher = makeHasher();
-    const repo = makeRepo();
-    await new CreateAdminUserUseCase(repo, makeBranchRepo(), hasher).execute({
-      name: "Ana Pérez",
-      email: "ana@example.com",
-      password: "supersecret",
-    });
-    expect(hasher.hash).toHaveBeenCalledWith("supersecret");
-    expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ passwordHash: "hashed-password" }));
+    expect(repo.create).toHaveBeenCalledWith(expect.not.objectContaining({ passwordHash: expect.anything() }));
   });
 
   it("crea un usuario con branchId y roleIds cuando la sucursal existe", async () => {
@@ -108,10 +86,9 @@ describe("CreateAdminUserUseCase", () => {
     const repo = makeRepo({
       create: jest.fn().mockResolvedValue(makeUser({ branchId: "b1", branchName: "Matriz", roles: ["operator"] })),
     });
-    const result = await new CreateAdminUserUseCase(repo, branchRepo, makeHasher()).execute({
+    const result = await new CreateAdminUserUseCase(repo, branchRepo).execute({
       name: "Ana Pérez",
       email: "ana@example.com",
-      password: "supersecret",
       branchId: "b1",
       roleIds: ["role-1"],
     });
@@ -122,10 +99,9 @@ describe("CreateAdminUserUseCase", () => {
 
   it("rechaza branchId si la sucursal no existe", async () => {
     await expect(
-      new CreateAdminUserUseCase(makeRepo(), makeBranchRepo({ findById: jest.fn().mockResolvedValue(null) }), makeHasher()).execute({
+      new CreateAdminUserUseCase(makeRepo(), makeBranchRepo({ findById: jest.fn().mockResolvedValue(null) })).execute({
         name: "Ana Pérez",
         email: "ana@example.com",
-        password: "supersecret",
         branchId: "00000000-0000-0000-0000-000000000000",
       })
     ).rejects.toThrow(BranchNotFoundForUserError);
@@ -134,20 +110,18 @@ describe("CreateAdminUserUseCase", () => {
   it("propaga EmailAlreadyInUseError del repositorio", async () => {
     const repo = makeRepo({ create: jest.fn().mockRejectedValue(new EmailAlreadyInUseError()) });
     await expect(
-      new CreateAdminUserUseCase(repo, makeBranchRepo(), makeHasher()).execute({
+      new CreateAdminUserUseCase(repo, makeBranchRepo()).execute({
         name: "Ana Pérez",
         email: "taken@example.com",
-        password: "supersecret",
       })
     ).rejects.toThrow(EmailAlreadyInUseError);
   });
 
   it("no valida la sucursal cuando branchId no viene en la request", async () => {
     const branchRepo = makeBranchRepo();
-    await new CreateAdminUserUseCase(makeRepo(), branchRepo, makeHasher()).execute({
+    await new CreateAdminUserUseCase(makeRepo(), branchRepo).execute({
       name: "Ana Pérez",
       email: "ana@example.com",
-      password: "supersecret",
     });
     expect(branchRepo.findById).not.toHaveBeenCalled();
   });
