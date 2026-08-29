@@ -5,9 +5,7 @@
 Define the user-facing authentication flows: registration, login, and logout, including validation rules, error responses, and session management via tokens.
 
 ---
-
 ## Requirements
-
 ### Requirement: User registration
 The system SHALL allow a new user to register with name, email and password. The password MUST be hashed before storing. The system SHALL reject registration if the email is already in use. The `name` field SHALL be persisted in the database and returned in the response. Upon successful registration, the system SHALL emit an access token and a refresh token, identical to the login flow.
 
@@ -34,7 +32,7 @@ The system SHALL allow a new user to register with name, email and password. The
 ---
 
 ### Requirement: User login
-The system SHALL authenticate a user with email and password and return an access token and a refresh token. Failed attempts MUST return a generic error that does not reveal which field is wrong.
+The system SHALL authenticate a user with email and password and return an access token and a refresh token. Failed attempts MUST return a generic error that does not reveal which field is wrong. If the user's account has no password set yet (`passwordHash` is `null` — e.g. an admin-created user who has not completed the password-setup flow), the system SHALL NOT attempt to compare the submitted password against a hash; instead it SHALL return a distinct error indicating the account has no password set, without revealing whether the submitted password itself was correct.
 
 #### Scenario: Successful login
 - **WHEN** a POST request is sent to `/api/auth/login` with correct email and password
@@ -48,7 +46,9 @@ The system SHALL authenticate a user with email and password and return an acces
 - **WHEN** a POST request is sent to `/api/auth/login` with an email that does not exist
 - **THEN** the system returns HTTP 401 with error message "Invalid credentials"
 
----
+#### Scenario: Account has no password set
+- **WHEN** a POST request is sent to `/api/auth/login` with the email of a user whose `passwordHash` is `null` (never completed the password-setup flow)
+- **THEN** the system returns HTTP 403 `{"error": "PasswordNotSet"}` instead of comparing against a hash, and does not authenticate the request
 
 ### Requirement: User logout
 The system SHALL allow an authenticated user to invalidate their session by clearing the refresh token cookie.
@@ -56,3 +56,4 @@ The system SHALL allow an authenticated user to invalidate their session by clea
 #### Scenario: Successful logout
 - **WHEN** a POST request is sent to `/api/auth/logout` with a valid `refreshToken` cookie
 - **THEN** the system returns HTTP 200 and clears the `refreshToken` cookie (Max-Age=0)
+

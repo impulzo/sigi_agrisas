@@ -32,14 +32,12 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
   return (
     <div className="printable-ticket print-area hidden print:block">
       <style>{`
-        @page { size: ${paperWidth} auto; margin: 0; }
+        @page { size: ${paperWidth} ${pageHeightMm}mm; margin: 4mm 3mm; }
         @media print {
           .printable-ticket {
             width: ${paperWidth};
             margin: 0 !important;
             position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
             font-family: monospace, monospace;
             font-size: 10px;
             color: #000000 !important;

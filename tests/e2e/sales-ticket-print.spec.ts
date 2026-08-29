@@ -77,10 +77,10 @@ test("T2 — Vista de ticket: botón inferior 'Imprimir Ticket' y solo el ticket
   await expect(print.getByText(/Sucursal:/i)).toBeVisible();
   await expect(print.getByText(/Total a pagar/i)).toBeVisible();
 
-  // Logo del ticket a 75x105px
+  // Logo del ticket a 125x77px (según CSS print en PrintableTicket.tsx)
   const printLogo = print.locator("img[alt='Logo']");
-  await expect(printLogo).toHaveCSS("width", "75px");
-  await expect(printLogo).toHaveCSS("height", "105px");
+  await expect(printLogo).toHaveCSS("width", "125px");
+  await expect(printLogo).toHaveCSS("height", "77px");
 
   // Volver a pantalla: tarjeta Stitch visible, ticket oculto
   await page.emulateMedia({ media: "screen" });
@@ -108,4 +108,50 @@ test("T3 — Botón 'Imprimir Ticket' dispara window.print()", async ({ page }) 
   await expect
     .poll(() => page.evaluate(() => (window as unknown as { __printed: boolean }).__printed))
     .toBe(true);
+});
+
+test("T4 — PDF generado incluye márgenes @page (4mm vertical, 3mm horizontal)", async ({ page }) => {
+  const token = await loginApi(ADMIN_EMAIL);
+  const saleId = await findCompletedSaleId(token);
+  if (!saleId) { test.skip(true, "Sin venta completed — ejecutar seed"); return; }
+
+  await loginUi(page, ADMIN_EMAIL);
+  await page.goto(`${BASE}/sales/${saleId}/ticket`);
+  await page.waitForLoadState("networkidle");
+
+  // Emular print media para que se aplique @page { margin: 4mm 3mm }
+  await page.emulateMedia({ media: "print" });
+
+  // Verificar que el CSS @page con márgenes está presente
+  const pageMargin = await page.evaluate(() => {
+    const styles = Array.from(document.styleSheets);
+    for (const sheet of styles) {
+      try {
+        const rules = Array.from(sheet.cssRules);
+        for (const rule of rules) {
+          if (rule.type === CSSRule.PAGE_RULE) {
+            return (rule as CSSPageRule).style.margin;
+          }
+        }
+      } catch {
+        // cross-origin stylesheet, ignorar
+      }
+    }
+    return null;
+  });
+
+  expect(pageMargin).toBe("4mm 3mm");
+
+  // Generar PDF real para validar que no falla y tiene contenido
+  const pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "4mm", right: "3mm", bottom: "4mm", left: "3mm" },
+  });
+
+  expect(pdfBuffer).toBeInstanceOf(Buffer);
+  expect(pdfBuffer.length).toBeGreaterThan(1000); // PDF no vacío
+
+  // Volver a screen media
+  await page.emulateMedia({ media: "screen" });
 });

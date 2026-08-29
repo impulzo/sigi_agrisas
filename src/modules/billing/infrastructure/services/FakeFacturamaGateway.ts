@@ -93,14 +93,25 @@ function toInvoiceDocumentPdfDataFromSnapshot(snapshot: FacturamaInvoiceSnapshot
       name: snapshot.issuer.legalName,
       rfc: snapshot.issuer.rfc,
       fiscalRegime: snapshot.issuer.fiscalRegime,
+      fiscalRegimeLabel: snapshot.issuer.fiscalRegimeLabel,
       zipCode: snapshot.issuer.zipCode,
       address: snapshot.issuer.address,
+      branchName: snapshot.issuer.branchName,
     },
-    receiver: snapshot.receiver,
+    receiver: {
+      rfc: snapshot.receiver.rfc,
+      name: snapshot.receiver.name,
+      cfdiUse: snapshot.receiver.cfdiUse,
+      cfdiUseLabel: snapshot.receiver.cfdiUseLabel,
+      fiscalRegime: snapshot.receiver.fiscalRegime,
+      fiscalRegimeLabel: snapshot.receiver.fiscalRegimeLabel,
+      taxZipCode: snapshot.receiver.taxZipCode,
+    },
     lines: snapshot.items.map((item) => ({
       description: item.description,
       productCode: item.productCode,
       satProductCode: item.satProductCode,
+      satProductCodeLabel: item.satProductCodeLabel,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       discountPct: item.discountPct,
@@ -161,7 +172,8 @@ export class FakeFacturamaGateway implements FacturamaGateway {
   constructor(
     private readonly getTicketSettingsUseCase?: GetTicketSettingsUseCase,
     private readonly searchSatTaxRegimesUseCase?: SatCodeSearchUseCase,
-    private readonly searchSatCfdiUsesUseCase?: SatCodeSearchUseCase
+    private readonly searchSatCfdiUsesUseCase?: SatCodeSearchUseCase,
+    private readonly searchSatCodesUseCase?: SatCodeSearchUseCase
   ) {}
 
   // Each call returns a fresh random UUID — unique per stamp, not identical across calls.
@@ -208,17 +220,44 @@ export class FakeFacturamaGateway implements FacturamaGateway {
     const emitter = snapshot ? null : await getEmitterFiscalSettings();
     const logoUrl = this.getTicketSettingsUseCase ? await this.getTicketSettingsUseCase.execute().then((s) => s.logoUrl) : null;
     const issuerFiscalRegime = emitter?.fiscalRegime ?? baseData.issuer.fiscalRegime;
-    const [issuerFiscalRegimeLabel, receiverFiscalRegimeLabel, receiverCfdiUseLabel] = await Promise.all([
-      this.searchSatTaxRegimesUseCase && issuerFiscalRegime
-        ? resolveSatDescription(this.searchSatTaxRegimesUseCase, issuerFiscalRegime)
-        : issuerFiscalRegime,
-      this.searchSatTaxRegimesUseCase
-        ? resolveSatDescription(this.searchSatTaxRegimesUseCase, baseData.receiver.fiscalRegime)
-        : baseData.receiver.fiscalRegime,
-      this.searchSatCfdiUsesUseCase
-        ? resolveSatDescription(this.searchSatCfdiUsesUseCase, baseData.receiver.cfdiUse)
-        : baseData.receiver.cfdiUse,
-    ]);
+
+    // When snapshot is provided, labels are pre-resolved by DownloadInvoiceFileUseCase.
+    // Only resolve from live settings when there's no snapshot (stamp path / test path).
+    let issuerFiscalRegimeLabel: string | null = snapshot?.issuer.fiscalRegimeLabel ?? null;
+    let receiverFiscalRegimeLabel: string | null = snapshot?.receiver.fiscalRegimeLabel ?? null;
+    let receiverCfdiUseLabel: string | null = snapshot?.receiver.cfdiUseLabel ?? null;
+    if (!snapshot) {
+      [issuerFiscalRegimeLabel, receiverFiscalRegimeLabel, receiverCfdiUseLabel] = await Promise.all([
+        this.searchSatTaxRegimesUseCase && issuerFiscalRegime
+          ? resolveSatDescription(this.searchSatTaxRegimesUseCase, issuerFiscalRegime)
+          : Promise.resolve(issuerFiscalRegime ?? null),
+        this.searchSatTaxRegimesUseCase
+          ? resolveSatDescription(this.searchSatTaxRegimesUseCase, baseData.receiver.fiscalRegime)
+          : Promise.resolve(baseData.receiver.fiscalRegime),
+        this.searchSatCfdiUsesUseCase
+          ? resolveSatDescription(this.searchSatCfdiUsesUseCase, baseData.receiver.cfdiUse)
+          : Promise.resolve(baseData.receiver.cfdiUse),
+      ]);
+    }
+
+    // SAT product code labels: use pre-resolved from snapshot, or resolve from live settings
+    let satProductCodeLabelByCode = new Map<string, string>();
+    if (snapshot) {
+      for (const item of snapshot.items) {
+        if (item.satProductCode && item.satProductCodeLabel) {
+          satProductCodeLabelByCode.set(item.satProductCode, item.satProductCodeLabel);
+        }
+      }
+    } else {
+      const uniqueSatProductCodes = [...new Set(baseData.lines.map((l) => l.satProductCode).filter((c): c is string => !!c))];
+      if (this.searchSatCodesUseCase && uniqueSatProductCodes.length > 0) {
+        const labels = await Promise.all(
+          uniqueSatProductCodes.map((code) => resolveSatDescription(this.searchSatCodesUseCase!, code))
+        );
+        uniqueSatProductCodes.forEach((code, idx) => satProductCodeLabelByCode.set(code, labels[idx]));
+      }
+    }
+
     const data = {
       ...baseData,
       issuer: {
@@ -235,6 +274,10 @@ export class FakeFacturamaGateway implements FacturamaGateway {
         fiscalRegimeLabel: receiverFiscalRegimeLabel,
         cfdiUseLabel: receiverCfdiUseLabel,
       },
+      lines: baseData.lines.map((line) => ({
+        ...line,
+        satProductCodeLabel: line.satProductCode ? satProductCodeLabelByCode.get(line.satProductCode) ?? line.satProductCodeLabel ?? null : null,
+      })),
     };
     const buffer = await renderToBuffer(
       createElement(InvoiceDocumentPdf, { data, watermark: MOCK_WATERMARK, folioLabel: uuid }) as never

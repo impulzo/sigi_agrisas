@@ -61,6 +61,7 @@ describe("SettingsController", () => {
         businessAddress: null,
         businessPhone: null,
         businessTaxRegime: null,
+        businessZipCode: null,
         legendText: "Favor de revisar su mercancia. No se hacen cambios ni devoluciones. Gracias por su compra.",
       });
     });

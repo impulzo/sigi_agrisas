@@ -43,8 +43,10 @@ import { GetCsdStatusUseCase } from "@/modules/billing/application/use-cases/Get
 import { GetEmitterFiscalSettingsUseCase } from "@/modules/billing/application/use-cases/GetEmitterFiscalSettingsUseCase";
 import { SearchSatTaxRegimesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatTaxRegimesUseCase";
 import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCfdiUsesUseCase";
+import { SearchSatCodesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCodesUseCase";
 import { InMemorySatTaxRegimeRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatTaxRegimeRepository";
 import { InMemorySatCfdiUseRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatCfdiUseRepository";
+import { InMemorySatCodeRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatCodeRepository";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 import type { BillingLookupService, SaleForBilling } from "@/modules/billing/application/ports/BillingLookupService";
 import type { CreateInvoiceData } from "@/modules/billing/application/ports/InvoiceRepository";
@@ -120,7 +122,9 @@ function buildController(opts: {
     new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()),
     new GetEmitterFiscalSettingsUseCase(gateway),
     new SearchSatTaxRegimesUseCase(new InMemorySatTaxRegimeRepository()),
-    new SearchSatCfdiUsesUseCase(new InMemorySatCfdiUseRepository())
+    new SearchSatCfdiUsesUseCase(new InMemorySatCfdiUseRepository()),
+    new SearchSatCodesUseCase(new InMemorySatCodeRepository()),
+    gateway,
   );
   return { controller, repo };
 }

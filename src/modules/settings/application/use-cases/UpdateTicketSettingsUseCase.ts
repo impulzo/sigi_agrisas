@@ -20,6 +20,7 @@ export class UpdateTicketSettingsUseCase {
       "businessAddress",
       "businessPhone",
       "businessTaxRegime",
+      "businessZipCode",
       "legendText",
     ];
     if (keys.every((k) => data[k] === undefined)) {

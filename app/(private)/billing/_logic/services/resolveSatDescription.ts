@@ -6,7 +6,8 @@ interface SatCode {
 }
 
 async function search(path: string, code: string, fetchImpl: typeof authFetch): Promise<SatCode[]> {
-  const res = await fetchImpl(`/api/v1/admin/sat-codes/${path}?search=${encodeURIComponent(code)}`);
+  const url = path ? `/api/v1/admin/sat-codes/${path}?search=${encodeURIComponent(code)}` : `/api/v1/admin/sat-codes?search=${encodeURIComponent(code)}`;
+  const res = await fetchImpl(url);
   if (!res.ok) throw new NetworkError();
   const body = (await res.json()) as { items: SatCode[] };
   return body.items;
@@ -30,3 +31,8 @@ export function resolveFiscalRegimeDescription(code: string, fetchImpl = authFet
 export function resolveCfdiUseDescription(code: string, fetchImpl = authFetch): Promise<string> {
   return resolve("uso-cfdi", code, fetchImpl);
 }
+
+export function resolveSatProductCodeDescription(code: string, fetchImpl = authFetch): Promise<string> {
+  return resolve("", code, fetchImpl);
+}
+

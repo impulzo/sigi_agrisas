@@ -35,6 +35,7 @@ const updateTicketSchema = z.object({
   businessAddress: z.string().max(300).nullable().optional(),
   businessPhone: z.string().max(30).nullable().optional(),
   businessTaxRegime: z.string().max(120).nullable().optional(),
+  businessZipCode: z.string().regex(/^\d{5}$/).nullable().optional(),
   legendText: z.string().max(500).nullable().optional(),
 });
 

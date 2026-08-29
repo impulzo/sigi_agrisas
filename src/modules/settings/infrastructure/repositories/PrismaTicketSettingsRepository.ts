@@ -13,6 +13,7 @@ type Row = {
   businessAddress: string | null;
   businessPhone: string | null;
   businessTaxRegime: string | null;
+  businessZipCode: string | null;
   legendText: string | null;
 };
 
@@ -26,6 +27,7 @@ function toEntity(row: Row): TicketSettings {
     businessAddress: row.businessAddress,
     businessPhone: row.businessPhone,
     businessTaxRegime: row.businessTaxRegime,
+    businessZipCode: row.businessZipCode,
     legendText: row.legendText,
   };
 }
@@ -50,6 +52,7 @@ export class PrismaTicketSettingsRepository implements TicketSettingsRepository 
         businessAddress: data.businessAddress !== undefined ? data.businessAddress : DEFAULT_TICKET_SETTINGS.businessAddress,
         businessPhone: data.businessPhone !== undefined ? data.businessPhone : DEFAULT_TICKET_SETTINGS.businessPhone,
         businessTaxRegime: data.businessTaxRegime !== undefined ? data.businessTaxRegime : DEFAULT_TICKET_SETTINGS.businessTaxRegime,
+        businessZipCode: data.businessZipCode !== undefined ? data.businessZipCode : DEFAULT_TICKET_SETTINGS.businessZipCode,
         legendText: data.legendText !== undefined ? data.legendText : DEFAULT_TICKET_SETTINGS.legendText,
       },
       update: {
@@ -60,6 +63,7 @@ export class PrismaTicketSettingsRepository implements TicketSettingsRepository 
         ...(data.businessAddress !== undefined ? { businessAddress: data.businessAddress } : {}),
         ...(data.businessPhone !== undefined ? { businessPhone: data.businessPhone } : {}),
         ...(data.businessTaxRegime !== undefined ? { businessTaxRegime: data.businessTaxRegime } : {}),
+        ...(data.businessZipCode !== undefined ? { businessZipCode: data.businessZipCode } : {}),
         ...(data.legendText !== undefined ? { legendText: data.legendText } : {}),
       },
     });
@@ -79,6 +83,7 @@ export class PrismaTicketSettingsRepository implements TicketSettingsRepository 
         businessAddress: DEFAULT_TICKET_SETTINGS.businessAddress,
         businessPhone: DEFAULT_TICKET_SETTINGS.businessPhone,
         businessTaxRegime: DEFAULT_TICKET_SETTINGS.businessTaxRegime,
+        businessZipCode: DEFAULT_TICKET_SETTINGS.businessZipCode,
         legendText: DEFAULT_TICKET_SETTINGS.legendText,
       },
       update: { logoUrl },

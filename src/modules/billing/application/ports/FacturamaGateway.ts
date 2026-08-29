@@ -61,6 +61,7 @@ export interface FacturamaInvoiceSnapshotItem {
   description: string;
   productCode: string;
   satProductCode?: string | null;
+  satProductCodeLabel?: string | null;
   quantity: number;
   unitPrice: number;
   discountPct: number;
@@ -81,10 +82,15 @@ export interface FacturamaInvoiceSnapshot {
     rfc: string | null;
     legalName: string | null;
     fiscalRegime: string | null;
+    fiscalRegimeLabel?: string | null;
     zipCode: string | null;
     address: string | null;
+    branchName?: string | null;
   };
-  receiver: FacturamaReceiverInput;
+  receiver: FacturamaReceiverInput & {
+    fiscalRegimeLabel?: string | null;
+    cfdiUseLabel?: string | null;
+  };
   items: FacturamaInvoiceSnapshotItem[];
   paymentForm: string;
   paymentMethod: string;

@@ -33,7 +33,12 @@ export function InvoiceMetaPanel({ invoice: inv }: InvoiceMetaPanelProps) {
       )}
 
       <div className="bg-surface-container-low rounded-lg border border-outline-variant p-4">
-        <h2 className="text-title-sm font-semibold text-on-surface mb-3">Datos del emisor</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-title-sm font-semibold text-on-surface">Datos del emisor</h2>
+          {inv.issuerBranchName && (
+            <span className="text-label-sm text-on-surface-variant font-medium">{inv.issuerBranchName}</span>
+          )}
+        </div>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div>
             <dt className="text-label-sm text-on-surface-variant">RFC</dt>

@@ -1,0 +1,114 @@
+// @react-pdf/renderer is a server-only ESM lib; mock it for the node test env
+jest.mock("@react-pdf/renderer", () => ({
+  renderToBuffer: jest.fn().mockResolvedValue(Buffer.from("%PDF-1.4 mock")),
+  Document: "Document",
+  Page: "Page",
+  Text: "Text",
+  View: "View",
+  StyleSheet: { create: (s: unknown) => s },
+}));
+
+jest.mock("@/modules/billing/infrastructure/pdf/InvoiceDocumentPdf", () => ({
+  InvoiceDocumentPdf: () => null,
+}));
+
+jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
+  getEmitterFiscalSettings: jest.fn(),
+}));
+
+import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
+import { extractSatCodeFromTicketRegime, resolveIssuerFiscalData } from "../../../../src/modules/billing/application/services/resolveIssuerFiscalData";
+import { GetEmitterFiscalSettingsUseCase } from "../../../../src/modules/billing/application/use-cases/GetEmitterFiscalSettingsUseCase";
+import { FakeFacturamaGateway } from "../../../../src/modules/billing/infrastructure/services/FakeFacturamaGateway";
+import { GetTicketSettingsUseCase } from "../../../../src/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { InMemoryTicketSettingsRepository } from "../../../../src/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
+
+const mockedGetEmitterFiscalSettings = getEmitterFiscalSettings as jest.Mock;
+
+describe("extractSatCodeFromTicketRegime", () => {
+  it("extracts the leading SAT code when businessTaxRegime uses the form's em-dash format", () => {
+    expect(extractSatCodeFromTicketRegime("612 — Personas Físicas con Actividad Empresarial")).toBe("612");
+  });
+
+  it("extracts the leading SAT code when businessTaxRegime uses a plain-space separator (seeded/legacy data)", () => {
+    expect(extractSatCodeFromTicketRegime("612 Personas Físicas con Actividad Empresarial")).toBe("612");
+  });
+
+  it("returns the bare code as-is when it already fits the column constraint", () => {
+    expect(extractSatCodeFromTicketRegime("601")).toBe("601");
+  });
+
+  it("returns null when there is no leading numeric code — never truncates the description", () => {
+    expect(extractSatCodeFromTicketRegime("Personas Físicas con Actividad Empresarial")).toBeNull();
+  });
+
+  it("returns null when businessTaxRegime is null", () => {
+    expect(extractSatCodeFromTicketRegime(null)).toBeNull();
+  });
+});
+
+describe("GetEmitterFiscalSettingsUseCase — draft-preview/stamp consistency", () => {
+  beforeEach(() => {
+    mockedGetEmitterFiscalSettings.mockReset();
+    mockedGetEmitterFiscalSettings.mockResolvedValue(null);
+  });
+
+  it("resolves the same parsed SAT code the stamping flow would persist, when only TicketSettings has data", async () => {
+    const ticketRepo = new InMemoryTicketSettingsRepository();
+    await ticketRepo.update({ businessTaxRegime: "612 Personas Físicas con Actividad Empresarial" });
+    const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
+    const gateway = new FakeFacturamaGateway();
+    const uc = new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase);
+
+    const result = await uc.execute();
+
+    expect(result.fiscalRegime).toBe("612");
+  });
+});
+
+describe("resolveIssuerFiscalData — zipCode 3rd-tier fallback to TicketSettings", () => {
+  beforeEach(() => {
+    mockedGetEmitterFiscalSettings.mockReset();
+  });
+
+  it("falls through to TicketSettings.businessZipCode when EmitterFiscalSettings has none and no CSD is loaded", async () => {
+    mockedGetEmitterFiscalSettings.mockResolvedValue(null);
+    const ticketRepo = new InMemoryTicketSettingsRepository();
+    await ticketRepo.update({ businessZipCode: "83000" });
+    const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
+    const gateway = new FakeFacturamaGateway();
+
+    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase);
+
+    expect(result.zipCode).toBe("83000");
+  });
+
+  it("resolves zipCode to null when neither EmitterFiscalSettings nor TicketSettings have it", async () => {
+    mockedGetEmitterFiscalSettings.mockResolvedValue(null);
+    const ticketRepo = new InMemoryTicketSettingsRepository();
+    const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
+    const gateway = new FakeFacturamaGateway();
+
+    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase);
+
+    expect(result.zipCode).toBeNull();
+  });
+
+  it("EmitterFiscalSettings.zipCode still wins over TicketSettings when both are present", async () => {
+    mockedGetEmitterFiscalSettings.mockResolvedValue({
+      rfc: null,
+      legalName: null,
+      fiscalRegime: null,
+      zipCode: "01000",
+      address: null,
+    });
+    const ticketRepo = new InMemoryTicketSettingsRepository();
+    await ticketRepo.update({ businessZipCode: "83000" });
+    const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
+    const gateway = new FakeFacturamaGateway();
+
+    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase);
+
+    expect(result.zipCode).toBe("01000");
+  });
+});

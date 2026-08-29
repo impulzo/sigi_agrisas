@@ -15,6 +15,7 @@ import { ReceiverFiscalDataIncompleteError, FacturamaStampError } from "../_logi
 import { SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS } from "@/shared/domain/catalogs/satPaymentCatalogs";
 import type { CustomerDto } from "../../pos/_logic/types/api";
 import type { ProductDto, ProductPriceDto } from "../../pos/_logic/types/api";
+import { useHeadquarters } from "../../../_hooks/useHeadquarters";
 
 interface PricePickerState {
   product: ProductDto;
@@ -28,7 +29,14 @@ const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", 
 const PAYMENT_FORMS = SAT_PAYMENT_FORMS.map((e) => ({ value: e.code, label: `${e.code} - ${e.description}` }));
 const PAYMENT_METHODS = SAT_PAYMENT_METHODS.map((e) => ({ value: e.code, label: `${e.code} - ${e.description}` }));
 
-export function PartialInvoiceForm() {
+interface PartialInvoiceFormProps {
+  branchId?: string | null;
+}
+
+export function PartialInvoiceForm({ branchId }: PartialInvoiceFormProps) {
+  const { hq } = useHeadquarters();
+  const effectiveBranchId = branchId ?? hq?.id ?? null;
+
   const {
     customer, setCustomer, fiscalMissingFields,
     lines, addLine, updateLine, removeLine,
@@ -119,7 +127,7 @@ export function PartialInvoiceForm() {
       stock: null,
     };
     setPricePicker({ product: fakeProduct, prices: [], isLoading: true, lineKey });
-    getProductPrices(line.productId).then((prices) => {
+    getProductPrices(line.productId, effectiveBranchId).then((prices) => {
       setPricePicker((prev) => (prev ? { ...prev, prices, isLoading: false } : null));
     });
   }
@@ -227,7 +235,7 @@ export function PartialInvoiceForm() {
 
         {lines.length > 0 ? (
           <div className="overflow-x-auto border border-outline-variant rounded-md">
-            <table className="w-full text-body-sm">
+            <table className="w-full text-body-sm" style={{ tableLayout: "fixed" }}>
               <thead>
                 <tr className="border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wide">
                   <th className="px-2 py-2 text-left font-medium">Descripción</th>
