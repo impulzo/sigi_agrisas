@@ -18,7 +18,9 @@ import { SearchSatTaxRegimesUseCase } from "@/modules/sat-codes/application/use-
 import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCfdiUsesUseCase";
 import { SearchSatCodesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCodesUseCase";
 import { resolveSatDescription } from "../services/resolveSatDescription";
+import { resolveIssuerFiscalData } from "../../application/services/resolveIssuerFiscalData";
 import { BillingLookupService } from "../../application/ports/BillingLookupService";
+import type { FacturamaGateway } from "../../application/ports/FacturamaGateway";
 import { toInvoiceDto } from "../../application/mappers/toInvoiceDto";
 import {
   InvoiceNotFoundError,
@@ -161,7 +163,8 @@ export class BillingController {
     private readonly getEmitterFiscalSettingsUseCase: GetEmitterFiscalSettingsUseCase,
     private readonly searchSatTaxRegimesUseCase: SearchSatTaxRegimesUseCase,
     private readonly searchSatCfdiUsesUseCase: SearchSatCfdiUsesUseCase,
-    private readonly searchSatCodesUseCase: SearchSatCodesUseCase
+    private readonly searchSatCodesUseCase: SearchSatCodesUseCase,
+    private readonly gateway: FacturamaGateway
   ) {}
 
   async list(req: NextRequest): Promise<NextResponse> {
@@ -288,9 +291,13 @@ export class BillingController {
       const scopeError = await enforceBranchScope(req, invoice.branchId, this.authz);
       if (scopeError) return scopeError;
 
+      const resolvedIssuer = await resolveIssuerFiscalData(this.gateway, this.getTicketSettingsUseCase);
+
+      const effectiveIssuerFiscalRegime = resolvedIssuer.fiscalRegime ?? invoice.issuerFiscalRegime;
+
       const [issuerFiscalRegimeLabel, receiverFiscalRegimeLabel, receiverCfdiUseLabel, branch] = await Promise.all([
-        invoice.issuerFiscalRegime
-          ? resolveSatDescription(this.searchSatTaxRegimesUseCase, invoice.issuerFiscalRegime)
+        effectiveIssuerFiscalRegime
+          ? resolveSatDescription(this.searchSatTaxRegimesUseCase, effectiveIssuerFiscalRegime)
           : null,
         resolveSatDescription(this.searchSatTaxRegimesUseCase, invoice.receiverFiscalRegime),
         resolveSatDescription(this.searchSatCfdiUsesUseCase, invoice.receiverCfdiUse),
@@ -309,7 +316,12 @@ export class BillingController {
       const dto = toInvoiceDto(invoice);
       return NextResponse.json({
         ...dto,
+        issuerRfc: resolvedIssuer.rfc ?? dto.issuerRfc,
+        issuerLegalName: resolvedIssuer.legalName ?? dto.issuerLegalName,
+        issuerFiscalRegime: resolvedIssuer.fiscalRegime ?? dto.issuerFiscalRegime,
         issuerFiscalRegimeLabel,
+        issuerZipCode: resolvedIssuer.zipCode ?? dto.issuerZipCode,
+        issuerAddress: resolvedIssuer.address ?? dto.issuerAddress,
         receiverFiscalRegimeLabel,
         receiverCfdiUseLabel,
         issuerBranchName: branch?.name ?? null,

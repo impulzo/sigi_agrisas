@@ -123,7 +123,8 @@ function buildController(opts: {
     new GetEmitterFiscalSettingsUseCase(gateway),
     new SearchSatTaxRegimesUseCase(new InMemorySatTaxRegimeRepository()),
     new SearchSatCfdiUsesUseCase(new InMemorySatCfdiUseRepository()),
-    new SearchSatCodesUseCase(new InMemorySatCodeRepository())
+    new SearchSatCodesUseCase(new InMemorySatCodeRepository()),
+    gateway,
   );
   return { controller, repo };
 }
