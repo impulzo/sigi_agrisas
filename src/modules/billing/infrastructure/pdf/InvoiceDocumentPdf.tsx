@@ -9,6 +9,7 @@ export interface InvoiceDocumentPdfLine {
   description: string;
   productCode: string;
   satProductCode?: string | null;
+  satProductCodeLabel?: string | null;
   quantity: number;
   unitPrice: number;
   discountPct: number;
@@ -159,11 +160,18 @@ export function InvoiceDocumentPdf({ data, watermark, folioLabel, isDraft = fals
             <Text style={s.colPrice}>Precio</Text>
             <Text style={s.colDiscount}>Desc.</Text>
             <Text style={s.colTax}>IVA</Text>
+            <Text style={s.colTax}>IEPS</Text>
+            <Text style={s.colTotal}>Subtotal</Text>
             <Text style={s.colTotal}>Total</Text>
           </View>
           {data.lines.map((line, idx) => (
             <View key={`${line.productCode}-${idx}`} style={idx % 2 === 0 ? s.tableRow : s.tableRowAlt}>
-              <Text style={s.colDescription}>{line.description}</Text>
+              <View style={s.colDescription}>
+                <Text>{line.description}</Text>
+                {(line.satProductCodeLabel || line.satProductCode) && (
+                  <Text style={s.colDescriptionMeta}>SAT: {line.satProductCodeLabel || line.satProductCode}</Text>
+                )}
+              </View>
               <Text style={s.colQty}>{line.quantity}</Text>
               <Text style={s.colPrice}>{money(line.unitPrice, data.currency)}</Text>
               {/* discountPct is already whole-percent scale (0-100); ivaRate/iepsRate are
@@ -172,6 +180,8 @@ export function InvoiceDocumentPdf({ data, watermark, folioLabel, isDraft = fals
                   fix there. */}
               <Text style={s.colDiscount}>{line.discountPct.toFixed(0)}%</Text>
               <Text style={s.colTax}>{pct(line.ivaRate)}</Text>
+              <Text style={s.colTax}>{pct(line.iepsRate)}</Text>
+              <Text style={s.colTotal}>{money(line.lineSubtotal, data.currency)}</Text>
               <Text style={s.colTotal}>{money(line.lineTotal, data.currency)}</Text>
             </View>
           ))}

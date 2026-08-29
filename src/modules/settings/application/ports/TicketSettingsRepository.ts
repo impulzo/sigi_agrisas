@@ -8,6 +8,7 @@ export interface UpdateTicketSettingsData {
   businessAddress?: string | null;
   businessPhone?: string | null;
   businessTaxRegime?: string | null;
+  businessZipCode?: string | null;
   legendText?: string | null;
 }
 

@@ -12,16 +12,18 @@ jest.mock("../../../../../app/(private)/billing/_logic/services/downloadInvoiceP
 jest.mock("../../../../../app/(private)/billing/_logic/services/resolveSatDescription", () => ({
   resolveFiscalRegimeDescription: jest.fn((code: string) => Promise.resolve(code)),
   resolveCfdiUseDescription: jest.fn((code: string) => Promise.resolve(code)),
+  resolveSatProductCodeDescription: jest.fn((code: string) => Promise.resolve(code)),
 }));
 
 import { InvoicePreviewModal } from "../../../../../app/(private)/billing/_blocks/InvoicePreviewModal";
 import { downloadInvoicePreviewPdf } from "../../../../../app/(private)/billing/_logic/services/downloadInvoicePreviewPdf";
-import { resolveFiscalRegimeDescription, resolveCfdiUseDescription } from "../../../../../app/(private)/billing/_logic/services/resolveSatDescription";
+import { resolveFiscalRegimeDescription, resolveCfdiUseDescription, resolveSatProductCodeDescription } from "../../../../../app/(private)/billing/_logic/services/resolveSatDescription";
 import type { InvoicePreviewData } from "../../../../../app/(private)/billing/_logic/types/preview";
 
 const mockDownload = downloadInvoicePreviewPdf as jest.MockedFunction<typeof downloadInvoicePreviewPdf>;
 const mockResolveFiscalRegime = resolveFiscalRegimeDescription as jest.MockedFunction<typeof resolveFiscalRegimeDescription>;
 const mockResolveCfdiUse = resolveCfdiUseDescription as jest.MockedFunction<typeof resolveCfdiUseDescription>;
+const mockResolveSatProductCode = resolveSatProductCodeDescription as jest.MockedFunction<typeof resolveSatProductCodeDescription>;
 
 HTMLDialogElement.prototype.showModal = jest.fn(function (this: HTMLDialogElement) {
   this.setAttribute("open", "");
@@ -287,5 +289,100 @@ describe("InvoicePreviewModal", () => {
 
     expect(screen.getByText(/esta venta no tiene cliente asociado/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /timbrar ahora/i })).toBeDisabled();
+  });
+
+  it("renders Forma de pago and Metodo de pago section with descriptions", () => {
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={makeData()}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    expect(screen.getByText("Datos de pago CFDI")).toBeInTheDocument();
+    expect(screen.getByText("Forma de pago")).toBeInTheDocument();
+    expect(screen.getByText("Método de pago")).toBeInTheDocument();
+  });
+
+  it("resolves and shows SAT product code description per line when satProductCode is present", async () => {
+    mockResolveSatProductCode.mockImplementation((code: string) =>
+      Promise.resolve(code === "21102300" ? "21102300 - Fertilizantes" : code)
+    );
+
+    const data = makeData({
+      lines: [
+        { description: "Fertilizante", productCode: "SKU1", satProductCode: "21102300", quantity: 2, unitPrice: 50, discountPct: 0, ivaRate: 0.16, iepsRate: 0, lineSubtotal: 86.21, lineTotal: 100 },
+      ],
+    });
+
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={data}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    expect(await screen.findByText("SAT: 21102300 - Fertilizantes")).toBeInTheDocument();
+    expect(mockResolveSatProductCode).toHaveBeenCalledWith("21102300");
+  });
+
+  it("renders IEPS percentage per line when iepsRate > 0", () => {
+    const data = makeData({
+      lines: [
+        { description: "Producto con IEPS", productCode: "SKU2", quantity: 1, unitPrice: 200, discountPct: 0, ivaRate: 0.16, iepsRate: 0.08, lineSubtotal: 185.19, lineTotal: 200 },
+      ],
+    });
+
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={data}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    expect(screen.getByText("8%")).toBeInTheDocument();
+  });
+
+  it("renders subtotal per line", () => {
+    const data = makeData({
+      lines: [
+        { description: "Fertilizante", productCode: "SKU1", quantity: 1, unitPrice: 100, discountPct: 0, ivaRate: 0.16, iepsRate: 0, lineSubtotal: 86.21, lineTotal: 100 },
+      ],
+    });
+
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={data}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    expect(screen.getAllByText("Subtotal").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders the issuer branch name as a subtitle when provided", () => {
+    render(
+      <InvoicePreviewModal
+        open={true}
+        onClose={jest.fn()}
+        data={makeData({ issuer: { name: "Agrisas", branchName: "Sucursal Centro", rfc: "AGR010101AB1", fiscalRegime: "601", zipCode: "83000", address: "Calle Falsa 123" } })}
+        onConfirmStamp={jest.fn()}
+        isSubmitting={false}
+      />
+    );
+
+    expect(screen.getByText("Sucursal Centro")).toBeInTheDocument();
   });
 });

@@ -1,9 +1,10 @@
 import { InvoiceRepository } from "../ports/InvoiceRepository";
 import { FacturamaGateway, FacturamaDownloadResult, FacturamaInvoiceSnapshot } from "../ports/FacturamaGateway";
+import { BillingLookupService } from "../ports/BillingLookupService";
 import { InvoiceNotFoundError, InvoiceNotStampedError, InvoiceFileDownloadFailedError } from "../../domain/errors";
 import type { Invoice } from "../../domain/entities/Invoice";
 
-function toSnapshot(invoice: Invoice): FacturamaInvoiceSnapshot {
+function toSnapshot(invoice: Invoice, branchName: string | null): FacturamaInvoiceSnapshot {
   return {
     uuid: invoice.uuid ?? invoice.id,
     issuer: {
@@ -12,6 +13,7 @@ function toSnapshot(invoice: Invoice): FacturamaInvoiceSnapshot {
       fiscalRegime: invoice.issuerFiscalRegime,
       zipCode: invoice.issuerZipCode,
       address: invoice.issuerAddress,
+      branchName,
     },
     receiver: {
       rfc: invoice.receiverRfc,
@@ -44,7 +46,8 @@ function toSnapshot(invoice: Invoice): FacturamaInvoiceSnapshot {
 export class DownloadInvoiceFileUseCase {
   constructor(
     private readonly invoiceRepo: InvoiceRepository,
-    private readonly gateway: FacturamaGateway
+    private readonly gateway: FacturamaGateway,
+    private readonly lookupService?: BillingLookupService
   ) {}
 
   async execute(id: string, format: "pdf" | "xml"): Promise<FacturamaDownloadResult & { filename: string }> {
@@ -52,9 +55,11 @@ export class DownloadInvoiceFileUseCase {
     if (!invoice) throw new InvoiceNotFoundError(id);
     if (!invoice.facturamaCfdiId) throw new InvoiceNotStampedError();
 
+    const branch = this.lookupService ? await this.lookupService.findBranch(invoice.branchId) : null;
+
     let result: FacturamaDownloadResult;
     try {
-      result = await this.gateway.download(format, invoice.facturamaCfdiId, toSnapshot(invoice));
+      result = await this.gateway.download(format, invoice.facturamaCfdiId, toSnapshot(invoice, branch?.name ?? null));
     } catch (err) {
       throw new InvoiceFileDownloadFailedError(err);
     }

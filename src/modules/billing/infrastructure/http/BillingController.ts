@@ -16,6 +16,7 @@ import { GetCsdStatusUseCase } from "../../application/use-cases/GetCsdStatusUse
 import { GetEmitterFiscalSettingsUseCase } from "../../application/use-cases/GetEmitterFiscalSettingsUseCase";
 import { SearchSatTaxRegimesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatTaxRegimesUseCase";
 import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCfdiUsesUseCase";
+import { SearchSatCodesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCodesUseCase";
 import { resolveSatDescription } from "../services/resolveSatDescription";
 import { BillingLookupService } from "../../application/ports/BillingLookupService";
 import { toInvoiceDto } from "../../application/mappers/toInvoiceDto";
@@ -159,7 +160,8 @@ export class BillingController {
     private readonly getTicketSettingsUseCase: GetTicketSettingsUseCase,
     private readonly getEmitterFiscalSettingsUseCase: GetEmitterFiscalSettingsUseCase,
     private readonly searchSatTaxRegimesUseCase: SearchSatTaxRegimesUseCase,
-    private readonly searchSatCfdiUsesUseCase: SearchSatCfdiUsesUseCase
+    private readonly searchSatCfdiUsesUseCase: SearchSatCfdiUsesUseCase,
+    private readonly searchSatCodesUseCase: SearchSatCodesUseCase
   ) {}
 
   async list(req: NextRequest): Promise<NextResponse> {
@@ -286,19 +288,35 @@ export class BillingController {
       const scopeError = await enforceBranchScope(req, invoice.branchId, this.authz);
       if (scopeError) return scopeError;
 
-      const [issuerFiscalRegimeLabel, receiverFiscalRegimeLabel, receiverCfdiUseLabel] = await Promise.all([
+      const [issuerFiscalRegimeLabel, receiverFiscalRegimeLabel, receiverCfdiUseLabel, branch] = await Promise.all([
         invoice.issuerFiscalRegime
           ? resolveSatDescription(this.searchSatTaxRegimesUseCase, invoice.issuerFiscalRegime)
           : null,
         resolveSatDescription(this.searchSatTaxRegimesUseCase, invoice.receiverFiscalRegime),
         resolveSatDescription(this.searchSatCfdiUsesUseCase, invoice.receiverCfdiUse),
+        this.lookupService.findBranch(invoice.branchId),
       ]);
 
+      const uniqueSatProductCodes = [...new Set(invoice.items.map((i) => i.satProductCode).filter((c): c is string => !!c))];
+      const satProductCodeLabelByCode = new Map<string, string>();
+      if (uniqueSatProductCodes.length > 0) {
+        const labels = await Promise.all(
+          uniqueSatProductCodes.map((code) => resolveSatDescription(this.searchSatCodesUseCase, code))
+        );
+        uniqueSatProductCodes.forEach((code, idx) => satProductCodeLabelByCode.set(code, labels[idx]));
+      }
+
+      const dto = toInvoiceDto(invoice);
       return NextResponse.json({
-        ...toInvoiceDto(invoice),
+        ...dto,
         issuerFiscalRegimeLabel,
         receiverFiscalRegimeLabel,
         receiverCfdiUseLabel,
+        issuerBranchName: branch?.name ?? null,
+        items: dto.items?.map((item) => ({
+          ...item,
+          satProductCodeLabel: item.satProductCode ? satProductCodeLabelByCode.get(item.satProductCode) ?? null : null,
+        })),
       });
     } catch (err) {
       if (err instanceof InvoiceNotFoundError) {
@@ -490,10 +508,22 @@ export class BillingController {
         resolveSatDescription(this.searchSatTaxRegimesUseCase, parsed.data.receiver.fiscalRegime),
         resolveSatDescription(this.searchSatCfdiUsesUseCase, parsed.data.receiver.cfdiUse),
       ]);
+      const uniqueSatProductCodes = [...new Set(parsed.data.lines.map((l) => l.satProductCode).filter((c): c is string => !!c))];
+      const satProductCodeLabelByCode = new Map<string, string>();
+      if (uniqueSatProductCodes.length > 0) {
+        const labels = await Promise.all(
+          uniqueSatProductCodes.map((code) => resolveSatDescription(this.searchSatCodesUseCase, code))
+        );
+        uniqueSatProductCodes.forEach((code, idx) => satProductCodeLabelByCode.set(code, labels[idx]));
+      }
       const rendered = await renderToBuffer(
         createElement(InvoiceDocumentPdf, {
           data: {
             ...parsed.data,
+            lines: parsed.data.lines.map((line) => ({
+              ...line,
+              satProductCodeLabel: line.satProductCode ? satProductCodeLabelByCode.get(line.satProductCode) ?? null : null,
+            })),
             issuer: {
               name: parsed.data.issuer.name,
               branchName: parsed.data.issuer.branchName,

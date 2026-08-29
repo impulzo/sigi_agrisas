@@ -83,6 +83,7 @@ export interface FacturamaInvoiceSnapshot {
     fiscalRegime: string | null;
     zipCode: string | null;
     address: string | null;
+    branchName?: string | null;
   };
   receiver: FacturamaReceiverInput;
   items: FacturamaInvoiceSnapshotItem[];

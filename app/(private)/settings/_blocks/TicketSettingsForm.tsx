@@ -22,7 +22,10 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
   const [businessAddress, setBusinessAddress] = useState(settings.businessAddress ?? "");
   const [businessPhone, setBusinessPhone] = useState(settings.businessPhone ?? "");
   const [businessTaxRegime, setBusinessTaxRegime] = useState(settings.businessTaxRegime ?? "");
+  const [businessZipCode, setBusinessZipCode] = useState(settings.businessZipCode ?? "");
   const [legendText, setLegendText] = useState(settings.legendText ?? "");
+
+  const businessZipCodeInvalid = businessZipCode.length > 0 && !/^\d{5}$/.test(businessZipCode);
 
   const { isSaving, mutationError, clearError, update } = useTicketSettingsMutations(onChange);
 
@@ -34,10 +37,12 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
     setBusinessAddress(settings.businessAddress ?? "");
     setBusinessPhone(settings.businessPhone ?? "");
     setBusinessTaxRegime(settings.businessTaxRegime ?? "");
+    setBusinessZipCode(settings.businessZipCode ?? "");
     setLegendText(settings.legendText ?? "");
   }, [settings]);
 
   async function handleSave() {
+    if (businessZipCodeInvalid) return;
     await update({
       footerText: footerText.trim() || null,
       paperWidth,
@@ -46,6 +51,7 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
       businessAddress: businessAddress.trim() || null,
       businessPhone: businessPhone.trim() || null,
       businessTaxRegime: businessTaxRegime.trim() || null,
+      businessZipCode: businessZipCode.trim() || null,
       legendText: legendText.trim() || null,
     });
   }
@@ -114,6 +120,25 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
             placeholder="Dirección, ciudad, CP"
             className={inputCls}
           />
+        </div>
+
+        <div>
+          <label htmlFor="business-zip-code" className="block text-label-md text-on-surface mb-1">
+            Código postal
+          </label>
+          <input
+            id="business-zip-code"
+            type="text"
+            inputMode="numeric"
+            value={businessZipCode}
+            onChange={(e) => setBusinessZipCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
+            disabled={!canWrite}
+            placeholder="83000"
+            className={inputCls}
+          />
+          {businessZipCodeInvalid && (
+            <p className="mt-1 text-body-sm text-error">El código postal debe tener 5 dígitos.</p>
+          )}
         </div>
 
         <div>
@@ -213,7 +238,7 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
         <button
           type="button"
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || businessZipCodeInvalid}
           className="px-4 py-2 rounded text-label-lg bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isSaving ? "Guardando…" : "Guardar cambios"}
