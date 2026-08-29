@@ -64,6 +64,7 @@ const defaultSettings: TicketSettingsDto = {
   businessAddress: null,
   businessPhone: null,
   businessTaxRegime: null,
+  businessZipCode: null,
   legendText: null,
 };
 
@@ -113,15 +114,15 @@ describe("PrintableTicket", () => {
     expect(printStyle).toContain("margin: 0 auto 8px;");
   });
 
-  it("declares @page size matching the default 80mm paper width when ticketSettings is null", () => {
+  it("declares @page size matching the default 80mm paper width and auto height when ticketSettings is null", () => {
     const { container } = render(<PrintableTicket sale={sale} ticketSettings={null} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
     // sale has 1 item, a customer, and creditDays: 120 + 30 + 8 + 1*12 + 35 (margin) + 12 (feed) = 217mm
-    expect(printStyle).toContain("@page { size: 80mm 217mm; margin: 4mm 3mm; }");
+    expect(printStyle).toContain("@page { size: 80mm auto; margin: 4mm 3mm; }");
   });
 
-  it("declares @page size matching the configured 58mm paper width", () => {
+  it("declares @page size matching the configured 58mm paper width and auto height", () => {
     const settings: TicketSettingsDto = { ...defaultSettings, paperWidth: "58mm" };
     const { container } = render(<PrintableTicket sale={sale} ticketSettings={settings} />);
 
