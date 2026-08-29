@@ -41,14 +41,23 @@ const lookupService = new PrismaBillingLookupService(prisma);
 
 const stampUseCase = new StampInvoiceUseCase(invoiceRepo, gateway, lookupService, getTicketSettingsUseCase);
 const cancelUseCase = new CancelInvoiceUseCase(invoiceRepo, gateway);
-const downloadUseCase = new DownloadInvoiceFileUseCase(invoiceRepo, gateway, lookupService);
+const getEmitterFiscalSettingsUseCase = new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase);
+const downloadUseCase = new DownloadInvoiceFileUseCase(
+  invoiceRepo,
+  gateway,
+  lookupService,
+  getEmitterFiscalSettingsUseCase,
+  getTicketSettingsUseCase,
+  searchSatTaxRegimesUseCase,
+  searchSatCfdiUsesUseCase,
+  searchSatCodesUseCase,
+);
 const sendEmailUseCase = new SendInvoiceEmailUseCase(invoiceRepo, lookupService, downloadUseCase, mailer);
 const listUseCase = new ListInvoicesUseCase(invoiceRepo);
 const getUseCase = new GetInvoiceUseCase(invoiceRepo);
 const listBySaleUseCase = new ListInvoicesBySaleUseCase(invoiceRepo);
 const uploadCsdUseCase = new UploadCsdUseCase(gateway);
 const getCsdStatusUseCase = new GetCsdStatusUseCase(gateway);
-const getEmitterFiscalSettingsUseCase = new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase);
 
 export const billingController = new BillingController(
   stampUseCase,
@@ -66,5 +75,6 @@ export const billingController = new BillingController(
   getEmitterFiscalSettingsUseCase,
   searchSatTaxRegimesUseCase,
   searchSatCfdiUsesUseCase,
-  searchSatCodesUseCase
+  searchSatCodesUseCase,
+  gateway,
 );

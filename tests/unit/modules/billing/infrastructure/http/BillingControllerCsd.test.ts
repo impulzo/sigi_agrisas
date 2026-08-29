@@ -103,7 +103,8 @@ function buildController(authzOverride?: AuthorizationService, ticketSettingsRep
     new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase),
     new SearchSatTaxRegimesUseCase(new InMemorySatTaxRegimeRepository()),
     new SearchSatCfdiUsesUseCase(new InMemorySatCfdiUseRepository()),
-    new SearchSatCodesUseCase(new InMemorySatCodeRepository())
+    new SearchSatCodesUseCase(new InMemorySatCodeRepository()),
+    gateway,
   );
 }
 
@@ -493,7 +494,8 @@ describe("BillingController — getById resolves SAT catalog descriptions", () =
       new GetEmitterFiscalSettingsUseCase(gateway),
       new SearchSatTaxRegimesUseCase(taxRegimeRepo),
       new SearchSatCfdiUsesUseCase(cfdiUseRepo),
-      new SearchSatCodesUseCase(satCodeRepo)
+      new SearchSatCodesUseCase(satCodeRepo),
+      gateway,
     );
     return { controller, repo };
   }
