@@ -118,7 +118,8 @@ describe("PrintableTicket", () => {
     const { container } = render(<PrintableTicket sale={sale} ticketSettings={null} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
-    expect(printStyle).toContain("@page { size: 80mm auto; margin: 0; }");
+    // sale has 1 item, a customer, and creditDays: 120 + 30 + 8 + 1*12 + 35 (margin) + 12 (feed) = 217mm
+    expect(printStyle).toContain("@page { size: 80mm 217mm; margin: 4mm 3mm; }");
   });
 
   it("declares @page size matching the configured 58mm paper width and auto height", () => {
@@ -126,7 +127,7 @@ describe("PrintableTicket", () => {
     const { container } = render(<PrintableTicket sale={sale} ticketSettings={settings} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
-    expect(printStyle).toContain("@page { size: 58mm auto; margin: 0; }");
+    expect(printStyle).toContain("@page { size: 58mm 217mm; margin: 4mm 3mm; }");
   });
 
   it("renders sale data correctly regardless of paperWidth", () => {
