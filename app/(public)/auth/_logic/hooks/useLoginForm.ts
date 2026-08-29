@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginSchema } from "../schemas/login.schema";
 import { login } from "../services/login";
-import { InvalidCredentialsError, NetworkError } from "../types/domain";
+import { InvalidCredentialsError, NetworkError, PasswordNotSetError } from "../types/domain";
 import { setAccessToken } from "../../../../_lib/session/accessToken";
 
 interface FormValues {
@@ -74,6 +74,8 @@ export function useLoginForm(): UseLoginFormReturn {
     } catch (err) {
       if (err instanceof InvalidCredentialsError) {
         setFormError("Credenciales inválidas");
+      } else if (err instanceof PasswordNotSetError) {
+        setFormError(err.message);
       } else if (err instanceof NetworkError) {
         setFormError("Error al iniciar sesión. Intenta de nuevo.");
       } else {

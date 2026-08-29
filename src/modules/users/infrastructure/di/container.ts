@@ -7,14 +7,13 @@ import { UpdateUserUseCase } from "@/modules/users/application/use-cases/UpdateU
 import { DeleteUserUseCase } from "@/modules/users/application/use-cases/DeleteUserUseCase";
 import { UsersController } from "@/modules/users/infrastructure/http/UsersController";
 import { branchRepo } from "@/modules/branches/infrastructure/di/container";
-import { BcryptPasswordHasher } from "@/modules/auth/infrastructure/services/BcryptPasswordHasher";
+import { sendSetPasswordEmailUseCase } from "@/modules/auth/infrastructure/di/container";
 
 const adminUserRepo = new PrismaAdminUserRepository(prisma);
-const passwordHasher = new BcryptPasswordHasher();
 
 const listUsersUseCase = new ListUsersUseCase(adminUserRepo);
 const getUserUseCase = new GetUserUseCase(adminUserRepo);
-const createUserUseCase = new CreateAdminUserUseCase(adminUserRepo, branchRepo, passwordHasher);
+const createUserUseCase = new CreateAdminUserUseCase(adminUserRepo, branchRepo);
 const updateUserUseCase = new UpdateUserUseCase(adminUserRepo, branchRepo);
 const deleteUserUseCase = new DeleteUserUseCase(adminUserRepo);
 
@@ -23,5 +22,6 @@ export const usersController = new UsersController(
   getUserUseCase,
   createUserUseCase,
   updateUserUseCase,
-  deleteUserUseCase
+  deleteUserUseCase,
+  sendSetPasswordEmailUseCase
 );

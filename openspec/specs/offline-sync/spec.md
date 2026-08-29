@@ -6,7 +6,6 @@ Modo offline transversal del panel: instala como PWA, cachea catálogo/inventari
 
 ---
 ## Requirements
-
 ### Requirement: Installable PWA with offline-capable app shell
 The system SHALL expose a `manifest.json` and register a service worker so the app is installable and, once installed and opened at least once online, launches and renders its shell without a network connection.
 
@@ -55,7 +54,7 @@ A user with the `branches:access_all` permission SHALL NOT be able to enter offl
 - **THEN** `meta.ownerBranchId` is set to that branch, and from that point the user's offline experience is identical to a regular cashier scoped to that branch
 
 ### Requirement: Catalog and inventory read-only offline cache
-The system SHALL cache active products, prices, dosifications, payment methods, POS-scope folios, active customers, and per-product branch stock (`branchInventory`) for the current `ownerBranchId`, refreshed periodically while online, and SHALL expose no write path to this cache while offline.
+The system SHALL cache active products, prices, dosifications, payment methods, POS-scope folios, active customers, and per-product branch stock (`branchInventory`) for the current `ownerBranchId`, refreshed periodically while online, and SHALL expose no write path to this cache while offline. Refresh SHALL fetch per-product data (prices, dosifications) with a bounded concurrency limit — never issuing an unbounded fan-out of one HTTP request per catalog product simultaneously. An **automatic** refresh trigger (initial mount, the periodic interval, or the tab regaining visibility) SHALL be skipped when the cache is already fresher than a configured minimum interval; an explicit **manual** refresh action (user-triggered "sync now") SHALL NOT be subject to this gate and SHALL always run.
 
 #### Scenario: Catalog and stock browsable while offline
 - **WHEN** a user searches products or views stock levels in POS, Quotes, or Inventory while offline
@@ -72,6 +71,18 @@ The system SHALL cache active products, prices, dosifications, payment methods, 
 #### Scenario: Empty cache on first-ever offline use is reported explicitly
 - **WHEN** a user goes offline before the catalog cache has ever been successfully populated for their `ownerBranchId`
 - **THEN** the UI shows an explicit "sin datos cacheados, conéctate primero" state rather than an empty or broken screen
+
+#### Scenario: Per-product prefetch respects a concurrency cap
+- **WHEN** a catalog refresh runs for a branch with hundreds of products
+- **THEN** the number of in-flight `prices`/`dosifications` requests for that batch never exceeds the configured concurrency limit, regardless of how many products are being synced
+
+#### Scenario: Automatic refresh skips when the cache is already fresh
+- **WHEN** the periodic refresh interval fires, or the tab regains visibility, or the provider mounts, and the cache was successfully refreshed less than the configured minimum interval ago
+- **THEN** no new fetch is issued for that trigger, and the existing cache contents and `catalogSyncedAt` timestamp are left unchanged
+
+#### Scenario: Manual refresh always runs regardless of freshness
+- **WHEN** the user explicitly triggers a manual catalog refresh (e.g. via the sync status control) immediately after an automatic refresh already ran
+- **THEN** the manual refresh executes anyway, without being skipped by the freshness gate that applies to automatic triggers
 
 ### Requirement: Offline mutation outbox for sales and quotes
 The system SHALL queue sales and quotes created while offline into local `outboxSales`/`outboxQuotes` stores, each record carrying a generated `clientRequestId` (UUID), the request payload, client-computed totals for display, a `provisionalCode`, and a `status` of `pending`, `syncing`, `synced`, or `failed`.
@@ -125,3 +136,4 @@ The system SHALL surface the current sync state persistently in the UI (offline 
 #### Scenario: Persistent warning while unsynced items exist
 - **WHEN** the outbox contains any `pending` or `failed` item
 - **THEN** the UI displays a persistent warning against closing the browser tab or clearing browser data, since queued items exist only locally until synced
+

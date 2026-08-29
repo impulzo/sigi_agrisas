@@ -138,6 +138,7 @@ describe("TicketPreviewPage", () => {
         businessAddress: null,
         businessPhone: null,
         businessTaxRegime: null,
+        businessZipCode: null,
         legendText: null,
       });
     mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
@@ -216,6 +217,7 @@ describe("TicketPreviewPage", () => {
       businessAddress: null,
       businessPhone: null,
       businessTaxRegime: null,
+      businessZipCode: null,
       legendText: null,
     });
     mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
@@ -245,6 +247,7 @@ describe("TicketPreviewPage", () => {
       businessAddress: null,
       businessPhone: null,
       businessTaxRegime: null,
+      businessZipCode: null,
       legendText: null,
     });
     mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });
@@ -266,6 +269,7 @@ describe("TicketPreviewPage", () => {
       businessAddress: null,
       businessPhone: null,
       businessTaxRegime: null,
+      businessZipCode: null,
       legendText: null,
     });
     mockUseSaleDetail.mockReturnValue({ sale: makeSale(), isLoading: false, error: null, refresh: jest.fn() });

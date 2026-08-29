@@ -2,6 +2,7 @@ import { LoginPayload, AuthResponse } from "../types/api";
 import {
   InvalidCredentialsError,
   NetworkError,
+  PasswordNotSetError,
 } from "../types/domain";
 
 export async function login(
@@ -20,6 +21,11 @@ export async function login(
   }
 
   if (res.status === 401) throw new InvalidCredentialsError();
+  if (res.status === 403) {
+    const data = await res.json().catch(() => ({}));
+    if (data?.error === "PasswordNotSet") throw new PasswordNotSetError();
+    throw new NetworkError();
+  }
   if (res.status >= 500) throw new NetworkError();
   if (!res.ok) throw new NetworkError();
 

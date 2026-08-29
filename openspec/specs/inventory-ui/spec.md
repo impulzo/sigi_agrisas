@@ -5,9 +5,7 @@
 Pantalla operacional de gestión de stock por sucursal (`/inventory`). Permite al operador/admin seleccionar una sucursal, ver su inventario paginado con alertas de reorden, asignar productos, ajustar stock con delta atómico, editar valores absolutos y quitar productos. Respeta la asimetría de permisos: `operator` tiene `inventory:write` pero solo `products:read`.
 
 ---
-
 ## Requirements
-
 ### Requirement: Inventory screen with branch selector
 The system SHALL provide a screen at `/inventory` that requires the `inventory:read` permission (gated via `useCurrentUser().can("inventory:read")`).
 
@@ -186,3 +184,15 @@ The system SHALL expose service functions in `app/(private)/inventory/_logic/ser
 #### Scenario: Acción oculta sin permiso
 - **WHEN** el usuario no tiene `inventory:kardex_read`
 - **THEN** la acción "Ver Kardex" no se muestra
+
+### Requirement: Inventory scope mode indicator
+The `/inventory` screen SHALL indicate when the deployment's inventory scope mode (`inventory-api` — Configurable inventory scope mode) is `branch`, so operators understand why the POS catalog for their branch may be shorter than the full product catalog. The indicator SHALL be sourced from a dedicated read endpoint (not inferred client-side) and cached briefly to avoid a request on every render.
+
+#### Scenario: Badge shown in branch mode
+- **WHEN** the inventory scope mode is `branch` and a user with `inventory:read` opens `/inventory`
+- **THEN** the screen displays a badge or notice indicating "Inventario por sucursal" (or equivalent), distinct from the branch selector already present
+
+#### Scenario: No indicator in general mode
+- **WHEN** the inventory scope mode is `general`
+- **THEN** the screen renders exactly as before this capability, with no additional indicator
+

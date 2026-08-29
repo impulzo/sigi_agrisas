@@ -61,6 +61,7 @@ const defaultSettings: TicketSettingsDto = {
   businessAddress: null,
   businessPhone: null,
   businessTaxRegime: null,
+  businessZipCode: null,
   legendText: null,
 };
 

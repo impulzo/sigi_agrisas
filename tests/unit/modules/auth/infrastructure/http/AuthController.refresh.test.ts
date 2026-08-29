@@ -4,8 +4,10 @@ import { RefreshTokenUseCase } from "@/modules/auth/application/use-cases/Refres
 import { LoginUseCase } from "@/modules/auth/application/use-cases/LoginUseCase";
 import { RegisterUseCase } from "@/modules/auth/application/use-cases/RegisterUseCase";
 import { LogoutUseCase } from "@/modules/auth/application/use-cases/LogoutUseCase";
+import { CompletePasswordSetupUseCase } from "@/modules/auth/application/use-cases/CompletePasswordSetupUseCase";
 import { JwtTokenService } from "@/modules/auth/infrastructure/services/JwtTokenService";
 import { InMemoryUserRepository } from "@/modules/auth/infrastructure/repositories/InMemoryUserRepository";
+import { InMemoryPasswordSetupTokenRepository } from "@/modules/auth/infrastructure/repositories/InMemoryPasswordSetupTokenRepository";
 import { BcryptPasswordHasher } from "@/modules/auth/infrastructure/services/BcryptPasswordHasher";
 import { RoleAssigner } from "@/modules/rbac/application/ports/RoleAssigner";
 
@@ -49,6 +51,7 @@ describe("AuthController.refresh — HTTP cookie rotation", () => {
 
   beforeEach(() => {
     const repo = new InMemoryUserRepository();
+    const tokenSetupRepo = new InMemoryPasswordSetupTokenRepository();
     const hasher = new BcryptPasswordHasher();
     tokenService = new JwtTokenService();
     controller = new AuthController(
@@ -56,6 +59,7 @@ describe("AuthController.refresh — HTTP cookie rotation", () => {
       new LoginUseCase(repo, hasher, tokenService),
       new RefreshTokenUseCase(tokenService),
       new LogoutUseCase(),
+      new CompletePasswordSetupUseCase(repo, tokenSetupRepo, hasher, tokenService),
     );
   });
 

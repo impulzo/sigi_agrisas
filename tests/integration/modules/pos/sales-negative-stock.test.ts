@@ -20,6 +20,7 @@ import { CreateSaleUseCase } from "@/modules/pos/application/use-cases/CreateSal
 import { PrismaBranchInventoryRepository } from "@/modules/inventory/infrastructure/repositories/PrismaBranchInventoryRepository";
 import { AdjustStockUseCase } from "@/modules/inventory/application/use-cases/AdjustStockUseCase";
 import { NegativeStockNotAllowedError } from "@/modules/inventory/domain/errors/NegativeStockNotAllowedError";
+import { isBranchScopedInventory } from "@/shared/infrastructure/config/inventoryScope";
 
 const P = "POSNEG_";
 
@@ -42,7 +43,9 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-describe("Sales — stock negativo por ventas (integration real DB)", () => {
+// Asume alta automática de fila de inventario al vender (allowRowCreation=true) — sólo válido en modo `general`.
+// En modo `branch` la venta sin fila previa se rechaza a propósito (ver ProductNotAvailableInBranchError).
+(isBranchScopedInventory() ? describe.skip : describe)("Sales — stock negativo por ventas (integration real DB)", () => {
   const branchRepo = new PrismaBranchRepository(prisma);
   const deptRepo = new PrismaDepartmentRepository(prisma);
   const productRepo = new PrismaProductRepository(prisma);

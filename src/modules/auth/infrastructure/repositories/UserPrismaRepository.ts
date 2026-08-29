@@ -55,4 +55,11 @@ export class UserPrismaRepository implements UserRepository {
       throw err;
     }
   }
+
+  async updatePasswordHash(userId: string, passwordHash: string): Promise<void> {
+    await this.db.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+  }
 }
