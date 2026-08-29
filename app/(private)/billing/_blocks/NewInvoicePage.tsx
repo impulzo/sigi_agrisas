@@ -16,7 +16,7 @@ interface NewInvoicePageProps {
 }
 
 export function NewInvoicePage({ initialSaleId, initialSaleLabel }: NewInvoicePageProps) {
-  const { can } = useCurrentUser();
+  const { can, branchId } = useCurrentUser();
   const canWrite = can("billing:write");
 
   const [mode, setMode] = useState<Mode>("sale");
@@ -50,7 +50,7 @@ export function NewInvoicePage({ initialSaleId, initialSaleLabel }: NewInvoicePa
         {mode === "sale" ? (
           <StampSaleForm initialSaleId={initialSaleId} initialSaleLabel={initialSaleLabel} />
         ) : (
-          <PartialInvoiceForm />
+          <PartialInvoiceForm branchId={branchId} />
         )}
       </div>
     </div>

@@ -120,7 +120,7 @@ export function InvoicePreviewModal({
     <dialog
       ref={dialogRef}
       aria-labelledby="invoice-preview-modal-title"
-      className="rounded-md bg-surface-container p-6 shadow-lg w-full max-w-3xl max-h-[85vh] overflow-y-auto backdrop:bg-black/40"
+      className="rounded-md bg-surface-container p-6 shadow-lg w-full max-w-5xl max-h-[85vh] overflow-y-auto backdrop:bg-black/40"
     >
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
@@ -222,8 +222,13 @@ export function InvoicePreviewModal({
             </dl>
           </div>
 
-          <div className="border border-outline-variant rounded-md overflow-hidden">
-            <div className="grid grid-cols-9 gap-2 border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-sm text-on-surface-variant uppercase tracking-wide">
+<<<<<<< HEAD
+          <div className="border border-outline-variant rounded-md overflow-x-auto min-w-0">
+            <div className="grid grid-cols-9 gap-2 border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-sm text-on-surface-variant uppercase tracking-wide min-w-0">
+=======
+          <div className="border border-outline-variant rounded-md overflow-x-auto min-w-0">
+            <div className="grid grid-cols-9 gap-2 border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-sm text-on-surface-variant uppercase tracking-wide min-w-0">
+>>>>>>> develop
               <span className="col-span-2">Concepto</span>
               <span className="text-right">Cant.</span>
               <span className="text-right">Precio</span>
@@ -236,7 +241,11 @@ export function InvoicePreviewModal({
             {data.lines.map((line, idx) => (
               <div
                 key={`${line.productCode}-${idx}`}
-                className="grid grid-cols-9 gap-2 px-4 py-2 border-b border-outline-variant/40 text-body-sm last:border-b-0"
+<<<<<<< HEAD
+                className="grid grid-cols-9 gap-2 px-4 py-2 border-b border-outline-variant/40 text-body-sm last:border-b-0 min-w-0"
+=======
+                className="grid grid-cols-9 gap-2 px-4 py-2 border-b border-outline-variant/40 text-body-sm last:border-b-0 min-w-0"
+>>>>>>> develop
               >
                 <div className="col-span-2">
                   <p className="text-on-surface font-medium">{line.description}</p>

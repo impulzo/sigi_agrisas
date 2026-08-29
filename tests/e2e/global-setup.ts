@@ -49,7 +49,7 @@ async function seedE2eSatCatalog() {
   });
 
   const provider = await prisma.provider.upsert({
-    where: { rfc: "XPO010101AA1" },
+    where: { code: "PROV_XPO010101AA1" },
     update: {},
     create: {
       code: "PROV_XPO010101AA1",

@@ -5,9 +5,7 @@
 Define la pantalla de administración de usuarios del panel privado de Agrisas: ruta `/users` bajo `(private)`, tabla paginada de usuarios con acciones de edición y eliminación, guard de permiso `users:read`, modal de edición con asignación de roles, y los servicios/hooks de lógica de negocio del módulo.
 
 ---
-
 ## Requirements
-
 ### Requirement: Ruta privada `/users` con guard de permiso `users:read`
 La aplicación SHALL exponer la ruta `/users` dentro del route group `(private)` con un `layout.tsx` que extienda el shell privado y un `page.tsx` que verifique sesión (`refreshToken` en cookies; redirect a `/auth/login` si falta) y renderice el block `UsersPage`. El block SHALL consultar `useCurrentUser().can("users:read")` y mostrar una pantalla "Sin acceso" cuando el resultado sea `false`, un esqueleto cuando sea `"loading"`, y la tabla cuando sea `true`.
 
@@ -146,22 +144,24 @@ El modal de usuario SHALL soportar dos modos mediante una prop `mode: "create" |
 - **Sucursal**: selector poblado por `useBranchesOptions`, con una opción "Sin sucursal" que representa `branchId: null`. Visible en ambos modos.
 - Lista de roles disponibles (cargada desde `GET /api/v1/admin/roles`) como checkboxes; en `edit` los roles actuales del usuario aparecen marcados, en `create` ninguno viene marcado por defecto.
 
+El modal NO SHALL exponer, en ningún modo, un campo para capturar o editar la contraseña de un usuario. El admin nunca ve ni introduce contraseñas ajenas.
+
 En modo `create` el modal además muestra:
 - Título "Crear usuario".
-- Campo **password**: input de tipo password, requerido, validación de longitud mínima (8 caracteres) con error inline.
+- Un texto informativo indicando que se enviará un correo al nuevo usuario para que establezca su propia contraseña.
 - El modal NO exige un `user` precargado (a diferencia de `edit`, donde `user` es obligatorio).
 
-En modo `edit` el título permanece "Editar Usuario" y el campo password no se renderiza.
+En modo `edit` el título permanece "Editar Usuario" y el modal muestra una sección "Contraseña" con un botón "Enviar correo para establecer/restablecer contraseña" que, tras una confirmación (`ConfirmDialog`), dispara `POST /api/v1/admin/users/:id/resend-set-password-email`. Mientras la petición está en vuelo el botón SHALL mostrar estado de carga y quedar deshabilitado; al resolver, el modal SHALL mostrar un mensaje inline de éxito o de error (sin cerrarse por esta acción).
 
-El modal SHALL tener un footer con botones "Cancelar" (cierra sin guardar) y "Guardar Cambios" en `edit` / "Crear usuario" en `create` (envía el formulario). En `edit`, el botón de guardar SHALL estar deshabilitado mientras no haya cambios respecto al estado inicial o mientras una mutación esté en vuelo. En `create`, el botón SHALL estar deshabilitado mientras falten campos requeridos válidos (`name`, `email`, `password`) o mientras una mutación esté en vuelo.
+El modal SHALL tener un footer con botones "Cancelar" (cierra sin guardar) y "Guardar Cambios" en `edit` / "Crear usuario" en `create` (envía el formulario). En `edit`, el botón de guardar SHALL estar deshabilitado mientras no haya cambios respecto al estado inicial o mientras una mutación esté en vuelo. En `create`, el botón SHALL estar deshabilitado mientras falten campos requeridos válidos (`name`, `email`) o mientras una mutación esté en vuelo.
 
 #### Scenario: Apertura del modal en modo edición
 - **WHEN** el usuario pulsa "Editar" en una fila
-- **THEN** el modal se abre con `mode="edit"`, los campos pre-llenos con los datos del usuario, la sucursal actual seleccionada, y los chips de roles marcados según `user.roles`
+- **THEN** el modal se abre con `mode="edit"`, los campos pre-llenos con los datos del usuario, la sucursal actual seleccionada, los chips de roles marcados según `user.roles`, y la sección "Contraseña" con el botón de reenvío (sin ningún campo de contraseña editable)
 
 #### Scenario: Apertura del modal en modo creación
 - **WHEN** el admin pulsa "Crear usuario"
-- **THEN** el modal se abre con `mode="create"`, título "Crear usuario", campos vacíos, campo password visible, y selector de sucursal en "Sin sucursal" por defecto
+- **THEN** el modal se abre con `mode="create"`, título "Crear usuario", campos vacíos, el texto informativo sobre el correo de establecimiento de contraseña, sin campo de contraseña, y selector de sucursal en "Sin sucursal" por defecto
 
 #### Scenario: Validación de email inválido
 - **WHEN** el usuario cambia el email a un valor que no cumple el formato (e.g. "no-email")
@@ -171,13 +171,17 @@ El modal SHALL tener un footer con botones "Cancelar" (cierra sin guardar) y "Gu
 - **WHEN** el campo `avatarUrl` contiene un valor que no es URL válida (y no está vacío)
 - **THEN** se muestra error inline "URL inválida" y el botón de submit se deshabilita
 
-#### Scenario: Validación de password corto en modo creación
-- **WHEN** en `mode="create"` el campo password tiene menos de 8 caracteres
-- **THEN** se muestra error inline "La contraseña debe tener al menos 8 caracteres" y "Crear usuario" se deshabilita
-
 #### Scenario: Cancelar descarta cambios
 - **WHEN** el usuario edita campos y pulsa "Cancelar"
 - **THEN** el modal se cierra sin enviar requests; en `edit`, al reabrirlo los datos vuelven al estado del servidor; en `create`, el formulario queda descartado
+
+#### Scenario: Reenviar correo de establecer/restablecer contraseña
+- **WHEN** en modo `edit` el admin pulsa "Enviar correo para establecer/restablecer contraseña" y confirma en el diálogo de confirmación
+- **THEN** se ejecuta `POST /api/v1/admin/users/:id/resend-set-password-email`; al resolver con éxito el modal muestra un mensaje inline de confirmación sin cerrarse
+
+#### Scenario: Falla el reenvío de correo
+- **WHEN** `POST /api/v1/admin/users/:id/resend-set-password-email` responde HTTP 502 `{"error": "EmailDeliveryFailed"}`
+- **THEN** el modal muestra un mensaje inline de error junto al botón de reenvío, permite reintentar, y no cierra el modal
 
 ---
 
@@ -189,7 +193,9 @@ Al confirmar el modal, el comportamiento SHALL depender del modo (`create` o `ed
 2. Por cada rol marcado que no estaba antes → `POST /api/v1/admin/users/:id/roles` con `{ roleName }`.
 3. Por cada rol desmarcado que sí estaba antes → `DELETE /api/v1/admin/users/:id/roles/:roleId`.
 
-**Modo `create`** — Al pulsar "Crear usuario", la pantalla SHALL ejecutar un único `POST /api/v1/admin/users` con `{ name, email, password, avatarUrl, branchId, roleIds }` (omitiendo campos opcionales no provistos).
+La acción "Enviar correo para establecer/restablecer contraseña" es independiente de este flujo de guardado por diff: se ejecuta inmediatamente al confirmarse (no espera al botón "Guardar Cambios") y no forma parte del diff ni del cierre del modal.
+
+**Modo `create`** — Al pulsar "Crear usuario", la pantalla SHALL ejecutar un único `POST /api/v1/admin/users` con `{ name, email, avatarUrl, branchId, roleIds }` (omitiendo campos opcionales no provistos; sin `password`).
 
 Si todas las operaciones tienen éxito, el modal SHALL cerrarse y el hook `useUsers` SHALL refrescar la página actual (en `create`, adicionalmente resetea a la primera página para mostrar el nuevo usuario si corresponde al orden por fecha de creación descendente). Si alguna falla, el modal permanece abierto y muestra el mensaje del error tipado (`EmailAlreadyInUseError` → "Ese email ya está en uso por otro usuario", `BranchNotFoundError` → "La sucursal seleccionada no existe", `ForbiddenError` → "No tienes permisos para esta acción", `NetworkError` → "Error de conexión", error genérico → mensaje del backend).
 
@@ -218,8 +224,8 @@ Si todas las operaciones tienen éxito, el modal SHALL cerrarse y el hook `useUs
 - **THEN** el modal muestra el mensaje del backend y permanece abierto
 
 #### Scenario: Creación exitosa
-- **WHEN** el admin completa `name`, `email`, `password` (y opcionalmente `branchId`/roles) y pulsa "Crear usuario"
-- **THEN** se ejecuta `POST /admin/users` con esos campos; al recibir 201 el modal se cierra y la tabla refresca mostrando el nuevo usuario
+- **WHEN** el admin completa `name`, `email` (y opcionalmente `branchId`/roles) y pulsa "Crear usuario"
+- **THEN** se ejecuta `POST /admin/users` con esos campos (sin `password`); al recibir 201 el modal se cierra y la tabla refresca mostrando el nuevo usuario
 
 #### Scenario: Creación falla por email duplicado
 - **WHEN** el `POST /admin/users` responde 409
@@ -228,8 +234,6 @@ Si todas las operaciones tienen éxito, el modal SHALL cerrarse y el hook `useUs
 #### Scenario: Creación falla por sucursal inexistente
 - **WHEN** el `POST /admin/users` responde 400 `{ error: "Branch not found" }`
 - **THEN** el modal permanece abierto y muestra el error inline en el selector de sucursal
-
----
 
 ### Requirement: Eliminación con confirmación
 Al pulsar "Eliminar", la pantalla SHALL abrir un `ConfirmDialog` con título "Eliminar usuario", descripción "Esta acción no se puede deshacer. Se eliminará al usuario `<email>` y se removerán todas sus asignaciones de rol.", botón primario "Eliminar" (variante destructiva) y botón secundario "Cancelar". Confirmar SHALL llamar a `DELETE /api/v1/admin/users/:id`; al éxito (HTTP 204) cierra el diálogo y refresca la tabla; al error muestra toast/inline con el mensaje del error.
@@ -322,3 +326,4 @@ Los services SHALL convertir entre ambos antes de devolver al hook.
 #### Scenario: branchId y branchName viajan hasta el dominio
 - **WHEN** el backend devuelve `{ branchId: "<uuid>", branchName: "Matriz" }`
 - **THEN** el `User` de dominio expone `branchId: "<uuid>"` y `branchName: "Matriz"`
+
