@@ -222,8 +222,13 @@ export function InvoicePreviewModal({
             </dl>
           </div>
 
+<<<<<<< HEAD
           <div className="border border-outline-variant rounded-md overflow-x-auto min-w-0">
             <div className="grid grid-cols-9 gap-2 border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-sm text-on-surface-variant uppercase tracking-wide min-w-0">
+=======
+          <div className="border border-outline-variant rounded-md overflow-x-auto min-w-0">
+            <div className="grid grid-cols-9 gap-2 border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-sm text-on-surface-variant uppercase tracking-wide min-w-0">
+>>>>>>> develop
               <span className="col-span-2">Concepto</span>
               <span className="text-right">Cant.</span>
               <span className="text-right">Precio</span>
@@ -236,7 +241,11 @@ export function InvoicePreviewModal({
             {data.lines.map((line, idx) => (
               <div
                 key={`${line.productCode}-${idx}`}
+<<<<<<< HEAD
                 className="grid grid-cols-9 gap-2 px-4 py-2 border-b border-outline-variant/40 text-body-sm last:border-b-0 min-w-0"
+=======
+                className="grid grid-cols-9 gap-2 px-4 py-2 border-b border-outline-variant/40 text-body-sm last:border-b-0 min-w-0"
+>>>>>>> develop
               >
                 <div className="col-span-2">
                   <p className="text-on-surface font-medium">{line.description}</p>

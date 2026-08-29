@@ -8,8 +8,28 @@ function fmtDate(d: Date) {
   return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" }).format(d);
 }
 
-// Feed final explícito antes del corte automático.
-const FINAL_FEED_MM = 8;
+// Constantes de altura estimada por sección del ticket (mm), a 10px monospace en ancho térmico.
+const BASE_HEIGHT_MM = 120; // logo + header de negocio + meta + totales + footer + leyenda + barcode
+const CUSTOMER_SECTION_HEIGHT_MM = 30;
+const CREDIT_LINE_HEIGHT_MM = 8;
+const PER_ITEM_HEIGHT_MM = 12;
+// Margen ampliado (antes 20) para impresoras térmicas cuyo driver puede sustituir el tamaño de
+// página custom por uno propio (ej. EPSON TM-T20II) — evita que el auto-cutter corte contenido
+// o que el driver agregue una hoja en blanco por subestimar la altura real.
+const SAFETY_MARGIN_MM = 35;
+// Feed final explícito antes del corte automático, además del margen de seguridad de altura.
+const FINAL_FEED_MM = 12;
+
+function computeTicketPageHeightMm(sale: SaleDetail): number {
+  return (
+    BASE_HEIGHT_MM +
+    (sale.customerId ? CUSTOMER_SECTION_HEIGHT_MM : 0) +
+    (sale.customerCreditDays != null ? CREDIT_LINE_HEIGHT_MM : 0) +
+    sale.items.length * PER_ITEM_HEIGHT_MM +
+    SAFETY_MARGIN_MM +
+    FINAL_FEED_MM
+  );
+}
 
 interface PrintableTicketProps {
   sale: SaleDetail;
@@ -18,6 +38,7 @@ interface PrintableTicketProps {
 
 export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) {
   const paperWidth = ticketSettings?.paperWidth ?? "80mm";
+  const pageHeightMm = computeTicketPageHeightMm(sale);
   const folioLabel = sale.folioCode;
   const ivaTotal = sale.items.reduce((sum, item) => sum + item.lineIva, 0);
   const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);

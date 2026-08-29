@@ -119,7 +119,7 @@ describe("PrintableTicket", () => {
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
     // sale has 1 item, a customer, and creditDays: 120 + 30 + 8 + 1*12 + 35 (margin) + 12 (feed) = 217mm
-    expect(printStyle).toContain("@page { size: 80mm auto; margin: 4mm 3mm; }");
+    expect(printStyle).toContain("@page { size: 80mm 217mm; margin: 4mm 3mm; }");
   });
 
   it("declares @page size matching the configured 58mm paper width and auto height", () => {
