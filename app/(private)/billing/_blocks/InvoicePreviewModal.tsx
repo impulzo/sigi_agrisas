@@ -5,7 +5,12 @@ import { Button } from "../../../_components/atoms/Button/Button";
 import { DownloadPdfButton } from "../../../_components/molecules/PdfDownloadButton/PdfDownloadButton";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { downloadInvoicePreviewPdf } from "../_logic/services/downloadInvoicePreviewPdf";
-import { resolveFiscalRegimeDescription, resolveCfdiUseDescription } from "../_logic/services/resolveSatDescription";
+import {
+  resolveFiscalRegimeDescription,
+  resolveCfdiUseDescription,
+  resolveSatProductCodeDescription,
+} from "../_logic/services/resolveSatDescription";
+import { describePaymentForm, describePaymentMethod } from "@/shared/domain/catalogs/satPaymentCatalogs";
 import type { InvoicePreviewData } from "../_logic/types/preview";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
@@ -39,10 +44,12 @@ export function InvoicePreviewModal({
     receiverFiscalRegime: string;
     receiverCfdiUse: string;
   } | null>(null);
+  const [satCodeLabels, setSatCodeLabels] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!data) {
       setLabels(null);
+      setSatCodeLabels({});
       return;
     }
     let cancelled = false;
@@ -54,6 +61,21 @@ export function InvoicePreviewModal({
       if (cancelled) return;
       setLabels({ issuerFiscalRegime, receiverFiscalRegime, receiverCfdiUse });
     });
+
+    const uniqueSatCodes = [...new Set(data.lines.map((l) => l.satProductCode).filter((c): c is string => !!c))];
+    if (uniqueSatCodes.length > 0) {
+      Promise.all(uniqueSatCodes.map((code) => resolveSatProductCodeDescription(code))).then((resolvedLabels) => {
+        if (cancelled) return;
+        const mapping: Record<string, string> = {};
+        uniqueSatCodes.forEach((code, idx) => {
+          mapping[code] = resolvedLabels[idx];
+        });
+        setSatCodeLabels(mapping);
+      });
+    } else {
+      setSatCodeLabels({});
+    }
+
     return () => {
       cancelled = true;
     };
@@ -186,28 +208,51 @@ export function InvoicePreviewModal({
             </dl>
           </div>
 
+          <div className="bg-surface-container-low rounded-lg border border-outline-variant p-4">
+            <h3 className="text-title-sm font-semibold text-on-surface mb-3">Datos de pago CFDI</h3>
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div>
+                <dt className="text-label-sm text-on-surface-variant">Forma de pago</dt>
+                <dd className="text-body-sm text-on-surface">{describePaymentForm(data.paymentForm)}</dd>
+              </div>
+              <div>
+                <dt className="text-label-sm text-on-surface-variant">Método de pago</dt>
+                <dd className="text-body-sm text-on-surface">{describePaymentMethod(data.paymentMethod)}</dd>
+              </div>
+            </dl>
+          </div>
+
           <div className="border border-outline-variant rounded-md overflow-hidden">
-            <div className="grid grid-cols-7 gap-2 border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-sm text-on-surface-variant uppercase tracking-wide">
+            <div className="grid grid-cols-9 gap-2 border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-sm text-on-surface-variant uppercase tracking-wide">
               <span className="col-span-2">Concepto</span>
               <span className="text-right">Cant.</span>
               <span className="text-right">Precio</span>
               <span className="text-right">Desc.</span>
               <span className="text-right">IVA</span>
+              <span className="text-right">IEPS</span>
+              <span className="text-right">Subtotal</span>
               <span className="text-right">Total línea</span>
             </div>
             {data.lines.map((line, idx) => (
               <div
                 key={`${line.productCode}-${idx}`}
-                className="grid grid-cols-7 gap-2 px-4 py-2 border-b border-outline-variant/40 text-body-sm last:border-b-0"
+                className="grid grid-cols-9 gap-2 px-4 py-2 border-b border-outline-variant/40 text-body-sm last:border-b-0"
               >
                 <div className="col-span-2">
                   <p className="text-on-surface font-medium">{line.description}</p>
                   <p className="text-label-sm text-on-surface-variant font-mono">{line.productCode}</p>
+                  {(line.satProductCode && (satCodeLabels[line.satProductCode] || line.satProductCode)) && (
+                    <p className="text-label-sm text-on-surface-variant font-mono">
+                      SAT: {satCodeLabels[line.satProductCode] || line.satProductCode}
+                    </p>
+                  )}
                 </div>
                 <span className="text-right tabular-nums">{line.quantity}</span>
                 <span className="text-right tabular-nums">{fmt(line.unitPrice)}</span>
                 <span className="text-right tabular-nums">{line.discountPct.toFixed(0)}%</span>
                 <span className="text-right tabular-nums">{pct(line.ivaRate)}</span>
+                <span className="text-right tabular-nums">{pct(line.iepsRate)}</span>
+                <span className="text-right tabular-nums">{fmt(line.lineSubtotal)}</span>
                 <span className="text-right tabular-nums font-medium">{fmt(line.lineTotal)}</span>
               </div>
             ))}

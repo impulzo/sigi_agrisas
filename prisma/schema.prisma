@@ -984,6 +984,7 @@ model TicketSettings {
   businessAddress   String?  @map("business_address") @db.VarChar(300)
   businessPhone     String?  @map("business_phone") @db.VarChar(30)
   businessTaxRegime String?  @map("business_tax_regime") @db.VarChar(120)
+  businessZipCode   String?  @map("business_zip_code") @db.VarChar(5)
   legendText        String?  @map("legend_text") @db.VarChar(500)
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")

@@ -10,6 +10,7 @@ export interface InvoiceItem {
   productCodeSnapshot: string;
   productNameSnapshot: string;
   satProductCode: string | null;
+  satProductCodeLabel?: string | null;
   satUnitCode: string | null;
   unit: string;
   quantity: number;
@@ -43,6 +44,7 @@ export interface Invoice {
   issuerFiscalRegime: string | null;
   issuerZipCode: string | null;
   issuerAddress: string | null;
+  issuerBranchName?: string | null;
   issuerFiscalRegimeLabel?: string | null;
   receiverFiscalRegimeLabel?: string | null;
   receiverCfdiUseLabel?: string | null;

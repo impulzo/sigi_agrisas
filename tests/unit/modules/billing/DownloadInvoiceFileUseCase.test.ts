@@ -116,7 +116,7 @@ describe("DownloadInvoiceFileUseCase", () => {
     const [, , snapshot] = (gateway.download as jest.Mock).mock.calls[0];
     expect(snapshot).toEqual({
       uuid: "UUID-1234",
-      issuer: { rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null },
+      issuer: { rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null, branchName: null },
       receiver: {
         rfc: "XAXX010101000",
         name: "Cliente",

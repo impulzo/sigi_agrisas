@@ -45,8 +45,10 @@ import { GetCsdStatusUseCase } from "@/modules/billing/application/use-cases/Get
 import { GetEmitterFiscalSettingsUseCase } from "@/modules/billing/application/use-cases/GetEmitterFiscalSettingsUseCase";
 import { SearchSatTaxRegimesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatTaxRegimesUseCase";
 import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCfdiUsesUseCase";
+import { SearchSatCodesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCodesUseCase";
 import { InMemorySatTaxRegimeRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatTaxRegimeRepository";
 import { InMemorySatCfdiUseRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatCfdiUseRepository";
+import { InMemorySatCodeRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatCodeRepository";
 import { upsertEmitterFiscalSettings, getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
 import type { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 import type { BillingLookupService } from "@/modules/billing/application/ports/BillingLookupService";
@@ -100,7 +102,8 @@ function buildController(authzOverride?: AuthorizationService, ticketSettingsRep
     getTicketSettingsUseCase,
     new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase),
     new SearchSatTaxRegimesUseCase(new InMemorySatTaxRegimeRepository()),
-    new SearchSatCfdiUsesUseCase(new InMemorySatCfdiUseRepository())
+    new SearchSatCfdiUsesUseCase(new InMemorySatCfdiUseRepository()),
+    new SearchSatCodesUseCase(new InMemorySatCodeRepository())
   );
 }
 
@@ -440,7 +443,7 @@ describe("BillingController — getEmitterFiscalSettings", () => {
     expect(body).toEqual({
       rfc: "OIRI8506123Y7",
       legalName: "IVAN ENRIQUE OLIVERA RAMIREZ",
-      fiscalRegime: "612 Personas Físicas con Actividad Empresarial",
+      fiscalRegime: "612",
       zipCode: null,
       address: "LIBRES # 105 CENTRO, OCOTLAN DE MORELOS, OAXACA. C.P. 71510",
     });
@@ -458,11 +461,12 @@ describe("BillingController — getEmitterFiscalSettings", () => {
 describe("BillingController — getById resolves SAT catalog descriptions", () => {
   const INVOICE_ID = "12345678-1234-1234-1234-123456789012";
 
-  function buildControllerWithSeededCatalogs() {
+  function buildControllerWithSeededCatalogs(branchName: string | null = null) {
     const repo = new InMemoryInvoiceRepository();
     const gateway = new FakeFacturamaGateway();
     const authz = makeAuthz();
     const lookup = makeLookup();
+    lookup.findBranch = jest.fn().mockResolvedValue(branchName ? { id: "branch-1", code: "MATRIZ", name: branchName, address: null } : null);
     const downloadUseCase = new DownloadInvoiceFileUseCase(repo, gateway);
     const mailer = { send: jest.fn().mockResolvedValue(undefined) };
 
@@ -470,6 +474,8 @@ describe("BillingController — getById resolves SAT catalog descriptions", () =
     taxRegimeRepo.seed([{ code: "601", description: "General de Ley Personas Morales" }]);
     const cfdiUseRepo = new InMemorySatCfdiUseRepository();
     cfdiUseRepo.seed([{ code: "G03", description: "Gastos en general" }]);
+    const satCodeRepo = new InMemorySatCodeRepository();
+    satCodeRepo.seed([{ code: "21102300", description: "Rafia" }]);
 
     const controller = new BillingController(
       new StampInvoiceUseCase(repo, gateway, lookup),
@@ -486,7 +492,8 @@ describe("BillingController — getById resolves SAT catalog descriptions", () =
       new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()),
       new GetEmitterFiscalSettingsUseCase(gateway),
       new SearchSatTaxRegimesUseCase(taxRegimeRepo),
-      new SearchSatCfdiUsesUseCase(cfdiUseRepo)
+      new SearchSatCfdiUsesUseCase(cfdiUseRepo),
+      new SearchSatCodesUseCase(satCodeRepo)
     );
     return { controller, repo };
   }
@@ -539,6 +546,128 @@ describe("BillingController — getById resolves SAT catalog descriptions", () =
     expect(body.issuerFiscalRegimeLabel).toBe("601 - General de Ley Personas Morales");
     expect(body.receiverFiscalRegimeLabel).toBe("601 - General de Ley Personas Morales");
     expect(body.receiverCfdiUseLabel).toBe("G03 - Gastos en general");
+  });
+
+  it("resolves each item's satProductCode to 'code - description' and the issuing branch's name", async () => {
+    const { controller, repo } = buildControllerWithSeededCatalogs("Sucursal Matriz");
+    await repo.createStamped({
+      id: INVOICE_ID,
+      uuid: "AAA-BBB",
+      facturamaCfdiId: "cfdi-1",
+      status: "stamped",
+      cfdiType: "I",
+      cfdiUse: "G03",
+      paymentForm: "01",
+      paymentMethod: "PUE",
+      receiverRfc: "XAXX010101000",
+      receiverName: "Cliente",
+      receiverCfdiUse: "G03",
+      receiverFiscalRegime: "601",
+      receiverTaxZipCode: "45010",
+      issuerRfc: "AGR010101AB1",
+      issuerLegalName: "Agrisas",
+      issuerFiscalRegime: "601",
+      issuerZipCode: "83000",
+      issuerAddress: "Calle Falsa 123",
+      currency: "MXN",
+      subtotal: 100,
+      taxTotal: 16,
+      total: 116,
+      xmlUrl: null,
+      pdfUrl: null,
+      saleId: null,
+      branchId: "branch-1",
+      customerId: null,
+      creatorId: "creator-1",
+      items: [
+        {
+          id: "item-1",
+          productId: null,
+          productCodeSnapshot: "RAF",
+          productNameSnapshot: "Rafia gruesa",
+          satProductCode: "21102300",
+          satUnitCode: "H87",
+          unit: "PZA",
+          quantity: 1,
+          unitPrice: 100,
+          discountPct: null,
+          ivaRate: 0.16,
+          iepsRate: 0,
+          taxObject: "02",
+          lineSubtotal: 100,
+          lineIva: 16,
+          lineIeps: 0,
+          lineTotal: 116,
+        },
+      ],
+    });
+
+    const res = await controller.getById(getByIdReq(), INVOICE_ID);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.issuerBranchName).toBe("Sucursal Matriz");
+    expect(body.items[0].satProductCodeLabel).toBe("21102300 - Rafia");
+  });
+
+  it("item's satProductCodeLabel falls back to the raw code when it has no catalog match", async () => {
+    const { controller, repo } = buildControllerWithSeededCatalogs();
+    await repo.createStamped({
+      id: INVOICE_ID,
+      uuid: "AAA-BBB",
+      facturamaCfdiId: "cfdi-1",
+      status: "stamped",
+      cfdiType: "I",
+      cfdiUse: "G03",
+      paymentForm: "01",
+      paymentMethod: "PUE",
+      receiverRfc: "XAXX010101000",
+      receiverName: "Cliente",
+      receiverCfdiUse: "G03",
+      receiverFiscalRegime: "601",
+      receiverTaxZipCode: "45010",
+      issuerRfc: "AGR010101AB1",
+      issuerLegalName: "Agrisas",
+      issuerFiscalRegime: "601",
+      issuerZipCode: "83000",
+      issuerAddress: "Calle Falsa 123",
+      currency: "MXN",
+      subtotal: 100,
+      taxTotal: 16,
+      total: 116,
+      xmlUrl: null,
+      pdfUrl: null,
+      saleId: null,
+      branchId: "branch-1",
+      customerId: null,
+      creatorId: "creator-1",
+      items: [
+        {
+          id: "item-1",
+          productId: null,
+          productCodeSnapshot: "XXX",
+          productNameSnapshot: "Producto sin catálogo",
+          satProductCode: "99999999",
+          satUnitCode: "H87",
+          unit: "PZA",
+          quantity: 1,
+          unitPrice: 100,
+          discountPct: null,
+          ivaRate: 0.16,
+          iepsRate: 0,
+          taxObject: "02",
+          lineSubtotal: 100,
+          lineIva: 16,
+          lineIeps: 0,
+          lineTotal: 116,
+        },
+      ],
+    });
+
+    const res = await controller.getById(getByIdReq(), INVOICE_ID);
+    const body = await res.json();
+    expect(body.items[0].satProductCodeLabel).toBe("99999999");
+    expect(body.issuerBranchName).toBeNull();
   });
 
   it("issuer label is null when the invoice has no issuer snapshot (pre-migration invoice)", async () => {

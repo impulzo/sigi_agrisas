@@ -16,8 +16,10 @@ import { GetEmitterFiscalSettingsUseCase } from "../../application/use-cases/Get
 import { BillingController } from "../http/BillingController";
 import { PrismaSatTaxRegimeRepository } from "@/modules/sat-codes/infrastructure/repositories/PrismaSatTaxRegimeRepository";
 import { PrismaSatCfdiUseRepository } from "@/modules/sat-codes/infrastructure/repositories/PrismaSatCfdiUseRepository";
+import { PrismaSatCodeRepository } from "@/modules/sat-codes/infrastructure/repositories/PrismaSatCodeRepository";
 import { SearchSatTaxRegimesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatTaxRegimesUseCase";
 import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCfdiUsesUseCase";
+import { SearchSatCodesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCodesUseCase";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
 import { mailer } from "@/shared/infrastructure/di/mailerContainer";
 import type { FacturamaGateway } from "../../application/ports/FacturamaGateway";
@@ -27,10 +29,11 @@ import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cas
 const getTicketSettingsUseCase = new GetTicketSettingsUseCase(new PrismaTicketSettingsRepository(prisma));
 const searchSatTaxRegimesUseCase = new SearchSatTaxRegimesUseCase(new PrismaSatTaxRegimeRepository(prisma));
 const searchSatCfdiUsesUseCase = new SearchSatCfdiUsesUseCase(new PrismaSatCfdiUseRepository(prisma));
+const searchSatCodesUseCase = new SearchSatCodesUseCase(new PrismaSatCodeRepository(prisma));
 
 const isMock = process.env.FACTURAMA_MOCK !== "false";
 const gateway: FacturamaGateway = isMock
-  ? new FakeFacturamaGateway(getTicketSettingsUseCase, searchSatTaxRegimesUseCase, searchSatCfdiUsesUseCase)
+  ? new FakeFacturamaGateway(getTicketSettingsUseCase, searchSatTaxRegimesUseCase, searchSatCfdiUsesUseCase, searchSatCodesUseCase)
   : new FacturamaRestGateway();
 
 const invoiceRepo = new PrismaInvoiceRepository(prisma);
@@ -38,7 +41,7 @@ const lookupService = new PrismaBillingLookupService(prisma);
 
 const stampUseCase = new StampInvoiceUseCase(invoiceRepo, gateway, lookupService, getTicketSettingsUseCase);
 const cancelUseCase = new CancelInvoiceUseCase(invoiceRepo, gateway);
-const downloadUseCase = new DownloadInvoiceFileUseCase(invoiceRepo, gateway);
+const downloadUseCase = new DownloadInvoiceFileUseCase(invoiceRepo, gateway, lookupService);
 const sendEmailUseCase = new SendInvoiceEmailUseCase(invoiceRepo, lookupService, downloadUseCase, mailer);
 const listUseCase = new ListInvoicesUseCase(invoiceRepo);
 const getUseCase = new GetInvoiceUseCase(invoiceRepo);
@@ -62,5 +65,6 @@ export const billingController = new BillingController(
   getTicketSettingsUseCase,
   getEmitterFiscalSettingsUseCase,
   searchSatTaxRegimesUseCase,
-  searchSatCfdiUsesUseCase
+  searchSatCfdiUsesUseCase,
+  searchSatCodesUseCase
 );

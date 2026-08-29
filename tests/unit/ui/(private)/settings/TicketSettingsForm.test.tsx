@@ -31,6 +31,7 @@ const settings: TicketSettingsDto = {
   businessAddress: "Ocotlan de Morelos, Oaxaca. CP 71520",
   businessPhone: "951 292 80 86",
   businessTaxRegime: "612 Personas Físicas con Actividad Empresarial",
+  businessZipCode: "71520",
   legendText: "Gracias por su compra",
 };
 

@@ -95,6 +95,7 @@ function toInvoiceDocumentPdfDataFromSnapshot(snapshot: FacturamaInvoiceSnapshot
       fiscalRegime: snapshot.issuer.fiscalRegime,
       zipCode: snapshot.issuer.zipCode,
       address: snapshot.issuer.address,
+      branchName: snapshot.issuer.branchName,
     },
     receiver: snapshot.receiver,
     lines: snapshot.items.map((item) => ({
@@ -161,7 +162,8 @@ export class FakeFacturamaGateway implements FacturamaGateway {
   constructor(
     private readonly getTicketSettingsUseCase?: GetTicketSettingsUseCase,
     private readonly searchSatTaxRegimesUseCase?: SatCodeSearchUseCase,
-    private readonly searchSatCfdiUsesUseCase?: SatCodeSearchUseCase
+    private readonly searchSatCfdiUsesUseCase?: SatCodeSearchUseCase,
+    private readonly searchSatCodesUseCase?: SatCodeSearchUseCase
   ) {}
 
   // Each call returns a fresh random UUID — unique per stamp, not identical across calls.
@@ -219,6 +221,14 @@ export class FakeFacturamaGateway implements FacturamaGateway {
         ? resolveSatDescription(this.searchSatCfdiUsesUseCase, baseData.receiver.cfdiUse)
         : baseData.receiver.cfdiUse,
     ]);
+    const uniqueSatProductCodes = [...new Set(baseData.lines.map((l) => l.satProductCode).filter((c): c is string => !!c))];
+    const satProductCodeLabelByCode = new Map<string, string>();
+    if (this.searchSatCodesUseCase && uniqueSatProductCodes.length > 0) {
+      const labels = await Promise.all(
+        uniqueSatProductCodes.map((code) => resolveSatDescription(this.searchSatCodesUseCase!, code))
+      );
+      uniqueSatProductCodes.forEach((code, idx) => satProductCodeLabelByCode.set(code, labels[idx]));
+    }
     const data = {
       ...baseData,
       issuer: {
@@ -235,6 +245,10 @@ export class FakeFacturamaGateway implements FacturamaGateway {
         fiscalRegimeLabel: receiverFiscalRegimeLabel,
         cfdiUseLabel: receiverCfdiUseLabel,
       },
+      lines: baseData.lines.map((line) => ({
+        ...line,
+        satProductCodeLabel: line.satProductCode ? satProductCodeLabelByCode.get(line.satProductCode) ?? null : null,
+      })),
     };
     const buffer = await renderToBuffer(
       createElement(InvoiceDocumentPdf, { data, watermark: MOCK_WATERMARK, folioLabel: uuid }) as never

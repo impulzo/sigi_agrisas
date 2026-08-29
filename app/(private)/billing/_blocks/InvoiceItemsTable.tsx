@@ -35,8 +35,8 @@ export function InvoiceItemsTable({ items, subtotal, taxTotal, total }: InvoiceI
               <td className="px-4 py-3">
                 <p className="text-on-surface font-medium">{item.productNameSnapshot}</p>
                 <p className="text-label-sm text-on-surface-variant font-mono">{item.productCodeSnapshot}</p>
-                {item.satProductCode && (
-                  <p className="text-label-sm text-on-surface-variant">SAT: {item.satProductCode}</p>
+                {(item.satProductCodeLabel || item.satProductCode) && (
+                  <p className="text-label-sm text-on-surface-variant">SAT: {item.satProductCodeLabel || item.satProductCode}</p>
                 )}
               </td>
               <td className="px-4 py-3 text-right tabular-nums">{item.quantity}</td>
