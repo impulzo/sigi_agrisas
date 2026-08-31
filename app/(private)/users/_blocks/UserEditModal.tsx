@@ -277,14 +277,14 @@ export function UserEditModal({
           )}
         </div>
 
-        {/* Password (create only): informativo, no se captura */}
+        {/* Aviso de contraseña (solo creación): informativo, no se captura */}
         {mode === "create" && (
           <p className="text-body-sm text-on-surface-variant bg-surface-container-low px-3 py-2 rounded-md">
             Se enviará un correo al nuevo usuario para que establezca su propia contraseña.
           </p>
         )}
 
-        {/* Password (edit only): solo reenvío, nunca edición directa */}
+        {/* Reenvío de contraseña (solo edición): nunca edición directa */}
         {mode === "edit" && user && (
           <div>
             <p className="block text-label-lg text-on-surface-variant mb-1">Contraseña</p>

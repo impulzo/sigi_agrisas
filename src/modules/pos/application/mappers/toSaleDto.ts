@@ -15,7 +15,10 @@ export interface SaleJoinedFields {
   paymentMethodIsCredit: boolean;
 }
 
-export function toSaleItemDto(it: SaleItem): SaleItemDto {
+export function toSaleItemDto(
+  it: SaleItem,
+  satProductCodeByProductId: Record<string, string | null> = {}
+): SaleItemDto {
   return {
     id: it.id,
     productId: it.productId,
@@ -23,6 +26,7 @@ export function toSaleItemDto(it: SaleItem): SaleItemDto {
     productCodeSnapshot: it.productCodeSnapshot,
     productNameSnapshot: it.productNameSnapshot,
     priceNameSnapshot: it.priceNameSnapshot,
+    satProductCode: satProductCodeByProductId[it.productId] ?? null,
     quantity: it.quantity,
     unitPrice: it.unitPrice,
     discountPct: it.discountPct,
@@ -75,11 +79,12 @@ export function toSaleDto(s: Sale, joined: SaleJoinedFields): SaleDto {
 export function toSaleDetailDto(
   s: Sale,
   joined: SaleJoinedFields,
-  returnedAggregate: Record<string, number> = {}
+  returnedAggregate: Record<string, number> = {},
+  satProductCodeByProductId: Record<string, string | null> = {}
 ): SaleDetailDto {
   return {
     ...toSaleDto(s, joined),
-    items: s.items.map(toSaleItemDto),
+    items: s.items.map((it) => toSaleItemDto(it, satProductCodeByProductId)),
     returnedQuantityBySaleItem: returnedAggregate,
   };
 }

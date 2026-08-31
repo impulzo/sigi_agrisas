@@ -123,6 +123,17 @@ describe("toSaleItemDto", () => {
     expect(dto.lineTax).toBe(48);
   });
 
+  it("resolves satProductCode from the productId map (parity with billing's live join)", () => {
+    const dto = toSaleItemDto(buildItem(), { "product-1": "10171500" });
+    expect(dto.satProductCode).toBe("10171500");
+  });
+
+  it("defaults satProductCode to null when the product has no SAT code or the map is omitted", () => {
+    expect(toSaleItemDto(buildItem()).satProductCode).toBeNull();
+    expect(toSaleItemDto(buildItem(), { "product-1": null }).satProductCode).toBeNull();
+    expect(toSaleItemDto(buildItem(), { "other-product": "10171500" }).satProductCode).toBeNull();
+  });
+
   it("defaults to 0 when ivaRate/iepsRate are null", () => {
     const dto = toSaleItemDto(
       buildItem({ ivaRate: null, iepsRate: null, lineTax: 0, lineTotal: 200 })

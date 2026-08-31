@@ -5,6 +5,7 @@ export interface SaleItemDto {
   productCodeSnapshot: string;
   productNameSnapshot: string;
   priceNameSnapshot: string;
+  satProductCode: string | null;
   quantity: number;
   unitPrice: number;
   discountPct: number | null;

@@ -35,6 +35,7 @@ export function UsersPage() {
     isSaving,
     mutationError,
     clearError,
+    clearSetPasswordEmailStatus,
     createNewUser,
     saveUserDiff,
     removeUser,
@@ -91,18 +92,21 @@ export function UsersPage() {
 
   const handleEdit = useCallback((user: User) => {
     clearError();
+    clearSetPasswordEmailStatus();
     setEditingUser(user);
-  }, [clearError]);
+  }, [clearError, clearSetPasswordEmailStatus]);
 
   const handleOpenCreate = useCallback(() => {
     clearError();
+    clearSetPasswordEmailStatus();
     setIsCreating(true);
-  }, [clearError]);
+  }, [clearError, clearSetPasswordEmailStatus]);
 
   const handleCloseModal = useCallback(() => {
     setEditingUser(null);
     setIsCreating(false);
-  }, []);
+    clearSetPasswordEmailStatus();
+  }, [clearSetPasswordEmailStatus]);
 
   const handleSave = useCallback(
     async (params: {

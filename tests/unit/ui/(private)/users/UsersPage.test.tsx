@@ -33,6 +33,7 @@ jest.spyOn(useUserMutationsModule, "useUserMutations").mockReturnValue({
   isSaving: false,
   mutationError: null,
   clearError: jest.fn(),
+  clearSetPasswordEmailStatus: jest.fn(),
   createNewUser: jest.fn(),
   saveUserDiff: jest.fn(),
   removeUser: jest.fn(),

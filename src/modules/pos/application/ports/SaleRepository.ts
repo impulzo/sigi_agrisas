@@ -5,6 +5,7 @@ export interface SaleSummary {
   sale: Sale;
   joined: SaleJoinedFields;
   returnedQuantityBySaleItem?: Record<string, number>;
+  satProductCodeByProductId?: Record<string, string | null>;
 }
 
 export interface FindAllSalesOptions {

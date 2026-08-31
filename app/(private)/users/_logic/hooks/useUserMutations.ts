@@ -37,6 +37,7 @@ interface UseUserMutationsResult {
   isSaving: boolean;
   mutationError: string | null;
   clearError: () => void;
+  clearSetPasswordEmailStatus: () => void;
   createNewUser: (params: CreateUserParams) => Promise<User | null>;
   saveUserDiff: (params: SaveDiffParams) => Promise<User | null>;
   removeUser: (userId: string) => Promise<boolean>;
@@ -54,6 +55,10 @@ export function useUserMutations(): UseUserMutationsResult {
   const [setPasswordEmailSuccess, setSetPasswordEmailSuccess] = useState<string | null>(null);
 
   const clearError = useCallback(() => setMutationError(null), []);
+  const clearSetPasswordEmailStatus = useCallback(() => {
+    setSetPasswordEmailError(null);
+    setSetPasswordEmailSuccess(null);
+  }, []);
 
   const createNewUser = useCallback(async ({ name, email, avatarUrlInput, branchId, stagedRoleIds, catalog }: CreateUserParams): Promise<User | null> => {
     setIsSaving(true);
@@ -163,6 +168,7 @@ export function useUserMutations(): UseUserMutationsResult {
     isSaving,
     mutationError,
     clearError,
+    clearSetPasswordEmailStatus,
     createNewUser,
     saveUserDiff,
     removeUser,
