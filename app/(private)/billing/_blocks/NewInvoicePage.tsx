@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
+import { authFetch } from "../../../_lib/authFetch";
 import { SegmentedButton } from "../../../_components/molecules/SegmentedButton/SegmentedButton";
+import { Select } from "../../../_components/atoms/Select/Select";
 import { StampSaleForm } from "./StampSaleForm";
 import { PartialInvoiceForm } from "./PartialInvoiceForm";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
+import type { BranchOption } from "../../pos/_logic/types/api";
 
 type Mode = "sale" | "partial";
 
@@ -18,8 +21,27 @@ interface NewInvoicePageProps {
 export function NewInvoicePage({ initialSaleId, initialSaleLabel }: NewInvoicePageProps) {
   const { can, branchId } = useCurrentUser();
   const canWrite = can("billing:write");
+  const isBypass = can("branches:access_all") === true;
 
   const [mode, setMode] = useState<Mode>("sale");
+  const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
+
+  useEffect(() => {
+    if (!isBypass && branchId) {
+      setBranches([{ id: branchId, code: "", name: "Mi sucursal", isHeadquarters: false }]);
+      setSelectedBranchId(branchId);
+      return;
+    }
+    if (isBypass) {
+      authFetch("/api/v1/admin/branches?pageSize=100&includeInactive=false")
+        .then((r) => r.json())
+        .then((body: { items: BranchOption[] }) => setBranches(body.items))
+        .catch(() => {});
+    }
+  }, [isBypass, branchId]);
+
+  const effectiveBranchId = selectedBranchId || null;
 
   if (canWrite === "loading") {
     return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
@@ -46,11 +68,30 @@ export function NewInvoicePage({ initialSaleId, initialSaleLabel }: NewInvoicePa
         aria-label="Tipo de factura"
       />
 
+      {mode === "partial" && isBypass && (
+        <div className="max-w-xs">
+          <label htmlFor="partial-invoice-branch" className="block text-label-md text-on-surface mb-1">
+            Sucursal (para resolver precios de catálogo)
+          </label>
+          <Select
+            id="partial-invoice-branch"
+            value={selectedBranchId}
+            onChange={(e) => setSelectedBranchId(e.target.value)}
+            aria-label="Sucursal"
+          >
+            <option value="">— Selecciona sucursal —</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </Select>
+        </div>
+      )}
+
       <div className="bg-surface-container-low rounded-lg border border-outline-variant p-6">
         {mode === "sale" ? (
           <StampSaleForm initialSaleId={initialSaleId} initialSaleLabel={initialSaleLabel} />
         ) : (
-          <PartialInvoiceForm branchId={branchId} />
+          <PartialInvoiceForm branchId={effectiveBranchId} />
         )}
       </div>
     </div>
