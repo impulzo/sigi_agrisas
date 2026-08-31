@@ -59,6 +59,7 @@ export async function searchProducts(
     name: item.name as string,
     ivaRate: item.ivaRate as number | null,
     iepsRate: item.iepsRate as number | null,
+    satProductCode: item.satProductCode as string | null,
     isActive: item.isActive as boolean,
     departmentId: item.departmentId as string,
     departmentName: item.departmentName as string | undefined,
