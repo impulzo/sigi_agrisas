@@ -13,12 +13,18 @@ const BASE_HEIGHT_MM = 120; // logo + header de negocio + meta + totales + foote
 const CUSTOMER_SECTION_HEIGHT_MM = 30;
 const CREDIT_LINE_HEIGHT_MM = 8;
 const PER_ITEM_HEIGHT_MM = 12;
-// Margen ampliado (antes 20) para impresoras térmicas cuyo driver puede sustituir el tamaño de
-// página custom por uno propio (ej. EPSON TM-T20II) — evita que el auto-cutter corte contenido
-// o que el driver agregue una hoja en blanco por subestimar la altura real.
-const SAFETY_MARGIN_MM = 35;
-// Feed final explícito antes del corte automático, además del margen de seguridad de altura.
-const FINAL_FEED_MM = 12;
+// Colchón recalibrado (antes 35) — el valor previo generaba una hoja/página en blanco extra al
+// final. Sigue absorbiendo subestimaciones de altura (word-wrap de nombres/direcciones largas);
+// se apoya en box-sizing:border-box (ancho) y FINAL_FEED_MM (corte) para el resto de la robustez.
+const SAFETY_MARGIN_MM = 15;
+// Feed final explícito antes del corte automático (antes 12), recalibrado junto con SAFETY_MARGIN_MM.
+const FINAL_FEED_MM = 6;
+// Márgenes base de @page (impresión browser).
+const BASE_TOP_MARGIN_MM = 4;
+const BOTTOM_MARGIN_MM = 4;
+const SIDE_MARGIN_MM = 3;
+// Margen superior adicional, proporcional al alto de contenido del ticket.
+const EXTRA_TOP_MARGIN_PCT = 0.05;
 
 function computeTicketPageHeightMm(sale: SaleDetail): number {
   return (
@@ -38,7 +44,12 @@ interface PrintableTicketProps {
 
 export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) {
   const paperWidth = ticketSettings?.paperWidth ?? "80mm";
-  const pageHeightMm = computeTicketPageHeightMm(sale);
+  const contentHeightMm = computeTicketPageHeightMm(sale);
+  // Margen superior adicional (5% del alto de contenido) se compensa sumándolo también al alto
+  // total de @page, para que el aire extra no le reste espacio al colchón de contenido.
+  const extraTopMarginMm = Math.round(contentHeightMm * EXTRA_TOP_MARGIN_PCT);
+  const topMarginMm = BASE_TOP_MARGIN_MM + extraTopMarginMm;
+  const pageHeightMm = contentHeightMm + extraTopMarginMm;
   const folioLabel = sale.folioCode;
   const ivaTotal = sale.items.reduce((sum, item) => sum + item.lineIva, 0);
   const iepsTotal = sale.items.reduce((sum, item) => sum + item.lineIeps, 0);
@@ -53,12 +64,14 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
   return (
     <div className="printable-ticket print-area hidden print:block">
       <style>{`
-        @page { size: ${paperWidth} ${pageHeightMm}mm; margin: 4mm 3mm; }
+        @page { size: ${paperWidth} ${pageHeightMm}mm; margin: ${topMarginMm}mm ${SIDE_MARGIN_MM}mm ${BOTTOM_MARGIN_MM}mm ${SIDE_MARGIN_MM}mm; }
         @media print {
           .printable-ticket {
             width: ${paperWidth};
             margin: 0 !important;
             position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
             font-family: monospace, monospace;
             font-size: 10px;
             color: #000000 !important;

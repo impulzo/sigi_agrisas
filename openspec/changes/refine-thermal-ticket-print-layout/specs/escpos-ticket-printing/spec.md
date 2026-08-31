@@ -1,6 +1,13 @@
 ## Purpose
 
-Define el contrato de impresión directa ESC/POS para tickets de venta: configuración de impresora por sucursal, el payload que el navegador envía a un agente local, y el comportamiento de reintento/fallback cuando ese agente no responde — como alternativa a `window.print()` para sucursales cuyo driver de impresora térmica no respeta el `@page` calculado por el navegador.
+Define el contrato de impresión directa ESC/POS para tickets de venta: configuración de impresora por
+sucursal, el payload que el navegador envía a un agente local, y el comportamiento de reintento/fallback
+cuando ese agente no responde — como alternativa a `window.print()` para sucursales cuyo driver de
+impresora térmica no respeta el `@page` calculado por el navegador.
+
+<!-- Carry-over sin cambios desde add-escpos-ticket-printing (24/24 tareas completas, feature
+independiente). Este change (refine-thermal-ticket-print-layout) no modifica esta capability — solo la
+incorpora al canonical por primera vez junto con el resto del merge de ticket-print-ui. -->
 
 ## ADDED Requirements
 

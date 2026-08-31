@@ -20,7 +20,7 @@ const updatePrinterConfigSchema = z.object({
   printMode: z.enum(["browser", "escpos"]).optional(),
   agentUrl: z
     .string()
-    .regex(/^https?:\/\/(localhost|127\.0\.0\.1):\d+$/, "agentUrl must be http(s)://localhost:<port> or http(s)://127.0.0.1:<port>")
+    .regex(/^http:\/\/(localhost|127\.0\.0\.1):\d+$/, "agentUrl must be http://localhost:<port> or http://127.0.0.1:<port>")
     .nullable()
     .optional(),
   printerHost: z.string().min(1).max(200).nullable().optional(),
