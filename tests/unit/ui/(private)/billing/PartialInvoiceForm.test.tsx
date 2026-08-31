@@ -191,3 +191,24 @@ describe("PartialInvoiceForm — handleChangeTier passes the same effectiveBranc
     expect(mockGetProductPrices).toHaveBeenNthCalledWith(2, "prod-1", null);
   });
 });
+
+describe("PartialInvoiceForm — changing branchId does not retroactively re-price existing lines", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("a line added under branch A keeps its unitPrice after the branchId prop changes to branch B", async () => {
+    mockGetProductPrices.mockResolvedValueOnce([
+      { id: "price-a", productId: "prod-1", name: "Precio sucursal A", price: 100, minQuantity: 1, discountPct: 0, isDefault: true },
+    ]);
+    const { rerender } = render(<PartialInvoiceForm branchId="branch-a" />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /\+ catálogo/i }));
+    await user.click(screen.getByRole("button", { name: /agregar producto de prueba/i }));
+    await screen.findByDisplayValue("100");
+
+    rerender(<PartialInvoiceForm branchId="branch-b" />);
+
+    expect(screen.getByDisplayValue("100")).toBeInTheDocument();
+    expect(mockGetProductPrices).toHaveBeenCalledTimes(1);
+  });
+});

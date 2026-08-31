@@ -15,7 +15,6 @@ import { ReceiverFiscalDataIncompleteError, FacturamaStampError } from "../_logi
 import { SAT_PAYMENT_FORMS, SAT_PAYMENT_METHODS } from "@/shared/domain/catalogs/satPaymentCatalogs";
 import type { CustomerDto } from "../../pos/_logic/types/api";
 import type { ProductDto, ProductPriceDto } from "../../pos/_logic/types/api";
-import { useHeadquarters } from "../../../_hooks/useHeadquarters";
 
 interface PricePickerState {
   product: ProductDto;
@@ -34,8 +33,7 @@ interface PartialInvoiceFormProps {
 }
 
 export function PartialInvoiceForm({ branchId }: PartialInvoiceFormProps) {
-  const { hq } = useHeadquarters();
-  const effectiveBranchId = branchId ?? hq?.id ?? null;
+  const effectiveBranchId = branchId ?? null;
 
   const {
     customer, setCustomer, fiscalMissingFields,
