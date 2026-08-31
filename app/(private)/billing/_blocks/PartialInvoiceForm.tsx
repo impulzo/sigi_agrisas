@@ -91,7 +91,7 @@ export function PartialInvoiceForm({ branchId }: PartialInvoiceFormProps) {
   }
 
   async function handleAddProduct(product: ProductDto) {
-    const prices = await getProductPrices(product.id);
+    const prices = await getProductPrices(product.id, effectiveBranchId);
     const defaultPrice = prices.find((p) => p.isDefault) ?? prices[0] ?? null;
     addLine({
       productId: product.id,

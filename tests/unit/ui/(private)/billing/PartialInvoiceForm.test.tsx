@@ -130,6 +130,20 @@ describe("PartialInvoiceForm — handleAddProduct preselects default price", () 
     expect(screen.getByRole("button", { name: /precio mayoreo/i })).toBeInTheDocument();
   });
 
+  it("passes effectiveBranchId to getProductPrices when adding from the catalog (regression: was omitted, causing branch-scoped-only prices to resolve empty)", async () => {
+    mockGetProductPrices.mockResolvedValueOnce([
+      { id: "price-1", productId: "prod-1", name: "Precio sucursal", price: 100, minQuantity: 1, discountPct: 0, isDefault: true },
+    ]);
+    render(<PartialInvoiceForm />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /\+ catálogo/i }));
+    await user.click(screen.getByRole("button", { name: /agregar producto de prueba/i }));
+
+    await screen.findByDisplayValue("100");
+    expect(mockGetProductPrices).toHaveBeenCalledWith("prod-1", null);
+  });
+
   it("falls back to the first price when none is marked default", async () => {
     mockGetProductPrices.mockResolvedValueOnce([
       { id: "price-1", productId: "prod-1", name: "Único precio", price: 75, minQuantity: 1, discountPct: 0, isDefault: false },
@@ -153,5 +167,27 @@ describe("PartialInvoiceForm — handleAddProduct preselects default price", () 
 
     expect(await screen.findByText("Elegir precio")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("0.00")).toHaveValue("0");
+  });
+});
+
+describe("PartialInvoiceForm — handleChangeTier passes the same effectiveBranchId as handleAddProduct", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("calls getProductPrices with effectiveBranchId on both the initial catalog add and the tier-change click", async () => {
+    mockGetProductPrices.mockResolvedValue([
+      { id: "price-1", productId: "prod-1", name: "Precio menudeo", price: 50, minQuantity: 1, discountPct: 0, isDefault: false },
+      { id: "price-2", productId: "prod-1", name: "Precio mayoreo", price: 250, minQuantity: 10, discountPct: 0, isDefault: true },
+    ]);
+    render(<PartialInvoiceForm />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /\+ catálogo/i }));
+    await user.click(screen.getByRole("button", { name: /agregar producto de prueba/i }));
+    await screen.findByDisplayValue("250");
+
+    await user.click(screen.getByRole("button", { name: /precio mayoreo/i }));
+
+    expect(mockGetProductPrices).toHaveBeenNthCalledWith(1, "prod-1", null);
+    expect(mockGetProductPrices).toHaveBeenNthCalledWith(2, "prod-1", null);
   });
 });
