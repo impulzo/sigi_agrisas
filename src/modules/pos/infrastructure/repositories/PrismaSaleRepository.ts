@@ -253,7 +253,24 @@ export class PrismaSaleRepository implements SaleRepository {
     const summary = toSummary(row as unknown as PrismaSaleWithJoins);
     const saleItemIds = summary.sale.items.map((i) => i.id);
     summary.returnedQuantityBySaleItem = await this.aggregateReturnedQty(saleItemIds);
+    summary.satProductCodeByProductId = await this.findSatProductCodesByProductId(
+      summary.sale.items.map((i) => i.productId)
+    );
     return summary;
+  }
+
+  private async findSatProductCodesByProductId(productIds: string[]): Promise<Record<string, string | null>> {
+    const uniqueIds = Array.from(new Set(productIds));
+    if (uniqueIds.length === 0) return {};
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true, satProductCode: true },
+    });
+    const result: Record<string, string | null> = {};
+    for (const p of products) {
+      result[p.id] = p.satProductCode ?? null;
+    }
+    return result;
   }
 
   async findByClientRequestId(clientRequestId: string): Promise<SaleSummary | null> {

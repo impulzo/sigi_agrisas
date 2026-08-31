@@ -5,6 +5,7 @@ import * as updateModule from "../../../../../../app/(private)/users/_logic/serv
 import * as deleteModule from "../../../../../../app/(private)/users/_logic/services/deleteUser";
 import * as assignModule from "../../../../../../app/(private)/users/_logic/services/assignRoleToUser";
 import * as revokeModule from "../../../../../../app/(private)/users/_logic/services/revokeRoleFromUser";
+import * as resendSetPasswordEmailModule from "../../../../../../app/(private)/users/_logic/services/resendSetPasswordEmail";
 import type { User } from "../../../../../../app/(private)/users/_logic/types/domain";
 
 const BASE_USER: User = {
@@ -157,5 +158,42 @@ describe("useUserMutations", () => {
     });
     expect(created).toBeNull();
     expect(result.current.mutationError).toBe("Email already in use");
+  });
+
+  it("resendSetPasswordEmail setea setPasswordEmailSuccess con el destinatario y devuelve true", async () => {
+    jest.spyOn(resendSetPasswordEmailModule, "resendSetPasswordEmail").mockResolvedValue({ sentTo: "ana@test.com" });
+
+    const { result } = renderHook(() => useUserMutations());
+    let ok = false;
+    await act(async () => { ok = await result.current.resendSetPasswordEmail("u1"); });
+
+    expect(ok).toBe(true);
+    expect(result.current.setPasswordEmailSuccess).toBe("Correo enviado a ana@test.com");
+    expect(result.current.setPasswordEmailError).toBeNull();
+  });
+
+  it("resendSetPasswordEmail setea setPasswordEmailError y devuelve false si falla", async () => {
+    jest.spyOn(resendSetPasswordEmailModule, "resendSetPasswordEmail").mockRejectedValue(new Error("EmailDeliveryFailed"));
+
+    const { result } = renderHook(() => useUserMutations());
+    let ok = true;
+    await act(async () => { ok = await result.current.resendSetPasswordEmail("u1"); });
+
+    expect(ok).toBe(false);
+    expect(result.current.setPasswordEmailError).toBe("EmailDeliveryFailed");
+    expect(result.current.setPasswordEmailSuccess).toBeNull();
+  });
+
+  it("clearSetPasswordEmailStatus limpia el banner de éxito/error de un usuario anterior (evita estado obsoleto al reabrir el modal)", async () => {
+    jest.spyOn(resendSetPasswordEmailModule, "resendSetPasswordEmail").mockResolvedValue({ sentTo: "alice@test.com" });
+
+    const { result } = renderHook(() => useUserMutations());
+    await act(async () => { await result.current.resendSetPasswordEmail("u1"); });
+    expect(result.current.setPasswordEmailSuccess).toBe("Correo enviado a alice@test.com");
+
+    act(() => result.current.clearSetPasswordEmailStatus());
+
+    expect(result.current.setPasswordEmailSuccess).toBeNull();
+    expect(result.current.setPasswordEmailError).toBeNull();
   });
 });

@@ -26,6 +26,7 @@ const SOURCE = {
       {
         productNameSnapshot: "Fertilizante",
         productCodeSnapshot: "SKU1",
+        satProductCode: "10171500",
         quantity: 1,
         unitPrice: 100,
         discountPct: 0,
@@ -75,6 +76,26 @@ describe("useInvoicePreview", () => {
       address: "Calle Falsa 123",
     });
     expect(result.current.error).toBeNull();
+  });
+
+  it("propagates satProductCode per line from the sale source (parity with the free-line/PartialInvoiceForm path)", async () => {
+    mockedSource.mockResolvedValue(SOURCE);
+    mockedEmitter.mockResolvedValue({
+      rfc: "AGR010101AB1",
+      legalName: "Agrisas SA de CV",
+      fiscalRegime: "601",
+      zipCode: "83000",
+      address: "Calle Falsa 123",
+    });
+
+    const { result } = renderHook(() => useInvoicePreview());
+
+    await act(async () => {
+      await result.current.load("sale-1", { paymentForm: "01", paymentMethod: "PUE" });
+    });
+
+    await waitFor(() => expect(result.current.data).not.toBeNull());
+    expect(result.current.data!.lines[0].satProductCode).toBe("10171500");
   });
 
   it("uses the resolved legalName as razón social — not a hardcoded company name (regression: this used to ignore legalName entirely)", async () => {

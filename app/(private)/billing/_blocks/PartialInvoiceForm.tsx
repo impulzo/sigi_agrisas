@@ -97,7 +97,7 @@ export function PartialInvoiceForm({ branchId }: PartialInvoiceFormProps) {
       productId: product.id,
       productCode: product.code,
       description: product.name,
-      satProductCode: "",
+      satProductCode: product.satProductCode ?? "",
       satUnitCode: "",
       unit: "H87",
       quantity: 1,

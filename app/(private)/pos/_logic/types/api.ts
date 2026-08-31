@@ -14,6 +14,7 @@ export interface ProductDto {
   name: string;
   ivaRate: number | null;
   iepsRate: number | null;
+  satProductCode?: string | null;
   isActive: boolean;
   departmentId: string;
   departmentName?: string;

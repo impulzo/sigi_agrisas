@@ -16,6 +16,7 @@ export interface InvoiceItemDto {
   lineIva: number;
   lineIeps: number;
   lineTotal: number;
+  satProductCodeLabel?: string | null;
 }
 
 export interface InvoiceDto {
@@ -51,6 +52,7 @@ export interface InvoiceDto {
   createdAt: string;
   updatedAt: string;
   items?: InvoiceItemDto[];
+  issuerBranchName?: string | null;
 }
 
 // --- Request types ---

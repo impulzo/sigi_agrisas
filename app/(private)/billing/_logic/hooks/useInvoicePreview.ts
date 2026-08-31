@@ -47,6 +47,7 @@ export function useInvoicePreview(): UseInvoicePreviewResult {
         lines: source.sale.items.map((item) => ({
           description: item.productNameSnapshot,
           productCode: item.productCodeSnapshot,
+          satProductCode: item.satProductCode,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           discountPct: item.discountPct,

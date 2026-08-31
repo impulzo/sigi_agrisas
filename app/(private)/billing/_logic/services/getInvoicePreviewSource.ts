@@ -3,6 +3,7 @@ import { authFetch, ForbiddenError, NetworkError } from "../../../../_lib/authFe
 export interface InvoicePreviewSaleItemSource {
   productNameSnapshot: string;
   productCodeSnapshot: string;
+  satProductCode: string | null;
   quantity: number;
   unitPrice: number;
   discountPct: number;
@@ -32,6 +33,7 @@ export interface InvoicePreviewSource {
 interface SaleDetailApiItemShape {
   productNameSnapshot: string;
   productCodeSnapshot: string;
+  satProductCode?: string | null;
   quantity: number;
   unitPrice: number;
   discountPct: number | null;
@@ -74,6 +76,7 @@ export async function getInvoicePreviewSource(
     items: saleDto.items.map((item) => ({
       productNameSnapshot: item.productNameSnapshot,
       productCodeSnapshot: item.productCodeSnapshot,
+      satProductCode: item.satProductCode ?? null,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       discountPct: item.discountPct ?? 0,

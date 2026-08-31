@@ -101,6 +101,40 @@ describe("GetSaleUseCase", () => {
     expect(result.dto.items[0].unitPrice).toBe(50);
   });
 
+  it("propaga satProductCode por línea desde satProductCodeByProductId del repo (paridad con facturación)", async () => {
+    const { repo, useCase } = makeUseCase();
+    const created = await repo.createCompleted({
+      branchId: "b1", customerId: "c1", cashierId: "u1",
+      paymentMethodId: "pm1", folioId: "f1", notes: null,
+      paidAmount: 116, paymentStatus: "paid",
+      subtotal: 100, taxTotal: 16, total: 116,
+      items: [
+        {
+          productId: "prod-sat-1",
+          productPriceId: "price-1",
+          dosificationId: null,
+          numPartsSnapshot: null,
+          productCodeSnapshot: "PROD001",
+          productNameSnapshot: "Producto Uno",
+          priceNameSnapshot: "Lista",
+          quantity: 2,
+          unitPrice: 50,
+          discountPct: null,
+          ivaRate: 0.16,
+          iepsRate: null,
+          lineSubtotal: 100,
+          lineTax: 16,
+          lineTotal: 116,
+        },
+      ],
+    });
+    // Simula el join de producto que PrismaSaleRepository.findByIdWithItems hace en real DB.
+    created.satProductCodeByProductId = { "prod-sat-1": "10171500" };
+
+    const result = await useCase.execute(created.sale.id);
+    expect(result.dto.items[0].satProductCode).toBe("10171500");
+  });
+
   it("devuelve venta cancelada con sus campos de cancelación", async () => {
     const { repo, useCase } = makeUseCase();
     const created = await repo.createCompleted({

@@ -15,7 +15,12 @@ export class GetSaleUseCase {
     const summary = await this.repo.findByIdWithItems(id);
     if (!summary) throw new SaleNotFoundError(id);
     return {
-      dto: toSaleDetailDto(summary.sale, summary.joined, summary.returnedQuantityBySaleItem ?? {}),
+      dto: toSaleDetailDto(
+        summary.sale,
+        summary.joined,
+        summary.returnedQuantityBySaleItem ?? {},
+        summary.satProductCodeByProductId ?? {}
+      ),
       branchId: summary.sale.branchId,
     };
   }
