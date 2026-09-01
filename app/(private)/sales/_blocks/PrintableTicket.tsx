@@ -1,5 +1,6 @@
 import type { SaleDetail } from "../_logic/types/domain";
 import type { TicketSettingsDto } from "../../settings/_logic/types/api";
+import { resolveTicketConditionsLine } from "../_logic/lib/resolveTicketConditionsLine";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
 function fmt(n: number) { return MX.format(n); }
@@ -11,7 +12,7 @@ function fmtDate(d: Date) {
 // Constantes de altura estimada por sección del ticket (mm), a 10px monospace en ancho térmico.
 const BASE_HEIGHT_MM = 85; // logo + header de negocio + meta + totales + footer + leyenda + barcode (recalibrado desde 120 por overestimación)
 const CUSTOMER_SECTION_HEIGHT_MM = 30;
-const CREDIT_LINE_HEIGHT_MM = 8;
+const CONDITIONS_LINE_HEIGHT_MM = 8;
 const PER_ITEM_HEIGHT_MM = 12;
 // Colchón recalibrado (antes 35) — el valor previo generaba una hoja/página en blanco extra al
 // final. Sigue absorbiendo subestimaciones de altura (word-wrap de nombres/direcciones largas);
@@ -30,7 +31,7 @@ function computeTicketPageHeightMm(sale: SaleDetail): number {
   return (
     BASE_HEIGHT_MM +
     (sale.customerId ? CUSTOMER_SECTION_HEIGHT_MM : 0) +
-    (sale.customerCreditDays != null ? CREDIT_LINE_HEIGHT_MM : 0) +
+    CONDITIONS_LINE_HEIGHT_MM +
     sale.items.length * PER_ITEM_HEIGHT_MM +
     SAFETY_MARGIN_MM +
     FINAL_FEED_MM
@@ -128,13 +129,11 @@ export function PrintableTicket({ sale, ticketSettings }: PrintableTicketProps) 
         </>
       )}
 
-      {/* Condiciones de crédito */}
-      {sale.customerCreditDays != null && (
-        <p style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Condiciones</span>
-          <span>Crédito a {sale.customerCreditDays} días</span>
-        </p>
-      )}
+      {/* Condiciones de pago */}
+      <p style={{ display: "flex", justifyContent: "space-between" }}>
+        <span>Condiciones</span>
+        <span>{resolveTicketConditionsLine(sale)}</span>
+      </p>
 
       <table>
         <tbody>

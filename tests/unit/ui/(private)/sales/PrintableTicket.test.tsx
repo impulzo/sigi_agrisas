@@ -118,7 +118,7 @@ describe("PrintableTicket", () => {
     const { container } = render(<PrintableTicket sale={sale} ticketSettings={null} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
-    // content: 85 + 30 + 8 + 1*12 + 15 (safety) + 6 (feed) = 156mm; extra top = round(156*0.05) = 8mm
+    // content: 85 + 30 (customer) + 8 (conditions, always) + 1*12 + 15 (safety) + 6 (feed) = 156mm; extra top = round(156*0.05) = 8mm
     // pageHeight = 156 + 8 = 164mm; topMargin = 4 + 8 = 12mm
     expect(printStyle).toContain("@page { size: 80mm 164mm; margin: 12mm 3mm 4mm 3mm; }");
   });
@@ -131,14 +131,14 @@ describe("PrintableTicket", () => {
     expect(printStyle).toContain("@page { size: 58mm 164mm; margin: 12mm 3mm 4mm 3mm; }");
   });
 
-  it("declares @page height that grows with item count, and shrinks without customer/credit sections", () => {
+  it("declares @page height that grows with item count, and shrinks without the customer section", () => {
     const saleNoCustomer: SaleDetail = { ...sale, customerId: null, customerName: null, customerRfc: null, customerAddress: null, customerCreditDays: null };
     const { container } = render(<PrintableTicket sale={saleNoCustomer} ticketSettings={null} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
-    // content: 85 (base) + 0 (no customer) + 0 (no credit) + 1*12 (items) + 15 (safety) + 6 (feed) = 118mm
-    // extra top = round(118*0.05) = 6mm; pageHeight = 124mm; topMargin = 10mm
-    expect(printStyle).toContain("@page { size: 80mm 124mm; margin: 10mm 3mm 4mm 3mm; }");
+    // content: 85 (base) + 0 (no customer) + 8 (conditions, always) + 1*12 (items) + 15 (safety) + 6 (feed) = 126mm
+    // extra top = round(126*0.05) = 6mm; pageHeight = 132mm; topMargin = 10mm
+    expect(printStyle).toContain("@page { size: 80mm 132mm; margin: 10mm 3mm 4mm 3mm; }");
   });
 
   it("declares a larger @page height for tickets with more item lines", () => {
@@ -149,7 +149,7 @@ describe("PrintableTicket", () => {
     const { container } = render(<PrintableTicket sale={saleManyItems} ticketSettings={null} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
-    // content: 85 + 30 (customer) + 8 (credit) + 3*12 (items) + 15 (safety) + 6 (feed) = 180mm
+    // content: 85 + 30 (customer) + 8 (conditions, always) + 3*12 (items) + 15 (safety) + 6 (feed) = 180mm
     // extra top = round(180*0.05) = 9mm; pageHeight = 189mm; topMargin = 13mm
     expect(printStyle).toContain("@page { size: 80mm 189mm; margin: 13mm 3mm 4mm 3mm; }");
   });
@@ -208,19 +208,28 @@ describe("PrintableTicket", () => {
     expect(screen.getByText(/Dirección: Av. Central 123, Oaxaca/i)).toBeInTheDocument();
   });
 
-  it("shows credit conditions from customer creditDays", () => {
-    render(<PrintableTicket sale={sale} ticketSettings={null} />);
+  it("shows credit conditions with the customer's creditDays for a credit sale", () => {
+    const creditSale: SaleDetail = { ...sale, isCredit: true, customerCreditDays: 30 };
+    render(<PrintableTicket sale={creditSale} ticketSettings={null} />);
 
     expect(screen.getByText("Condiciones")).toBeInTheDocument();
     expect(screen.getByText("Crédito a 30 días")).toBeInTheDocument();
   });
 
-  it("omits customer section and credit conditions when sale has no customer", () => {
+  it("shows CONTADO for a cash sale", () => {
+    render(<PrintableTicket sale={sale} ticketSettings={null} />);
+
+    expect(screen.getByText("Condiciones")).toBeInTheDocument();
+    expect(screen.getByText("CONTADO")).toBeInTheDocument();
+  });
+
+  it("omits the customer section but still shows conditions when the sale has no customer", () => {
     const saleNoCustomer: SaleDetail = { ...sale, customerId: null, customerName: null, customerRfc: null, customerAddress: null, customerCreditDays: null };
     render(<PrintableTicket sale={saleNoCustomer} ticketSettings={null} />);
 
     expect(screen.queryByText("Cliente")).not.toBeInTheDocument();
-    expect(screen.queryByText("Condiciones")).not.toBeInTheDocument();
+    expect(screen.getByText("Condiciones")).toBeInTheDocument();
+    expect(screen.getByText("CONTADO")).toBeInTheDocument();
   });
 
   it("shows 'Total a pagar' label", () => {
