@@ -32,3 +32,20 @@ export const updateBranchSchema = z.object({
 
 export type CreateBranchFormValues = z.infer<typeof createBranchSchema>;
 export type UpdateBranchFormValues = z.infer<typeof updateBranchSchema>;
+
+// Regex debe mantenerse en sync con SettingsController.ts (updatePrinterConfigSchema.agentUrl).
+const AGENT_URL_REGEX = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+
+export const printerConfigSchema = z
+  .object({
+    printMode: z.enum(["browser", "escpos"]),
+    agentUrl: z.string().regex(AGENT_URL_REGEX, "Debe ser http://localhost:<puerto> o http://127.0.0.1:<puerto>").nullable(),
+    printerHost: z.string().min(1).max(200).nullable(),
+    printerPort: z.number().int().min(1).max(65535).nullable(),
+  })
+  .refine((data) => data.printMode !== "escpos" || (data.agentUrl && data.printerHost), {
+    message: "printMode 'escpos' requiere agentUrl y printerHost",
+    path: ["printMode"],
+  });
+
+export type PrinterConfigFormValues = z.infer<typeof printerConfigSchema>;

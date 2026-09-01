@@ -30,11 +30,17 @@ El sistema SHALL permitir configurar, por sucursal, el modo de impresión de tic
 - **THEN** el sistema responde 403, igual que en el resto de endpoints scoped por sucursal del sistema
 
 ### Requirement: Payload de impresión — navegador a agente local
-Cuando la sucursal de la venta tiene `printMode: 'escpos'`, el navegador SHALL construir un job de impresión en JSON con el mismo contenido y orden de secciones ya definido para el ticket impreso (logo, header de negocio, folio/fecha/vendedor/sucursal/pago, sección cliente condicional, condiciones de crédito condicionales, items, totales con IVA/IEPS siempre como líneas separadas, footer, leyenda condicional, folio decorativo tipo código de barras) y SHALL enviarlo por `POST` HTTP a `agentUrl` (`http://localhost:<puerto>` u otro host configurado). El payload NO SHALL incluir tokens de sesión, JWT, ni ningún dato de autenticación — solo contenido de ticket ya resuelto en el navegador.
+Cuando la sucursal de la venta tiene `printMode: 'escpos'`, el navegador SHALL construir un job de impresión en JSON con el mismo contenido y orden de secciones ya definido para el ticket impreso (logo, header de negocio, folio/fecha/vendedor/sucursal/pago, sección cliente condicional, línea de condiciones de pago siempre presente — crédito o CONTADO —, items, totales con IVA/IEPS siempre como líneas separadas, footer, leyenda condicional, folio decorativo tipo código de barras) y SHALL enviarlo por `POST` HTTP a `agentUrl` (`http://localhost:<puerto>` u otro host configurado). El campo `conditionsLine: string` del payload SHALL llevar el texto ya resuelto en el navegador ("Crédito a <N> días" o "CONTADO"), SIEMPRE presente independientemente de si la venta tiene cliente asociado — reemplaza al campo previo `creditDays: number | null`. El payload NO SHALL incluir tokens de sesión, JWT, ni ningún dato de autenticación — solo contenido de ticket ya resuelto en el navegador.
 
 #### Scenario: El JSON refleja las mismas secciones condicionales que el HTML
-- **WHEN** se genera el job de impresión para una venta sin cliente ni crédito
-- **THEN** el JSON omite la sección de cliente y la línea de condiciones de crédito, igual que hace hoy `PrintableTicket` en HTML
+- **WHEN** se genera el job de impresión para una venta sin cliente y en efectivo
+- **THEN** el JSON omite la sección de cliente (`customer: null`), igual que hace hoy `PrintableTicket` en HTML, pero SÍ incluye `conditionsLine: "CONTADO"` — la línea de condiciones ya no se omite
+
+#### Scenario: conditionsLine refleja crédito o contado según la venta
+- **WHEN** se genera el job de impresión para una venta con `sale.isCredit: true`
+- **THEN** `conditionsLine` es `"Crédito a <N> días"` usando `customerCreditDays` del cliente de la venta
+- **WHEN** se genera el job de impresión para una venta con `sale.isCredit: false`
+- **THEN** `conditionsLine` es `"CONTADO"`, sin importar si la venta tiene cliente asociado
 
 #### Scenario: El JSON nunca lleva credenciales
 - **WHEN** se construye el payload de impresión
