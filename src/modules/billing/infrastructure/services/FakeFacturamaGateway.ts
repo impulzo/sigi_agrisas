@@ -14,7 +14,7 @@ import {
 import { InvoiceDocumentPdf, InvoiceDocumentPdfData } from "../pdf/InvoiceDocumentPdf";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
-import { resolveSatDescription, SatCodeSearchUseCase } from "./resolveSatDescription";
+import { resolveSatDescription, SatCodeSearchUseCase } from "../../application/services/resolveSatDescription";
 
 const MOCK_WATERMARK = "DOCUMENTO DE PRUEBA — SIN VALIDEZ FISCAL";
 

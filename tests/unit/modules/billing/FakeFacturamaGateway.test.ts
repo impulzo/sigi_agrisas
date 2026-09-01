@@ -21,7 +21,7 @@ import { FakeFacturamaGateway } from "../../../../src/modules/billing/infrastruc
 import { GetTicketSettingsUseCase } from "../../../../src/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { InMemoryTicketSettingsRepository } from "../../../../src/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
-import type { SatCodeSearchUseCase } from "../../../../src/modules/billing/infrastructure/services/resolveSatDescription";
+import type { SatCodeSearchUseCase } from "../../../../src/modules/billing/application/services/resolveSatDescription";
 
 const mockRenderToBuffer = renderToBuffer as jest.MockedFunction<typeof renderToBuffer>;
 const mockGetEmitterFiscalSettings = getEmitterFiscalSettings as jest.MockedFunction<typeof getEmitterFiscalSettings>;

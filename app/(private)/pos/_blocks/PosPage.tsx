@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useCart } from "../_logic/hooks/useCart";
 import { useFoliosOptions } from "../../../_hooks/useFoliosOptions";
+import { useBypassBranchOptions } from "../../../_hooks/useBypassBranchOptions";
 import { usePaymentMethodsOptions } from "../../../_hooks/usePaymentMethodsOptions";
 import { usePricingSettingsOptions } from "../../../_hooks/usePricingSettingsOptions";
 import { useSaleSubmission } from "../_logic/hooks/useSaleSubmission";
@@ -25,7 +26,7 @@ import { PosShortcutsOverlay } from "./PosShortcutsOverlay";
 import { ConfirmDialog } from "../../../_components/molecules/ConfirmDialog/ConfirmDialog";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
-import type { ProductDto, ProductPriceDto, DosificationOptionDto, CustomerDto, BranchOption } from "../_logic/types/api";
+import type { ProductDto, ProductPriceDto, DosificationOptionDto, CustomerDto } from "../_logic/types/api";
 
 type Modal = "pricePicker" | "quickAdd" | "confirmed" | "quoteQueued" | "shortcuts" | "clearCart" | null;
 type PosMode = "sale" | "quote";
@@ -81,8 +82,7 @@ export function PosPage() {
   const [mode, setMode] = useState<PosMode>(() =>
     canCreate === false && canQuote === true ? "quote" : "sale"
   );
-  const [branches, setBranches] = useState<BranchOption[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
+  const { branches, selectedBranchId, setSelectedBranchId } = useBypassBranchOptions(isBypass, userBranchId ?? null);
   const [selectedFolioId, setSelectedFolioId] = useState<string>("");
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string>("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
@@ -119,25 +119,6 @@ export function PosPage() {
       setMode("quote");
     }
   }, [canCreate, canQuote]);
-
-  // Load branches for admin bypass
-  useEffect(() => {
-    if (isBypass !== true && userBranchId) {
-      setBranches([{ id: userBranchId, code: "", name: "Mi sucursal", isHeadquarters: false }]);
-      setSelectedBranchId(userBranchId);
-      return;
-    }
-    if (isBypass === true) {
-      import("../../../_lib/authFetch").then(({ authFetch }) => {
-        authFetch("/api/v1/admin/branches?pageSize=100&includeInactive=false")
-          .then((r) => r.json())
-          .then((body: { items: BranchOption[] }) => {
-            setBranches(body.items);
-          })
-          .catch(() => {});
-      });
-    }
-  }, [isBypass, userBranchId]);
 
   // Prompt on unload when cart has items
   useEffect(() => {

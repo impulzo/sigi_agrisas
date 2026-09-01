@@ -4,7 +4,7 @@ import { BillingLookupService } from "../ports/BillingLookupService";
 import { GetEmitterFiscalSettingsUseCase } from "./GetEmitterFiscalSettingsUseCase";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { resolveIssuerFiscalData } from "../services/resolveIssuerFiscalData";
-import { resolveSatDescription, type SatCodeSearchUseCase } from "../../infrastructure/services/resolveSatDescription";
+import { resolveSatDescription, type SatCodeSearchUseCase } from "../services/resolveSatDescription";
 import { InvoiceNotFoundError, InvoiceNotStampedError, InvoiceFileDownloadFailedError } from "../../domain/errors";
 import type { Invoice } from "../../domain/entities/Invoice";
 
