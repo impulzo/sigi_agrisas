@@ -1,4 +1,4 @@
-import { resolveSatDescription } from "../../../../src/modules/billing/infrastructure/services/resolveSatDescription";
+import { resolveSatDescription } from "../../../../src/modules/billing/application/services/resolveSatDescription";
 
 describe("resolveSatDescription", () => {
   it("returns 'code - description' on exact match", async () => {

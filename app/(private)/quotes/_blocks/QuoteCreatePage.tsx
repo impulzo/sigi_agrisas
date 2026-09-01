@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
 import { useCart } from "../../pos/_logic/hooks/useCart";
 import { useFoliosOptions } from "../../../_hooks/useFoliosOptions";
+import { useBypassBranchOptions } from "../../../_hooks/useBypassBranchOptions";
 import { usePricingSettingsOptions } from "../../../_hooks/usePricingSettingsOptions";
 import { useQuoteSubmission } from "../_logic/hooks/useQuoteSubmission";
 import { useOfflineSync } from "../../_blocks/OfflineSyncProvider";
@@ -16,7 +17,7 @@ import { CustomerQuickAddModal } from "../../pos/_blocks/CustomerQuickAddModal";
 import { QuoteQueuedModal } from "../../pos/_blocks/QuoteQueuedModal";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
-import type { ProductDto, ProductPriceDto, CustomerDto, BranchOption } from "../../pos/_logic/types/api";
+import type { ProductDto, ProductPriceDto, CustomerDto } from "../../pos/_logic/types/api";
 import type { FolioOption } from "../../../_hooks/useFoliosOptions";
 
 type Modal = "pricePicker" | "quickAdd" | "quoteQueued" | null;
@@ -40,32 +41,13 @@ export function QuoteCreatePage() {
   const { lines, totals, addLine, updateQuantity, updateDiscountPct, changeTier, removeLine, clear } = useCart(dosificationSurchargePct);
   const { status, quote, queuedQuote, error: submitError, submit, reset: resetSubmit } = useQuoteSubmission();
 
-  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState("");
+  const { branches, selectedBranchId, setSelectedBranchId } = useBypassBranchOptions(isBypass, userBranchId ?? null);
   const [selectedFolioId, setSelectedFolioId] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [notes, setNotes] = useState("");
   const [modal, setModal] = useState<Modal>(null);
   const [pricePicker, setPricePicker] = useState<PricePicker | null>(null);
-
-  useEffect(() => {
-    if (isBypass !== true && userBranchId) {
-      setBranches([{ id: userBranchId, name: "Mi sucursal" }]);
-      setSelectedBranchId(userBranchId);
-      return;
-    }
-    if (isBypass === true) {
-      import("../../../_lib/authFetch").then(({ authFetch }) => {
-        authFetch("/api/v1/admin/branches?pageSize=100&includeInactive=false")
-          .then((r) => r.json())
-          .then((body: { items: BranchOption[] }) => {
-            setBranches(body.items.map((b) => ({ id: b.id, name: b.name })));
-          })
-          .catch(() => {});
-      });
-    }
-  }, [isBypass, userBranchId]);
 
   useEffect(() => {
     if (status === "succeeded" && quote) {

@@ -17,7 +17,7 @@ import { GetEmitterFiscalSettingsUseCase } from "../../application/use-cases/Get
 import { SearchSatTaxRegimesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatTaxRegimesUseCase";
 import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCfdiUsesUseCase";
 import { SearchSatCodesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCodesUseCase";
-import { resolveSatDescription } from "../services/resolveSatDescription";
+import { resolveSatDescription } from "../../application/services/resolveSatDescription";
 import { resolveIssuerFiscalData } from "../../application/services/resolveIssuerFiscalData";
 import { BillingLookupService } from "../../application/ports/BillingLookupService";
 import type { FacturamaGateway } from "../../application/ports/FacturamaGateway";

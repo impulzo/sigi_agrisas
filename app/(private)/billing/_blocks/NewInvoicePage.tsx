@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
-import { authFetch } from "../../../_lib/authFetch";
+import { useBypassBranchOptions } from "../../../_hooks/useBypassBranchOptions";
 import { SegmentedButton } from "../../../_components/molecules/SegmentedButton/SegmentedButton";
 import { Select } from "../../../_components/atoms/Select/Select";
 import { StampSaleForm } from "./StampSaleForm";
 import { PartialInvoiceForm } from "./PartialInvoiceForm";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
-import type { BranchOption } from "../../pos/_logic/types/api";
 
 type Mode = "sale" | "partial";
 
@@ -24,22 +23,7 @@ export function NewInvoicePage({ initialSaleId, initialSaleLabel }: NewInvoicePa
   const isBypass = can("branches:access_all") === true;
 
   const [mode, setMode] = useState<Mode>("sale");
-  const [branches, setBranches] = useState<BranchOption[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
-
-  useEffect(() => {
-    if (!isBypass && branchId) {
-      setBranches([{ id: branchId, code: "", name: "Mi sucursal", isHeadquarters: false }]);
-      setSelectedBranchId(branchId);
-      return;
-    }
-    if (isBypass) {
-      authFetch("/api/v1/admin/branches?pageSize=100&includeInactive=false")
-        .then((r) => r.json())
-        .then((body: { items: BranchOption[] }) => setBranches(body.items))
-        .catch(() => {});
-    }
-  }, [isBypass, branchId]);
+  const { branches, selectedBranchId, setSelectedBranchId } = useBypassBranchOptions(isBypass, branchId ?? null);
 
   const effectiveBranchId = selectedBranchId || null;
 
