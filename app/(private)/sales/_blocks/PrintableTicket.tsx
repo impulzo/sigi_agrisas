@@ -9,7 +9,7 @@ function fmtDate(d: Date) {
 }
 
 // Constantes de altura estimada por sección del ticket (mm), a 10px monospace en ancho térmico.
-const BASE_HEIGHT_MM = 120; // logo + header de negocio + meta + totales + footer + leyenda + barcode
+const BASE_HEIGHT_MM = 85; // logo + header de negocio + meta + totales + footer + leyenda + barcode (recalibrado desde 120 por overestimación)
 const CUSTOMER_SECTION_HEIGHT_MM = 30;
 const CREDIT_LINE_HEIGHT_MM = 8;
 const PER_ITEM_HEIGHT_MM = 12;
