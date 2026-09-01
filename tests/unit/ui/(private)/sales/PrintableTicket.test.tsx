@@ -118,9 +118,9 @@ describe("PrintableTicket", () => {
     const { container } = render(<PrintableTicket sale={sale} ticketSettings={null} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
-    // content: 120 + 30 + 8 + 1*12 + 15 (safety) + 6 (feed) = 191mm; extra top = round(191*0.05) = 10mm
-    // pageHeight = 191 + 10 = 201mm; topMargin = 4 + 10 = 14mm
-    expect(printStyle).toContain("@page { size: 80mm 201mm; margin: 14mm 3mm 4mm 3mm; }");
+    // content: 85 + 30 + 8 + 1*12 + 15 (safety) + 6 (feed) = 156mm; extra top = round(156*0.05) = 8mm
+    // pageHeight = 156 + 8 = 164mm; topMargin = 4 + 8 = 12mm
+    expect(printStyle).toContain("@page { size: 80mm 164mm; margin: 12mm 3mm 4mm 3mm; }");
   });
 
   it("declares @page size matching the configured 58mm paper width and auto height", () => {
@@ -128,7 +128,7 @@ describe("PrintableTicket", () => {
     const { container } = render(<PrintableTicket sale={sale} ticketSettings={settings} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
-    expect(printStyle).toContain("@page { size: 58mm 201mm; margin: 14mm 3mm 4mm 3mm; }");
+    expect(printStyle).toContain("@page { size: 58mm 164mm; margin: 12mm 3mm 4mm 3mm; }");
   });
 
   it("declares @page height that grows with item count, and shrinks without customer/credit sections", () => {
@@ -136,9 +136,9 @@ describe("PrintableTicket", () => {
     const { container } = render(<PrintableTicket sale={saleNoCustomer} ticketSettings={null} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
-    // content: 120 (base) + 0 (no customer) + 0 (no credit) + 1*12 (items) + 15 (safety) + 6 (feed) = 153mm
-    // extra top = round(153*0.05) = 8mm; pageHeight = 161mm; topMargin = 12mm
-    expect(printStyle).toContain("@page { size: 80mm 161mm; margin: 12mm 3mm 4mm 3mm; }");
+    // content: 85 (base) + 0 (no customer) + 0 (no credit) + 1*12 (items) + 15 (safety) + 6 (feed) = 118mm
+    // extra top = round(118*0.05) = 6mm; pageHeight = 124mm; topMargin = 10mm
+    expect(printStyle).toContain("@page { size: 80mm 124mm; margin: 10mm 3mm 4mm 3mm; }");
   });
 
   it("declares a larger @page height for tickets with more item lines", () => {
@@ -149,9 +149,9 @@ describe("PrintableTicket", () => {
     const { container } = render(<PrintableTicket sale={saleManyItems} ticketSettings={null} />);
 
     const printStyle = container.querySelector("style")?.textContent ?? "";
-    // content: 120 + 30 (customer) + 8 (credit) + 3*12 (items) + 15 (safety) + 6 (feed) = 215mm
-    // extra top = round(215*0.05) = 11mm; pageHeight = 226mm; topMargin = 15mm
-    expect(printStyle).toContain("@page { size: 80mm 226mm; margin: 15mm 3mm 4mm 3mm; }");
+    // content: 85 + 30 (customer) + 8 (credit) + 3*12 (items) + 15 (safety) + 6 (feed) = 180mm
+    // extra top = round(180*0.05) = 9mm; pageHeight = 189mm; topMargin = 13mm
+    expect(printStyle).toContain("@page { size: 80mm 189mm; margin: 13mm 3mm 4mm 3mm; }");
   });
 
   it("renders sale data correctly regardless of paperWidth", () => {
