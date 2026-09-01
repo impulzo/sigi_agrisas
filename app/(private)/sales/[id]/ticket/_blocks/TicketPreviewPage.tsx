@@ -7,6 +7,7 @@ import { getTicketSettings } from "../../../../settings/_logic/services/getTicke
 import type { TicketSettingsDto } from "../../../../settings/_logic/types/api";
 import { getBranchPrinterConfig } from "../../../_logic/services/getBranchPrinterConfig";
 import { buildTicketPrintJob } from "../../../_logic/lib/buildTicketPrintJob";
+import { resolveTicketConditionsLine } from "../../../_logic/lib/resolveTicketConditionsLine";
 import { sendTicketPrintJob } from "../../../_logic/services/sendTicketPrintJob";
 import { PrintableTicket } from "../../../_blocks/PrintableTicket";
 import { SendTicketEmailModal } from "./SendTicketEmailModal";
@@ -173,13 +174,11 @@ export function TicketPreviewPage({ id }: TicketPreviewPageProps) {
             </div>
           )}
 
-          {/* Condiciones de crédito */}
-          {sale.customerCreditDays != null && (
-            <div className="flex justify-between text-body-sm text-on-surface-variant border-b border-outline-variant pb-4">
-              <span className="font-bold text-on-surface">Condiciones</span>
-              <span>Crédito a {sale.customerCreditDays} días</span>
-            </div>
-          )}
+          {/* Condiciones de pago */}
+          <div className="flex justify-between text-body-sm text-on-surface-variant border-b border-outline-variant pb-4">
+            <span className="font-bold text-on-surface">Condiciones</span>
+            <span>{resolveTicketConditionsLine(sale)}</span>
+          </div>
 
           {/* Items */}
           <div className="flex flex-col gap-2 py-2">

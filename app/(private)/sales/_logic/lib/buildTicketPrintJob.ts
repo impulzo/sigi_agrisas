@@ -1,6 +1,7 @@
 import type { SaleDetail } from "../types/domain";
 import type { TicketSettingsDto } from "../../../settings/_logic/types/api";
 import type { TicketPrintJob } from "../types/ticketPrintJob";
+import { resolveTicketConditionsLine } from "./resolveTicketConditionsLine";
 
 const DEFAULT_LOGO_PATH = "/logo.png";
 
@@ -41,7 +42,7 @@ export function buildTicketPrintJob(sale: SaleDetail, ticketSettings: TicketSett
           address: sale.customerAddress ?? "—",
         }
       : null,
-    creditDays: sale.customerCreditDays ?? null,
+    conditionsLine: resolveTicketConditionsLine(sale),
     items: sale.items.map((item) => ({
       name: item.productNameSnapshot,
       quantity: item.quantity,
