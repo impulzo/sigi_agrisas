@@ -73,7 +73,7 @@ export function PartialInvoiceForm({ branchId }: PartialInvoiceFormProps) {
 
   async function handleConfirmStamp() {
     setShowPreview(false);
-    await submit();
+    await submit(effectiveBranchId);
   }
 
   function handleCustomerSelect(id: string, dto: CustomerDto | null) {
@@ -227,7 +227,7 @@ export function PartialInvoiceForm({ branchId }: PartialInvoiceFormProps) {
 
         {showCatalog && (
           <div className="border border-outline-variant rounded-md overflow-hidden mb-4">
-            <ProductCatalogPanel onAddProduct={handleAddProduct} />
+            <ProductCatalogPanel onAddProduct={handleAddProduct} branchId={effectiveBranchId ?? undefined} />
           </div>
         )}
 
@@ -322,7 +322,7 @@ export function PartialInvoiceForm({ branchId }: PartialInvoiceFormProps) {
           </button>
           <button
             type="button"
-            onClick={() => submit()}
+            onClick={() => submit(effectiveBranchId)}
             disabled={isSubmitting || lines.length === 0 || !customer || fiscalMissingFields.length > 0}
             className="rounded-full bg-secondary text-on-secondary px-6 py-2.5 text-label-lg font-medium hover:bg-secondary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >

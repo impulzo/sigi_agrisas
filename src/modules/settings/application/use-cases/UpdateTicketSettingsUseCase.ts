@@ -19,6 +19,7 @@ export class UpdateTicketSettingsUseCase {
       "businessRfc",
       "businessAddress",
       "businessPhone",
+      "businessEmail",
       "businessTaxRegime",
       "businessZipCode",
       "legendText",

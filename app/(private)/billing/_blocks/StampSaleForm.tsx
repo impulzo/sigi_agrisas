@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { SalePickerField } from "./SalePickerField";
 import { InvoicePreviewModal } from "./InvoicePreviewModal";
+import { CustomerPicker } from "../../pos/_blocks/CustomerPicker";
+import { CustomerQuickAddModal } from "../../pos/_blocks/CustomerQuickAddModal";
 import { useStampSaleForm } from "../_logic/hooks/useStampSaleForm";
 import { useInvoicePreview } from "../_logic/hooks/useInvoicePreview";
 import { SaleAlreadyInvoicedError, ReceiverFiscalDataIncompleteError, FacturamaStampError } from "../_logic/errors";
@@ -26,13 +28,14 @@ interface StampSaleFormProps {
 }
 
 export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleFormProps) {
-  const { form, setField, isSubmitting, error, clearError, submit } = useStampSaleForm(initialSaleId, initialSaleLabel);
+  const { form, setField, selectSale, isSubmitting, error, clearError, submit } = useStampSaleForm(initialSaleId, initialSaleLabel);
   const [showPreview, setShowPreview] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const preview = useInvoicePreview();
 
   function handleOpenPreview() {
     setShowPreview(true);
-    preview.load(form.saleId, { paymentForm: form.paymentForm, paymentMethod: form.paymentMethod });
+    preview.load(form.saleId, { paymentForm: form.paymentForm, paymentMethod: form.paymentMethod, customerId: form.customerId || undefined });
   }
 
   async function handleConfirmStamp() {
@@ -86,12 +89,25 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
         <SalePickerField
           value={form.saleId}
           label={form.saleLabel}
-          onSelect={(id, label) => { setField("saleId", id); setField("saleLabel", label); }}
+          onSelect={selectSale}
         />
         <p className="mt-1 text-label-sm text-on-surface-variant">
           Busca por folio o nombre del cliente. Solo ventas completadas sin CFDI vigente.
         </p>
       </div>
+
+      {form.saleId && (
+        <div>
+          <CustomerPicker
+            value={form.customerId}
+            onChange={(id) => setField("customerId", id)}
+            onOpenQuickAdd={() => setShowQuickAdd(true)}
+          />
+          <p className="mt-1 text-label-sm text-on-surface-variant">
+            Cliente que recibirá el CFDI. Por defecto es el cliente de la venta; puedes cambiarlo sin alterar el ticket original.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
@@ -135,7 +151,7 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
         <button
           type="button"
           onClick={handleOpenPreview}
-          disabled={!form.saleId}
+          disabled={!form.saleId || !form.customerId}
           className="rounded-full border border-outline px-6 py-2.5 text-label-lg font-medium hover:bg-surface-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Vista previa
@@ -143,7 +159,7 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
         <button
           type="button"
           onClick={() => submit()}
-          disabled={isSubmitting || !form.saleId}
+          disabled={isSubmitting || !form.saleId || !form.customerId}
           className="rounded-full bg-primary text-on-primary px-6 py-2.5 text-label-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? "Timbrando…" : "Emitir factura"}
@@ -159,6 +175,16 @@ export function StampSaleForm({ initialSaleId, initialSaleLabel }: StampSaleForm
         onConfirmStamp={handleConfirmStamp}
         isSubmitting={isSubmitting}
       />
+
+      {showQuickAdd && (
+        <CustomerQuickAddModal
+          onClose={() => setShowQuickAdd(false)}
+          onCreated={(dto) => {
+            setField("customerId", dto.id);
+            setShowQuickAdd(false);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -55,6 +55,7 @@ export class StampInvoiceUseCase {
     issuerFiscalRegime: string | null;
     issuerZipCode: string | null;
     issuerAddress: string | null;
+    issuerEmail: string | null;
   }> {
     const issuer = await resolveIssuerFiscalData(this.gateway, this.getTicketSettingsUseCase);
     return {
@@ -63,6 +64,7 @@ export class StampInvoiceUseCase {
       issuerFiscalRegime: issuer.fiscalRegime,
       issuerZipCode: issuer.zipCode,
       issuerAddress: issuer.address,
+      issuerEmail: issuer.email,
     };
   }
 
@@ -85,8 +87,9 @@ export class StampInvoiceUseCase {
     const existing = await this.invoiceRepo.findStampedBySale(input.saleId);
     if (existing) throw new SaleAlreadyInvoicedError(input.saleId, existing.id);
 
-    const customer = sale.customerId
-      ? await this.lookupService.findCustomer(sale.customerId)
+    const effectiveCustomerId = input.customerId ?? sale.customerId;
+    const customer = effectiveCustomerId
+      ? await this.lookupService.findCustomer(effectiveCustomerId)
       : null;
     const branch = await this.lookupService.findBranch(sale.branchId);
 
@@ -205,7 +208,7 @@ export class StampInvoiceUseCase {
       pdfUrl: result.pdfUrl ?? null,
       saleId: input.saleId,
       branchId: sale.branchId,
-      customerId: sale.customerId,
+      customerId: effectiveCustomerId,
       creatorId,
       items: itemsData,
     });

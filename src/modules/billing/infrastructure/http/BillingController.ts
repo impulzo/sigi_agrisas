@@ -73,6 +73,7 @@ const standaloneItemSchema = z.object({
 
 const stampFromSaleSchema = z.object({
   saleId: z.string().uuid(),
+  customerId: z.string().uuid().nullable().optional(),
   paymentForm: z.string().max(4).optional(),
   paymentMethod: z.string().max(4).optional(),
   cfdiUse: z.string().max(8).optional(),
@@ -545,6 +546,7 @@ export class BillingController {
               fiscalRegimeLabel: issuerFiscalRegimeLabel,
               zipCode: emitter.zipCode,
               address: emitter.address,
+              email: emitter.email,
             },
             receiver: {
               ...parsed.data.receiver,

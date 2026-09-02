@@ -60,6 +60,7 @@ describe("SettingsController", () => {
         businessRfc: null,
         businessAddress: null,
         businessPhone: null,
+        businessEmail: null,
         businessTaxRegime: null,
         businessZipCode: null,
         legendText: "Favor de revisar su mercancia. No se hacen cambios ni devoluciones. Gracias por su compra.",

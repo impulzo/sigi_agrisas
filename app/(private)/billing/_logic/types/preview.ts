@@ -19,6 +19,7 @@ export interface InvoicePreviewData {
     fiscalRegime?: string | null;
     zipCode?: string | null;
     address?: string | null;
+    email?: string | null;
   };
   receiver: {
     rfc: string;

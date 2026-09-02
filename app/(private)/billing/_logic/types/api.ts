@@ -40,6 +40,7 @@ export interface InvoiceDto {
   issuerFiscalRegime: string | null;
   issuerZipCode: string | null;
   issuerAddress: string | null;
+  issuerEmail: string | null;
   issuerBranchName?: string | null;
   issuerFiscalRegimeLabel?: string | null;
   receiverFiscalRegimeLabel?: string | null;
@@ -69,6 +70,7 @@ export interface InvoiceListResponse {
 
 export interface StampFromSaleRequest {
   saleId: string;
+  customerId?: string | null;
   paymentForm?: string;
   paymentMethod?: string;
   cfdiUse?: string;

@@ -24,11 +24,12 @@ describe("useEmitterFiscalSettings", () => {
       fiscalRegime: "601",
       zipCode: "83000",
       address: "Calle Falsa 123",
+      email: "contacto@agrisas.mx",
     });
 
     const { result } = renderHook(() => useEmitterFiscalSettings());
 
-    expect(result.current).toEqual({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null });
+    expect(result.current).toEqual({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null, email: null });
 
     await waitFor(() =>
       expect(result.current).toEqual({
@@ -37,6 +38,7 @@ describe("useEmitterFiscalSettings", () => {
         fiscalRegime: "601",
         zipCode: "83000",
         address: "Calle Falsa 123",
+        email: "contacto@agrisas.mx",
       })
     );
   });
@@ -47,6 +49,6 @@ describe("useEmitterFiscalSettings", () => {
     const { result } = renderHook(() => useEmitterFiscalSettings());
 
     await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(1));
-    expect(result.current).toEqual({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null });
+    expect(result.current).toEqual({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null, email: null });
   });
 });

@@ -9,6 +9,7 @@ const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", 
 interface SaleOption {
   id: string;
   folioLabel: string;
+  customerId: string | null;
   customerName: string | null;
   total: number;
 }
@@ -16,7 +17,7 @@ interface SaleOption {
 interface SalePickerFieldProps {
   value: string;
   label: string;
-  onSelect: (id: string, label: string) => void;
+  onSelect: (id: string, label: string, customerId: string | null) => void;
 }
 
 async function searchSales(search: string): Promise<SaleOption[]> {
@@ -24,10 +25,11 @@ async function searchSales(search: string): Promise<SaleOption[]> {
   const params = new URLSearchParams({ search, status: "completed", pageSize: "20" });
   const res = await authFetch(`/api/v1/admin/sales?${params.toString()}`);
   if (!res.ok) return [];
-  const body = await res.json() as { items: Array<{ id: string; folioPrefix?: string | null; folioNumber: number; customerName?: string | null; total: number }> };
+  const body = await res.json() as { items: Array<{ id: string; folioPrefix?: string | null; folioNumber: number; customerId?: string | null; customerName?: string | null; total: number }> };
   return body.items.map((s) => ({
     id: s.id,
     folioLabel: s.folioPrefix ? `${s.folioPrefix}-${s.folioNumber}` : String(s.folioNumber),
+    customerId: s.customerId ?? null,
     customerName: s.customerName ?? null,
     total: s.total,
   }));
@@ -55,7 +57,7 @@ export function SalePickerField({ value, label, onSelect }: SalePickerFieldProps
     const lbl = `${opt.folioLabel} · ${opt.customerName ?? "Sin cliente"} · ${MX.format(opt.total)}`;
     setQuery(lbl);
     setOpen(false);
-    onSelect(opt.id, lbl);
+    onSelect(opt.id, lbl, opt.customerId);
   }
 
   return (
@@ -64,7 +66,7 @@ export function SalePickerField({ value, label, onSelect }: SalePickerFieldProps
         type="text"
         value={query}
         placeholder="Buscar venta por folio o cliente (mín. 2 caracteres)..."
-        onChange={(e) => { setQuery(e.target.value); if (value) onSelect("", ""); }}
+        onChange={(e) => { setQuery(e.target.value); if (value) onSelect("", "", null); }}
         onFocus={() => { if (results.length > 0) setOpen(true); }}
         className="w-full rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
       />

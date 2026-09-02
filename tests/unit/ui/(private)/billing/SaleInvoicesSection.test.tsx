@@ -53,6 +53,7 @@ function makeInvoice(status: Invoice["status"] = "stamped"): Invoice {
     issuerFiscalRegime: null,
     issuerZipCode: null,
     issuerAddress: null,
+    issuerEmail: null,
     currency: "MXN",
     subtotal: 100,
     taxTotal: 16,

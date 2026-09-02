@@ -112,3 +112,38 @@ describe("resolveIssuerFiscalData — zipCode 3rd-tier fallback to TicketSetting
     expect(result.zipCode).toBe("01000");
   });
 });
+
+describe("resolveIssuerFiscalData — email (single tier, TicketSettings only)", () => {
+  beforeEach(() => {
+    mockedGetEmitterFiscalSettings.mockReset();
+  });
+
+  it("resolves email from TicketSettings.businessEmail when captured", async () => {
+    mockedGetEmitterFiscalSettings.mockResolvedValue(null);
+    const ticketRepo = new InMemoryTicketSettingsRepository();
+    await ticketRepo.update({ businessEmail: "contacto@agrisas.mx" });
+    const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
+    const gateway = new FakeFacturamaGateway();
+
+    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase);
+
+    expect(result.email).toBe("contacto@agrisas.mx");
+  });
+
+  it("resolves email to null when TicketSettings.businessEmail is not captured — no CSD/EmitterFiscalSettings tier exists for it", async () => {
+    mockedGetEmitterFiscalSettings.mockResolvedValue({
+      rfc: "AGR010101AB1",
+      legalName: "Agrisas SA de CV",
+      fiscalRegime: "601",
+      zipCode: "83000",
+      address: "Calle Falsa 123",
+    });
+    const ticketRepo = new InMemoryTicketSettingsRepository();
+    const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
+    const gateway = new FakeFacturamaGateway();
+
+    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase);
+
+    expect(result.email).toBeNull();
+  });
+});

@@ -6,6 +6,7 @@ export interface EmitterFiscalSettingsDto {
   fiscalRegime: string | null;
   zipCode: string | null;
   address: string | null;
+  email: string | null;
 }
 
 export async function getEmitterFiscalSettings(

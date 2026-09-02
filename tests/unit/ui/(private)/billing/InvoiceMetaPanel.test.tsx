@@ -26,6 +26,7 @@ function makeInvoice(overrides: Partial<Invoice> = {}): Invoice {
     issuerFiscalRegime: "601",
     issuerZipCode: "83000",
     issuerAddress: "Calle Falsa 123, CDMX",
+    issuerEmail: "contacto@agrisas.mx",
     currency: "MXN",
     subtotal: 100,
     taxTotal: 16,
@@ -54,6 +55,13 @@ describe("InvoiceMetaPanel", () => {
     expect(screen.getByText("83000")).toBeInTheDocument();
   });
 
+  it("does not render the issuer email in the 'Datos del emisor' card (it moved to the page header)", () => {
+    render(<InvoiceMetaPanel invoice={makeInvoice()} />);
+
+    expect(screen.queryByText("Correo")).not.toBeInTheDocument();
+    expect(screen.queryByText("contacto@agrisas.mx")).not.toBeInTheDocument();
+  });
+
   it("renders the receiver section with its own RFC, name, CFDI use and CP", () => {
     render(<InvoiceMetaPanel invoice={makeInvoice()} />);
 
@@ -70,6 +78,7 @@ describe("InvoiceMetaPanel", () => {
       issuerFiscalRegime: null,
       issuerZipCode: null,
       issuerAddress: null,
+      issuerEmail: null,
     });
     render(<InvoiceMetaPanel invoice={invoice} />);
 
