@@ -1,10 +1,5 @@
-# sales-ticket-preview-ui Specification
+## MODIFIED Requirements
 
-## Purpose
-Vista previa en pantalla del ticket de una venta con el diseño de marca de Agrisas (mockup Stitch "Ticket de Venta - Agrisas"), independiente del ticket térmico monospace usado para impresión física. Permite revisar el comprobante con estilo antes de imprimirlo o enviarlo por correo.
-
----
-## Requirements
 ### Requirement: Ticket preview page
 The system SHALL render `/sales/:id/ticket`, gated by the same `sales:read` permission (and branch scoping) that already protects `/sales/:id`. The page SHALL reuse the `SaleDetail` data already available to the sale detail flow (no additional data fetch beyond what `GET /sales/:id` already provides) and render: brand logo (from `GET /settings/ticket`, falling back to the Agrisas default brand mark when `logoUrl` is `null` — with NO header-text tagline fallback of any kind), folio label (labeled "Folio" — NOT "Orden"), date, seller name (labeled "Vendedor", over `cashierName` — NOT "Cajero"), a business info section immediately below the logo (razón social `businessName`, RFC `businessRfc`, address, "Tel. <phone>", and tax regime from `GET /settings/ticket` — rendered exactly as stored, whether it is a bare code or the full `"<code> — <description>"` string, omitting `null` fields), a line-item table (product name, quantity × unit price, line total), a financial summary showing Subtotal, IVA, and IEPS (ALWAYS visible, even when `$0.00` — consistent with `pos-ui`'s `TaxBreakdownRows`/`CartTotals` behavior), Total (labeled "Total a pagar"), a customer section (RFC, name, address — ONLY when the sale has `customerId`), payment conditions ("Condiciones: Crédito a <N> días" when `sale.isCredit` is `true`, or "Condiciones: CONTADO" when `sale.isCredit` is `false` — ALWAYS shown, regardless of whether the sale has a customer), payment method name, footer text (from `GET /settings/ticket.footerText`, rendered exactly as returned — `null` or empty means the footer paragraph is omitted entirely, with NO hardcoded placeholder text of any kind substituted in its place), a decorative barcode-style element rendering `sale.folioCode` (the fully formatted folio, with its prefix — never the bare `folioNumber`) as text (no barcode-generation library), and the legend text (from `GET /settings/ticket.legendText`, omitted when `null`). `headerText` no longer exists as a field of `TicketSettings`; there is no header-text paragraph and no fallback tagline (e.g. the prior "Centro Agrícola Integral" text) anywhere on this page.
 
@@ -93,37 +88,3 @@ This page is display-only styling on top of existing data — it introduces no n
 #### Scenario: Forbidden without sales:read
 - **WHEN** a user without `sales:read` navigates to `/sales/:id/ticket`
 - **THEN** the system applies the same guard as `/sales/:id` (redirect/403 per the existing page-level RBAC pattern)
-
-### Requirement: "Ver Ticket" link on sale detail
-The system SHALL render a "Ver Ticket" link/button on `/sales/:id`, visible under the same `sales:read` permission, navigating to `/sales/:id/ticket`.
-
-#### Scenario: Link navigates to the preview page
-- **WHEN** a user on `/sales/:id` clicks "Ver Ticket"
-- **THEN** the browser navigates to `/sales/:id/ticket`
-
----
-
-### Requirement: Print action on the preview page
-The system SHALL render an "Imprimir Ticket" button on `/sales/:id/ticket` that, when clicked, invokes `window.print()` using the EXISTING thermal `PrintableTicket.tsx` component (per `ticket-print-ui`) — NOT the Stitch-styled preview layout. The Stitch design is for on-screen viewing only; it is never sent to the physical printer.
-
-#### Scenario: Print button uses the thermal ticket, not the styled preview
-- **WHEN** a user clicks "Imprimir Ticket" on `/sales/:id/ticket`
-- **THEN** the print dialog opens with the monospace 80mm/58mm thermal layout (same output as the "Imprimir ticket" button on `/sales/:id`), not the Stitch-branded on-screen layout
-
----
-
-### Requirement: Send ticket by email action on the preview page
-The system SHALL render an "Enviar por Correo" button on `/sales/:id/ticket`, visible under the same `sales:read` permission, that opens a modal (same UX pattern as `billing-ui`'s send-invoice-by-email modal): an optional email input (placeholder guidance: "vacío usa el del cliente"), a "Enviar" button calling `POST /api/v1/admin/sales/:id/send-ticket-email`, and typed error handling for `SaleNoEmailError` (prompts the user to type an email) and `SaleEmailSendFailedError` (generic retry message).
-
-#### Scenario: Send with no override uses the customer's email
-- **WHEN** the user clicks "Enviar por Correo" then "Enviar" without typing an email, and the sale's customer has `email` set
-- **THEN** the modal shows a success message with the resolved recipient email
-
-#### Scenario: No email available prompts for manual entry
-- **WHEN** the sale has no customer or the customer has no email, and the user submits without typing one
-- **THEN** the modal shows an inline error asking the user to type an email, and does NOT close
-
-#### Scenario: Send failure shows a retry message
-- **WHEN** the backend returns HTTP 502 (SMTP failure)
-- **THEN** the modal shows an error message and remains open for retry
-
