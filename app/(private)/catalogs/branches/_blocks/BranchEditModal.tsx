@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { Icon } from "../../../../_components/atoms/Icon/Icon";
 import { Switch } from "../../../../_components/atoms/Switch/Switch";
 import { createBranchSchema, updateBranchSchema } from "../_logic/schemas/branch.schema";
-import { BranchPrinterConfigSection } from "./BranchPrinterConfigSection";
 import type { Branch } from "../_logic/types/domain";
 import type { CreateBranchBody, UpdateBranchBody } from "../_logic/types/api";
 
@@ -471,8 +470,6 @@ export function BranchEditModal({
             </div>
           </div>
         </section>
-
-        {!isCreateMode && entity && <BranchPrinterConfigSection branchId={entity.id} />}
 
         {mutationError && (
           <p className="text-body-md text-error bg-error-container px-4 py-2 rounded">{mutationError}</p>

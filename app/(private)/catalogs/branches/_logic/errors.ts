@@ -11,10 +11,3 @@ export class BranchCodeAlreadyInUseError extends Error {
     this.name = "BranchCodeAlreadyInUseError";
   }
 }
-
-export class IncompletePrinterConfigError extends Error {
-  constructor() {
-    super("printMode 'escpos' requires both agentUrl and printerHost");
-    this.name = "IncompletePrinterConfigError";
-  }
-}

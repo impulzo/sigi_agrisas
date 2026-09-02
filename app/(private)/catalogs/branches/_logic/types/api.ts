@@ -42,22 +42,6 @@ export interface CreateBranchBody {
   addressZipCode?: string | null;
 }
 
-export type PrintMode = "browser" | "escpos";
-
-export interface PrinterConfigDto {
-  printMode: PrintMode;
-  agentUrl: string | null;
-  printerHost: string | null;
-  printerPort: number | null;
-}
-
-export interface UpdatePrinterConfigBody {
-  printMode?: PrintMode;
-  agentUrl?: string | null;
-  printerHost?: string | null;
-  printerPort?: number | null;
-}
-
 export interface UpdateBranchBody {
   name?: string;
   address?: string | null;
