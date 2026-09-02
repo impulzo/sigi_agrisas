@@ -21,11 +21,13 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
   const [businessRfc, setBusinessRfc] = useState(settings.businessRfc ?? "");
   const [businessAddress, setBusinessAddress] = useState(settings.businessAddress ?? "");
   const [businessPhone, setBusinessPhone] = useState(settings.businessPhone ?? "");
+  const [businessEmail, setBusinessEmail] = useState(settings.businessEmail ?? "");
   const [businessTaxRegime, setBusinessTaxRegime] = useState(settings.businessTaxRegime ?? "");
   const [businessZipCode, setBusinessZipCode] = useState(settings.businessZipCode ?? "");
   const [legendText, setLegendText] = useState(settings.legendText ?? "");
 
   const businessZipCodeInvalid = businessZipCode.length > 0 && !/^\d{5}$/.test(businessZipCode);
+  const businessEmailInvalid = businessEmail.length > 0 && !/^\S+@\S+\.\S+$/.test(businessEmail);
 
   const { isSaving, mutationError, clearError, update } = useTicketSettingsMutations(onChange);
 
@@ -36,13 +38,14 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
     setBusinessRfc(settings.businessRfc ?? "");
     setBusinessAddress(settings.businessAddress ?? "");
     setBusinessPhone(settings.businessPhone ?? "");
+    setBusinessEmail(settings.businessEmail ?? "");
     setBusinessTaxRegime(settings.businessTaxRegime ?? "");
     setBusinessZipCode(settings.businessZipCode ?? "");
     setLegendText(settings.legendText ?? "");
   }, [settings]);
 
   async function handleSave() {
-    if (businessZipCodeInvalid) return;
+    if (businessZipCodeInvalid || businessEmailInvalid) return;
     await update({
       footerText: footerText.trim() || null,
       paperWidth,
@@ -50,6 +53,7 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
       businessRfc: businessRfc.trim() || null,
       businessAddress: businessAddress.trim() || null,
       businessPhone: businessPhone.trim() || null,
+      businessEmail: businessEmail.trim() || null,
       businessTaxRegime: businessTaxRegime.trim() || null,
       businessZipCode: businessZipCode.trim() || null,
       legendText: legendText.trim() || null,
@@ -157,6 +161,24 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
         </div>
 
         <div>
+          <label htmlFor="business-email" className="block text-label-md text-on-surface mb-1">
+            Correo de contacto
+          </label>
+          <input
+            id="business-email"
+            type="email"
+            value={businessEmail}
+            onChange={(e) => setBusinessEmail(e.target.value.slice(0, 200))}
+            disabled={!canWrite}
+            placeholder="contacto@agrisas.mx"
+            className={inputCls}
+          />
+          {businessEmailInvalid && (
+            <p className="mt-1 text-body-sm text-error">Correo inválido.</p>
+          )}
+        </div>
+
+        <div>
           <label htmlFor="business-tax-regime" className="block text-label-md text-on-surface mb-1">
             Régimen Fiscal
           </label>
@@ -238,7 +260,7 @@ export function TicketSettingsForm({ settings, canWrite, onChange }: TicketSetti
         <button
           type="button"
           onClick={handleSave}
-          disabled={isSaving || businessZipCodeInvalid}
+          disabled={isSaving || businessZipCodeInvalid || businessEmailInvalid}
           className="px-4 py-2 rounded text-label-lg bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isSaving ? "Guardando…" : "Guardar cambios"}

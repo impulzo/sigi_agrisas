@@ -63,6 +63,7 @@ const defaultSettings: TicketSettingsDto = {
   businessRfc: null,
   businessAddress: null,
   businessPhone: null,
+  businessEmail: null,
   businessTaxRegime: null,
   businessZipCode: null,
   legendText: null,
@@ -243,6 +244,7 @@ describe("PrintableTicket", () => {
       ...defaultSettings,
       businessAddress: "Ocotlan de Morelos, Oaxaca. CP 71520",
       businessPhone: "951 292 80 86",
+      businessEmail: null,
       businessTaxRegime: "612 Personas Físicas con Actividad Empresarial",
     };
     render(<PrintableTicket sale={sale} ticketSettings={settings} />);

@@ -17,6 +17,12 @@ const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", 
 function fmt(n: number) { return MX.format(n); }
 function pct(n: number) { return `${(n * 100).toFixed(0)}%`; }
 
+// Anchos proporcionales al contenido (Concepto lleva nombre+código+"SAT: ..." de hasta
+// 3 líneas; "Total línea"/"Subtotal" son los labels más largos del resto). Definido una
+// sola vez y reutilizado igual en el header y en cada fila para que nunca se desalineen
+// entre sí por una discrepancia de clases (ver D12 en design.md).
+const LINE_ITEMS_GRID_TEMPLATE = "grid-cols-[2.2fr_0.6fr_0.9fr_0.6fr_0.6fr_0.6fr_0.9fr_1fr]";
+
 interface InvoicePreviewModalProps {
   open: boolean;
   onClose: () => void;
@@ -132,6 +138,9 @@ export function InvoicePreviewModal({
             {data?.issuer.branchName && (
               <p className="text-label-sm text-on-surface-variant">{data.issuer.branchName}</p>
             )}
+            {data?.issuer.email && (
+              <p className="text-label-sm text-on-surface-variant">{data.issuer.email}</p>
+            )}
           </div>
         </div>
         <div className="text-right space-y-1">
@@ -223,8 +232,8 @@ export function InvoicePreviewModal({
           </div>
 
           <div className="border border-outline-variant rounded-md overflow-x-auto min-w-0">
-            <div className="grid grid-cols-9 gap-2 border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-sm text-on-surface-variant uppercase tracking-wide min-w-0">
-              <span className="col-span-2">Concepto</span>
+            <div className={`grid ${LINE_ITEMS_GRID_TEMPLATE} gap-2 border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-sm text-on-surface-variant uppercase tracking-wide min-w-0`}>
+              <span>Concepto</span>
               <span className="text-right">Cant.</span>
               <span className="text-right">Precio</span>
               <span className="text-right">Desc.</span>
@@ -236,9 +245,9 @@ export function InvoicePreviewModal({
             {data.lines.map((line, idx) => (
               <div
                 key={`${line.productCode}-${idx}`}
-                className="grid grid-cols-9 gap-2 px-4 py-2 border-b border-outline-variant/40 text-body-sm last:border-b-0 min-w-0"
+                className={`grid ${LINE_ITEMS_GRID_TEMPLATE} gap-2 px-4 py-2 border-b border-outline-variant/40 text-body-sm last:border-b-0 min-w-0`}
               >
-                <div className="col-span-2">
+                <div>
                   <p className="text-on-surface font-medium">{line.description}</p>
                   <p className="text-label-sm text-on-surface-variant font-mono">{line.productCode}</p>
                   {(line.satProductCode && (satCodeLabels[line.satProductCode] || line.satProductCode)) && (

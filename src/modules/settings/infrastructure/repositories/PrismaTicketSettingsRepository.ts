@@ -12,6 +12,7 @@ type Row = {
   businessRfc: string | null;
   businessAddress: string | null;
   businessPhone: string | null;
+  businessEmail: string | null;
   businessTaxRegime: string | null;
   businessZipCode: string | null;
   legendText: string | null;
@@ -26,6 +27,7 @@ function toEntity(row: Row): TicketSettings {
     businessRfc: row.businessRfc,
     businessAddress: row.businessAddress,
     businessPhone: row.businessPhone,
+    businessEmail: row.businessEmail,
     businessTaxRegime: row.businessTaxRegime,
     businessZipCode: row.businessZipCode,
     legendText: row.legendText,
@@ -51,6 +53,7 @@ export class PrismaTicketSettingsRepository implements TicketSettingsRepository 
         businessRfc: data.businessRfc !== undefined ? data.businessRfc : DEFAULT_TICKET_SETTINGS.businessRfc,
         businessAddress: data.businessAddress !== undefined ? data.businessAddress : DEFAULT_TICKET_SETTINGS.businessAddress,
         businessPhone: data.businessPhone !== undefined ? data.businessPhone : DEFAULT_TICKET_SETTINGS.businessPhone,
+        businessEmail: data.businessEmail !== undefined ? data.businessEmail : DEFAULT_TICKET_SETTINGS.businessEmail,
         businessTaxRegime: data.businessTaxRegime !== undefined ? data.businessTaxRegime : DEFAULT_TICKET_SETTINGS.businessTaxRegime,
         businessZipCode: data.businessZipCode !== undefined ? data.businessZipCode : DEFAULT_TICKET_SETTINGS.businessZipCode,
         legendText: data.legendText !== undefined ? data.legendText : DEFAULT_TICKET_SETTINGS.legendText,
@@ -62,6 +65,7 @@ export class PrismaTicketSettingsRepository implements TicketSettingsRepository 
         ...(data.businessRfc !== undefined ? { businessRfc: data.businessRfc } : {}),
         ...(data.businessAddress !== undefined ? { businessAddress: data.businessAddress } : {}),
         ...(data.businessPhone !== undefined ? { businessPhone: data.businessPhone } : {}),
+        ...(data.businessEmail !== undefined ? { businessEmail: data.businessEmail } : {}),
         ...(data.businessTaxRegime !== undefined ? { businessTaxRegime: data.businessTaxRegime } : {}),
         ...(data.businessZipCode !== undefined ? { businessZipCode: data.businessZipCode } : {}),
         ...(data.legendText !== undefined ? { legendText: data.legendText } : {}),
@@ -82,6 +86,7 @@ export class PrismaTicketSettingsRepository implements TicketSettingsRepository 
         businessRfc: DEFAULT_TICKET_SETTINGS.businessRfc,
         businessAddress: DEFAULT_TICKET_SETTINGS.businessAddress,
         businessPhone: DEFAULT_TICKET_SETTINGS.businessPhone,
+        businessEmail: DEFAULT_TICKET_SETTINGS.businessEmail,
         businessTaxRegime: DEFAULT_TICKET_SETTINGS.businessTaxRegime,
         businessZipCode: DEFAULT_TICKET_SETTINGS.businessZipCode,
         legendText: DEFAULT_TICKET_SETTINGS.legendText,

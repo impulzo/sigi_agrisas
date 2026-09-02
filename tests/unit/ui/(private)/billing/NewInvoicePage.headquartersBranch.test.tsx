@@ -1,12 +1,16 @@
 /**
  * @jest-environment jsdom
+ *
+ * Reemplaza NewInvoicePage.branchSelector.test.tsx tras improve-billing-invoice-details:
+ * "Factura parcial" ya no muestra ningún selector de sucursal — siempre usa la
+ * sucursal marcada isHeadquarters=true, resuelta vía useHeadquarters().
  */
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 jest.mock("../../../../../app/_hooks/useCurrentUser");
-jest.mock("../../../../../app/_lib/authFetch");
+jest.mock("../../../../../app/_hooks/useHeadquarters");
 
 jest.mock("../../../../../app/(private)/billing/_blocks/StampSaleForm", () => ({
   StampSaleForm: () => <div data-testid="stamp-sale-form" />,
@@ -18,11 +22,11 @@ jest.mock("../../../../../app/(private)/billing/_blocks/PartialInvoiceForm", () 
 }));
 
 import { useCurrentUser } from "../../../../../app/_hooks/useCurrentUser";
-import { authFetch } from "../../../../../app/_lib/authFetch";
+import { useHeadquarters } from "../../../../../app/_hooks/useHeadquarters";
 import { NewInvoicePage } from "../../../../../app/(private)/billing/_blocks/NewInvoicePage";
 
 const mockUseCurrentUser = useCurrentUser as jest.MockedFunction<typeof useCurrentUser>;
-const mockAuthFetch = authFetch as jest.MockedFunction<typeof authFetch>;
+const mockUseHeadquarters = useHeadquarters as jest.MockedFunction<typeof useHeadquarters>;
 
 function setupUser({ branchId, isBypass }: { branchId: string | null; isBypass: boolean }) {
   mockUseCurrentUser.mockReturnValue({
@@ -40,77 +44,55 @@ async function switchToPartialMode(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("tab", { name: /factura parcial/i }));
 }
 
-describe("NewInvoicePage — selector de sucursal para branches:access_all", () => {
+describe("NewInvoicePage — sucursal matriz fija en factura parcial (sin selector)", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("usuario con branches:access_all ve el selector, sin sucursal preseleccionada", async () => {
+  it("usuario con branches:access_all NO ve ningún selector de sucursal", async () => {
     setupUser({ branchId: null, isBypass: true });
-    mockAuthFetch.mockResolvedValue({
-      json: async () => ({
-        items: [
-          { id: "b-tlaxiaco", code: "TLAXIACO", name: "TLAXIACO", isHeadquarters: false },
-          { id: "b-pradera", code: "PRADERA", name: "PRADERA", isHeadquarters: false },
-        ],
-      }),
-    } as Response);
-    const user = userEvent.setup();
-    render(<NewInvoicePage />);
-    await switchToPartialMode(user);
-
-    const select = await screen.findByRole("combobox", { name: /sucursal/i });
-    expect(select).toHaveValue("");
-    expect(await screen.findByRole("option", { name: "TLAXIACO" })).toBeInTheDocument();
-  });
-
-  it("usuario sin branches:access_all con branchId propio NO ve selector", async () => {
-    setupUser({ branchId: "b-own", isBypass: false });
+    mockUseHeadquarters.mockReturnValue({ hq: { id: "b-matriz", code: "MATRIZ", name: "Matriz" }, isLoading: false, refresh: jest.fn() });
     const user = userEvent.setup();
     render(<NewInvoicePage />);
     await switchToPartialMode(user);
 
     expect(screen.queryByRole("combobox", { name: /sucursal/i })).toBeNull();
-    expect(mockAuthFetch).not.toHaveBeenCalled();
+    expect(await screen.findByTestId("partial-form")).toHaveAttribute("data-branch-id", "b-matriz");
   });
 
-  it("usuario sin branches:access_all: PartialInvoiceForm recibe su branchId propio", async () => {
+  it("usuario sin branches:access_all tampoco ve selector — mismo comportamiento fijo a HQ", async () => {
     setupUser({ branchId: "b-own", isBypass: false });
+    mockUseHeadquarters.mockReturnValue({ hq: { id: "b-matriz", code: "MATRIZ", name: "Matriz" }, isLoading: false, refresh: jest.fn() });
     const user = userEvent.setup();
     render(<NewInvoicePage />);
     await switchToPartialMode(user);
 
-    expect(await screen.findByTestId("partial-form")).toHaveAttribute("data-branch-id", "b-own");
+    expect(screen.queryByRole("combobox", { name: /sucursal/i })).toBeNull();
+    expect(await screen.findByTestId("partial-form")).toHaveAttribute("data-branch-id", "b-matriz");
   });
 
-  it("bypass sin seleccionar sucursal: PartialInvoiceForm recibe branchId null", async () => {
+  it("mientras useHeadquarters está cargando, muestra spinner y no renderiza el formulario", async () => {
     setupUser({ branchId: null, isBypass: true });
-    mockAuthFetch.mockResolvedValue({
-      json: async () => ({ items: [{ id: "b-tlaxiaco", code: "TLAXIACO", name: "TLAXIACO", isHeadquarters: false }] }),
-    } as Response);
+    mockUseHeadquarters.mockReturnValue({ hq: null, isLoading: true, refresh: jest.fn() });
     const user = userEvent.setup();
     render(<NewInvoicePage />);
     await switchToPartialMode(user);
 
-    expect(await screen.findByTestId("partial-form")).toHaveAttribute("data-branch-id", "null");
+    expect(screen.queryByTestId("partial-form")).toBeNull();
   });
 
-  it("bypass selecciona una sucursal: PartialInvoiceForm recibe ese branchId", async () => {
+  it("sin sucursal matriz configurada, bloquea el formulario con mensaje explícito", async () => {
     setupUser({ branchId: null, isBypass: true });
-    mockAuthFetch.mockResolvedValue({
-      json: async () => ({ items: [{ id: "b-tlaxiaco", code: "TLAXIACO", name: "TLAXIACO", isHeadquarters: false }] }),
-    } as Response);
+    mockUseHeadquarters.mockReturnValue({ hq: null, isLoading: false, refresh: jest.fn() });
     const user = userEvent.setup();
     render(<NewInvoicePage />);
     await switchToPartialMode(user);
 
-    const select = await screen.findByRole("combobox", { name: /sucursal/i });
-    await user.selectOptions(select, "b-tlaxiaco");
-
-    expect(await screen.findByTestId("partial-form")).toHaveAttribute("data-branch-id", "b-tlaxiaco");
+    expect(screen.queryByTestId("partial-form")).toBeNull();
+    expect(await screen.findByText(/no hay sucursal matriz configurada/i)).toBeInTheDocument();
   });
 
-  it("selector NO aparece en modo 'Facturar venta'", async () => {
+  it("selector NO aparece en modo 'Facturar venta' (nunca existió ahí)", async () => {
     setupUser({ branchId: null, isBypass: true });
-    mockAuthFetch.mockResolvedValue({ json: async () => ({ items: [] }) } as Response);
+    mockUseHeadquarters.mockReturnValue({ hq: { id: "b-matriz", code: "MATRIZ", name: "Matriz" }, isLoading: false, refresh: jest.fn() });
     render(<NewInvoicePage />);
 
     expect(screen.queryByRole("combobox", { name: /sucursal/i })).toBeNull();

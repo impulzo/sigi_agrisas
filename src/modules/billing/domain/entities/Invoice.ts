@@ -21,6 +21,7 @@ export interface InvoiceProps {
   issuerFiscalRegime: string | null;
   issuerZipCode: string | null;
   issuerAddress: string | null;
+  issuerEmail: string | null;
   currency: string;
   subtotal: number;
   taxTotal: number;
@@ -59,6 +60,7 @@ export class Invoice {
   readonly issuerFiscalRegime!: string | null;
   readonly issuerZipCode!: string | null;
   readonly issuerAddress!: string | null;
+  readonly issuerEmail!: string | null;
   readonly currency!: string;
   readonly subtotal!: number;
   readonly taxTotal!: number;

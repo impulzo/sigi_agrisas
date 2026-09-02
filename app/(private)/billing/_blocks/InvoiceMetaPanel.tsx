@@ -2,6 +2,7 @@
 
 import type { Invoice } from "../_logic/types/domain";
 import { describePaymentForm, describePaymentMethod } from "@/shared/domain/catalogs/satPaymentCatalogs";
+import { formatInvoiceDate } from "../_logic/lib/formatInvoiceDate";
 
 const MOTIVE_LABELS: Record<string, string> = {
   "01": "01 - Comprobante emitido con errores con relación",
@@ -15,8 +16,7 @@ interface InvoiceMetaPanelProps {
 }
 
 export function InvoiceMetaPanel({ invoice: inv }: InvoiceMetaPanelProps) {
-  const fmtDate = (d: Date | null) =>
-    d ? new Intl.DateTimeFormat("es-MX", { dateStyle: "long", timeStyle: "short" }).format(d) : "—";
+  const fmtDate = formatInvoiceDate;
 
   return (
     <div className="space-y-4">

@@ -58,6 +58,7 @@ describe("useInvoicePreview", () => {
       fiscalRegime: "601",
       zipCode: "83000",
       address: "Calle Falsa 123",
+      email: "contacto@agrisas.mx",
     });
 
     const { result } = renderHook(() => useInvoicePreview());
@@ -74,6 +75,7 @@ describe("useInvoicePreview", () => {
       fiscalRegime: "601",
       zipCode: "83000",
       address: "Calle Falsa 123",
+      email: "contacto@agrisas.mx",
     });
     expect(result.current.error).toBeNull();
   });
@@ -86,6 +88,7 @@ describe("useInvoicePreview", () => {
       fiscalRegime: "601",
       zipCode: "83000",
       address: "Calle Falsa 123",
+      email: "contacto@agrisas.mx",
     });
 
     const { result } = renderHook(() => useInvoicePreview());
@@ -106,6 +109,7 @@ describe("useInvoicePreview", () => {
       fiscalRegime: "612 Personas Físicas con Actividad Empresarial",
       zipCode: null,
       address: "LIBRES # 105 CENTRO, OCOTLAN DE MORELOS, OAXACA. C.P. 71510",
+      email: null,
     });
 
     const { result } = renderHook(() => useInvoicePreview());
@@ -135,5 +139,26 @@ describe("useInvoicePreview", () => {
     expect(result.current.data!.issuer.fiscalRegime).toBeNull();
     expect(result.current.data!.issuer.zipCode).toBeNull();
     expect(result.current.data!.issuer.address).toBeNull();
+    expect(result.current.data!.issuer.email).toBeNull();
+  });
+
+  it("passes the customerId override through to getInvoicePreviewSource", async () => {
+    mockedSource.mockResolvedValue(SOURCE);
+    mockedEmitter.mockResolvedValue({
+      rfc: "AGR010101AB1",
+      legalName: "Agrisas SA de CV",
+      fiscalRegime: "601",
+      zipCode: "83000",
+      address: "Calle Falsa 123",
+      email: "contacto@agrisas.mx",
+    });
+
+    const { result } = renderHook(() => useInvoicePreview());
+
+    await act(async () => {
+      await result.current.load("sale-1", { paymentForm: "01", paymentMethod: "PUE", customerId: "override-id" });
+    });
+
+    expect(mockedSource).toHaveBeenCalledWith("sale-1", "override-id");
   });
 });

@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
-import { useBypassBranchOptions } from "../../../_hooks/useBypassBranchOptions";
+import { useHeadquarters } from "../../../_hooks/useHeadquarters";
 import { SegmentedButton } from "../../../_components/molecules/SegmentedButton/SegmentedButton";
-import { Select } from "../../../_components/atoms/Select/Select";
 import { StampSaleForm } from "./StampSaleForm";
 import { PartialInvoiceForm } from "./PartialInvoiceForm";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
@@ -18,14 +17,11 @@ interface NewInvoicePageProps {
 }
 
 export function NewInvoicePage({ initialSaleId, initialSaleLabel }: NewInvoicePageProps) {
-  const { can, branchId } = useCurrentUser();
+  const { can } = useCurrentUser();
   const canWrite = can("billing:write");
-  const isBypass = can("branches:access_all") === true;
 
   const [mode, setMode] = useState<Mode>("sale");
-  const { branches, selectedBranchId, setSelectedBranchId } = useBypassBranchOptions(isBypass, branchId ?? null);
-
-  const effectiveBranchId = selectedBranchId || null;
+  const { hq, isLoading: hqLoading } = useHeadquarters();
 
   if (canWrite === "loading") {
     return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
@@ -52,30 +48,19 @@ export function NewInvoicePage({ initialSaleId, initialSaleLabel }: NewInvoicePa
         aria-label="Tipo de factura"
       />
 
-      {mode === "partial" && isBypass && (
-        <div className="max-w-xs">
-          <label htmlFor="partial-invoice-branch" className="block text-label-md text-on-surface mb-1">
-            Sucursal (para resolver precios de catálogo)
-          </label>
-          <Select
-            id="partial-invoice-branch"
-            value={selectedBranchId}
-            onChange={(e) => setSelectedBranchId(e.target.value)}
-            aria-label="Sucursal"
-          >
-            <option value="">— Selecciona sucursal —</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </Select>
-        </div>
-      )}
-
       <div className="bg-surface-container-low rounded-lg border border-outline-variant p-6">
         {mode === "sale" ? (
           <StampSaleForm initialSaleId={initialSaleId} initialSaleLabel={initialSaleLabel} />
+        ) : hqLoading ? (
+          <div className="flex h-32 items-center justify-center"><Spinner size="md" /></div>
+        ) : !hq ? (
+          <EmptyState
+            icon="warning"
+            title="No hay sucursal matriz configurada"
+            description="La factura parcial siempre se emite desde la sucursal matriz. Contacta a un administrador para configurarla."
+          />
         ) : (
-          <PartialInvoiceForm branchId={effectiveBranchId} />
+          <PartialInvoiceForm branchId={hq.id} />
         )}
       </div>
     </div>

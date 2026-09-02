@@ -96,6 +96,7 @@ function toInvoiceDocumentPdfDataFromSnapshot(snapshot: FacturamaInvoiceSnapshot
       fiscalRegimeLabel: snapshot.issuer.fiscalRegimeLabel,
       zipCode: snapshot.issuer.zipCode,
       address: snapshot.issuer.address,
+      email: snapshot.issuer.email,
       branchName: snapshot.issuer.branchName,
     },
     receiver: {
@@ -127,6 +128,7 @@ function toInvoiceDocumentPdfDataFromSnapshot(snapshot: FacturamaInvoiceSnapshot
     total: snapshot.total,
     currency: snapshot.currency,
     uuid: snapshot.uuid,
+    emittedAt: snapshot.emittedAt,
   };
 }
 
@@ -218,7 +220,8 @@ export class FakeFacturamaGateway implements FacturamaGateway {
         ? toInvoiceDocumentPdfData(stored.input, uuid)
         : { ...FALLBACK_INVOICE_DATA, uuid };
     const emitter = snapshot ? null : await getEmitterFiscalSettings();
-    const logoUrl = this.getTicketSettingsUseCase ? await this.getTicketSettingsUseCase.execute().then((s) => s.logoUrl) : null;
+    const ticketSettings = this.getTicketSettingsUseCase ? await this.getTicketSettingsUseCase.execute() : null;
+    const logoUrl = ticketSettings?.logoUrl ?? null;
     const issuerFiscalRegime = emitter?.fiscalRegime ?? baseData.issuer.fiscalRegime;
 
     // When snapshot is provided, labels are pre-resolved by DownloadInvoiceFileUseCase.
@@ -268,6 +271,7 @@ export class FakeFacturamaGateway implements FacturamaGateway {
         fiscalRegimeLabel: issuerFiscalRegimeLabel,
         zipCode: emitter?.zipCode ?? baseData.issuer.zipCode,
         address: emitter?.address ?? baseData.issuer.address,
+        email: snapshot ? baseData.issuer.email : ticketSettings?.businessEmail ?? baseData.issuer.email ?? null,
       },
       receiver: {
         ...baseData.receiver,

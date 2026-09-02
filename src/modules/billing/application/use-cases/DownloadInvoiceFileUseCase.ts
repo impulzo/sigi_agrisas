@@ -11,7 +11,7 @@ import type { Invoice } from "../../domain/entities/Invoice";
 function toSnapshot(
   invoice: Invoice,
   branchName: string | null,
-  resolvedIssuer: { rfc: string | null; legalName: string | null; fiscalRegime: string | null; zipCode: string | null; address: string | null },
+  resolvedIssuer: { rfc: string | null; legalName: string | null; fiscalRegime: string | null; zipCode: string | null; address: string | null; email: string | null },
   labels: { issuerFiscalRegimeLabel: string | null; receiverFiscalRegimeLabel: string | null; receiverCfdiUseLabel: string | null },
   satProductCodeLabelByCode: Map<string, string>,
 ): FacturamaInvoiceSnapshot {
@@ -24,6 +24,7 @@ function toSnapshot(
       fiscalRegimeLabel: labels.issuerFiscalRegimeLabel,
       zipCode: resolvedIssuer.zipCode ?? invoice.issuerZipCode,
       address: resolvedIssuer.address ?? invoice.issuerAddress,
+      email: resolvedIssuer.email ?? invoice.issuerEmail,
       branchName,
     },
     receiver: {
@@ -54,6 +55,7 @@ function toSnapshot(
     subtotal: invoice.subtotal,
     taxTotal: invoice.taxTotal,
     total: invoice.total,
+    emittedAt: invoice.createdAt.toISOString(),
   };
 }
 

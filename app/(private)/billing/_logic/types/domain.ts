@@ -44,6 +44,7 @@ export interface Invoice {
   issuerFiscalRegime: string | null;
   issuerZipCode: string | null;
   issuerAddress: string | null;
+  issuerEmail: string | null;
   issuerBranchName?: string | null;
   issuerFiscalRegimeLabel?: string | null;
   receiverFiscalRegimeLabel?: string | null;

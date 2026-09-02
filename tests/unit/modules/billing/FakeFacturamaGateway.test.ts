@@ -167,6 +167,49 @@ describe("FakeFacturamaGateway", () => {
     expect(element.props.data.receiver.cfdiUseLabel).toBe("G03 - Gastos en general");
   });
 
+  it("download('pdf') without a snapshot resolves the issuer email from TicketSettings.businessEmail", async () => {
+    const settingsRepo = new InMemoryTicketSettingsRepository();
+    await settingsRepo.update({ businessEmail: "contacto@agrisas.mx" });
+    const gw = new FakeFacturamaGateway(new GetTicketSettingsUseCase(settingsRepo));
+
+    await gw.download("pdf", "never-stamped-id");
+
+    const element = mockRenderToBuffer.mock.calls[0][0] as unknown as { props: { data: { issuer: { email: string | null } } } };
+    expect(element.props.data.issuer.email).toBe("contacto@agrisas.mx");
+  });
+
+  it("download('pdf', cfdiId, snapshot) uses the snapshot's issuer email and emission date/time verbatim", async () => {
+    const gw = new FakeFacturamaGateway();
+    const snapshot = {
+      uuid: "UUID-SNAPSHOT",
+      issuer: {
+        rfc: "AGR010101AB1",
+        legalName: "Agrisas SA de CV",
+        fiscalRegime: "601",
+        zipCode: "83000",
+        address: "Av. Siempre Viva 742",
+        email: "contacto@agrisas.mx",
+      },
+      receiver: STAMP_INPUT.receiver,
+      items: [],
+      paymentForm: "01",
+      paymentMethod: "PUE",
+      currency: "MXN",
+      subtotal: 100,
+      taxTotal: 16,
+      total: 116,
+      emittedAt: "2026-09-01T14:32:00.000Z",
+    };
+
+    await gw.download("pdf", "some-cfdi-id", snapshot);
+
+    const element = mockRenderToBuffer.mock.calls[0][0] as unknown as {
+      props: { data: { issuer: { email: string | null }; emittedAt?: string | null } };
+    };
+    expect(element.props.data.issuer.email).toBe("contacto@agrisas.mx");
+    expect(element.props.data.emittedAt).toBe("2026-09-01T14:32:00.000Z");
+  });
+
   it("download('pdf') without the optional dependency behaves as before (no logo, no error)", async () => {
     const gw = new FakeFacturamaGateway();
 

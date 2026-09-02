@@ -8,6 +8,7 @@ export interface TicketSettingsDto {
   businessRfc: string | null;
   businessAddress: string | null;
   businessPhone: string | null;
+  businessEmail: string | null;
   businessTaxRegime: string | null;
   businessZipCode: string | null;
   legendText: string | null;
@@ -20,6 +21,7 @@ export interface UpdateTicketSettingsBody {
   businessRfc?: string | null;
   businessAddress?: string | null;
   businessPhone?: string | null;
+  businessEmail?: string | null;
   businessTaxRegime?: string | null;
   businessZipCode?: string | null;
   legendText?: string | null;

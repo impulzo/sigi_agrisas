@@ -57,6 +57,7 @@ interface CustomerApiShape {
 
 export async function getInvoicePreviewSource(
   saleId: string,
+  overrideCustomerId?: string,
   fetchImpl = authFetch,
 ): Promise<InvoicePreviewSource> {
   let saleRes: Response;
@@ -85,13 +86,14 @@ export async function getInvoicePreviewSource(
     })),
   };
 
-  if (!sale.customerId) {
+  const effectiveCustomerId = overrideCustomerId || sale.customerId;
+  if (!effectiveCustomerId) {
     throw new Error("Esta venta no tiene cliente asociado, no se puede facturar");
   }
 
   let customerRes: Response;
   try {
-    customerRes = await fetchImpl(`/api/v1/admin/customers/${sale.customerId}`);
+    customerRes = await fetchImpl(`/api/v1/admin/customers/${effectiveCustomerId}`);
   } catch (err) {
     if (err instanceof ForbiddenError) throw new Error("No tienes permiso para ver los datos fiscales del cliente");
     throw new NetworkError();

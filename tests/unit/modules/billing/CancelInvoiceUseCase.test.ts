@@ -44,6 +44,7 @@ function makeInvoiceData(overrides: Partial<CreateInvoiceData> = {}): CreateInvo
     issuerFiscalRegime: null,
     issuerZipCode: null,
     issuerAddress: null,
+    issuerEmail: null,
     currency: "MXN",
     subtotal: 100,
     taxTotal: 16,

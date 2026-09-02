@@ -408,6 +408,7 @@ describe("BillingController — getEmitterFiscalSettings", () => {
       fiscalRegime: "601",
       zipCode: "83000",
       address: "Dirección de prueba, Culiacán, Sinaloa",
+      email: null,
     });
     // Cascade always attempts the CSD tier first — this controller's gateway has no CSD
     // uploaded, so it resolves with an empty rfc and the cascade falls through to EmitterFiscalSettings.
@@ -423,7 +424,7 @@ describe("BillingController — getEmitterFiscalSettings", () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null });
+    expect(body).toEqual({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null, email: null });
   });
 
   it("falls through to TicketSettings when EmitterFiscalSettings is empty and no CSD is loaded", async () => {
@@ -447,6 +448,7 @@ describe("BillingController — getEmitterFiscalSettings", () => {
       fiscalRegime: "612",
       zipCode: null,
       address: "LIBRES # 105 CENTRO, OCOTLAN DE MORELOS, OAXACA. C.P. 71510",
+      email: null,
     });
   });
 
@@ -528,6 +530,7 @@ describe("BillingController — getById resolves SAT catalog descriptions", () =
       issuerFiscalRegime: "601",
       issuerZipCode: "83000",
       issuerAddress: "Calle Falsa 123",
+      issuerEmail: null,
       currency: "MXN",
       subtotal: 100,
       taxTotal: 16,
@@ -571,6 +574,7 @@ describe("BillingController — getById resolves SAT catalog descriptions", () =
       issuerFiscalRegime: "601",
       issuerZipCode: "83000",
       issuerAddress: "Calle Falsa 123",
+      issuerEmail: null,
       currency: "MXN",
       subtotal: 100,
       taxTotal: 16,
@@ -633,6 +637,7 @@ describe("BillingController — getById resolves SAT catalog descriptions", () =
       issuerFiscalRegime: "601",
       issuerZipCode: "83000",
       issuerAddress: "Calle Falsa 123",
+      issuerEmail: null,
       currency: "MXN",
       subtotal: 100,
       taxTotal: 16,
@@ -693,6 +698,7 @@ describe("BillingController — getById resolves SAT catalog descriptions", () =
       issuerFiscalRegime: null,
       issuerZipCode: null,
       issuerAddress: null,
+      issuerEmail: null,
       currency: "MXN",
       subtotal: 100,
       taxTotal: 16,
@@ -733,6 +739,7 @@ describe("BillingController — getById resolves SAT catalog descriptions", () =
       issuerFiscalRegime: null,
       issuerZipCode: null,
       issuerAddress: null,
+      issuerEmail: null,
       currency: "MXN",
       subtotal: 100,
       taxTotal: 16,

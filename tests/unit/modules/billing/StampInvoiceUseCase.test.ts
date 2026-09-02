@@ -37,6 +37,19 @@ const EMITTER = {
   fiscalRegime: "601",
   zipCode: "83000",
   address: "Av. Siempre Viva 742, Culiacán, Sinaloa",
+  email: null,
+};
+
+const OTHER_CUSTOMER_ID = "customer-uuid-2";
+const OTHER_CUSTOMER = {
+  id: OTHER_CUSTOMER_ID,
+  name: "Otro Cliente SA",
+  legalName: "Otro Cliente SA de CV",
+  rfc: "OCL900101AAA",
+  taxRegime: "601",
+  cfdiUse: "G03",
+  taxZipCode: "01000",
+  email: "otro@ejemplo.com",
 };
 
 const BRANCH_ID = "branch-uuid-1";
@@ -221,6 +234,89 @@ describe("StampInvoiceUseCase", () => {
       expect(invoice.issuerFiscalRegime).toBe(EMITTER.fiscalRegime);
       expect(invoice.issuerZipCode).toBe(EMITTER.zipCode);
       expect(invoice.issuerAddress).toBe(EMITTER.address);
+      expect(invoice.issuerEmail).toBe(EMITTER.email);
+    });
+
+    it("stamps from sale with a customer override — receiver is the override, sale is never mutated", async () => {
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const sale = makeSale();
+      const findCustomer = jest.fn().mockImplementation((id: string) =>
+        Promise.resolve(id === OTHER_CUSTOMER_ID ? OTHER_CUSTOMER : CUSTOMER)
+      );
+      const lookup: BillingLookupService = {
+        findSaleWithItems: jest.fn().mockResolvedValue(sale),
+        findCustomer,
+        findBranch: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
+        findHeadquarters: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
+      };
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+
+      const invoice = await uc.execute(
+        { type: "sale", saleId: SALE_ID, customerId: OTHER_CUSTOMER_ID },
+        CREATOR_ID,
+        BRANCH_ID
+      );
+
+      expect(findCustomer).toHaveBeenCalledWith(OTHER_CUSTOMER_ID);
+      expect(invoice.customerId).toBe(OTHER_CUSTOMER_ID);
+      expect(invoice.receiverRfc).toBe(OTHER_CUSTOMER.rfc);
+      expect(invoice.receiverName).toBe(OTHER_CUSTOMER.legalName);
+      // The sale object itself is never touched — no write method on the
+      // lookup/repo other than the invoice creation is exercised.
+      expect(sale.customerId).toBe(CUSTOMER_ID);
+    });
+
+    it("omitting customerId keeps the sale's own customer as receiver — unchanged from before this capability", async () => {
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const lookup = makeLookup();
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+
+      const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
+
+      expect(lookup.findCustomer).toHaveBeenCalledWith(CUSTOMER_ID);
+      expect(invoice.customerId).toBe(CUSTOMER_ID);
+      expect(invoice.receiverRfc).toBe(CUSTOMER.rfc);
+    });
+
+    it("customer override not found → ReceiverFiscalDataIncompleteError — does NOT call gateway", async () => {
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const stampSpy = jest.spyOn(gateway, "stamp");
+      const lookup: BillingLookupService = {
+        findSaleWithItems: jest.fn().mockResolvedValue(makeSale()),
+        findCustomer: jest.fn().mockResolvedValue(null),
+        findBranch: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
+        findHeadquarters: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
+      };
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+
+      await expect(
+        uc.execute({ type: "sale", saleId: SALE_ID, customerId: "nonexistent-uuid" }, CREATOR_ID, BRANCH_ID)
+      ).rejects.toThrow(ReceiverFiscalDataIncompleteError);
+
+      expect(stampSpy).not.toHaveBeenCalled();
+    });
+
+    it("sale without its own customer and no override → ReceiverFiscalDataIncompleteError — does NOT call gateway", async () => {
+      const repo = new InMemoryInvoiceRepository();
+      const gateway = new FakeFacturamaGateway();
+      const stampSpy = jest.spyOn(gateway, "stamp");
+      const lookup: BillingLookupService = {
+        findSaleWithItems: jest.fn().mockResolvedValue(makeSale({ customerId: null })),
+        findCustomer: jest.fn(),
+        findBranch: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
+        findHeadquarters: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
+      };
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+
+      await expect(
+        uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID)
+      ).rejects.toThrow(ReceiverFiscalDataIncompleteError);
+
+      expect(lookup.findCustomer).not.toHaveBeenCalled();
+      expect(stampSpy).not.toHaveBeenCalled();
     });
 
     it("CSD loaded — rfc/legalName come from the certificate, fiscalRegime/zipCode/address still from EmitterFiscalSettings", async () => {
@@ -429,6 +525,7 @@ describe("StampInvoiceUseCase", () => {
       expect(invoice.issuerFiscalRegime).toBe(EMITTER.fiscalRegime);
       expect(invoice.issuerZipCode).toBe(EMITTER.zipCode);
       expect(invoice.issuerAddress).toBe(EMITTER.address);
+      expect(invoice.issuerEmail).toBe(EMITTER.email);
     });
 
     it("stamps successfully with null issuer fields when nothing is captured anywhere — never invents data", async () => {

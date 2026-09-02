@@ -8,6 +8,7 @@ import type { Invoice } from "../types/domain";
 interface StampSaleFormState {
   saleId: string;
   saleLabel: string;
+  customerId: string;
   paymentForm: string;
   paymentMethod: string;
   cfdiUse: string;
@@ -16,6 +17,7 @@ interface StampSaleFormState {
 interface UseStampSaleFormResult {
   form: StampSaleFormState;
   setField: <K extends keyof StampSaleFormState>(key: K, value: StampSaleFormState[K]) => void;
+  selectSale: (saleId: string, saleLabel: string, customerId: string | null) => void;
   isSubmitting: boolean;
   error: Error | null;
   clearError: () => void;
@@ -25,6 +27,7 @@ interface UseStampSaleFormResult {
 const DEFAULT: StampSaleFormState = {
   saleId: "",
   saleLabel: "",
+  customerId: "",
   paymentForm: "03",
   paymentMethod: "PUE",
   cfdiUse: "G03",
@@ -44,6 +47,12 @@ export function useStampSaleForm(initialSaleId?: string, initialSaleLabel?: stri
     setForm((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  // Selecting a different sale resets the receiver override back to that sale's
+  // own customer (or empty) — never carries over the previous sale's override.
+  const selectSale = useCallback((saleId: string, saleLabel: string, customerId: string | null) => {
+    setForm((prev) => ({ ...prev, saleId, saleLabel, customerId: customerId ?? "" }));
+  }, []);
+
   const clearError = useCallback(() => setError(null), []);
 
   const submit = useCallback(async (): Promise<Invoice | null> => {
@@ -56,6 +65,7 @@ export function useStampSaleForm(initialSaleId?: string, initialSaleLabel?: stri
     try {
       const invoice = await stampInvoice({
         saleId: form.saleId,
+        ...(form.customerId && { customerId: form.customerId }),
         ...(form.paymentForm && { paymentForm: form.paymentForm }),
         ...(form.paymentMethod && { paymentMethod: form.paymentMethod }),
         ...(form.cfdiUse && { cfdiUse: form.cfdiUse }),
@@ -70,5 +80,5 @@ export function useStampSaleForm(initialSaleId?: string, initialSaleLabel?: stri
     }
   }, [form, router]);
 
-  return { form, setField, isSubmitting, error, clearError, submit };
+  return { form, setField, selectSale, isSubmitting, error, clearError, submit };
 }

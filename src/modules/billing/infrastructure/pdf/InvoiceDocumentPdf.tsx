@@ -28,6 +28,7 @@ export interface InvoiceDocumentPdfData {
     fiscalRegimeLabel?: string | null;
     zipCode?: string | null;
     address?: string | null;
+    email?: string | null;
     logoUrl?: string | null;
   };
   receiver: {
@@ -47,6 +48,9 @@ export interface InvoiceDocumentPdfData {
   total: number;
   currency: string;
   uuid?: string | null;
+  // ISO timestamp of the invoice's emission (`Invoice.createdAt`). Absent for a
+  // draft/preview PDF — there is no real emission instant before stamping.
+  emittedAt?: string | null;
 }
 
 interface InvoiceDocumentPdfProps {
@@ -64,6 +68,10 @@ function pct(n: number): string {
   return `${(n * 100).toFixed(0)}%`;
 }
 
+function formatEmittedAt(iso: string): string {
+  return new Intl.DateTimeFormat("es-MX", { dateStyle: "long", timeStyle: "short" }).format(new Date(iso));
+}
+
 export function InvoiceDocumentPdf({ data, watermark, folioLabel, isDraft = false }: InvoiceDocumentPdfProps) {
   const ivaTotal = data.lines.reduce((sum, l) => sum + l.lineSubtotal * l.ivaRate, 0);
   const iepsTotal = data.lines.reduce((sum, l) => sum + l.lineSubtotal * l.iepsRate, 0);
@@ -79,17 +87,26 @@ export function InvoiceDocumentPdf({ data, watermark, folioLabel, isDraft = fals
             <View style={s.issuerBlock}>
               <Text style={s.issuerName}>Factura</Text>
               {data.issuer.branchName && <Text style={s.issuerMeta}>{data.issuer.branchName}</Text>}
+              {data.issuer.email && <Text style={s.issuerMeta}>{data.issuer.email}</Text>}
             </View>
           </View>
-          <View style={s.invoiceMeta}>
-            <Text style={s.invoiceMetaLabel}>Folio</Text>
-            <Text style={s.invoiceMetaValue}>{folioLabel}</Text>
-            {data.uuid && (
-              <>
-                <Text style={s.invoiceMetaLabel}>UUID</Text>
-                <Text style={s.invoiceMetaValue}>{data.uuid}</Text>
-              </>
+          <View style={s.invoiceMetaColumns}>
+            {!isDraft && data.emittedAt && (
+              <View style={s.invoiceMetaCol}>
+                <Text style={s.invoiceMetaLabel}>Fecha de emisión</Text>
+                <Text style={s.invoiceMetaValue}>{formatEmittedAt(data.emittedAt)}</Text>
+              </View>
             )}
+            <View style={s.invoiceMetaCol}>
+              <Text style={s.invoiceMetaLabel}>Folio</Text>
+              <Text style={s.invoiceMetaValue}>{folioLabel}</Text>
+              {data.uuid && (
+                <>
+                  <Text style={s.invoiceMetaLabel}>UUID</Text>
+                  <Text style={s.invoiceMetaValue}>{data.uuid}</Text>
+                </>
+              )}
+            </View>
           </View>
         </View>
 

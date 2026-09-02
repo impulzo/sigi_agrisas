@@ -19,6 +19,7 @@ import type { Invoice } from "../../../../../app/(private)/billing/_logic/types/
 import { totalsVectors } from "../../../../fixtures/totals-vectors";
 
 const mockStamp = stampInvoice as jest.MockedFunction<typeof stampInvoice>;
+const TEST_BRANCH_ID = "branch-uuid-hq";
 
 const COMPLETE_CUSTOMER = {
   rfc: "XAXX010101000",
@@ -74,7 +75,7 @@ describe("usePartialInvoiceForm", () => {
     const { result } = renderHook(() => usePartialInvoiceForm());
     act(() => result.current.addLine(makeLine()));
     let ret: unknown;
-    await act(async () => { ret = await result.current.submit(); });
+    await act(async () => { ret = await result.current.submit(TEST_BRANCH_ID); });
     expect(ret).toBeNull();
     expect(mockStamp).not.toHaveBeenCalled();
     expect(result.current.error).not.toBeNull();
@@ -84,7 +85,7 @@ describe("usePartialInvoiceForm", () => {
     const { result } = renderHook(() => usePartialInvoiceForm());
     act(() => result.current.setCustomer(COMPLETE_CUSTOMER));
     let ret: unknown;
-    await act(async () => { ret = await result.current.submit(); });
+    await act(async () => { ret = await result.current.submit(TEST_BRANCH_ID); });
     expect(ret).toBeNull();
     expect(mockStamp).not.toHaveBeenCalled();
   });
@@ -121,12 +122,25 @@ describe("usePartialInvoiceForm", () => {
       result.current.setCustomer(COMPLETE_CUSTOMER);
       result.current.addLine(makeLine());
     });
-    await act(async () => { await result.current.submit(); });
+    await act(async () => { await result.current.submit(TEST_BRANCH_ID); });
     expect(mockStamp).toHaveBeenCalledTimes(1);
     const payload = mockStamp.mock.calls[0][0] as unknown as Record<string, unknown>;
     expect(payload).not.toHaveProperty("saleId");
     expect(payload).toHaveProperty("customer");
     expect(payload).toHaveProperty("items");
+    expect(payload.branchId).toBe(TEST_BRANCH_ID);
+  });
+
+  it("submit sends the branchId passed by the caller (headquarters branch), even when null", async () => {
+    mockStamp.mockResolvedValueOnce(makeInvoiceResult());
+    const { result } = renderHook(() => usePartialInvoiceForm());
+    act(() => {
+      result.current.setCustomer(COMPLETE_CUSTOMER);
+      result.current.addLine(makeLine());
+    });
+    await act(async () => { await result.current.submit(null); });
+    const payload = mockStamp.mock.calls[0][0] as unknown as Record<string, unknown>;
+    expect(payload.branchId).toBeNull();
   });
 
   it("free line (null productId) included in payload", async () => {
@@ -136,7 +150,7 @@ describe("usePartialInvoiceForm", () => {
       result.current.setCustomer(COMPLETE_CUSTOMER);
       result.current.addLine({ ...makeLine(), productId: null, productCode: "MANUAL" });
     });
-    await act(async () => { await result.current.submit(); });
+    await act(async () => { await result.current.submit(TEST_BRANCH_ID); });
     const payload = mockStamp.mock.calls[0][0] as { items: Array<{ productId: unknown }> };
     expect(payload.items[0].productId).toBeNull();
   });
@@ -183,7 +197,7 @@ describe("usePartialInvoiceForm", () => {
       result.current.addLine(makeLine({ productId: "prod-1", productCode: "P001", unitPrice: 0 }));
     });
     let ret: unknown;
-    await act(async () => { ret = await result.current.submit(); });
+    await act(async () => { ret = await result.current.submit(TEST_BRANCH_ID); });
     expect(ret).toBeNull();
     expect(mockStamp).not.toHaveBeenCalled();
     expect(result.current.error?.message).toMatch(/precio \$0/i);
@@ -196,7 +210,7 @@ describe("usePartialInvoiceForm", () => {
       result.current.addLine(makeLine({ satProductCode: "1234" }));
     });
     let ret: unknown;
-    await act(async () => { ret = await result.current.submit(); });
+    await act(async () => { ret = await result.current.submit(TEST_BRANCH_ID); });
     expect(ret).toBeNull();
     expect(mockStamp).not.toHaveBeenCalled();
     expect(result.current.error?.message).toMatch(/clave sat/i);
@@ -209,7 +223,7 @@ describe("usePartialInvoiceForm", () => {
       result.current.setCustomer(COMPLETE_CUSTOMER);
       result.current.addLine(makeLine({ satProductCode: "" }));
     });
-    await act(async () => { await result.current.submit(); });
+    await act(async () => { await result.current.submit(TEST_BRANCH_ID); });
     expect(mockStamp).toHaveBeenCalledTimes(1);
   });
 
@@ -220,7 +234,7 @@ describe("usePartialInvoiceForm", () => {
       result.current.setCustomer(COMPLETE_CUSTOMER);
       result.current.addLine(makeLine({ satProductCode: "01010101" }));
     });
-    await act(async () => { await result.current.submit(); });
+    await act(async () => { await result.current.submit(TEST_BRANCH_ID); });
     expect(mockStamp).toHaveBeenCalledTimes(1);
   });
 
@@ -231,7 +245,7 @@ describe("usePartialInvoiceForm", () => {
       result.current.setCustomer(COMPLETE_CUSTOMER);
       result.current.addLine(makeLine({ productId: null, productCode: "LIB-1", unitPrice: 0 }));
     });
-    await act(async () => { await result.current.submit(); });
+    await act(async () => { await result.current.submit(TEST_BRANCH_ID); });
     expect(mockStamp).toHaveBeenCalledTimes(1);
   });
 
@@ -242,7 +256,7 @@ describe("usePartialInvoiceForm", () => {
       result.current.setCustomer(COMPLETE_CUSTOMER);
       result.current.addLine(makeLine());
     });
-    await act(async () => { await result.current.submit(); });
+    await act(async () => { await result.current.submit(TEST_BRANCH_ID); });
     expect(result.current.error).toBeInstanceOf(SaleAlreadyInvoicedError);
   });
 });

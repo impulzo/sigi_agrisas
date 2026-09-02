@@ -85,6 +85,7 @@ export interface FacturamaInvoiceSnapshot {
     fiscalRegimeLabel?: string | null;
     zipCode: string | null;
     address: string | null;
+    email: string | null;
     branchName?: string | null;
   };
   receiver: FacturamaReceiverInput & {
@@ -98,6 +99,10 @@ export interface FacturamaInvoiceSnapshot {
   subtotal: number;
   taxTotal: number;
   total: number;
+  // ISO timestamp of the invoice's emission (`Invoice.createdAt`). Only present
+  // for an already-stamped invoice — absent for any snapshot built before
+  // stamping (there is no real emission instant yet).
+  emittedAt?: string;
 }
 
 export interface FacturamaCsdInput {

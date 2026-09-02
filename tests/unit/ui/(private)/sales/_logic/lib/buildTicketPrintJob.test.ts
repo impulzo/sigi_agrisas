@@ -60,6 +60,7 @@ const defaultSettings: TicketSettingsDto = {
   businessRfc: null,
   businessAddress: null,
   businessPhone: null,
+  businessEmail: null,
   businessTaxRegime: null,
   businessZipCode: null,
   legendText: null,
