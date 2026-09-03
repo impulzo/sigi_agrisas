@@ -122,11 +122,13 @@ The system SHALL expose `GET /api/v1/admin/sales/:id` that returns a single sale
 
  `SaleDetailDto` extends `SaleDto` with:
 
-- `items: SaleItemDto[]`, each including `id`, `productId`, `productPriceId` (or `null`), `productCodeSnapshot`, `productNameSnapshot`, `priceNameSnapshot`, `quantity`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`, `lineSubtotal`, `lineTax`, `lineTotal`.
+- `items: SaleItemDto[]`, each including `id`, `productId`, `productPriceId` (or `null`), `productCodeSnapshot`, `productNameSnapshot`, `priceNameSnapshot`, `quantity`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`, `lineSubtotal`, `lineIva`, `lineIeps`, `lineTax`, `lineTotal`.
 - `quoteId: string | null` (unchanged from `add-quotes-crud`).
 - `returnedQuantityBySaleItem: Record<string, number>` — a map keyed by `sale_item.id` whose value is the SUM of `return_items.quantity` across all returns linked to this sale where `returns.status='completed'`. Keys for `sale_items` with no completed returns are OMITTED (consumers SHALL interpret "absent key" as `0`). Cancelled returns do NOT contribute to this aggregate.
 - `customerAddress: string | null` — the customer's `address` joined from the sale's `customerId` (`null` for walk-in sales).
 - `customerCreditDays: number | null` — the customer's `creditDays` joined from the sale's `customerId` (`null` for walk-in sales).
+
+`lineIva` and `lineIeps` are derived fields — `SaleItem` only persists `lineSubtotal`, `lineTax`, and `lineTotal` (see "Sale aggregate model"). The mapper SHALL compute `lineIva = roundHalfToEven(lineSubtotal * (ivaRate ?? 0), 4)` and `lineIeps = roundHalfToEven(lineSubtotal * (iepsRate ?? 0), 4)`, using the same banker's-rounding function (`roundHalfToEven`, half-to-even at 4 decimals) that `SaleTotalsCalculator` uses when the line was first computed — never `Math.round` or any other rounding mode — so that `lineIva + lineIeps` always equals the persisted `lineTax` for that line.
 
 Each `SaleDto` in the list response (`GET /api/v1/admin/sales`) SHALL also include `customerAddress` and `customerCreditDays` (same joined semantics, `null` for walk-in sales).
 
@@ -169,6 +171,10 @@ Each `SaleDto` in the list response (`GET /api/v1/admin/sales`) SHALL also inclu
 #### Scenario: Aggregate query is not paginated
 - **WHEN** the sale has 50 returns across many lines (unusual but legal)
 - **THEN** the aggregate still reflects the total per line; the query is a single `SUM`-grouped read against `return_items` joined to `returns`
+
+#### Scenario: lineIva and lineIeps use the same rounding as lineTax
+- **WHEN** a sale item has `lineSubtotal = 100.0002` and `iepsRate = 0.25` (a value where half-up and half-to-even rounding disagree at the 4th decimal)
+- **THEN** the returned `lineIeps` SHALL equal `roundHalfToEven(100.0002 * 0.25, 4) = 25.0000`, and `lineIva + lineIeps` SHALL equal the persisted `lineTax` for that item — never the half-up result `25.0001`
 
 ---
 
