@@ -4,6 +4,7 @@ import { BillingLookupService } from "../ports/BillingLookupService";
 import { GetEmitterFiscalSettingsUseCase } from "./GetEmitterFiscalSettingsUseCase";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { resolveIssuerFiscalData } from "../services/resolveIssuerFiscalData";
+import { EmitterFiscalSettingsStore } from "../ports/EmitterFiscalSettingsStore";
 import { resolveSatDescription, type SatCodeSearchUseCase } from "../services/resolveSatDescription";
 import { InvoiceNotFoundError, InvoiceNotStampedError, InvoiceFileDownloadFailedError } from "../../domain/errors";
 import type { Invoice } from "../../domain/entities/Invoice";
@@ -69,6 +70,7 @@ export class DownloadInvoiceFileUseCase {
     private readonly searchSatTaxRegimesUseCase?: SatCodeSearchUseCase,
     private readonly searchSatCfdiUsesUseCase?: SatCodeSearchUseCase,
     private readonly searchSatCodesUseCase?: SatCodeSearchUseCase,
+    private readonly store?: EmitterFiscalSettingsStore
   ) {}
 
   async execute(id: string, format: "pdf" | "xml"): Promise<FacturamaDownloadResult & { filename: string }> {
@@ -78,7 +80,7 @@ export class DownloadInvoiceFileUseCase {
 
     const branch = this.lookupService ? await this.lookupService.findBranch(invoice.branchId) : null;
 
-    const resolvedIssuer = await resolveIssuerFiscalData(this.gateway, this.getTicketSettingsUseCase);
+    const resolvedIssuer = await resolveIssuerFiscalData(this.gateway, this.getTicketSettingsUseCase, this.store);
 
     const [issuerFiscalRegimeLabel, receiverFiscalRegimeLabel, receiverCfdiUseLabel] = await Promise.all([
       resolvedIssuer.fiscalRegime && this.searchSatTaxRegimesUseCase

@@ -10,13 +10,14 @@ import { ProviderNotFoundError } from "../../domain/errors/ProviderNotFoundError
 import { ProviderCodeAlreadyInUseError } from "../../domain/errors/ProviderCodeAlreadyInUseError";
 import { ProviderRfcAlreadyInUseError } from "../../domain/errors/ProviderRfcAlreadyInUseError";
 import { ProviderHasDepartmentsError } from "../../domain/errors/ProviderHasDepartmentsError";
-import { optionalRfcSchema, taxRegimeSchema } from "@/shared/infrastructure/http/validators";
+import { optionalRfcSchema, taxRegimeSchema, uuidSchema } from "@/shared/infrastructure/http/validators";
+import { mapDomainError } from "@/shared/infrastructure/http/mapDomainError";
 
 const CFDI_USE_REGEX = /^[A-Z]\d{2}$/;
 const TAX_ZIP_CODE_REGEX = /^\d{5}$/;
 const CODE_REGEX = /^[A-Z0-9_]{1,32}$/;
 
-const uuidParamSchema = z.string().uuid("Invalid provider ID format");
+const uuidParamSchema = uuidSchema;
 
 const listQueryFiltersSchema = z.object({
   search: z
@@ -135,7 +136,8 @@ export class ProviderController {
       const provider = await this.getUseCase.execute(parsed.data);
       return NextResponse.json(provider);
     } catch (err) {
-      if (err instanceof ProviderNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[ProviderNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -150,8 +152,11 @@ export class ProviderController {
       const provider = await this.createUseCase.execute(parsed.data);
       return NextResponse.json(provider, { status: 201 });
     } catch (err) {
-      if (err instanceof ProviderCodeAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
-      if (err instanceof ProviderRfcAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
+      const mapped = mapDomainError(err, [
+        [ProviderCodeAlreadyInUseError, 409],
+        [ProviderRfcAlreadyInUseError, 409],
+      ]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -170,8 +175,11 @@ export class ProviderController {
       const provider = await this.updateUseCase.execute(idParsed.data, parsed.data);
       return NextResponse.json(provider);
     } catch (err) {
-      if (err instanceof ProviderNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
-      if (err instanceof ProviderRfcAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
+      const mapped = mapDomainError(err, [
+        [ProviderNotFoundError, 404],
+        [ProviderRfcAlreadyInUseError, 409],
+      ]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -185,7 +193,8 @@ export class ProviderController {
       await this.softDeleteUseCase.execute(parsed.data);
       return new NextResponse(null, { status: 204 });
     } catch (err) {
-      if (err instanceof ProviderNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[ProviderNotFoundError, 404]]);
+      if (mapped) return mapped;
       if (err instanceof ProviderHasDepartmentsError) return NextResponse.json({ error: "ProviderHasDepartments", departmentCount: err.departmentCount }, { status: 409 });
       throw err;
     }

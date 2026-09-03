@@ -9,10 +9,7 @@ import {
   FacturamaItemInput,
 } from "../../application/ports/FacturamaGateway";
 import { FacturamaStampError, FacturamaCancelError, FacturamaCsdError } from "../../domain/errors";
-
-function buildBasicAuth(user: string, password: string): string {
-  return "Basic " + Buffer.from(`${user}:${password}`).toString("base64");
-}
+import { FacturamaHttpClient } from "@/shared/infrastructure/facturama/FacturamaHttpClient";
 
 function buildCfdiItemPayload(item: FacturamaItemInput) {
   return {
@@ -38,9 +35,7 @@ function buildCfdiItemPayload(item: FacturamaItemInput) {
 }
 
 export class FacturamaRestGateway implements FacturamaGateway {
-  private readonly baseUrl: string;
-  private readonly authHeader: string;
-  private readonly fetchImpl: typeof fetch;
+  private readonly http: FacturamaHttpClient;
 
   constructor(
     opts: {
@@ -50,45 +45,11 @@ export class FacturamaRestGateway implements FacturamaGateway {
       fetchImpl?: typeof fetch;
     } = {}
   ) {
-    const user = opts.user ?? process.env.FACTURAMA_USER ?? "";
-    const password = opts.password ?? process.env.FACTURAMA_PASSWORD ?? "";
-    this.baseUrl = (opts.baseUrl ?? process.env.FACTURAMA_BASE_URL ?? "https://apisandbox.facturama.mx/").replace(/\/$/, "");
-    this.fetchImpl = opts.fetchImpl ?? fetch;
-
-    if (!user || !password) {
-      throw new Error(
-        "FACTURAMA_USER and FACTURAMA_PASSWORD are required when FACTURAMA_MOCK is false"
-      );
-    }
-    this.authHeader = buildBasicAuth(user, password);
+    this.http = new FacturamaHttpClient(opts);
   }
 
-  private async request<T>(
-    method: string,
-    path: string,
-    body?: unknown
-  ): Promise<T> {
-    const url = `${this.baseUrl}${path}`;
-    const res = await this.fetchImpl(url, {
-      method,
-      headers: {
-        Authorization: this.authHeader,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: body != null ? JSON.stringify(body) : undefined,
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => res.statusText);
-      throw new Error(`Facturama HTTP ${res.status}: ${text}`);
-    }
-
-    const ct = res.headers.get("content-type") ?? "";
-    if (ct.includes("application/json")) {
-      return res.json() as Promise<T>;
-    }
-    return res.text() as unknown as Promise<T>;
+  private request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    return this.http.request<T>(method, path, body);
   }
 
   async stamp(input: FacturamaStampInput): Promise<FacturamaStampResult> {

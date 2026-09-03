@@ -1,5 +1,5 @@
 import { FacturamaGateway, FacturamaCsdStatus } from "../ports/FacturamaGateway";
-import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
+import { EmitterFiscalSettingsStore } from "../ports/EmitterFiscalSettingsStore";
 
 export interface CsdStatusWithFiscalData extends FacturamaCsdStatus {
   legalName: string | null;
@@ -9,12 +9,15 @@ export interface CsdStatusWithFiscalData extends FacturamaCsdStatus {
 }
 
 export class GetCsdStatusUseCase {
-  constructor(private readonly gateway: FacturamaGateway) {}
+  constructor(
+    private readonly gateway: FacturamaGateway,
+    private readonly store: EmitterFiscalSettingsStore
+  ) {}
 
   async execute(rfc?: string): Promise<CsdStatusWithFiscalData> {
     const [status, fiscalSettings] = await Promise.all([
       this.gateway.getCsdStatus(rfc),
-      getEmitterFiscalSettings(),
+      this.store.get(),
     ]);
     return {
       ...status,

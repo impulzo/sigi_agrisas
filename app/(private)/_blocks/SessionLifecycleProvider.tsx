@@ -8,7 +8,8 @@ import {
   setScheduleOverride,
   refreshNow,
 } from "../../_lib/session/refreshScheduler";
-import { setAccessToken } from "../../_lib/session/accessToken";
+import { setAccessToken, getAccessToken, clearAccessToken } from "../../_lib/session/accessToken";
+import { setLastActivityAt, clearLastActivityAt } from "../../_lib/session/lastActivity";
 import { claimRefreshLeadership } from "../../_lib/session/claimRefreshLeadership";
 import { logoutClient, setLogoutChannel } from "../../_lib/logout";
 import { useInactivityTimer } from "../../_hooks/useInactivityTimer";
@@ -33,8 +34,7 @@ export function SessionLifecycleProvider({ children }: { children: React.ReactNo
   });
 
   useEffect(() => {
-    const token =
-      typeof window !== "undefined" ? sessionStorage.getItem("accessToken") : null;
+    const token = getAccessToken();
 
     // Sin BroadcastChannel no hay coordinación entre pestañas: cada pestaña se vale sola.
     if (typeof BroadcastChannel === "undefined") {
@@ -105,13 +105,13 @@ export function SessionLifecycleProvider({ children }: { children: React.ReactNo
       }
 
       if (msg.type === "activity" && msg.at) {
-        try { sessionStorage.setItem("lastActivityAt", String(msg.at)); } catch {}
+        setLastActivityAt(msg.at);
       }
 
       if (msg.type === "logged-out") {
         if (typeof window !== "undefined") {
-          sessionStorage.removeItem("accessToken");
-          sessionStorage.removeItem("lastActivityAt");
+          clearAccessToken();
+          clearLastActivityAt();
           const query = msg.reason && msg.reason !== "manual" ? `?reason=${msg.reason}` : "";
           window.location.assign(`/auth/login${query}`);
         }

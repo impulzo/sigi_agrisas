@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormField } from "../../../_components/molecules/FormField/FormField";
 import { Button } from "../../../_components/atoms/Button/Button";
 import { SessionReasonBanner } from "../../../_components/molecules/SessionReasonBanner/SessionReasonBanner";
@@ -13,6 +12,7 @@ type SessionReason = (typeof VALID_REASONS)[number];
 export function LoginForm() {
   const { values, errors, isSubmitting, formError, handleChange, handleBlur, handleSubmit } =
     useLoginForm();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const rawReason = searchParams.get("reason");
   const reason: SessionReason | null =
@@ -24,7 +24,9 @@ export function LoginForm() {
         Iniciar sesión
       </h2>
 
-      {reason && <SessionReasonBanner reason={reason} />}
+      {reason && (
+        <SessionReasonBanner reason={reason} onDismiss={() => router.replace("/auth/login")} />
+      )}
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <FormField
@@ -67,13 +69,6 @@ export function LoginForm() {
           Ingresar
         </Button>
       </form>
-
-      <p className="mt-4 text-center text-sm text-gray-600">
-        ¿No tienes cuenta?{" "}
-        <Link href="/auth/register" className="text-agrisas-medium hover:underline font-medium">
-          Regístrate aquí
-        </Link>
-      </p>
     </div>
   );
 }

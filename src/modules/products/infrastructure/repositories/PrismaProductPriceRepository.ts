@@ -10,6 +10,10 @@ import { resolveEffectivePrices } from "../../domain/services/resolveEffectivePr
 import { ProductPriceNotFoundError } from "../../domain/errors/ProductPriceNotFoundError";
 import { DuplicatePriceNameError } from "../../domain/errors/DuplicatePriceNameError";
 import { DuplicateDefaultPriceError } from "../../domain/errors/DuplicateDefaultPriceError";
+import {
+  isPrismaUniqueError as isUniqueError,
+  isPrismaNotFoundError as isNotFoundError,
+} from "@/shared/infrastructure/prisma/errors";
 
 function toProductPrice(row: PrismaProductPrice): ProductPrice {
   return ProductPrice.create({
@@ -26,26 +30,8 @@ function toProductPrice(row: PrismaProductPrice): ProductPrice {
   });
 }
 
-function uniqueTargetIncludes(err: unknown, needle: string): boolean {
-  if (typeof err !== "object" || err === null) return false;
-  const e = err as { code?: string; meta?: { target?: string[] | string } };
-  if (e.code !== "P2002") return false;
-  const t = e.meta?.target;
-  if (Array.isArray(t)) return t.some((f) => f.includes(needle));
-  if (typeof t === "string") return t.includes(needle);
-  return false;
-}
-
-function isUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
-}
-
-function isNotFoundError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2025";
-}
-
 function mapWriteError(err: unknown, name: string): never {
-  if (uniqueTargetIncludes(err, "default")) throw new DuplicateDefaultPriceError();
+  if (isUniqueError(err, "default")) throw new DuplicateDefaultPriceError();
   if (isUniqueError(err)) throw new DuplicatePriceNameError(name);
   throw err;
 }

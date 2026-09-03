@@ -30,7 +30,7 @@ export const sendSetPasswordEmailUseCase = new SendSetPasswordEmailUseCase(
 
 export const authController = (() => {
   try {
-    const registerUseCase = new RegisterUseCase(userRepo, hasher, tokenService, roleAssigner);
+    const registerUseCase = new RegisterUseCase(userRepo, hasher, roleAssigner);
     const loginUseCase = new LoginUseCase(userRepo, hasher, tokenService);
     const refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
     const logoutUseCase = new LogoutUseCase();

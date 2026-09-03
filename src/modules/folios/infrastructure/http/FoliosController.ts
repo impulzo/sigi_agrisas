@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
-import { entityCodeSchema } from "@/shared/infrastructure/http/validators";
+import { entityCodeSchema, uuidSchema } from "@/shared/infrastructure/http/validators";
+import { mapDomainError } from "@/shared/infrastructure/http/mapDomainError";
 import { ListFoliosUseCase } from "@/modules/folios/application/use-cases/ListFoliosUseCase";
 import { GetFolioUseCase } from "@/modules/folios/application/use-cases/GetFolioUseCase";
 import { CreateFolioUseCase } from "@/modules/folios/application/use-cases/CreateFolioUseCase";
@@ -11,8 +12,6 @@ import { AuditFolioSequenceUseCase } from "@/modules/folios/application/use-case
 import { FolioNotFoundError } from "@/modules/folios/domain/errors/FolioNotFoundError";
 import { FolioCodeAlreadyInUseError } from "@/modules/folios/domain/errors/FolioCodeAlreadyInUseError";
 import { FOLIO_SCOPES } from "@/shared/domain/types/FolioScope";
-
-const uuidSchema = z.string().uuid("Invalid ID format");
 
 const scopeSchema = z.enum(FOLIO_SCOPES as unknown as [string, ...string[]]);
 
@@ -82,7 +81,8 @@ export class FoliosController {
     try {
       return NextResponse.json(await this.getUseCase.execute(idParsed.data));
     } catch (err) {
-      if (err instanceof FolioNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[FolioNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -100,7 +100,8 @@ export class FoliosController {
         { status: 201 }
       );
     } catch (err) {
-      if (err instanceof FolioCodeAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
+      const mapped = mapDomainError(err, [[FolioCodeAlreadyInUseError, 409]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -120,7 +121,8 @@ export class FoliosController {
         })
       );
     } catch (err) {
-      if (err instanceof FolioNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[FolioNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -132,7 +134,8 @@ export class FoliosController {
       await this.softDeleteUseCase.execute(idParsed.data);
       return new NextResponse(null, { status: 204 });
     } catch (err) {
-      if (err instanceof FolioNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[FolioNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -143,7 +146,8 @@ export class FoliosController {
     try {
       return NextResponse.json(await this.auditUseCase.execute(idParsed.data));
     } catch (err) {
-      if (err instanceof FolioNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[FolioNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }

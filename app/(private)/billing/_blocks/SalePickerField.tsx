@@ -1,18 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { authFetch } from "../../../_lib/authFetch";
-import { useDebounce } from "../../../_hooks/useDebounce";
+import { useState } from "react";
+import { useSaleSearch } from "../_logic/hooks/useSaleSearch";
+import type { SaleOption } from "../_logic/services/searchSales";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
-
-interface SaleOption {
-  id: string;
-  folioLabel: string;
-  customerId: string | null;
-  customerName: string | null;
-  total: number;
-}
 
 interface SalePickerFieldProps {
   value: string;
@@ -20,38 +12,9 @@ interface SalePickerFieldProps {
   onSelect: (id: string, label: string, customerId: string | null) => void;
 }
 
-async function searchSales(search: string): Promise<SaleOption[]> {
-  if (search.length < 2) return [];
-  const params = new URLSearchParams({ search, status: "completed", pageSize: "20" });
-  const res = await authFetch(`/api/v1/admin/sales?${params.toString()}`);
-  if (!res.ok) return [];
-  const body = await res.json() as { items: Array<{ id: string; folioPrefix?: string | null; folioNumber: number; customerId?: string | null; customerName?: string | null; total: number }> };
-  return body.items.map((s) => ({
-    id: s.id,
-    folioLabel: s.folioPrefix ? `${s.folioPrefix}-${s.folioNumber}` : String(s.folioNumber),
-    customerId: s.customerId ?? null,
-    customerName: s.customerName ?? null,
-    total: s.total,
-  }));
-}
-
 export function SalePickerField({ value, label, onSelect }: SalePickerFieldProps) {
   const [query, setQuery] = useState(label);
-  const [results, setResults] = useState<SaleOption[]>([]);
-  const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const debouncedQuery = useDebounce(query, 300);
-
-  useEffect(() => {
-    if (debouncedQuery.length < 2) { setResults([]); setOpen(false); return; }
-    setIsLoading(true);
-    searchSales(debouncedQuery).then((items) => {
-      setResults(items);
-      setOpen(items.length > 0);
-      setIsLoading(false);
-    }).catch(() => setIsLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery]);
+  const { results, open, setOpen, isLoading } = useSaleSearch(query);
 
   function handleSelect(opt: SaleOption) {
     const lbl = `${opt.folioLabel} · ${opt.customerName ?? "Sin cliente"} · ${MX.format(opt.total)}`;

@@ -12,11 +12,10 @@ import {
 import { PrismaPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaPricingSettingsRepository";
 
 export class PrismaPosLookupService implements PosLookupService {
-  private readonly pricingSettingsRepo: PrismaPricingSettingsRepository;
-
-  constructor(private readonly prisma: PrismaClient) {
-    this.pricingSettingsRepo = new PrismaPricingSettingsRepository(prisma);
-  }
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly pricingSettingsRepo: PrismaPricingSettingsRepository = new PrismaPricingSettingsRepository(prisma)
+  ) {}
 
   async getDosificationSurchargePct(): Promise<number> {
     const settings = await this.pricingSettingsRepo.get();

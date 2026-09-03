@@ -13,6 +13,10 @@ import { NegativeStockNotAllowedError } from "../../domain/errors/NegativeStockN
 import { recordInventoryMovement, type LowStockSignal } from "@/shared/infrastructure/inventory/recordInventoryMovement";
 import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
 import type { AdminNotificationService } from "@/shared/application/services/AdminNotificationService";
+import {
+  isPrismaUniqueError as isUniqueError,
+  isPrismaNotFoundError as isNotFoundError,
+} from "@/shared/infrastructure/prisma/errors";
 
 type InventoryRow = Prisma.BranchInventoryGetPayload<{
   include: { product: { select: { code: true; name: true } } };
@@ -62,14 +66,6 @@ function rawToView(row: RawRow): BranchInventoryView {
     productCode: row.productCode,
     productName: row.productName,
   };
-}
-
-function isUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
-}
-
-function isNotFoundError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2025";
 }
 
 export class PrismaBranchInventoryRepository implements BranchInventoryRepository {

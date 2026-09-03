@@ -8,6 +8,7 @@ const config: Config = {
       testEnvironment: "node",
       testMatch: [
         "<rootDir>/tests/unit/modules/**/*.test.ts",
+        "<rootDir>/tests/unit/security/**/*.test.ts",
         "<rootDir>/tests/integration/**/*.test.ts",
       ],
       moduleNameMapper: {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
-import { entityCodeSchema } from "@/shared/infrastructure/http/validators";
+import { entityCodeSchema, uuidSchema } from "@/shared/infrastructure/http/validators";
+import { mapDomainError } from "@/shared/infrastructure/http/mapDomainError";
 import { ListPaymentMethodsUseCase } from "@/modules/payment-methods/application/use-cases/ListPaymentMethodsUseCase";
 import { GetPaymentMethodUseCase } from "@/modules/payment-methods/application/use-cases/GetPaymentMethodUseCase";
 import { CreatePaymentMethodUseCase } from "@/modules/payment-methods/application/use-cases/CreatePaymentMethodUseCase";
@@ -9,8 +10,6 @@ import { UpdatePaymentMethodUseCase } from "@/modules/payment-methods/applicatio
 import { SoftDeletePaymentMethodUseCase } from "@/modules/payment-methods/application/use-cases/SoftDeletePaymentMethodUseCase";
 import { PaymentMethodNotFoundError } from "@/modules/payment-methods/domain/errors/PaymentMethodNotFoundError";
 import { PaymentMethodCodeAlreadyInUseError } from "@/modules/payment-methods/domain/errors/PaymentMethodCodeAlreadyInUseError";
-
-const uuidSchema = z.string().uuid("Invalid ID format");
 
 const createBodySchema = z.object({
   code: entityCodeSchema,
@@ -53,7 +52,8 @@ export class PaymentMethodsController {
     try {
       return NextResponse.json(await this.getUseCase.execute(idParsed.data));
     } catch (err) {
-      if (err instanceof PaymentMethodNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[PaymentMethodNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -72,7 +72,8 @@ export class PaymentMethodsController {
       });
       return NextResponse.json(result, { status: 201 });
     } catch (err) {
-      if (err instanceof PaymentMethodCodeAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
+      const mapped = mapDomainError(err, [[PaymentMethodCodeAlreadyInUseError, 409]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -86,7 +87,8 @@ export class PaymentMethodsController {
     try {
       return NextResponse.json(await this.updateUseCase.execute({ id: idParsed.data, ...parsed.data }));
     } catch (err) {
-      if (err instanceof PaymentMethodNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[PaymentMethodNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -98,7 +100,8 @@ export class PaymentMethodsController {
       await this.softDeleteUseCase.execute(idParsed.data);
       return new NextResponse(null, { status: 204 });
     } catch (err) {
-      if (err instanceof PaymentMethodNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[PaymentMethodNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }

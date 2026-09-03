@@ -55,7 +55,7 @@ describe("AuthController.refresh — HTTP cookie rotation", () => {
     const hasher = new BcryptPasswordHasher();
     tokenService = new JwtTokenService();
     controller = new AuthController(
-      new RegisterUseCase(repo, hasher, tokenService, noopRoleAssigner),
+      new RegisterUseCase(repo, hasher, noopRoleAssigner),
       new LoginUseCase(repo, hasher, tokenService),
       new RefreshTokenUseCase(tokenService),
       new LogoutUseCase(),

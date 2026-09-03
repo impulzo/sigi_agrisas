@@ -5,14 +5,12 @@ const REFRESH_TOKEN_COOKIE = "refreshToken";
 
 const PUBLIC_PATHS = [
   "/api/v1/auth/login",
-  "/api/v1/auth/register",
   "/api/v1/auth/refresh",
   "/api/v1/auth/logout",
   "/api/v1/auth/set-password",
   "/api/v1/health",
   "/api/v1/admin/cron/inventory-expiry-notifications",
   "/auth/login",
-  "/auth/register",
   "/auth/set-password",
   "/favicon.ico",
 ];
@@ -22,6 +20,19 @@ const PUBLIC_PREFIXES = ["/_next/"];
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;
   return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+const IDENTITY_HEADERS = ["x-user-id", "x-user-email", "x-user-roles", "x-user-branch-id"];
+
+/**
+ * Rutas públicas no llevan Bearer verificado — cualquier x-user-* que traiga
+ * el cliente debe descartarse antes de continuar, para que un futuro handler
+ * público no pueda ser engañado confiando en un header no verificado.
+ */
+function stripIdentityHeaders(req: NextRequest): NextResponse {
+  const requestHeaders = new Headers(req.headers);
+  for (const header of IDENTITY_HEADERS) requestHeaders.delete(header);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 function extractBearerToken(req: NextRequest): string | null {
@@ -48,7 +59,7 @@ function propagateIdentity(
 export async function authMiddleware(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
 
-  if (isPublic(pathname)) return NextResponse.next();
+  if (isPublic(pathname)) return stripIdentityHeaders(req);
 
   const isApi = pathname.startsWith("/api/");
 

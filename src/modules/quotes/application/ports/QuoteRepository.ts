@@ -1,4 +1,3 @@
-import type { Prisma } from "@prisma/client";
 import { Quote } from "../../domain/entities/Quote";
 import { QuoteStatus } from "../../domain/value-objects/QuoteStatus";
 import { QuoteJoinedFields } from "../mappers/toQuoteDto";
@@ -64,11 +63,12 @@ export interface UpdateQuoteMetaData {
 }
 
 /**
- * Tx handle used by ConvertQuoteToSaleUseCase to mark a quote `converted`
- * within the same Prisma transaction that creates the sale. Typed loosely
- * as Prisma.TransactionClient so InMemory implementations can accept undefined.
+ * Opaque transaction handle used by ConvertQuoteToSaleUseCase to mark a quote
+ * `converted` within the same transaction that creates the sale. Kept opaque
+ * (not `Prisma.TransactionClient`) so the application layer's port doesn't
+ * depend on the ORM — `PrismaQuoteRepository` casts it internally.
  */
-export type TxHandle = Prisma.TransactionClient | undefined;
+export type TxHandle = unknown;
 
 export interface QuoteRepository {
   findAll(opts: FindAllQuotesOptions): Promise<{ items: QuoteSummary[]; total: number }>;
