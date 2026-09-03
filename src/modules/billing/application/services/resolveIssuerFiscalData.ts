@@ -8,6 +8,7 @@ export interface IssuerFiscalData {
   fiscalRegime: string | null;
   zipCode: string | null;
   address: string | null;
+  email: string | null;
 }
 
 // Matches Invoice.issuerFiscalRegime's VarChar(4) column (prisma/schema.prisma) — a
@@ -45,7 +46,9 @@ export function extractSatCodeFromTicketRegime(businessTaxRegime: string | null)
  * captured for ticket printing, `Configuración > Ticket de venta`). Whatever
  * neither source has stays `null` — callers/UI already render that as "—".
  * All 5 fields (rfc/legalName/fiscalRegime/zipCode/address) now have the same
- * 3-tier fallback down to TicketSettings.
+ * 3-tier fallback down to TicketSettings. `email` is the exception: neither the
+ * Facturama CSD status nor EmitterFiscalSettings expose a contact email, so it
+ * resolves from a single tier — TicketSettings.businessEmail — or stays null.
  */
 export async function resolveIssuerFiscalData(
   gateway: FacturamaGateway,
@@ -72,5 +75,6 @@ export async function resolveIssuerFiscalData(
     fiscalRegime: settings?.fiscalRegime ?? extractSatCodeFromTicketRegime(ticket?.businessTaxRegime ?? null),
     zipCode: settings?.zipCode ?? ticket?.businessZipCode ?? null,
     address: settings?.address ?? ticket?.businessAddress ?? null,
+    email: ticket?.businessEmail ?? null,
   };
 }

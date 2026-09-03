@@ -18,6 +18,7 @@ export class InMemoryTicketSettingsRepository implements TicketSettingsRepositor
       ...(data.businessRfc !== undefined ? { businessRfc: data.businessRfc } : {}),
       ...(data.businessAddress !== undefined ? { businessAddress: data.businessAddress } : {}),
       ...(data.businessPhone !== undefined ? { businessPhone: data.businessPhone } : {}),
+      ...(data.businessEmail !== undefined ? { businessEmail: data.businessEmail } : {}),
       ...(data.businessTaxRegime !== undefined ? { businessTaxRegime: data.businessTaxRegime } : {}),
       ...(data.businessZipCode !== undefined ? { businessZipCode: data.businessZipCode } : {}),
       ...(data.legendText !== undefined ? { legendText: data.legendText } : {}),

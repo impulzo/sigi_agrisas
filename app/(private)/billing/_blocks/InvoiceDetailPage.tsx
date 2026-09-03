@@ -15,6 +15,7 @@ import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState
 import { Spinner } from "../../../_components/atoms/Spinner/Spinner";
 import { Icon } from "../../../_components/atoms/Icon/Icon";
 import { InvoiceNotFoundError, BillingForbiddenError } from "../_logic/errors";
+import { formatInvoiceDate } from "../_logic/lib/formatInvoiceDate";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
@@ -81,8 +82,8 @@ export function InvoiceDetailPage({ id }: InvoiceDetailPageProps) {
   return (
     <div className="flex flex-col gap-lg px-gutter py-lg mx-auto w-full max-w-4xl">
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+      <div className="grid grid-cols-[1fr_auto] items-start gap-4">
+        <div className="min-w-0">
           <div className="flex items-center gap-3 mb-1">
             <Link href="/billing" className="text-on-surface-variant hover:text-on-surface">
               <Icon name="arrow_back" size={20} />
@@ -92,15 +93,25 @@ export function InvoiceDetailPage({ id }: InvoiceDetailPageProps) {
             </h1>
             <InvoiceStatusBadge status={invoice.status} />
           </div>
-          <div className="pl-9 flex items-center gap-2 text-body-sm text-on-surface-variant">
-            {invoice.saleId && (
-              <Link href={`/sales/${invoice.saleId}`} className="text-primary hover:underline">
-                Ver venta origen
-              </Link>
-            )}
+          {invoice.issuerEmail && (
+            <p className="pl-9 text-body-sm text-on-surface-variant">{invoice.issuerEmail}</p>
+          )}
+          <div className="pl-9 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-body-sm text-on-surface-variant">
+            <div>
+              <p>Emitida: {formatInvoiceDate(invoice.createdAt)}</p>
+              {invoice.saleId && (
+                <Link href={`/sales/${invoice.saleId}`} className="text-primary hover:underline">
+                  Ver venta origen
+                </Link>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p>Folio: <span className="font-mono">{`Factura #${invoice.id.slice(-8).toUpperCase()}`}</span></p>
+              <p className="break-all">UUID: <span className="font-mono">{invoice.uuid ?? "—"}</span></p>
+            </div>
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-right flex-shrink-0">
           <p className="text-label-sm text-on-surface-variant">Total facturado</p>
           <p className="text-display-sm font-bold tabular-nums text-on-surface">{fmt(invoice.total)}</p>
         </div>

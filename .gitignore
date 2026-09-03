@@ -33,6 +33,7 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+.env.prod
 
 # vercel
 .vercel
@@ -96,3 +97,6 @@ lerna-debug.log*
 .previewjs/
 .contentlayer/
 .react-email/
+
+# claude code local settings (may contain per-session permission strings with secrets)
+.claude/settings.local.json

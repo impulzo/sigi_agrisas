@@ -10,7 +10,7 @@ interface UseInvoicePreviewResult {
   data: InvoicePreviewData | null;
   isLoading: boolean;
   error: Error | null;
-  load: (saleId: string, opts: { paymentForm: string; paymentMethod: string }) => Promise<void>;
+  load: (saleId: string, opts: { paymentForm: string; paymentMethod: string; customerId?: string }) => Promise<void>;
   reset: () => void;
 }
 
@@ -19,14 +19,14 @@ export function useInvoicePreview(): UseInvoicePreviewResult {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const load = useCallback(async (saleId: string, opts: { paymentForm: string; paymentMethod: string }) => {
+  const load = useCallback(async (saleId: string, opts: { paymentForm: string; paymentMethod: string; customerId?: string }) => {
     setIsLoading(true);
     setError(null);
     setData(null);
     try {
       const [source, emitterFiscal] = await Promise.all([
-        getInvoicePreviewSource(saleId),
-        getEmitterFiscalSettings().catch(() => ({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null })),
+        getInvoicePreviewSource(saleId, opts.customerId),
+        getEmitterFiscalSettings().catch(() => ({ rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null, email: null })),
       ]);
       const preview = buildInvoicePreview({
         issuer: {
@@ -36,6 +36,7 @@ export function useInvoicePreview(): UseInvoicePreviewResult {
           fiscalRegime: emitterFiscal.fiscalRegime,
           zipCode: emitterFiscal.zipCode,
           address: emitterFiscal.address,
+          email: emitterFiscal.email,
         },
         receiver: {
           rfc: source.customer.rfc,

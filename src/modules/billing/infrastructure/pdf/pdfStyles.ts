@@ -41,7 +41,13 @@ export const pdfStyles = StyleSheet.create({
     fontSize: 8,
     color: PDF_COLORS.onSurfaceVariant,
   },
-  invoiceMeta: {
+  invoiceMetaColumns: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  invoiceMetaCol: {
+    flexDirection: "column",
+    gap: 2,
     textAlign: "right",
   },
   invoiceMetaLabel: {

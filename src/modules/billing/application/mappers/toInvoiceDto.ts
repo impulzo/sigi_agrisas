@@ -21,6 +21,7 @@ export function toInvoiceDto(invoice: Invoice): InvoiceDto {
     issuerFiscalRegime: invoice.issuerFiscalRegime,
     issuerZipCode: invoice.issuerZipCode,
     issuerAddress: invoice.issuerAddress,
+    issuerEmail: invoice.issuerEmail,
     currency: invoice.currency,
     subtotal: invoice.subtotal,
     taxTotal: invoice.taxTotal,

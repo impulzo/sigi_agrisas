@@ -29,7 +29,7 @@ export interface TicketPrintJob {
     paymentMethodName: string;
   };
   customer: TicketPrintJobCustomer | null;
-  creditDays: number | null;
+  conditionsLine: string;
   items: TicketPrintJobItem[];
   totals: {
     subtotal: number;

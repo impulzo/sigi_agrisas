@@ -20,6 +20,7 @@ interface BuildInvoicePreviewInput {
     fiscalRegime?: string | null;
     zipCode?: string | null;
     address?: string | null;
+    email?: string | null;
   };
   receiver: { rfc: string; name: string; cfdiUse: string; fiscalRegime: string; taxZipCode: string };
   lines: BuildInvoicePreviewLineInput[];

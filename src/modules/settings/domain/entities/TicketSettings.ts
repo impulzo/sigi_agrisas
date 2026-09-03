@@ -8,6 +8,7 @@ export interface TicketSettings {
   businessRfc: string | null;
   businessAddress: string | null;
   businessPhone: string | null;
+  businessEmail: string | null;
   businessTaxRegime: string | null;
   businessZipCode: string | null;
   legendText: string | null;
@@ -21,6 +22,7 @@ export const DEFAULT_TICKET_SETTINGS: TicketSettings = {
   businessRfc: null,
   businessAddress: null,
   businessPhone: null,
+  businessEmail: null,
   businessTaxRegime: null,
   businessZipCode: null,
   legendText: "Favor de revisar su mercancia. No se hacen cambios ni devoluciones. Gracias por su compra.",

@@ -32,6 +32,7 @@ export interface CreateInvoiceData {
   issuerFiscalRegime: string | null;
   issuerZipCode: string | null;
   issuerAddress: string | null;
+  issuerEmail: string | null;
   currency: string;
   subtotal: number;
   taxTotal: number;

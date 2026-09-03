@@ -9,9 +9,10 @@ export interface EmitterFiscalSettingsState {
   fiscalRegime: string | null;
   zipCode: string | null;
   address: string | null;
+  email: string | null;
 }
 
-const EMPTY: EmitterFiscalSettingsState = { rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null };
+const EMPTY: EmitterFiscalSettingsState = { rfc: null, legalName: null, fiscalRegime: null, zipCode: null, address: null, email: null };
 
 /**
  * Resolves the issuer's fiscal identity for on-screen preview only. Failure or
@@ -26,7 +27,7 @@ export function useEmitterFiscalSettings(): EmitterFiscalSettingsState {
     getEmitterFiscalSettings()
       .then((res) => {
         if (cancelled) return;
-        setData({ rfc: res.rfc, legalName: res.legalName, fiscalRegime: res.fiscalRegime, zipCode: res.zipCode, address: res.address });
+        setData({ rfc: res.rfc, legalName: res.legalName, fiscalRegime: res.fiscalRegime, zipCode: res.zipCode, address: res.address, email: res.email });
       })
       .catch(() => {
         // Non-blocking: keep nulls, render "—" in the preview.

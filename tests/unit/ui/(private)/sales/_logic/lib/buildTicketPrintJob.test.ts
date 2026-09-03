@@ -60,6 +60,7 @@ const defaultSettings: TicketSettingsDto = {
   businessRfc: null,
   businessAddress: null,
   businessPhone: null,
+  businessEmail: null,
   businessTaxRegime: null,
   businessZipCode: null,
   legendText: null,
@@ -71,20 +72,22 @@ describe("buildTicketPrintJob", () => {
     expect(job.customer).toEqual({ rfc: "XAXX010101000", name: "Cliente Uno", address: "Av. Central 123, Oaxaca" });
   });
 
-  it("omits the customer section for walk-in sales (parity with PrintableTicket)", () => {
+  it("omits the customer section for walk-in sales, but still includes conditionsLine", () => {
     const walkIn: SaleDetail = { ...sale, customerId: null, customerName: null, customerRfc: null, customerAddress: null, customerCreditDays: null };
     const job = buildTicketPrintJob(walkIn, defaultSettings, ORIGIN);
     expect(job.customer).toBeNull();
-    expect(job.creditDays).toBeNull();
+    expect(job.conditionsLine).toBe("CONTADO");
   });
 
-  it("includes creditDays only when the sale's customer has it set", () => {
-    const noCreditCustomer: SaleDetail = { ...sale, customerCreditDays: null };
-    const job = buildTicketPrintJob(noCreditCustomer, defaultSettings, ORIGIN);
-    expect(job.creditDays).toBeNull();
+  it("resolves conditionsLine to credit days for a credit sale", () => {
+    const creditSale: SaleDetail = { ...sale, isCredit: true, customerCreditDays: 30 };
+    const job = buildTicketPrintJob(creditSale, defaultSettings, ORIGIN);
+    expect(job.conditionsLine).toBe("Crédito a 30 días");
+  });
 
-    const withCredit = buildTicketPrintJob(sale, defaultSettings, ORIGIN);
-    expect(withCredit.creditDays).toBe(30);
+  it("resolves conditionsLine to CONTADO for a cash sale with a customer", () => {
+    const job = buildTicketPrintJob(sale, defaultSettings, ORIGIN);
+    expect(job.conditionsLine).toBe("CONTADO");
   });
 
   it("always includes IVA and IEPS as separate totals, even when IEPS is zero", () => {

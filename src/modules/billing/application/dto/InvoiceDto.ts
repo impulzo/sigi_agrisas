@@ -38,6 +38,7 @@ export interface InvoiceDto {
   issuerFiscalRegime: string | null;
   issuerZipCode: string | null;
   issuerAddress: string | null;
+  issuerEmail: string | null;
   currency: string;
   subtotal: number;
   taxTotal: number;
@@ -59,6 +60,7 @@ export interface InvoiceDto {
 
 export interface StampInvoiceFromSaleRequest {
   saleId: string;
+  customerId?: string | null;
   paymentForm?: string;
   paymentMethod?: string;
   cfdiUse?: string;

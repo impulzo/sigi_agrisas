@@ -1,17 +1,17 @@
 ## Context
 
-`PrintableTicket.tsx` (`app/(private)/sales/_blocks/`) renderiza el ticket térmico para impresión vía `window.print()`. Su código actual (tras los 3 changes fusionados) declara:
+`PrintableTicket.tsx` (`app/(private)/sales/_blocks/`) renderiza el ticket térmico para impresión vía `window.print()`. Su código actual (tras este change) declara:
 
 ```ts
-const BASE_HEIGHT_MM = 120;
+const BASE_HEIGHT_MM = 85;  // recalibrado de 120 por Decision 7
 const CUSTOMER_SECTION_HEIGHT_MM = 30;
 const CREDIT_LINE_HEIGHT_MM = 8;
 const PER_ITEM_HEIGHT_MM = 12;
-const SAFETY_MARGIN_MM = 35; // subido de 20, por document-thermal-print-limitation
-const FINAL_FEED_MM = 12;    // agregado por document-thermal-print-limitation
+const SAFETY_MARGIN_MM = 15; // recalibrado de 35 por Decision 2
+const FINAL_FEED_MM = 6;     // recalibrado de 12 por Decision 2
 
-// @page { size: <paperWidth> <pageHeightMm>mm; margin: 4mm 3mm; }        (add-ticket-print-margins)
-// .printable-ticket { margin:0 !important; position:absolute !important; ... }  (sin top/left, add-ticket-print-margins removió el forcing)
+// @page { size: <paperWidth> <pageHeightMm>mm; margin: <topMarginMm>mm 3mm 4mm 3mm; }
+// .printable-ticket { margin:0 !important; position:absolute !important; top:0 !important; left:0 !important; ... }
 ```
 
 `add-ticket-print-margins` removió el `top: 0 !important; left: 0 !important` que `document-thermal-print-limitation` había forzado en `.printable-ticket` — nadie actualizó formalmente el requirement de anclaje de este último para reflejarlo. `app/globals.css` (líneas ~89-105) tiene además una regla global `.print-area { position:absolute; top:0; left:0; width:100% }` **sin** `!important`, usada exclusivamente por `.printable-ticket` (confirmado, cero otros usos) — no forma parte del scope de este change (ver Non-Goals).
@@ -23,7 +23,7 @@ El canonical `openspec/specs/ticket-print-ui/spec.md` nunca se sincronizó contr
 **Goals:**
 - Una sola fuente de verdad para `ticket-print-ui` + `escpos-ticket-printing`, reemplazando los 3 changes dispersos.
 - Resolver formalmente, con evidencia empírica (Playwright), el conflicto de anclaje `top:0/left:0` forzado vs `@page margin`.
-- Eliminar la hoja en blanco sobrante reportada, bajando el colchón fijo de altura.
+- ~~Eliminar la hoja en blanco sobrante reportada~~ **[RESUELTO Decision 7]** — recalibrar `BASE_HEIGHT_MM` (120→85) tras confirmación en hardware real, reductor ~37mm de blanco sin corte.
 - Agregar margen superior proporcional (5%) sin reabrir el riesgo de corte de contenido en tickets largos.
 - Corregir la tarea 6.5 desactualizada de `add-escpos-ticket-printing` (describía un estado del código ya revertido).
 
@@ -66,11 +66,21 @@ const pageHeightMm = contentHeightMm + extraTopMarginMm;   // compensación
 ### 6. Copiar `escpos-ticket-printing` sin cambios
 **Rationale:** capability completa e independiente (branch printer config, payload JSON, retry/fallback), no tocada por ningún ajuste de este merge. Se incorpora al canonical por primera vez (carry-over).
 
+### 7. Recalibrar `BASE_HEIGHT_MM` (120→85) — resolución de hallazgo diferido en Decision 2
+**Contexto:** tras confirmación en hardware real (user reportó en sesión posterior), queda un tramo de blanco notorio al final del ticket al imprimir. Análisis empírico del change (tasks.md §2/§6.1) diagnosticó: venta de prueba `d07fd50c...` (3 items, cliente+crédito) con `pageHeightMm=226mm` mostraba contenido real ~68%, dejando 72mm no-contenido (SAFETY 15+FEED 6+EXTRA_TOP 11+EXCESO 40mm). El exceso de 40mm es sobreestimación de `BASE_HEIGHT_MM=120`.
+**Rationale:** bloque fijo real (logo+header+meta+totales+footer+leyenda+barcode) a 10px monospace ocupa ~96mm máximo. Nuevo `BASE_HEIGHT_MM=85` (reduce 35mm, ~29%) alinea mejor con realidad, manteniendo pequeño colchón sin reusar presupuesto de SAFETY/FEED (esos quedan reservados al pipeline de corte, Decision 2). Con el nuevo valor, misma venta pasa de `pageHeightMm=226mm` (68% content) a `pageHeightMm=189mm` (~90-95% content) — reducción de ~37mm blanco, ~16%.
+**Cambios de código:**
+- `app/(private)/sales/_blocks/PrintableTicket.tsx` línea 12: `const BASE_HEIGHT_MM = 85;`
+- `tests/unit/ui/(private)/sales/PrintableTicket.test.tsx` líneas 121-154: actualizar 4 aserciones `@page` con nuevos valores (164mm/124mm/189mm para los perfiles testados).
+**Test:** `npm test -- "PrintableTicket.test.tsx"` → 24/24 en verde.
+**Verificación empírica:** derivado de datos ya en repo (venta d07fd50c..., análisis Playwright previo) — aplicable directo sin medición nueva.
+
 ## Risks / Trade-offs
 
 | Risk | Mitigación |
 |---|---|
 | `SAFETY_MARGIN_MM=15`/`FINAL_FEED_MM=6` son estimación sin hardware físico — riesgo de reabrir corte de contenido en tickets con nombres/direcciones muy largas | Queda como tarea pendiente de confirmación en la EPSON TM-T20II física (ver tasks.md); ajustable en una sola constante si hace falta subir de nuevo |
+| `BASE_HEIGHT_MM=85` es derivado de análisis empírico (venta d07fd50c... con ~96mm medido de bloque fijo) — pequeño riesgo de variación si hay renderizado distinto entre contextos (OS, driver, Chromium build) | Bajo riesgo (85mm aún deja ~30mm de colchón por debajo de la máximo teórico); queda confirmable en hardware real; ajustable en una sola constante si hace falta |
 | El 5% con compensación de altura total es una interpretación técnica del pedido original ("agregar margen top, sin tocar el resto"), no la lectura literal — el alto total de `@page` sí cambia | Confirmado explícitamente con el usuario antes de implementar; documentado aquí y en el requirement correspondiente |
 | `app/globals.css`/`.print-area` podría interferir con la verificación de anclaje y no se toca por decisión explícita | Se documenta como limitación conocida en el resultado de la verificación Playwright si aplica, sin bloquear el resto del change |
 | Corrección del escenario "Logo rendered at 75x105px" → "125x77px" es un drive-by fix no solicitado explícitamente | Bajo riesgo (1 línea de spec, alinea con código real y con el requirement de proporción del logo), incluido por decisión explícita del usuario |

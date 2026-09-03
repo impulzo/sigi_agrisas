@@ -26,6 +26,7 @@ function makeInvoice(overrides: Partial<{ facturamaCfdiId: string | null; uuid: 
     issuerFiscalRegime: null,
     issuerZipCode: null,
     issuerAddress: null,
+    issuerEmail: null,
     currency: "MXN",
     subtotal: 100,
     taxTotal: 16,
@@ -116,7 +117,7 @@ describe("DownloadInvoiceFileUseCase", () => {
     const [, , snapshot] = (gateway.download as jest.Mock).mock.calls[0];
     expect(snapshot).toEqual({
       uuid: "UUID-1234",
-      issuer: { rfc: null, legalName: null, fiscalRegime: null, fiscalRegimeLabel: null, zipCode: null, address: null, branchName: null },
+      issuer: { rfc: null, legalName: null, fiscalRegime: null, fiscalRegimeLabel: null, zipCode: null, address: null, email: null, branchName: null },
       receiver: {
         rfc: "XAXX010101000",
         name: "Cliente",
@@ -133,7 +134,24 @@ describe("DownloadInvoiceFileUseCase", () => {
       subtotal: 100,
       taxTotal: 16,
       total: 116,
+      emittedAt: invoice.createdAt.toISOString(),
     });
+  });
+
+  it("passes the invoice's own issuerEmail and emission date/time in the download snapshot", async () => {
+    const invoice = Invoice.create({
+      ...makeInvoice({ uuid: "UUID-EMAIL" }),
+      issuerEmail: "contacto@agrisas.mx",
+    });
+    const repo = makeInvoiceRepo(invoice);
+    const gateway = makeGateway();
+    const uc = new DownloadInvoiceFileUseCase(repo, gateway);
+
+    await uc.execute(INVOICE_ID, "pdf");
+
+    const [, , snapshot] = (gateway.download as jest.Mock).mock.calls[0];
+    expect(snapshot.issuer.email).toBe("contacto@agrisas.mx");
+    expect(snapshot.emittedAt).toBe(invoice.createdAt.toISOString());
   });
 
   it("falls back to the invoice id for the filename when uuid is null", async () => {

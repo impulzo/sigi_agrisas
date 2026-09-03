@@ -6,7 +6,7 @@ Vista previa en pantalla del ticket de una venta con el diseño de marca de Agri
 ---
 ## Requirements
 ### Requirement: Ticket preview page
-The system SHALL render `/sales/:id/ticket`, gated by the same `sales:read` permission (and branch scoping) that already protects `/sales/:id`. The page SHALL reuse the `SaleDetail` data already available to the sale detail flow (no additional data fetch beyond what `GET /sales/:id` already provides) and render: brand logo (from `GET /settings/ticket`, falling back to the Agrisas default brand mark when `logoUrl` is `null` — with NO header-text tagline fallback of any kind), folio label (labeled "Folio" — NOT "Orden"), date, seller name (labeled "Vendedor", over `cashierName` — NOT "Cajero"), a business info section immediately below the logo (razón social `businessName`, RFC `businessRfc`, address, "Tel. <phone>", and tax regime from `GET /settings/ticket` — rendered exactly as stored, whether it is a bare code or the full `"<code> — <description>"` string, omitting `null` fields), a line-item table (product name, quantity × unit price, line total), a financial summary showing Subtotal, IVA, and IEPS (ALWAYS visible, even when `$0.00` — consistent with `pos-ui`'s `TaxBreakdownRows`/`CartTotals` behavior), Total (labeled "Total a pagar"), a customer section (RFC, name, address — ONLY when the sale has `customerId`), credit conditions ("Condiciones: Crédito a <N> días" — ONLY when `customerCreditDays` is non-null), payment method name, footer text (from `GET /settings/ticket.footerText`, rendered exactly as returned — `null` or empty means the footer paragraph is omitted entirely, with NO hardcoded placeholder text of any kind substituted in its place), a decorative barcode-style element rendering `sale.folioCode` (the fully formatted folio, with its prefix — never the bare `folioNumber`) as text (no barcode-generation library), and the legend text (from `GET /settings/ticket.legendText`, omitted when `null`). `headerText` no longer exists as a field of `TicketSettings`; there is no header-text paragraph and no fallback tagline (e.g. the prior "Centro Agrícola Integral" text) anywhere on this page.
+The system SHALL render `/sales/:id/ticket`, gated by the same `sales:read` permission (and branch scoping) that already protects `/sales/:id`. The page SHALL reuse the `SaleDetail` data already available to the sale detail flow (no additional data fetch beyond what `GET /sales/:id` already provides) and render: brand logo (from `GET /settings/ticket`, falling back to the Agrisas default brand mark when `logoUrl` is `null` — with NO header-text tagline fallback of any kind), folio label (labeled "Folio" — NOT "Orden"), date, seller name (labeled "Vendedor", over `cashierName` — NOT "Cajero"), a business info section immediately below the logo (razón social `businessName`, RFC `businessRfc`, address, "Tel. <phone>", and tax regime from `GET /settings/ticket` — rendered exactly as stored, whether it is a bare code or the full `"<code> — <description>"` string, omitting `null` fields), a line-item table (product name, quantity × unit price, line total), a financial summary showing Subtotal, IVA, and IEPS (ALWAYS visible, even when `$0.00` — consistent with `pos-ui`'s `TaxBreakdownRows`/`CartTotals` behavior), Total (labeled "Total a pagar"), a customer section (RFC, name, address — ONLY when the sale has `customerId`), payment conditions ("Condiciones: Crédito a <N> días" when `sale.isCredit` is `true`, or "Condiciones: CONTADO" when `sale.isCredit` is `false` — ALWAYS shown, regardless of whether the sale has a customer), payment method name, footer text (from `GET /settings/ticket.footerText`, rendered exactly as returned — `null` or empty means the footer paragraph is omitted entirely, with NO hardcoded placeholder text of any kind substituted in its place), a decorative barcode-style element rendering `sale.folioCode` (the fully formatted folio, with its prefix — never the bare `folioNumber`) as text (no barcode-generation library), and the legend text (from `GET /settings/ticket.legendText`, omitted when `null`). `headerText` no longer exists as a field of `TicketSettings`; there is no header-text paragraph and no fallback tagline (e.g. the prior "Centro Agrícola Integral" text) anywhere on this page.
 
 This page is display-only styling on top of existing data — it introduces no new backend endpoint for reading sale data.
 
@@ -26,9 +26,21 @@ This page is display-only styling on top of existing data — it introduces no n
 - **WHEN** the sale has `customerId` (with `customerRfc`, `customerName`, `customerAddress` populated)
 - **THEN** the preview shows a "Cliente" section with RFC, name, and address
 
-#### Scenario: Customer and conditions sections omitted for walk-in sales
+#### Scenario: Customer section omitted for walk-in sales, conditions line unaffected
 - **WHEN** the sale has `customerId: null`
-- **THEN** the preview omits the customer section and the conditions line entirely (no empty rows)
+- **THEN** the preview omits the customer section entirely (no empty rows) — the "Condiciones" line still renders (see the credit/cash scenarios below), since it depends on `sale.isCredit`, not on the presence of a customer
+
+#### Scenario: Credit conditions shown when the sale is paid on credit
+- **WHEN** the sale's payment method is credit (`sale.isCredit: true`)
+- **THEN** the preview shows "Condiciones: Crédito a <N> días", using the sale's customer `customerCreditDays`
+
+#### Scenario: Cash conditions shown when the sale is paid in cash
+- **WHEN** the sale's payment method is not credit (`sale.isCredit: false`), regardless of whether the sale has a customer
+- **THEN** the preview shows "Condiciones: CONTADO"
+
+#### Scenario: Fallback to 30 days when a credit sale's customer has no creditDays set
+- **WHEN** the sale is paid on credit (`sale.isCredit: true`) and `customerCreditDays` is `null` (a data inconsistency that business rules at sale creation should already prevent)
+- **THEN** the preview shows "Condiciones: Crédito a 30 días" instead of breaking the render or showing a blank/`NaN` value
 
 #### Scenario: Business info and legend from settings
 - **WHEN** `GET /settings/ticket` returns `businessName`, `businessRfc`, `businessAddress`, `businessPhone`, `businessTaxRegime`, and `legendText`

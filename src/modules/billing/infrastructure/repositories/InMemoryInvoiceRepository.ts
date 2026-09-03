@@ -22,6 +22,7 @@ function makeInvoice(data: CreateInvoiceData, now: Date): Invoice {
     issuerFiscalRegime: data.issuerFiscalRegime,
     issuerZipCode: data.issuerZipCode,
     issuerAddress: data.issuerAddress,
+    issuerEmail: data.issuerEmail,
     currency: data.currency,
     subtotal: data.subtotal,
     taxTotal: data.taxTotal,

@@ -30,7 +30,7 @@ interface UsePartialInvoiceFormResult {
   isSubmitting: boolean;
   error: Error | null;
   clearError: () => void;
-  submit: () => Promise<Invoice | null>;
+  submit: (branchId: string | null) => Promise<Invoice | null>;
 }
 
 let keyCounter = 0;
@@ -79,7 +79,7 @@ export function usePartialInvoiceForm(): UsePartialInvoiceFormResult {
 
   const clearError = useCallback(() => setError(null), []);
 
-  const submit = useCallback(async (): Promise<Invoice | null> => {
+  const submit = useCallback(async (branchId: string | null): Promise<Invoice | null> => {
     if (!customer || fiscalMissingFields.length > 0) {
       setError(new Error(`Datos fiscales incompletos: ${fiscalMissingFields.join(", ")}`));
       return null;
@@ -112,6 +112,7 @@ export function usePartialInvoiceForm(): UsePartialInvoiceFormResult {
     setError(null);
     try {
       const invoice = await stampInvoice({
+        branchId,
         customer: {
           rfc: customer.rfc,
           name: customer.name,

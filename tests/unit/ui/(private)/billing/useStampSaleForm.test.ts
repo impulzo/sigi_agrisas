@@ -103,4 +103,46 @@ describe("useStampSaleForm", () => {
     await act(async () => { await result.current.submit(); });
     expect(result.current.isSubmitting).toBe(false);
   });
+
+  it("selectSale sets saleId, saleLabel and customerId together", () => {
+    const { result } = renderHook(() => useStampSaleForm());
+    act(() => result.current.selectSale("s-42", "TK-042 · Cliente X", "cust-1"));
+    expect(result.current.form.saleId).toBe("s-42");
+    expect(result.current.form.saleLabel).toBe("TK-042 · Cliente X");
+    expect(result.current.form.customerId).toBe("cust-1");
+  });
+
+  it("selectSale with null customerId leaves the picker empty (sale has no own customer)", () => {
+    const { result } = renderHook(() => useStampSaleForm());
+    act(() => result.current.selectSale("s-42", "TK-042", null));
+    expect(result.current.form.customerId).toBe("");
+  });
+
+  it("selecting a different sale resets the previous customer override", () => {
+    const { result } = renderHook(() => useStampSaleForm());
+    act(() => result.current.selectSale("s-A", "TK-A", "cust-A"));
+    act(() => result.current.setField("customerId", "cust-override"));
+    expect(result.current.form.customerId).toBe("cust-override");
+
+    act(() => result.current.selectSale("s-B", "TK-B", "cust-B"));
+    expect(result.current.form.customerId).toBe("cust-B");
+  });
+
+  it("submit includes customerId in the payload when the picker has a value", async () => {
+    mockStamp.mockResolvedValueOnce(makeInvoice());
+    const { result } = renderHook(() => useStampSaleForm());
+    act(() => result.current.selectSale("s-1", "TK-1", "cust-1"));
+    await act(async () => { await result.current.submit(); });
+    const payload = mockStamp.mock.calls[0][0] as unknown as Record<string, unknown>;
+    expect(payload.customerId).toBe("cust-1");
+  });
+
+  it("submit omits customerId when the picker is empty", async () => {
+    mockStamp.mockResolvedValueOnce(makeInvoice());
+    const { result } = renderHook(() => useStampSaleForm());
+    act(() => result.current.selectSale("s-1", "TK-1", null));
+    await act(async () => { await result.current.submit(); });
+    const payload = mockStamp.mock.calls[0][0] as unknown as Record<string, unknown>;
+    expect(payload).not.toHaveProperty("customerId");
+  });
 });

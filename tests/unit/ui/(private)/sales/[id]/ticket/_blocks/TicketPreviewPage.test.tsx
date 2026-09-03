@@ -137,6 +137,7 @@ describe("TicketPreviewPage", () => {
         businessRfc: null,
         businessAddress: null,
         businessPhone: null,
+        businessEmail: null,
         businessTaxRegime: null,
         businessZipCode: null,
         legendText: null,
@@ -186,7 +187,7 @@ describe("TicketPreviewPage", () => {
     expect(container.querySelector(".material-symbols-outlined")?.textContent).not.toBe("credit_card");
   });
 
-  it("muestra sección cliente (RFC, nombre, dirección) cuando la venta tiene cliente", async () => {
+  it("muestra sección cliente (RFC, nombre, dirección) cuando la venta tiene cliente, y CONTADO al ser en efectivo", async () => {
     mockUseSaleDetail.mockReturnValue({
       sale: makeSale({
         customerId: "c1",
@@ -204,7 +205,39 @@ describe("TicketPreviewPage", () => {
     expect(screen.getAllByText(/RFC: XAXX010101000/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Nombre: Cliente Test/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Dirección: Av. Central 123, Oaxaca/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("CONTADO").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("muestra los días de crédito del cliente cuando la venta es a crédito", async () => {
+    mockUseSaleDetail.mockReturnValue({
+      sale: makeSale({
+        isCredit: true,
+        customerId: "c1",
+        customerName: "Cliente Test",
+        customerRfc: "XAXX010101000",
+        customerAddress: "Av. Central 123, Oaxaca",
+        customerCreditDays: 30,
+      }),
+      isLoading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+    await renderPage();
+
     expect(screen.getAllByText("Crédito a 30 días").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("muestra CONTADO en una venta en efectivo de mostrador, sin cliente asociado", async () => {
+    mockUseSaleDetail.mockReturnValue({
+      sale: makeSale({ customerId: null, customerName: null, customerRfc: null, customerAddress: null, customerCreditDays: null }),
+      isLoading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+    await renderPage();
+
+    expect(screen.getAllByText("CONTADO").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("Cliente")).not.toBeInTheDocument();
   });
 
   it("muestra razón social y RFC del emisor cuando settings los trae", async () => {
@@ -216,6 +249,7 @@ describe("TicketPreviewPage", () => {
       businessRfc: "AGR010101AB1",
       businessAddress: null,
       businessPhone: null,
+      businessEmail: null,
       businessTaxRegime: null,
       businessZipCode: null,
       legendText: null,
@@ -246,6 +280,7 @@ describe("TicketPreviewPage", () => {
       businessRfc: null,
       businessAddress: null,
       businessPhone: null,
+      businessEmail: null,
       businessTaxRegime: null,
       businessZipCode: null,
       legendText: null,
@@ -268,6 +303,7 @@ describe("TicketPreviewPage", () => {
       businessRfc: null,
       businessAddress: null,
       businessPhone: null,
+      businessEmail: null,
       businessTaxRegime: null,
       businessZipCode: null,
       legendText: null,
