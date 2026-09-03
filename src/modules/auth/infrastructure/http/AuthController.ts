@@ -60,20 +60,13 @@ export class AuthController {
     }
 
     try {
-      const { refreshToken, ...publicResult } = await this.registerUseCase.execute(parsed.data);
-      const response = NextResponse.json(publicResult, { status: 201 });
-      response.headers.set(
-        "Set-Cookie",
-        serialize(REFRESH_TOKEN_COOKIE, refreshToken, refreshCookieOptions)
-      );
-      return response;
+      const result = await this.registerUseCase.execute(parsed.data);
+      return NextResponse.json(result, { status: 201 });
     } catch (err) {
       if (err instanceof EmailAlreadyInUseError) {
         return NextResponse.json({ error: err.message }, { status: 409 });
       }
-      if (err instanceof Error) {
-        return NextResponse.json({ error: err.message }, { status: 400 });
-      }
+      console.error("[AuthController.register] unexpected error:", err);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
   }
@@ -148,9 +141,6 @@ export class AuthController {
       }
       if (err instanceof PasswordSetupTokenInvalidError) {
         return NextResponse.json({ error: "PasswordSetupTokenInvalid" }, { status: 400 });
-      }
-      if (err instanceof Error) {
-        return NextResponse.json({ error: err.message }, { status: 400 });
       }
       console.error("[AuthController.completeSetPassword] unexpected error:", err);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });

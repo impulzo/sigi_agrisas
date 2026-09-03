@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
-import { entityCodeSchema } from "@/shared/infrastructure/http/validators";
+import { entityCodeSchema, uuidSchema } from "@/shared/infrastructure/http/validators";
+import { mapDomainError } from "@/shared/infrastructure/http/mapDomainError";
 import { ListTaxRatesUseCase } from "../../application/use-cases/ListTaxRatesUseCase";
 import { GetTaxRateUseCase } from "../../application/use-cases/GetTaxRateUseCase";
 import { CreateTaxRateUseCase } from "../../application/use-cases/CreateTaxRateUseCase";
 import { UpdateTaxRateUseCase } from "../../application/use-cases/UpdateTaxRateUseCase";
 import { DeactivateTaxRateUseCase } from "../../application/use-cases/DeactivateTaxRateUseCase";
 import { TaxRateNotFoundError, TaxRateCodeAlreadyInUseError, TaxRateInUseByProductsError } from "../../domain/errors";
-
-const uuidSchema = z.string().uuid("Invalid ID format");
 
 const factorTypeSchema = z.enum(["Tasa", "Cuota", "Exento"]);
 const satTaxCodeSchema = z.string().regex(/^\d{3}$/, "satTaxCode must be 3 digits (SAT c_Impuesto catalog)");
@@ -99,7 +98,8 @@ export class TaxRatesController {
     try {
       return NextResponse.json(await this.getUseCase.execute(idParsed.data));
     } catch (err) {
-      if (err instanceof TaxRateNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[TaxRateNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -126,7 +126,8 @@ export class TaxRatesController {
     try {
       return NextResponse.json(await this.updateUseCase.execute(idParsed.data, parsed.data));
     } catch (err) {
-      if (err instanceof TaxRateNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[TaxRateNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -137,7 +138,8 @@ export class TaxRatesController {
     try {
       return NextResponse.json(await this.deactivateUseCase.execute(idParsed.data));
     } catch (err) {
-      if (err instanceof TaxRateNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[TaxRateNotFoundError, 404]]);
+      if (mapped) return mapped;
       if (err instanceof TaxRateInUseByProductsError) return NextResponse.json({ error: "TaxRateInUse", productCount: err.count }, { status: 409 });
       throw err;
     }

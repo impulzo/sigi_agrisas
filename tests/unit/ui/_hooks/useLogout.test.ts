@@ -2,19 +2,19 @@
  * @jest-environment jsdom
  */
 import { renderHook, act } from "@testing-library/react";
-import { useLogout } from "../../../../../../../app/(public)/auth/_logic/hooks/useLogout";
+import { useLogout } from "../../../../app/_hooks/useLogout";
 
-jest.mock("../../../../../../../app/_lib/logout", () => ({
+jest.mock("../../../../app/_lib/logout", () => ({
   logoutClient: jest.fn(),
 }));
 
-jest.mock("../../../../../../../app/_lib/session/refreshScheduler", () => ({
+jest.mock("../../../../app/_lib/session/refreshScheduler", () => ({
   cancel: jest.fn(),
   schedule: jest.fn(),
   _getDelay: jest.fn(),
 }));
 
-import { logoutClient } from "../../../../../../../app/_lib/logout";
+import { logoutClient } from "../../../../app/_lib/logout";
 const logoutMock = logoutClient as jest.Mock;
 
 describe("useLogout", () => {

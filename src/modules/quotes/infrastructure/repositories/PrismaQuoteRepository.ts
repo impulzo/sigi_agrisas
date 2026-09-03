@@ -360,7 +360,7 @@ export class PrismaQuoteRepository implements QuoteRepository {
   }
 
   async markConverted(id: string, saleId: string, tx?: TxHandle): Promise<QuoteSummary> {
-    const client = tx ?? this.prisma;
+    const client = (tx as Prisma.TransactionClient | undefined) ?? this.prisma;
     await client.quote.update({
       where: { id },
       data: {

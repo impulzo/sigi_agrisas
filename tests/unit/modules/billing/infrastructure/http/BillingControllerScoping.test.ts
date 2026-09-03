@@ -23,10 +23,6 @@ jest.mock("@/modules/rbac/infrastructure/di/container", () => ({
   },
 }));
 
-jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
-  getEmitterFiscalSettings: jest.fn().mockResolvedValue(null),
-}));
-
 import { NextRequest } from "next/server";
 import { BillingController } from "@/modules/billing/infrastructure/http/BillingController";
 import { InMemoryInvoiceRepository } from "@/modules/billing/infrastructure/repositories/InMemoryInvoiceRepository";
@@ -50,6 +46,7 @@ import { InMemorySatCodeRepository } from "@/modules/sat-codes/infrastructure/re
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 import type { BillingLookupService, SaleForBilling } from "@/modules/billing/application/ports/BillingLookupService";
 import type { CreateInvoiceData } from "@/modules/billing/application/ports/InvoiceRepository";
+import type { EmitterFiscalSettingsStore } from "@/modules/billing/application/ports/EmitterFiscalSettingsStore";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { InMemoryTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 
@@ -107,6 +104,7 @@ function buildController(opts: {
   const lookup = opts.lookup ?? makeLookup();
   const downloadUseCase = new DownloadInvoiceFileUseCase(repo, gateway);
   const mailer = { send: jest.fn().mockResolvedValue(undefined) };
+  const fakeStore: EmitterFiscalSettingsStore = { get: jest.fn().mockResolvedValue(null), upsert: jest.fn() };
   const controller = new BillingController(
     new StampInvoiceUseCase(repo, gateway, lookup),
     new CancelInvoiceUseCase(repo, gateway),
@@ -114,8 +112,8 @@ function buildController(opts: {
     new ListInvoicesUseCase(repo),
     new GetInvoiceUseCase(repo),
     new ListInvoicesBySaleUseCase(repo),
-    new UploadCsdUseCase(gateway),
-    new GetCsdStatusUseCase(gateway),
+    new UploadCsdUseCase(gateway, fakeStore),
+    new GetCsdStatusUseCase(gateway, fakeStore),
     authz,
     lookup,
     new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer),

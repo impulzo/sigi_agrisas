@@ -32,6 +32,16 @@ const THRESHOLD_LABEL: Record<InventoryExpiryThreshold, string> = {
   dayOf: "hoy",
 };
 
+/** Escapa texto de usuario antes de interpolarlo en el HTML de un correo. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export class AdminNotificationService {
   constructor(private readonly mailer: MailerPort) {}
 
@@ -46,7 +56,7 @@ export class AdminNotificationService {
           <p>Se canceló la venta <strong>${sale.folioCode}</strong>.</p>
           <ul>
             <li>Total: $${sale.total.toFixed(2)}</li>
-            <li>Motivo: ${sale.cancellationReason ?? "sin motivo"}</li>
+            <li>Motivo: ${sale.cancellationReason ? escapeHtml(sale.cancellationReason) : "sin motivo"}</li>
             <li>Sucursal: ${sale.branchName}</li>
             <li>Cajero: ${sale.cashierName}</li>
           </ul>

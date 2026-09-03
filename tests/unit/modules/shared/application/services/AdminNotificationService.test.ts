@@ -28,6 +28,24 @@ describe("AdminNotificationService", () => {
       );
     });
 
+    it("escapes HTML in cancellationReason before interpolating it into the email body", async () => {
+      process.env.ADMIN_NOTIFICATION_EMAIL = "admin@agrisas.mx";
+      const mailer: MailerPort = { send: jest.fn().mockResolvedValue(undefined) };
+      const service = new AdminNotificationService(mailer);
+
+      await service.notifySaleCancelled({
+        folioCode: "TK-000042",
+        total: 1500,
+        cancellationReason: '<img src=x onerror="alert(1)">',
+        branchName: "Matriz",
+        cashierName: "Admin",
+      });
+
+      const sentHtml = (mailer.send as jest.Mock).mock.calls[0][0].html as string;
+      expect(sentHtml).not.toContain("<img");
+      expect(sentHtml).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
+    });
+
     it("does not attempt to send when ADMIN_NOTIFICATION_EMAIL is unset", async () => {
       delete process.env.ADMIN_NOTIFICATION_EMAIL;
       const mailer: MailerPort = { send: jest.fn().mockResolvedValue(undefined) };

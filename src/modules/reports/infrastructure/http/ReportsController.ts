@@ -47,6 +47,7 @@ import { buildCollectionsReportWorkbook } from "../xlsx/buildCollectionsReportWo
 import { requirePermission } from "@/modules/rbac/infrastructure/http/requirePermission";
 import { resolveScopedBranchId } from "@/modules/rbac/infrastructure/http/enforceBranchScope";
 import { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
+import { pdfResponse, xlsxResponse, reportErrorResponse } from "./reportResponses";
 
 const LEDGER_PDF_MAX_ROWS = 10000;
 
@@ -262,31 +263,18 @@ export class ReportsController {
         const issuer = toPdfIssuer(settings);
         const buffer = await renderToBuffer(createElement(InventoryStockReportPdf, { data: dto, issuer }) as never);
         const date = dto.generatedAt.split("T")[0];
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="stock-${date}.pdf"`,
-          },
-        });
+        return pdfResponse(buffer, `stock-${date}.pdf`);
       }
 
       if (format === "xlsx") {
         const buffer = buildInventoryStockWorkbook(dto);
         const date = dto.generatedAt.split("T")[0];
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": `attachment; filename="stock-${date}.xlsx"`,
-          },
-        });
+        return xlsxResponse(buffer, `stock-${date}.xlsx`);
       }
 
       return NextResponse.json(dto);
     } catch (err) {
-      console.error("[ReportsController] getInventoryStockReport error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getInventoryStockReport", err);
     }
   }
 
@@ -325,31 +313,18 @@ export class ReportsController {
           createElement(PaymentHistoryReportPdf, { data: dto, issuer }) as never
         );
         const date = dto.generatedAt.split("T")[0];
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="payments-${date}.pdf"`,
-          },
-        });
+        return pdfResponse(buffer, `payments-${date}.pdf`);
       }
 
       if (format === "xlsx") {
         const buffer = buildPaymentHistoryWorkbook(dto);
         const date = dto.generatedAt.split("T")[0];
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": `attachment; filename="payments-${date}.xlsx"`,
-          },
-        });
+        return xlsxResponse(buffer, `payments-${date}.xlsx`);
       }
 
       return NextResponse.json(dto);
     } catch (err) {
-      console.error("[ReportsController] getPaymentHistoryReport error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getPaymentHistoryReport", err);
     }
   }
 
@@ -396,31 +371,18 @@ export class ReportsController {
           createElement(AccountStatementSummaryPdf, { data: dto, issuer }) as never
         );
         const date = dto.generatedAt.split("T")[0];
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="account-statements-${date}.pdf"`,
-          },
-        });
+        return pdfResponse(buffer, `account-statements-${date}.pdf`);
       }
 
       if (format === "xlsx") {
         const buffer = buildAccountStatementsSummaryWorkbook(dto);
         const date = dto.generatedAt.split("T")[0];
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": `attachment; filename="account-statements-${date}.xlsx"`,
-          },
-        });
+        return xlsxResponse(buffer, `account-statements-${date}.xlsx`);
       }
 
       return NextResponse.json(dto);
     } catch (err) {
-      console.error("[ReportsController] getAccountStatementsSummary error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getAccountStatementsSummary", err);
     }
   }
 
@@ -469,13 +431,7 @@ export class ReportsController {
 
         if (format === "xlsx") {
           const buffer = buildAccountStatementLedgerWorkbook(dto);
-          return new NextResponse(buffer as unknown as BodyInit, {
-            status: 200,
-            headers: {
-              "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-              "Content-Disposition": `attachment; filename="account-statement-${dto.customer.code}-${date}.xlsx"`,
-            },
-          });
+          return xlsxResponse(buffer, `account-statement-${dto.customer.code}-${date}.xlsx`);
         }
 
         const settings = await this.getTicketSettingsUseCase.execute();
@@ -483,13 +439,7 @@ export class ReportsController {
         const buffer = await renderToBuffer(
           createElement(AccountStatementLedgerPdf, { data: dto, issuer }) as never
         );
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="account-statement-${dto.customer.code}-${date}.pdf"`,
-          },
-        });
+        return pdfResponse(buffer, `account-statement-${dto.customer.code}-${date}.pdf`);
       }
 
       return NextResponse.json(dto);
@@ -497,8 +447,7 @@ export class ReportsController {
       if (err instanceof StatementCustomerNotFoundError) {
         return NextResponse.json({ error: err.message }, { status: 404 });
       }
-      console.error("[ReportsController] getAccountStatementLedger error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getAccountStatementLedger", err);
     }
   }
 
@@ -545,19 +494,12 @@ export class ReportsController {
         createElement(AnticipoReceiptPdf, { data: dto, issuer }) as never
       );
       const date = dto.generatedAt.split("T")[0];
-      return new NextResponse(buffer as unknown as BodyInit, {
-        status: 200,
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="anticipo-${dto.payment.folio}-${date}.pdf"`,
-        },
-      });
+      return pdfResponse(buffer, `anticipo-${dto.payment.folio}-${date}.pdf`);
     } catch (err) {
       if (err instanceof AnticipoReceiptNotFoundError) {
         return NextResponse.json({ error: err.message }, { status: 404 });
       }
-      console.error("[ReportsController] getAnticipoReceipt error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getAnticipoReceipt", err);
     }
   }
 
@@ -609,30 +551,17 @@ export class ReportsController {
         const settings = await this.getTicketSettingsUseCase.execute();
         const issuer = toPdfIssuer(settings);
         const buffer = await renderToBuffer(createElement(SalesCutReportPdf, { data: dto, issuer }) as never);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="sales-cut-${dto.filters.from}_${dto.filters.to}.pdf"`,
-          },
-        });
+        return pdfResponse(buffer, `sales-cut-${dto.filters.from}_${dto.filters.to}.pdf`);
       }
 
       if (format === "xlsx") {
         const buffer = buildSalesCutWorkbook(dto);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": `attachment; filename="sales-cut-${dto.filters.from}_${dto.filters.to}.xlsx"`,
-          },
-        });
+        return xlsxResponse(buffer, `sales-cut-${dto.filters.from}_${dto.filters.to}.xlsx`);
       }
 
       return NextResponse.json(dto);
     } catch (err) {
-      console.error("[ReportsController] getSalesCutReport error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getSalesCutReport", err);
     }
   }
 
@@ -671,30 +600,17 @@ export class ReportsController {
         const settings = await this.getTicketSettingsUseCase.execute();
         const issuer = toPdfIssuer(settings);
         const buffer = await renderToBuffer(createElement(CashCutReportPdf, { data: dto, issuer }) as never);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="cash-cut-${dto.filters.from}_${dto.filters.to}.pdf"`,
-          },
-        });
+        return pdfResponse(buffer, `cash-cut-${dto.filters.from}_${dto.filters.to}.pdf`);
       }
 
       if (format === "xlsx") {
         const buffer = buildCashCutWorkbook(dto);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": `attachment; filename="cash-cut-${dto.filters.from}_${dto.filters.to}.xlsx"`,
-          },
-        });
+        return xlsxResponse(buffer, `cash-cut-${dto.filters.from}_${dto.filters.to}.xlsx`);
       }
 
       return NextResponse.json(dto);
     } catch (err) {
-      console.error("[ReportsController] getCashCutReport error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getCashCutReport", err);
     }
   }
 
@@ -731,30 +647,17 @@ export class ReportsController {
         const buffer = await renderToBuffer(
           createElement(DepartmentPriceListReportPdf, { data: dto, issuer }) as never
         );
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="inventory-by-department-${date}.pdf"`,
-          },
-        });
+        return pdfResponse(buffer, `inventory-by-department-${date}.pdf`);
       }
 
       if (format === "xlsx") {
         const buffer = buildDepartmentPriceListWorkbook(dto);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": `attachment; filename="inventory-by-department-${date}.xlsx"`,
-          },
-        });
+        return xlsxResponse(buffer, `inventory-by-department-${date}.xlsx`);
       }
 
       return NextResponse.json(dto);
     } catch (err) {
-      console.error("[ReportsController] getDepartmentPriceListReport error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getDepartmentPriceListReport", err);
     }
   }
 
@@ -806,30 +709,17 @@ export class ReportsController {
         const settings = await this.getTicketSettingsUseCase.execute();
         const issuer = toPdfIssuer(settings);
         const buffer = await renderToBuffer(createElement(PurchasesReportPdf, { data: dto, issuer }) as never);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="purchases-${date}.pdf"`,
-          },
-        });
+        return pdfResponse(buffer, `purchases-${date}.pdf`);
       }
 
       if (format === "xlsx") {
         const buffer = buildPurchasesReportWorkbook(dto);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": `attachment; filename="purchases-${date}.xlsx"`,
-          },
-        });
+        return xlsxResponse(buffer, `purchases-${date}.xlsx`);
       }
 
       return NextResponse.json(dto);
     } catch (err) {
-      console.error("[ReportsController] getPurchasesReport error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getPurchasesReport", err);
     }
   }
 
@@ -881,30 +771,17 @@ export class ReportsController {
         const settings = await this.getTicketSettingsUseCase.execute();
         const issuer = toPdfIssuer(settings);
         const buffer = await renderToBuffer(createElement(ProviderPaymentsReportPdf, { data: dto, issuer }) as never);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="provider-payments-${date}.pdf"`,
-          },
-        });
+        return pdfResponse(buffer, `provider-payments-${date}.pdf`);
       }
 
       if (format === "xlsx") {
         const buffer = buildProviderPaymentsReportWorkbook(dto);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": `attachment; filename="provider-payments-${date}.xlsx"`,
-          },
-        });
+        return xlsxResponse(buffer, `provider-payments-${date}.xlsx`);
       }
 
       return NextResponse.json(dto);
     } catch (err) {
-      console.error("[ReportsController] getProviderPaymentsReport error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getProviderPaymentsReport", err);
     }
   }
 
@@ -961,30 +838,17 @@ export class ReportsController {
         const settings = await this.getTicketSettingsUseCase.execute();
         const issuer = toPdfIssuer(settings);
         const buffer = await renderToBuffer(createElement(SalesByProductReportPdf, { data: dto, issuer }) as never);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="sales-by-product-${dto.filters.from}_${dto.filters.to}.pdf"`,
-          },
-        });
+        return pdfResponse(buffer, `sales-by-product-${dto.filters.from}_${dto.filters.to}.pdf`);
       }
 
       if (format === "xlsx") {
         const buffer = buildSalesByProductReportWorkbook(dto);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": `attachment; filename="sales-by-product-${dto.filters.from}_${dto.filters.to}.xlsx"`,
-          },
-        });
+        return xlsxResponse(buffer, `sales-by-product-${dto.filters.from}_${dto.filters.to}.xlsx`);
       }
 
       return NextResponse.json(dto);
     } catch (err) {
-      console.error("[ReportsController] getSalesByProductReport error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getSalesByProductReport", err);
     }
   }
 
@@ -1022,30 +886,17 @@ export class ReportsController {
         const settings = await this.getTicketSettingsUseCase.execute();
         const issuer = toPdfIssuer(settings);
         const buffer = await renderToBuffer(createElement(CollectionsReportPdf, { data: dto, issuer }) as never);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="customer-collections-${dto.filters.from}_${dto.filters.to}.pdf"`,
-          },
-        });
+        return pdfResponse(buffer, `customer-collections-${dto.filters.from}_${dto.filters.to}.pdf`);
       }
 
       if (format === "xlsx") {
         const buffer = buildCollectionsReportWorkbook(dto);
-        return new NextResponse(buffer as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": `attachment; filename="customer-collections-${dto.filters.from}_${dto.filters.to}.xlsx"`,
-          },
-        });
+        return xlsxResponse(buffer, `customer-collections-${dto.filters.from}_${dto.filters.to}.xlsx`);
       }
 
       return NextResponse.json(dto);
     } catch (err) {
-      console.error("[ReportsController] getCustomerCollectionsReport error", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      return reportErrorResponse("getCustomerCollectionsReport", err);
     }
   }
 }

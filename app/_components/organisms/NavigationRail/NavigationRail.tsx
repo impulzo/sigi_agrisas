@@ -9,7 +9,7 @@ import { Icon } from "../../atoms/Icon/Icon";
 import { RailFlyout } from "../../molecules/RailFlyout/RailFlyout";
 import { primaryItems, secondaryItems, type RailItem } from "./items";
 import { useCurrentUser } from "../../../_hooks/useCurrentUser";
-import { useLogout } from "../../../(public)/auth/_logic/hooks/useLogout";
+import { useLogout } from "../../../_hooks/useLogout";
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";

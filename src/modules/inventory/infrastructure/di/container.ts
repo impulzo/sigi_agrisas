@@ -17,6 +17,7 @@ import { BranchInventoryController } from "@/modules/inventory/infrastructure/ht
 import { InventoryMovementsController } from "@/modules/inventory/infrastructure/http/InventoryMovementsController";
 import { InventoryCronController } from "@/modules/inventory/infrastructure/http/InventoryCronController";
 import { PrismaInventoryNotificationSettingsAdapter } from "@/modules/inventory/infrastructure/services/PrismaInventoryNotificationSettingsAdapter";
+import { PrismaInventoryNotificationSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaInventoryNotificationSettingsRepository";
 import { rbacContainer } from "@/modules/rbac/infrastructure/di/container";
 import { adminNotificationService } from "@/shared/infrastructure/di/adminNotificationContainer";
 import { PrismaTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaTicketSettingsRepository";
@@ -27,7 +28,9 @@ const productRepo = new PrismaProductRepository(prisma);
 const inventoryRepo = new PrismaBranchInventoryRepository(prisma, adminNotificationService);
 const movementRepo = new PrismaInventoryMovementRepository(prisma);
 const inventoryLotRepo = new PrismaInventoryLotRepository(prisma);
-const inventoryNotificationSettingsPort = new PrismaInventoryNotificationSettingsAdapter(prisma);
+const inventoryNotificationSettingsPort = new PrismaInventoryNotificationSettingsAdapter(
+  new PrismaInventoryNotificationSettingsRepository(prisma)
+);
 const getTicketSettingsUseCase = new GetTicketSettingsUseCase(new PrismaTicketSettingsRepository(prisma));
 
 export const branchInventoryController = new BranchInventoryController(

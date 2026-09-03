@@ -26,6 +26,7 @@ import { BranchScopeViolationError } from "../../domain/errors/BranchScopeViolat
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 import { FolioScope } from "@/shared/domain/types/FolioScope";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
+import { SaleNotFoundError } from "@/modules/pos/domain/errors/SaleNotFoundError";
 
 const AMOUNT_TOLERANCE = 0.0001;
 
@@ -100,7 +101,7 @@ export class InMemoryPaymentRepository implements PaymentRepository {
 
   async createCompleted(input: CreatePaymentInput): Promise<PaymentWithSale> {
     const sale = this.sales.get(input.saleId);
-    if (!sale) throw new Error("Sale not found");
+    if (!sale) throw new SaleNotFoundError(input.saleId);
     if (sale.status !== "completed") throw new SaleNotPayableError({ status: sale.status });
     if (!sale.isCredit) throw new SaleNotPayableError({ reason: "not_credit" });
 
@@ -343,7 +344,7 @@ export class InMemoryPaymentRepository implements PaymentRepository {
 
   async listBySale(saleId: string): Promise<{ items: PaymentListRow[]; saleTotals: SaleTotals }> {
     const sale = this.sales.get(saleId);
-    if (!sale) throw new Error("Sale not found");
+    if (!sale) throw new SaleNotFoundError(saleId);
 
     const payments = Array.from(this.payments.values())
       .filter((p) => p.saleId === saleId)

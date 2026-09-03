@@ -10,7 +10,7 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("../../../../../app/_hooks/useCurrentUser");
-jest.mock("../../../../../app/(public)/auth/_logic/hooks/useLogout", () => ({
+jest.mock("../../../../../app/_hooks/useLogout", () => ({
   useLogout: jest.fn(() => ({ logout: jest.fn(), isLoading: false })),
 }));
 jest.mock("../../../../../app/_components/molecules/RailFlyout/RailFlyout", () => ({

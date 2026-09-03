@@ -1,6 +1,7 @@
 import { prisma } from "@/shared/infrastructure/prisma/client";
 import { PrismaInvoiceRepository } from "../repositories/PrismaInvoiceRepository";
 import { PrismaBillingLookupService } from "../services/PrismaBillingLookupService";
+import { PrismaEmitterFiscalSettingsStore } from "../services/PrismaEmitterFiscalSettingsStore";
 import { FacturamaRestGateway } from "../services/FacturamaRestGateway";
 import { FakeFacturamaGateway } from "../services/FakeFacturamaGateway";
 import { StampInvoiceUseCase } from "../../application/use-cases/StampInvoiceUseCase";
@@ -38,10 +39,11 @@ const gateway: FacturamaGateway = isMock
 
 const invoiceRepo = new PrismaInvoiceRepository(prisma);
 const lookupService = new PrismaBillingLookupService(prisma);
+const emitterFiscalSettingsStore = new PrismaEmitterFiscalSettingsStore();
 
-const stampUseCase = new StampInvoiceUseCase(invoiceRepo, gateway, lookupService, getTicketSettingsUseCase);
+const stampUseCase = new StampInvoiceUseCase(invoiceRepo, gateway, lookupService, getTicketSettingsUseCase, emitterFiscalSettingsStore);
 const cancelUseCase = new CancelInvoiceUseCase(invoiceRepo, gateway);
-const getEmitterFiscalSettingsUseCase = new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase);
+const getEmitterFiscalSettingsUseCase = new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase, emitterFiscalSettingsStore);
 const downloadUseCase = new DownloadInvoiceFileUseCase(
   invoiceRepo,
   gateway,
@@ -51,13 +53,14 @@ const downloadUseCase = new DownloadInvoiceFileUseCase(
   searchSatTaxRegimesUseCase,
   searchSatCfdiUsesUseCase,
   searchSatCodesUseCase,
+  emitterFiscalSettingsStore,
 );
 const sendEmailUseCase = new SendInvoiceEmailUseCase(invoiceRepo, lookupService, downloadUseCase, mailer);
 const listUseCase = new ListInvoicesUseCase(invoiceRepo);
 const getUseCase = new GetInvoiceUseCase(invoiceRepo);
 const listBySaleUseCase = new ListInvoicesBySaleUseCase(invoiceRepo);
-const uploadCsdUseCase = new UploadCsdUseCase(gateway);
-const getCsdStatusUseCase = new GetCsdStatusUseCase(gateway);
+const uploadCsdUseCase = new UploadCsdUseCase(gateway, emitterFiscalSettingsStore);
+const getCsdStatusUseCase = new GetCsdStatusUseCase(gateway, emitterFiscalSettingsStore);
 
 export const billingController = new BillingController(
   stampUseCase,
@@ -77,4 +80,5 @@ export const billingController = new BillingController(
   searchSatCfdiUsesUseCase,
   searchSatCodesUseCase,
   gateway,
+  emitterFiscalSettingsStore,
 );

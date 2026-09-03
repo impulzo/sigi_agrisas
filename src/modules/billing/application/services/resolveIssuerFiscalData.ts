@@ -1,4 +1,4 @@
-import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
+import { EmitterFiscalSettingsStore } from "../ports/EmitterFiscalSettingsStore";
 import { FacturamaGateway } from "../ports/FacturamaGateway";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 
@@ -52,7 +52,8 @@ export function extractSatCodeFromTicketRegime(businessTaxRegime: string | null)
  */
 export async function resolveIssuerFiscalData(
   gateway: FacturamaGateway,
-  getTicketSettingsUseCase?: GetTicketSettingsUseCase
+  getTicketSettingsUseCase?: GetTicketSettingsUseCase,
+  store?: EmitterFiscalSettingsStore
 ): Promise<IssuerFiscalData> {
   let csdRfc: string | undefined;
   let csdLegalName: string | undefined;
@@ -65,7 +66,7 @@ export async function resolveIssuerFiscalData(
   }
 
   const [settings, ticket] = await Promise.all([
-    getEmitterFiscalSettings(),
+    store ? store.get() : null,
     getTicketSettingsUseCase ? getTicketSettingsUseCase.execute() : null,
   ]);
 

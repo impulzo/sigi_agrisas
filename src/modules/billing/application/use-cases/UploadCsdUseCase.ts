@@ -1,5 +1,5 @@
 import { FacturamaGateway, FacturamaCsdInput, FacturamaCsdStatus } from "../ports/FacturamaGateway";
-import { upsertEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
+import { EmitterFiscalSettingsStore } from "../ports/EmitterFiscalSettingsStore";
 
 export interface UploadCsdRequest extends FacturamaCsdInput {
   legalName?: string;
@@ -9,14 +9,17 @@ export interface UploadCsdRequest extends FacturamaCsdInput {
 }
 
 export class UploadCsdUseCase {
-  constructor(private readonly gateway: FacturamaGateway) {}
+  constructor(
+    private readonly gateway: FacturamaGateway,
+    private readonly store: EmitterFiscalSettingsStore
+  ) {}
 
   async execute(input: UploadCsdRequest): Promise<FacturamaCsdStatus> {
     // CSD cryptographic material (cert/key/password) is forwarded to Facturama and never persisted locally.
     const status = await this.gateway.uploadCsd(input);
 
     // Only the non-secret fiscal identity is persisted, and only after Facturama accepts the CSD.
-    await upsertEmitterFiscalSettings({
+    await this.store.upsert({
       rfc: input.rfc,
       legalName: input.legalName,
       fiscalRegime: input.fiscalRegime,

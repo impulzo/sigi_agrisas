@@ -151,4 +151,15 @@ describe("toSaleItemDto", () => {
     expect(dto.lineIva).toBe(5.3333);
     expect(dto.lineIeps).toBe(0);
   });
+
+  it("uses banker's rounding (half-to-even), matching the persisted lineTax at the exact .5 tie", () => {
+    // 100.0002 * 0.25 = 25.00005 exactly at the 4th-decimal tie: half-up would
+    // give 25.0001, half-to-even gives 25.0000 — must match lineTax's rounding.
+    const dto = toSaleItemDto(
+      buildItem({ lineSubtotal: 100.0002, ivaRate: 0, iepsRate: 0.25, lineTax: 25, lineTotal: 125.0002 })
+    );
+
+    expect(dto.lineIeps).toBe(25);
+    expect(dto.lineIva + dto.lineIeps).toBe(dto.lineTax);
+  });
 });

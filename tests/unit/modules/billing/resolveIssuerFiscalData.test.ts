@@ -12,18 +12,18 @@ jest.mock("@/modules/billing/infrastructure/pdf/InvoiceDocumentPdf", () => ({
   InvoiceDocumentPdf: () => null,
 }));
 
-jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
-  getEmitterFiscalSettings: jest.fn(),
-}));
-
-import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
 import { extractSatCodeFromTicketRegime, resolveIssuerFiscalData } from "../../../../src/modules/billing/application/services/resolveIssuerFiscalData";
 import { GetEmitterFiscalSettingsUseCase } from "../../../../src/modules/billing/application/use-cases/GetEmitterFiscalSettingsUseCase";
 import { FakeFacturamaGateway } from "../../../../src/modules/billing/infrastructure/services/FakeFacturamaGateway";
 import { GetTicketSettingsUseCase } from "../../../../src/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { InMemoryTicketSettingsRepository } from "../../../../src/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
+import type { EmitterFiscalSettingsStore } from "../../../../src/modules/billing/application/ports/EmitterFiscalSettingsStore";
 
-const mockedGetEmitterFiscalSettings = getEmitterFiscalSettings as jest.Mock;
+const store: EmitterFiscalSettingsStore = {
+  get: jest.fn(),
+  upsert: jest.fn(),
+};
+const mockedGetEmitterFiscalSettings = store.get as jest.Mock;
 
 describe("extractSatCodeFromTicketRegime", () => {
   it("extracts the leading SAT code when businessTaxRegime uses the form's em-dash format", () => {
@@ -58,7 +58,7 @@ describe("GetEmitterFiscalSettingsUseCase — draft-preview/stamp consistency", 
     await ticketRepo.update({ businessTaxRegime: "612 Personas Físicas con Actividad Empresarial" });
     const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
     const gateway = new FakeFacturamaGateway();
-    const uc = new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase);
+    const uc = new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase, store);
 
     const result = await uc.execute();
 
@@ -78,7 +78,7 @@ describe("resolveIssuerFiscalData — zipCode 3rd-tier fallback to TicketSetting
     const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
     const gateway = new FakeFacturamaGateway();
 
-    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase);
+    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase, store);
 
     expect(result.zipCode).toBe("83000");
   });
@@ -89,7 +89,7 @@ describe("resolveIssuerFiscalData — zipCode 3rd-tier fallback to TicketSetting
     const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
     const gateway = new FakeFacturamaGateway();
 
-    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase);
+    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase, store);
 
     expect(result.zipCode).toBeNull();
   });
@@ -107,7 +107,7 @@ describe("resolveIssuerFiscalData — zipCode 3rd-tier fallback to TicketSetting
     const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
     const gateway = new FakeFacturamaGateway();
 
-    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase);
+    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase, store);
 
     expect(result.zipCode).toBe("01000");
   });
@@ -125,7 +125,7 @@ describe("resolveIssuerFiscalData — email (single tier, TicketSettings only)",
     const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
     const gateway = new FakeFacturamaGateway();
 
-    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase);
+    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase, store);
 
     expect(result.email).toBe("contacto@agrisas.mx");
   });
@@ -142,7 +142,7 @@ describe("resolveIssuerFiscalData — email (single tier, TicketSettings only)",
     const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketRepo);
     const gateway = new FakeFacturamaGateway();
 
-    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase);
+    const result = await resolveIssuerFiscalData(gateway, getTicketSettingsUseCase, store);
 
     expect(result.email).toBeNull();
   });

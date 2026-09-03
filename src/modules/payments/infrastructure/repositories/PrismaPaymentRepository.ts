@@ -25,6 +25,7 @@ import { SaleItemNotFoundError } from "../../domain/errors/SaleItemNotFoundError
 import { SaleNotPayableError } from "../../domain/errors/SaleNotPayableError";
 import { BranchScopeViolationError } from "../../domain/errors/BranchScopeViolationError";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
+import { SaleNotFoundError } from "@/modules/pos/domain/errors/SaleNotFoundError";
 import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 import { FolioScope } from "@/shared/domain/types/FolioScope";
@@ -103,7 +104,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
         where: { id: input.saleId },
         include: { paymentMethod: { select: { isCredit: true } }, items: true },
       });
-      if (!saleRow) throw new Error("Sale not found");
+      if (!saleRow) throw new SaleNotFoundError(input.saleId);
       if (saleRow.status !== "completed") throw new SaleNotPayableError({ status: saleRow.status });
       if (!saleRow.paymentMethod.isCredit) throw new SaleNotPayableError({ reason: "not_credit" });
 
@@ -422,7 +423,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
       }),
     ]);
 
-    if (!saleRow) throw new Error("Sale not found");
+    if (!saleRow) throw new SaleNotFoundError(saleId);
 
     const saleTotal = Number(saleRow.total);
     const salePaidAmount = Number(saleRow.paidAmount);

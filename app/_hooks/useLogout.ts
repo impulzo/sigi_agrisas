@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { logoutClient } from "../../../../_lib/logout";
+import { logoutClient } from "../_lib/logout";
 
 export function useLogout() {
   const [isLoading, setIsLoading] = useState(false);
