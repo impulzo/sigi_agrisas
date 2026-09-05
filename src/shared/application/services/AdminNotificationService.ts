@@ -57,8 +57,8 @@ export class AdminNotificationService {
           <ul>
             <li>Total: $${sale.total.toFixed(2)}</li>
             <li>Motivo: ${sale.cancellationReason ? escapeHtml(sale.cancellationReason) : "sin motivo"}</li>
-            <li>Sucursal: ${sale.branchName}</li>
-            <li>Cajero: ${sale.cashierName}</li>
+            <li>Sucursal: ${escapeHtml(sale.branchName)}</li>
+            <li>Cajero: ${escapeHtml(sale.cashierName)}</li>
           </ul>
         `,
       });
@@ -75,9 +75,9 @@ export class AdminNotificationService {
         to,
         subject: `Stock bajo — ${item.productName}`,
         html: `
-          <p>El producto <strong>${item.productName}</strong> (${item.productCode}) cayó por debajo del punto de reorden.</p>
+          <p>El producto <strong>${escapeHtml(item.productName)}</strong> (${escapeHtml(item.productCode)}) cayó por debajo del punto de reorden.</p>
           <ul>
-            <li>Sucursal: ${item.branchName}</li>
+            <li>Sucursal: ${escapeHtml(item.branchName)}</li>
             <li>Existencia actual: ${item.quantity}</li>
             <li>Punto de reorden: ${item.reorderPoint}</li>
           </ul>

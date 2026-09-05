@@ -100,3 +100,6 @@ lerna-debug.log*
 
 # claude code local settings (may contain per-session permission strings with secrets)
 .claude/settings.local.json
+
+# local MCP server config (may reference production project refs / credentials)
+.mcp.json

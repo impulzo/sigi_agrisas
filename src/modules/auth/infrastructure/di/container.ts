@@ -13,12 +13,17 @@ import { SendSetPasswordEmailUseCase } from "@/modules/auth/application/use-case
 import { CompletePasswordSetupUseCase } from "@/modules/auth/application/use-cases/CompletePasswordSetupUseCase";
 import { AuthController } from "@/modules/auth/infrastructure/http/AuthController";
 import { PrismaRoleAssigner } from "@/modules/rbac/infrastructure/services/PrismaRoleAssigner";
+import { PrismaAdminUserRepository } from "@/modules/users/infrastructure/repositories/PrismaAdminUserRepository";
+import { GetUserUseCase } from "@/modules/users/application/use-cases/GetUserUseCase";
+import { UpdateOwnProfileUseCase } from "@/modules/users/application/use-cases/UpdateOwnProfileUseCase";
 
 const userRepo = new UserPrismaRepository(prisma);
 const tokenSetupRepo = new PrismaPasswordSetupTokenRepository(prisma);
 const tokenService = new JwtTokenService();
 const hasher = new BcryptPasswordHasher();
 const roleAssigner = new PrismaRoleAssigner(prisma);
+// Instancia local (no via users/di) para evitar import circular — mismo patrón que POS/Payments con PrismaSaleRepository.
+const adminUserRepo = new PrismaAdminUserRepository(prisma);
 
 const issuePasswordSetupTokenUseCase = new IssuePasswordSetupTokenUseCase(tokenSetupRepo);
 
@@ -40,13 +45,18 @@ export const authController = (() => {
       hasher,
       tokenService
     );
+    const getUserUseCase = new GetUserUseCase(adminUserRepo);
+    const updateOwnProfileUseCase = new UpdateOwnProfileUseCase(adminUserRepo);
 
     return new AuthController(
       registerUseCase,
       loginUseCase,
       refreshTokenUseCase,
       logoutUseCase,
-      completePasswordSetupUseCase
+      completePasswordSetupUseCase,
+      getUserUseCase,
+      updateOwnProfileUseCase,
+      sendSetPasswordEmailUseCase
     );
   } catch (err) {
     console.error("[auth/di] failed to initialize AuthController:", err);

@@ -5,6 +5,9 @@ import { LoginUseCase } from "@/modules/auth/application/use-cases/LoginUseCase"
 import { RefreshTokenUseCase } from "@/modules/auth/application/use-cases/RefreshTokenUseCase";
 import { LogoutUseCase } from "@/modules/auth/application/use-cases/LogoutUseCase";
 import { CompletePasswordSetupUseCase } from "@/modules/auth/application/use-cases/CompletePasswordSetupUseCase";
+import { GetUserUseCase } from "@/modules/users/application/use-cases/GetUserUseCase";
+import { UpdateOwnProfileUseCase } from "@/modules/users/application/use-cases/UpdateOwnProfileUseCase";
+import { SendSetPasswordEmailUseCase } from "@/modules/auth/application/use-cases/SendSetPasswordEmailUseCase";
 import { EmailAlreadyInUseError } from "@/modules/auth/domain/errors/EmailAlreadyInUseError";
 
 function buildController(overrides: {
@@ -21,7 +24,10 @@ function buildController(overrides: {
     {} as LoginUseCase,
     {} as RefreshTokenUseCase,
     {} as LogoutUseCase,
-    completePasswordSetupUseCase
+    completePasswordSetupUseCase,
+    {} as GetUserUseCase,
+    {} as UpdateOwnProfileUseCase,
+    {} as SendSetPasswordEmailUseCase
   );
 }
 
