@@ -31,8 +31,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es">
-      <body className={`${inter.variable} ${poppins.variable} font-inter`}>
+    <html lang="es" suppressHydrationWarning>
+      <body className={`${inter.variable} ${poppins.variable} font-inter`} suppressHydrationWarning>
         <ServiceWorkerRegistrar />
         {children}
       </body>

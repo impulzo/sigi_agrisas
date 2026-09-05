@@ -221,6 +221,24 @@ describe("NavigationRail — item Configuración (secondaryItems)", () => {
   });
 });
 
+describe("NavigationRail — item Mi cuenta (secondaryItems)", () => {
+  it("usuario autenticado sin ningún permiso ve el item Mi cuenta", () => {
+    renderRail("/dashboard", []);
+    expect(screen.getByRole("link", { name: /Mi cuenta/ })).toBeInTheDocument();
+  });
+
+  it("Mi cuenta apunta a /account", () => {
+    renderRail("/dashboard", []);
+    expect(screen.getByRole("link", { name: /Mi cuenta/ })).toHaveAttribute("href", "/account");
+  });
+
+  it("Mi cuenta activo cuando pathname empieza con /account", () => {
+    renderRail("/account", []);
+    const link = screen.getByRole("link", { name: /Mi cuenta/ });
+    expect(link.className).toContain("bg-primary-container");
+  });
+});
+
 describe("NavigationRail — children Vehículos y Operadores bajo Catálogos", () => {
   beforeEach(() => jest.clearAllMocks());
 

@@ -7,11 +7,19 @@ import { LoginUseCase } from "@/modules/auth/application/use-cases/LoginUseCase"
 import { RefreshTokenUseCase } from "@/modules/auth/application/use-cases/RefreshTokenUseCase";
 import { LogoutUseCase } from "@/modules/auth/application/use-cases/LogoutUseCase";
 import { CompletePasswordSetupUseCase } from "@/modules/auth/application/use-cases/CompletePasswordSetupUseCase";
+import { SendSetPasswordEmailUseCase } from "@/modules/auth/application/use-cases/SendSetPasswordEmailUseCase";
 import { EmailAlreadyInUseError } from "@/modules/auth/domain/errors/EmailAlreadyInUseError";
 import { InvalidCredentialsError } from "@/modules/auth/domain/errors/InvalidCredentialsError";
 import { PasswordNotSetError } from "@/modules/auth/domain/errors/PasswordNotSetError";
 import { PasswordSetupTokenInvalidError } from "@/modules/auth/domain/errors/PasswordSetupTokenInvalidError";
 import { PasswordSetupTokenExpiredError } from "@/modules/auth/domain/errors/PasswordSetupTokenExpiredError";
+import { UserNotFoundError as AuthUserNotFoundError } from "@/modules/auth/domain/errors/UserNotFoundError";
+import { SetPasswordEmailSendFailedError } from "@/modules/auth/domain/errors/SetPasswordEmailSendFailedError";
+import { GetUserUseCase } from "@/modules/users/application/use-cases/GetUserUseCase";
+import { UpdateOwnProfileUseCase } from "@/modules/users/application/use-cases/UpdateOwnProfileUseCase";
+import { UserNotFoundError } from "@/modules/users/domain/errors/UserNotFoundError";
+import { EmailAlreadyInUseError as UsersEmailAlreadyInUseError } from "@/modules/users/domain/errors/EmailAlreadyInUseError";
+import { checkRateLimit } from "@/shared/infrastructure/http/rateLimit";
 import {
   REFRESH_TOKEN_COOKIE,
   refreshCookieOptions,
@@ -34,13 +42,25 @@ const setPasswordSchema = z.object({
   password: z.string().min(8),
 });
 
+const updateMeSchema = z
+  .object({
+    name: z.string().min(1).optional(),
+    email: z.string().email().optional(),
+  })
+  .refine((d) => d.name !== undefined || d.email !== undefined, {
+    message: "At least one field (name, email) must be provided",
+  });
+
 export class AuthController {
   constructor(
     private readonly registerUseCase: RegisterUseCase,
     private readonly loginUseCase: LoginUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly logoutUseCase: LogoutUseCase,
-    private readonly completePasswordSetupUseCase: CompletePasswordSetupUseCase
+    private readonly completePasswordSetupUseCase: CompletePasswordSetupUseCase,
+    private readonly getUserUseCase: GetUserUseCase,
+    private readonly updateOwnProfileUseCase: UpdateOwnProfileUseCase,
+    private readonly sendSetPasswordEmailUseCase: SendSetPasswordEmailUseCase
   ) {}
 
   async register(req: NextRequest): Promise<NextResponse> {
@@ -186,5 +206,76 @@ export class AuthController {
       serialize(REFRESH_TOKEN_COOKIE, "", clearCookieOptions)
     );
     return res;
+  }
+
+  async me(req: NextRequest): Promise<NextResponse> {
+    const userId = req.headers.get("x-user-id") ?? "";
+    try {
+      const user = await this.getUserUseCase.execute(userId);
+      return NextResponse.json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatarUrl: user.avatarUrl,
+      });
+    } catch (err) {
+      if (err instanceof UserNotFoundError) {
+        return NextResponse.json({ error: err.message }, { status: 404 });
+      }
+      throw err;
+    }
+  }
+
+  async updateMe(req: NextRequest): Promise<NextResponse> {
+    const userId = req.headers.get("x-user-id") ?? "";
+    const body = await req.json().catch(() => ({}));
+    const parsed = updateMeSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+    try {
+      const user = await this.updateOwnProfileUseCase.execute({
+        id: userId,
+        name: parsed.data.name,
+        email: parsed.data.email,
+      });
+      return NextResponse.json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatarUrl: user.avatarUrl,
+      });
+    } catch (err) {
+      if (err instanceof UsersEmailAlreadyInUseError) {
+        return NextResponse.json({ error: err.message }, { status: 409 });
+      }
+      if (err instanceof UserNotFoundError) {
+        return NextResponse.json({ error: err.message }, { status: 404 });
+      }
+      throw err;
+    }
+  }
+
+  async sendMyPasswordLink(req: NextRequest): Promise<NextResponse> {
+    const userId = req.headers.get("x-user-id") ?? "";
+    const rateLimit = checkRateLimit(`send-password-link:${userId}`, 60_000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "TooManyRequests", retryAfterSeconds: rateLimit.retryAfterSeconds },
+        { status: 429 }
+      );
+    }
+    try {
+      const { sentTo } = await this.sendSetPasswordEmailUseCase.execute(userId);
+      return NextResponse.json({ sentTo }, { status: 200 });
+    } catch (err) {
+      if (err instanceof AuthUserNotFoundError) {
+        return NextResponse.json({ error: err.message }, { status: 404 });
+      }
+      if (err instanceof SetPasswordEmailSendFailedError) {
+        return NextResponse.json({ error: "EmailDeliveryFailed" }, { status: 502 });
+      }
+      throw err;
+    }
   }
 }

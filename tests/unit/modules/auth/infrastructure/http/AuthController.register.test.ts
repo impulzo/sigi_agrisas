@@ -13,6 +13,9 @@ import { LoginUseCase } from "@/modules/auth/application/use-cases/LoginUseCase"
 import { RefreshTokenUseCase } from "@/modules/auth/application/use-cases/RefreshTokenUseCase";
 import { LogoutUseCase } from "@/modules/auth/application/use-cases/LogoutUseCase";
 import { CompletePasswordSetupUseCase } from "@/modules/auth/application/use-cases/CompletePasswordSetupUseCase";
+import { GetUserUseCase } from "@/modules/users/application/use-cases/GetUserUseCase";
+import { UpdateOwnProfileUseCase } from "@/modules/users/application/use-cases/UpdateOwnProfileUseCase";
+import { SendSetPasswordEmailUseCase } from "@/modules/auth/application/use-cases/SendSetPasswordEmailUseCase";
 import { InMemoryUserRepository } from "@/modules/auth/infrastructure/repositories/InMemoryUserRepository";
 import { InMemoryPasswordSetupTokenRepository } from "@/modules/auth/infrastructure/repositories/InMemoryPasswordSetupTokenRepository";
 import { BcryptPasswordHasher } from "@/modules/auth/infrastructure/services/BcryptPasswordHasher";
@@ -37,7 +40,10 @@ describe("AuthController.register — sin emisión de tokens", () => {
       new LoginUseCase(repo, hasher, tokenService),
       new RefreshTokenUseCase(tokenService),
       new LogoutUseCase(),
-      new CompletePasswordSetupUseCase(repo, tokenSetupRepo, hasher, tokenService)
+      new CompletePasswordSetupUseCase(repo, tokenSetupRepo, hasher, tokenService),
+      {} as GetUserUseCase,
+      {} as UpdateOwnProfileUseCase,
+      {} as SendSetPasswordEmailUseCase
     );
   }
 
