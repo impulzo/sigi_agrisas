@@ -45,10 +45,12 @@ El service worker ya tiene la función `isApiRequest(url)` con un `return` tempr
 
 ## Migration Plan
 
-1. Mergear a `develop` → deploy automático a preview. Verificar con `curl` que `POST /_vercel/speed-insights/vitals` ya no devuelve 302 y que las rutas de negocio (`/dashboard`, `/api/v1/admin/branches`) mantienen su comportamiento de auth sin cambios.
+**Corrección post-ejecución**: el plan original asumía un deploy de preview por PR seguido de una promoción separada a producción vía `master`. La ejecución real reveló (vía `mcp__vercel__list_deployments`) que el proyecto Vercel no genera deploys de preview por PR — `develop` es la rama de producción configurada en Vercel (coincide con "PR#69 es la versión productiva" del contexto inicial del usuario). Pasos 1 y 3 de abajo reflejan lo que realmente se ejecutó, no la suposición original.
+
+1. Mergear PR a `develop` (con confirmación explícita del usuario, dado que no hay entorno de preview intermedio donde probar primero) → Vercel redeploya automáticamente y promueve a `target:"production"`. Verificar con `curl` contra el dominio público del proyecto (`sigi-agrisas.vercel.app` — **no** el alias `sigi-agrisas-git-develop-*.vercel.app`, que tiene Vercel Deployment Protection/SSO delante y nunca llega a la app) que `POST /_vercel/speed-insights/vitals` ya no devuelve 302 y que las rutas de negocio (`/dashboard`, `/api/v1/admin/branches`) mantienen su comportamiento de auth sin cambios.
 2. Habilitar "Speed Insights" manualmente en el dashboard del proyecto `sigi-agrisas`.
-3. Mergear a `master` → deploy a producción. Confirmar que `enabled=true` sólo ahí (no en preview) revisando el Network tab o los logs de build (`VERCEL_ENV`).
-4. **Rollback**: si algo falla, revertir el commit — no hay migración de datos ni estado persistente involucrado; `@vercel/speed-insights` no escribe nada en la base de datos del proyecto.
+3. No aplica un paso adicional de "mergear a `master`" — el merge a `develop` del paso 1 YA es el deploy a producción en este proyecto. Confirmar `enabled=true` inspeccionando en un browser real (no `curl`, el script se inyecta client-side) que `window.si` está definido y el `<script src=".../<unique-path>/script.js">` carga sin errores.
+4. **Rollback**: si algo falla, revertir el commit en `develop` (que redeploya automáticamente) — no hay migración de datos ni estado persistente involucrado; `@vercel/speed-insights` no escribe nada en la base de datos del proyecto.
 
 ## Open Questions
 
