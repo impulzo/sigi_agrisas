@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegistrar } from "./_components/organisms/ServiceWorkerRegistrar/ServiceWorkerRegistrar";
+import { SpeedInsightsTracker } from "./_components/organisms/SpeedInsightsTracker/SpeedInsightsTracker";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -30,10 +31,13 @@ export const viewport = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const isProduction = process.env.VERCEL_ENV === "production";
+
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${inter.variable} ${poppins.variable} font-inter`} suppressHydrationWarning>
         <ServiceWorkerRegistrar />
+        <SpeedInsightsTracker enabled={isProduction} debug={!isProduction} />
         {children}
       </body>
     </html>

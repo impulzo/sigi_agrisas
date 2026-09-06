@@ -40,6 +40,20 @@ describe("authMiddleware — public routes strip spoofed identity headers", () =
 
     expect(res.headers.get("x-middleware-request-x-user-id")).toBeNull();
   });
+
+  it("lets the Speed Insights beacon through without redirecting to login or requiring auth", async () => {
+    const req = new NextRequest("http://localhost/_vercel/speed-insights/vitals", {
+      method: "POST",
+      headers: { "x-user-id": "attacker-id" },
+    });
+
+    const res = await authMiddleware(req);
+
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(302);
+    expect(res.headers.get("x-middleware-request-x-user-id")).toBeNull();
+  });
 });
 
 describe("authMiddleware — protected routes still forward real identity", () => {
