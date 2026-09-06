@@ -15,7 +15,7 @@ const PUBLIC_PATHS = [
   "/favicon.ico",
 ];
 
-const PUBLIC_PREFIXES = ["/_next/"];
+const PUBLIC_PREFIXES = ["/_next/", "/_vercel/"];
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;

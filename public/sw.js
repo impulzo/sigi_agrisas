@@ -35,6 +35,10 @@ function isApiRequest(url) {
   return url.pathname.startsWith("/api/");
 }
 
+function isVercelInsightsRequest(url) {
+  return url.pathname.startsWith("/_vercel/");
+}
+
 function isNextStaticAsset(url) {
   // Content-hashed by Next.js build — safe to cache indefinitely, a new
   // deploy simply produces new URLs that were never in this cache.
@@ -48,6 +52,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (isApiRequest(url)) return; // never intercept API routes — see design.md
+  if (isVercelInsightsRequest(url)) return; // never cache Speed Insights' script/beacon — the path is per-deployment
 
   if (isNextStaticAsset(url)) {
     event.respondWith(
