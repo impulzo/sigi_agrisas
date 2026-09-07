@@ -53,7 +53,7 @@ El panel SHALL cumplir las convenciones de arquitectura frontend documentadas en
 ---
 
 ### Requirement: El panel carga después de iniciar sesión o registrarse
-Tras un submit exitoso de login o registro, el usuario SHALL aterrizar directamente en `/pos`. Los hooks `useLoginForm`, `useRegisterForm` y `useAuthRedirect` (rebote de usuarios ya autenticados en `/auth/*`) SHALL invocar `router.replace("/pos")` con la ruta hardcodeada, evitando saltos intermedios y open-redirects derivados de query params. La raíz del proyecto `app/page.tsx` SHALL redirigir a `/pos` (en vez de `/dashboard`) cuando el usuario tiene una cookie `refreshToken` válida.
+Tras un submit exitoso de login, registro o **establecimiento/restablecimiento de contraseña**, el usuario SHALL aterrizar directamente en `/pos`. Los hooks `useLoginForm`, `useRegisterForm`, `useSetPasswordForm` y `useAuthRedirect` (rebote de usuarios ya autenticados en `/auth/*`) SHALL invocar `router.replace("/pos")` con la ruta hardcodeada, evitando saltos intermedios y open-redirects derivados de query params. La raíz del proyecto `app/page.tsx` SHALL redirigir a `/pos` (en vez de `/dashboard`) cuando el usuario tiene una cookie `refreshToken` válida.
 
 #### Scenario: Login exitoso aterriza en /pos
 - **WHEN** un usuario envía credenciales válidas desde `/auth/login`
@@ -62,6 +62,22 @@ Tras un submit exitoso de login o registro, el usuario SHALL aterrizar directame
 #### Scenario: Registro exitoso aterriza en /pos
 - **WHEN** un usuario envía un registro válido desde `/auth/register`
 - **THEN** `useRegisterForm` invoca `router.replace("/pos")` tras la respuesta 201 del backend
+
+#### Scenario: Establecer contraseña con token válido aterriza en /pos
+- **WHEN** un usuario envía token y contraseña válidos desde `/auth/set-password`
+- **THEN** `useSetPasswordForm` invoca `router.replace("/pos")` (no `/dashboard`) después de persistir el access token en `sessionStorage`
+
+#### Scenario: Establecer contraseña como rol admin aterriza en /pos
+- **WHEN** un usuario con rol `admin` completa `/auth/set-password` con un token válido
+- **THEN** aterriza en `/pos`, no en `/dashboard`, aunque su rol tenga acceso a ambas rutas
+
+#### Scenario: Establecer contraseña con rol sin permisos de POS
+- **WHEN** un usuario con rol `viewer` (sin `sales:create` ni `quotes:create`) completa `/auth/set-password` con un token válido
+- **THEN** `useSetPasswordForm` invoca igualmente `router.replace("/pos")`; la pantalla de "Sin acceso" que `/pos` muestre a continuación es responsabilidad del guard de permisos de esa ruta, no de este redirect
+
+#### Scenario: Token expirado o inválido no redirige
+- **WHEN** un usuario envía el formulario de `/auth/set-password` con un token expirado o inválido
+- **THEN** el usuario permanece en la página con un mensaje de error; no se invoca ningún `router.replace`
 
 #### Scenario: Usuario ya autenticado que cae en /auth/*
 - **WHEN** un usuario con sesión activa navega a `/auth/login` o `/auth/register`
@@ -168,15 +184,19 @@ Ningún `layout.tsx` de módulo bajo `(private)` SHALL declarar padding, centrad
 
 ### Requirement: NavigationRail organism con destinos primarios y secundarios
 
-`app/_components/organisms/NavigationRail/NavigationRail.tsx` SHALL renderizar una barra vertical fija de 80px de ancho, alto completo, con: logo Agrisas arriba, los destinos primarios del panel (`POS`, `Inventario`, `Facturación`, entre otros — ver el requirement `Navigation rail item catalogue` para la lista completa y su orden) en el centro, y un único destino secundario abajo (`Configuración`, condicional a `settings:read`). Cada destino es un `<Link>` (Next.js) con icono Material Symbols + label `label-sm`. El active state SHALL aplicar `bg-primary-container text-on-primary-container rounded-xl scale-90` al destino cuya ruta coincida con `usePathname()`. Por usar `usePathname`, el componente SHALL ser client component (`"use client"`).
+`app/_components/organisms/NavigationRail/NavigationRail.tsx` SHALL renderizar una barra vertical fija de 80px de ancho, alto completo, con: logo Agrisas arriba, los destinos primarios del panel (`POS`, `Inventario`, `Facturación`, entre otros — ver el requirement `Navigation rail item catalogue` para la lista completa y su orden) en el centro, y los destinos secundarios abajo (`Mi cuenta`, siempre visible; `Configuración`, condicional a `settings:read`). Cada destino es un `<Link>` (Next.js) con icono Material Symbols + label `label-sm`. El active state SHALL aplicar `bg-primary-container text-on-primary-container rounded-xl scale-90` al destino cuya ruta coincida con `usePathname()`. Por usar `usePathname`, el componente SHALL ser client component (`"use client"`).
 
 #### Scenario: Dashboard ya no aparece como destino del rail
 - **WHEN** se inspecciona el HTML del NavigationRail
 - **THEN** NO contiene ningún enlace con `href="/dashboard"`; el primer destino primario visible es `pos` (`href="/pos"`)
 
-#### Scenario: Único destino secundario para usuario con settings:read
+#### Scenario: Destinos secundarios para usuario con settings:read
 - **WHEN** se inspecciona el HTML del NavigationRail y el usuario tiene `settings:read`
-- **THEN** contiene únicamente el enlace a `/settings` con icono `settings` ubicado con `mt-auto`; NO contiene enlaces a `/support` ni `/account`
+- **THEN** contiene el enlace a `/account` con icono `account_circle` y el enlace a `/settings` con icono `settings` ubicado con `mt-auto`; NO contiene enlace a `/support`
+
+#### Scenario: Mi cuenta visible sin ningún permiso adicional
+- **WHEN** se inspecciona el HTML del NavigationRail para un usuario autenticado sin `settings:read`
+- **THEN** contiene el enlace a `/account` (sin `requires`, visible a cualquier usuario autenticado); el enlace a `/settings` no se renderiza
 
 #### Scenario: Active state en la ruta actual
 - **WHEN** el usuario está en `/pos`

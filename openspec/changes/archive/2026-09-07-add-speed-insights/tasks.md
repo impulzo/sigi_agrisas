@@ -48,4 +48,4 @@
 - [ ] 9.1 Confirmar que "Speed Insights" está habilitado en el dashboard del proyecto `sigi-agrisas` (team `kevin-hernandezs-projects`) — pendiente de confirmación del usuario, quien tiene el dashboard abierto en `https://vercel.com/kevin-hernandezs-projects/sigi-agrisas/speed-insights`
 - [x] 9.2 ~~Mergear a `master`~~ — no aplica: `develop` ES la rama de producción real en este proyecto Vercel (hallazgo de la sección 8); el merge a `develop` (PR #70) ya desplegó el cambio a producción
 - [ ] 9.3 Tras tráfico real, confirmar datos visibles en la pestaña Speed Insights del proyecto (requiere paso de tiempo, no verificable de inmediato)
-- [ ] 9.4 Correr `opsx:verify` del change — **no archivar** hasta indicación explícita del usuario
+- [x] 9.4 Correr `opsx:verify` del change — **no archivar** hasta indicación explícita del usuario. Ejecutado: 0 CRITICAL/WARNING, 552/552 suites verdes. Usuario indicó archivar con 9.1/9.3 aún abiertas (pasos manuales/externos post-deploy).
