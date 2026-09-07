@@ -12,11 +12,6 @@ jest.mock("@/modules/billing/infrastructure/pdf/InvoiceDocumentPdf", () => ({
   InvoiceDocumentPdf: () => null,
 }));
 
-jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
-  getEmitterFiscalSettings: jest.fn(),
-}));
-
-import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
 import { StampInvoiceUseCase } from "../../../../src/modules/billing/application/use-cases/StampInvoiceUseCase";
 import { InMemoryInvoiceRepository } from "../../../../src/modules/billing/infrastructure/repositories/InMemoryInvoiceRepository";
 import { FakeFacturamaGateway } from "../../../../src/modules/billing/infrastructure/services/FakeFacturamaGateway";
@@ -28,8 +23,13 @@ import {
 import type { BillingLookupService, SaleForBilling } from "../../../../src/modules/billing/application/ports/BillingLookupService";
 import { GetTicketSettingsUseCase } from "../../../../src/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { InMemoryTicketSettingsRepository } from "../../../../src/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
+import type { EmitterFiscalSettingsStore } from "../../../../src/modules/billing/application/ports/EmitterFiscalSettingsStore";
 
-const mockedGetEmitterFiscalSettings = getEmitterFiscalSettings as jest.Mock;
+const store: EmitterFiscalSettingsStore = {
+  get: jest.fn(),
+  upsert: jest.fn(),
+};
+const mockedGetEmitterFiscalSettings = store.get as jest.Mock;
 
 const EMITTER = {
   rfc: "AGR010101AB1",
@@ -118,7 +118,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       const invoice = await uc.execute(
         { type: "sale", saleId: SALE_ID },
@@ -138,7 +138,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -151,7 +151,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup(null);
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       await expect(
         uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID)
@@ -162,7 +162,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup(makeSale({ status: "cancelled" }));
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       await expect(
         uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID)
@@ -173,7 +173,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -194,7 +194,7 @@ describe("StampInvoiceUseCase", () => {
         findBranch: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: null }),
         findHeadquarters: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: null }),
       };
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       await expect(
         uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID)
@@ -210,7 +210,7 @@ describe("StampInvoiceUseCase", () => {
         new (await import("../../../../src/modules/billing/domain/errors")).FacturamaStampError("SAT error 400")
       );
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       const { FacturamaStampError } = await import("../../../../src/modules/billing/domain/errors");
       await expect(
@@ -225,7 +225,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -250,7 +250,7 @@ describe("StampInvoiceUseCase", () => {
         findBranch: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
         findHeadquarters: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
       };
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       const invoice = await uc.execute(
         { type: "sale", saleId: SALE_ID, customerId: OTHER_CUSTOMER_ID },
@@ -271,7 +271,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -290,7 +290,7 @@ describe("StampInvoiceUseCase", () => {
         findBranch: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
         findHeadquarters: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
       };
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       await expect(
         uc.execute({ type: "sale", saleId: SALE_ID, customerId: "nonexistent-uuid" }, CREATOR_ID, BRANCH_ID)
@@ -309,7 +309,7 @@ describe("StampInvoiceUseCase", () => {
         findBranch: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
         findHeadquarters: jest.fn().mockResolvedValue({ id: BRANCH_ID, code: "MATRIZ", name: "Matriz", address: "45010" }),
       };
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       await expect(
         uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID)
@@ -334,7 +334,7 @@ describe("StampInvoiceUseCase", () => {
         isValid: true,
       });
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -350,7 +350,7 @@ describe("StampInvoiceUseCase", () => {
       const gateway = new FakeFacturamaGateway();
       // No uploadCsd() call — getCsdStatus() resolves with an empty rfc by default (no CSD loaded).
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -363,7 +363,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -389,7 +389,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase, store);
 
       const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -412,7 +412,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase, store);
 
       const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -427,7 +427,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase, store);
 
       const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -442,7 +442,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase, store);
 
       const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -457,7 +457,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, getTicketSettingsUseCase, store);
 
       const invoice = await uc.execute({ type: "sale", saleId: SALE_ID }, CREATOR_ID, BRANCH_ID);
 
@@ -491,7 +491,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       const invoice = await uc.execute(standaloneInput, CREATOR_ID, BRANCH_ID);
 
@@ -504,7 +504,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       await uc.execute(standaloneInput, CREATOR_ID, BRANCH_ID);
 
@@ -516,7 +516,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       const invoice = await uc.execute(standaloneInput, CREATOR_ID, BRANCH_ID);
 
@@ -533,7 +533,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       const invoice = await uc.execute(standaloneInput, CREATOR_ID, BRANCH_ID);
 
@@ -549,7 +549,7 @@ describe("StampInvoiceUseCase", () => {
       const repo = new InMemoryInvoiceRepository();
       const gateway = new FakeFacturamaGateway();
       const lookup = makeLookup();
-      const uc = new StampInvoiceUseCase(repo, gateway, lookup);
+      const uc = new StampInvoiceUseCase(repo, gateway, lookup, undefined, store);
 
       mockedGetEmitterFiscalSettings.mockResolvedValue(EMITTER);
       const firstInvoice = await uc.execute(standaloneInput, CREATOR_ID, BRANCH_ID);

@@ -1,20 +1,12 @@
 import { RegisterUseCase } from "@/modules/auth/application/use-cases/RegisterUseCase";
 import { InMemoryUserRepository } from "@/modules/auth/infrastructure/repositories/InMemoryUserRepository";
 import { PasswordHasher } from "@/modules/auth/application/ports/PasswordHasher";
-import { TokenService } from "@/modules/auth/application/ports/TokenService";
 import { RoleAssigner } from "@/modules/rbac/application/ports/RoleAssigner";
 import { EmailAlreadyInUseError } from "@/modules/auth/domain/errors/EmailAlreadyInUseError";
 
 const fakeHasher: PasswordHasher = {
   hash: async (p) => `hashed:${p}`,
   compare: async (p, h) => h === `hashed:${p}`,
-};
-
-const fakeTokenService: TokenService = {
-  generateAccessToken: () => "access-tok",
-  generateRefreshToken: () => "refresh-tok",
-  verifyAccessToken: () => ({ sub: "id", email: "e@e.com" }),
-  verifyRefreshToken: () => ({ sub: "id", email: "e@e.com" }),
 };
 
 const fakeRoleAssigner: RoleAssigner = {
@@ -27,10 +19,10 @@ describe("RegisterUseCase", () => {
 
   beforeEach(() => {
     repo = new InMemoryUserRepository();
-    useCase = new RegisterUseCase(repo, fakeHasher, fakeTokenService, fakeRoleAssigner);
+    useCase = new RegisterUseCase(repo, fakeHasher, fakeRoleAssigner);
   });
 
-  it("registers a new user and returns tokens", async () => {
+  it("registers a new user and returns its public data (no tokens)", async () => {
     const result = await useCase.execute({
       name: "Alice",
       email: "user@example.com",
@@ -39,8 +31,8 @@ describe("RegisterUseCase", () => {
     expect(result.user.email).toBe("user@example.com");
     expect(result.user.name).toBe("Alice");
     expect(result.user.id).toBeDefined();
-    expect(result.accessToken).toBe("access-tok");
-    expect(result.refreshToken).toBe("refresh-tok");
+    expect(result).not.toHaveProperty("accessToken");
+    expect(result).not.toHaveProperty("refreshToken");
   });
 
   it("throws EmailAlreadyInUseError for duplicate email", async () => {

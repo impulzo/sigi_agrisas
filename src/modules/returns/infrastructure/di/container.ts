@@ -12,7 +12,7 @@ import { PrismaSaleRepository } from "@/modules/pos/infrastructure/repositories/
 import { adminNotificationService } from "@/shared/infrastructure/di/adminNotificationContainer";
 
 const returnRepo = new PrismaReturnRepository(prisma, adminNotificationService);
-const saleRepo = new PrismaSaleRepository(prisma);
+const saleRepo = new PrismaSaleRepository(prisma, adminNotificationService);
 
 const listUseCase = new ListReturnsUseCase(returnRepo);
 const getUseCase = new GetReturnUseCase(returnRepo);

@@ -3,6 +3,7 @@ import { PaymentMethodRepository, FindAllOptions, CreatePaymentMethodData, Updat
 import { PaymentMethod } from "@/modules/payment-methods/domain/entities/PaymentMethod";
 import { PaymentMethodNotFoundError } from "@/modules/payment-methods/domain/errors/PaymentMethodNotFoundError";
 import { PaymentMethodCodeAlreadyInUseError } from "@/modules/payment-methods/domain/errors/PaymentMethodCodeAlreadyInUseError";
+import { isPrismaUniqueError, isPrismaNotFoundError } from "@/shared/infrastructure/prisma/errors";
 
 type PrismaPaymentMethod = {
   id: string;
@@ -25,14 +26,6 @@ function toDomain(row: PrismaPaymentMethod): PaymentMethod {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });
-}
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
-}
-
-function isPrismaNotFoundError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2025";
 }
 
 export class PrismaPaymentMethodRepository implements PaymentMethodRepository {

@@ -1,3 +1,4 @@
+import { roundHalfToEven } from "@/shared/domain/services/roundHalfToEven";
 import { Quote } from "../../domain/entities/Quote";
 import { QuoteItem } from "../../domain/entities/QuoteItem";
 import { QuoteDto, QuoteDetailDto } from "../dto/QuoteDto";
@@ -24,8 +25,8 @@ export function toQuoteItemDto(it: QuoteItem): QuoteItemDto {
     ivaRate: it.ivaRate,
     iepsRate: it.iepsRate,
     lineSubtotal: it.lineSubtotal,
-    lineIva:  Math.round(it.lineSubtotal * (it.ivaRate  ?? 0) * 10_000) / 10_000,
-    lineIeps: Math.round(it.lineSubtotal * (it.iepsRate ?? 0) * 10_000) / 10_000,
+    lineIva: roundHalfToEven(it.lineSubtotal * (it.ivaRate ?? 0), 4),
+    lineIeps: roundHalfToEven(it.lineSubtotal * (it.iepsRate ?? 0), 4),
     lineTax: it.lineTax,
     lineTotal: it.lineTotal,
   };

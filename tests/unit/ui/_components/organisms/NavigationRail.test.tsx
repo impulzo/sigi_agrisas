@@ -10,7 +10,7 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("../../../../../app/_hooks/useCurrentUser");
-jest.mock("../../../../../app/(public)/auth/_logic/hooks/useLogout", () => ({
+jest.mock("../../../../../app/_hooks/useLogout", () => ({
   useLogout: jest.fn(() => ({ logout: jest.fn(), isLoading: false })),
 }));
 jest.mock("../../../../../app/_components/molecules/RailFlyout/RailFlyout", () => ({
@@ -217,6 +217,24 @@ describe("NavigationRail — item Configuración (secondaryItems)", () => {
   it("Configuración activo cuando pathname empieza con /settings", () => {
     renderRail("/settings", ["settings:read"]);
     const link = screen.getByRole("link", { name: /Configuración/ });
+    expect(link.className).toContain("bg-primary-container");
+  });
+});
+
+describe("NavigationRail — item Mi cuenta (secondaryItems)", () => {
+  it("usuario autenticado sin ningún permiso ve el item Mi cuenta", () => {
+    renderRail("/dashboard", []);
+    expect(screen.getByRole("link", { name: /Mi cuenta/ })).toBeInTheDocument();
+  });
+
+  it("Mi cuenta apunta a /account", () => {
+    renderRail("/dashboard", []);
+    expect(screen.getByRole("link", { name: /Mi cuenta/ })).toHaveAttribute("href", "/account");
+  });
+
+  it("Mi cuenta activo cuando pathname empieza con /account", () => {
+    renderRail("/account", []);
+    const link = screen.getByRole("link", { name: /Mi cuenta/ });
     expect(link.className).toContain("bg-primary-container");
   });
 });

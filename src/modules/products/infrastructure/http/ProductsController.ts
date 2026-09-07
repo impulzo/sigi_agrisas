@@ -14,11 +14,29 @@ import { ProductNotFoundError } from "../../domain/errors/ProductNotFoundError";
 import { ProductCodeAlreadyInUseError } from "../../domain/errors/ProductCodeAlreadyInUseError";
 import { ProductDepartmentNotFoundError } from "../../domain/errors/ProductDepartmentNotFoundError";
 import { ProductTaxRateNotFoundError } from "../../domain/errors/ProductTaxRateNotFoundError";
+import { mapDomainError } from "@/shared/infrastructure/http/mapDomainError";
 
 const CODE_REGEX = /^[A-Z0-9_]{1,32}$/;
 const SAT_PRODUCT_CODE_REGEX = /^\d{8}$/;
 const SAT_UNIT_CODE_REGEX = /^[A-Za-z0-9]{2,3}$/;
-const SUPABASE_BUCKET_HOST = "supabase.co/storage/v1/object/public/product-images";
+const SUPABASE_BUCKET_PATH_PREFIX = "/storage/v1/object/public/product-images/";
+
+/**
+ * Valida host y pathname reales (no una subcadena en cualquier parte de la
+ * URL) para que un atacante no pueda pasar el filtro incrustando el
+ * fragmento esperado en el query string de un dominio arbitrario.
+ */
+function isValidSupabaseBucketUrl(u: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(u);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:") return false;
+  if (parsed.host !== "supabase.co" && !parsed.host.endsWith(".supabase.co")) return false;
+  return parsed.pathname.startsWith(SUPABASE_BUCKET_PATH_PREFIX);
+}
 
 const uuidParamSchema = z.string().uuid("Invalid product ID format");
 
@@ -34,7 +52,7 @@ const imageUrlSchema = z
   .string()
   .url()
   .max(2048)
-  .refine((u) => u.includes(SUPABASE_BUCKET_HOST), { message: "Invalid image URL" })
+  .refine(isValidSupabaseBucketUrl, { message: "Invalid image URL" })
   .nullable()
   .optional();
 
@@ -166,7 +184,8 @@ export class ProductsController {
       const product = await this.getUseCase.execute(parsed.data);
       return NextResponse.json(product);
     } catch (err) {
-      if (err instanceof ProductNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[ProductNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -181,8 +200,11 @@ export class ProductsController {
       const product = await this.createUseCase.execute(parsed.data);
       return NextResponse.json(product, { status: 201 });
     } catch (err) {
-      if (err instanceof ProductCodeAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
-      if (err instanceof ProductDepartmentNotFoundError) return NextResponse.json({ error: err.message }, { status: 400 });
+      const mapped = mapDomainError(err, [
+        [ProductCodeAlreadyInUseError, 409],
+        [ProductDepartmentNotFoundError, 400],
+      ]);
+      if (mapped) return mapped;
       if (err instanceof ProductTaxRateNotFoundError) return NextResponse.json({ error: "Tax rate not found or inactive" }, { status: 400 });
       throw err;
     }
@@ -202,8 +224,11 @@ export class ProductsController {
       const product = await this.updateUseCase.execute(idParsed.data, parsed.data);
       return NextResponse.json(product);
     } catch (err) {
-      if (err instanceof ProductNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
-      if (err instanceof ProductDepartmentNotFoundError) return NextResponse.json({ error: err.message }, { status: 400 });
+      const mapped = mapDomainError(err, [
+        [ProductNotFoundError, 404],
+        [ProductDepartmentNotFoundError, 400],
+      ]);
+      if (mapped) return mapped;
       if (err instanceof ProductTaxRateNotFoundError) return NextResponse.json({ error: "Tax rate not found or inactive" }, { status: 400 });
       throw err;
     }
@@ -218,7 +243,8 @@ export class ProductsController {
       await this.softDeleteUseCase.execute(parsed.data);
       return new NextResponse(null, { status: 204 });
     } catch (err) {
-      if (err instanceof ProductNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[ProductNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -251,9 +277,12 @@ export class ProductsController {
       });
       return NextResponse.json({ imageUrl });
     } catch (err) {
-      if (err instanceof InvalidImageFormatError) return NextResponse.json({ error: err.message }, { status: 400 });
+      const mapped = mapDomainError(err, [
+        [InvalidImageFormatError, 400],
+        [ProductNotFoundError, 404],
+      ]);
+      if (mapped) return mapped;
       if (err instanceof ImageTooLargeError) return NextResponse.json({ error: err.message, maxBytes: err.maxBytes }, { status: 413 });
-      if (err instanceof ProductNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
       throw err;
     }
   }
@@ -267,7 +296,8 @@ export class ProductsController {
       await this.deleteImageUseCase.execute(idParsed.data);
       return new NextResponse(null, { status: 204 });
     } catch (err) {
-      if (err instanceof ProductNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[ProductNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }

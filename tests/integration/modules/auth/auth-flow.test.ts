@@ -29,7 +29,7 @@ describe("Auth flow integration (InMemoryUserRepository + real services)", () =>
     repo = new InMemoryUserRepository();
     hasher = new BcryptPasswordHasher();
     tokenService = new JwtTokenService();
-    registerUseCase = new RegisterUseCase(repo, hasher, tokenService, noopRoleAssigner);
+    registerUseCase = new RegisterUseCase(repo, hasher, noopRoleAssigner);
     loginUseCase = new LoginUseCase(repo, hasher, tokenService);
     refreshTokenUseCase = new RefreshTokenUseCase(tokenService);
     logoutUseCase = new LogoutUseCase();
@@ -43,8 +43,6 @@ describe("Auth flow integration (InMemoryUserRepository + real services)", () =>
     });
     expect(registered.user.email).toBe("user@example.com");
     expect(registered.user.id).toBeDefined();
-    expect(registered.accessToken).toBeDefined();
-    expect(registered.refreshToken).toBeDefined();
 
     const loginResult = await loginUseCase.execute({
       email: "user@example.com",

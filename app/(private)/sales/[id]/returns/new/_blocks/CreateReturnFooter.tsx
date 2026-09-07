@@ -16,7 +16,9 @@ interface CreateReturnFooterProps {
   refundTotal: number;
 }
 
-const today = new Date().toISOString().slice(0, 10);
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 const MX = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -70,7 +72,7 @@ export function CreateReturnFooter({
           id="return-date"
           type="date"
           value={returnedAt}
-          max={today}
+          max={todayIso()}
           onChange={(e) => onReturnedAtChange(e.target.value)}
           className="rounded border border-outline px-3 py-2 text-body-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         />

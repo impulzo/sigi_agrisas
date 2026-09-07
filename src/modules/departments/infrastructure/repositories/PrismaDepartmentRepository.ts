@@ -3,6 +3,7 @@ import { DepartmentRepository, FindAllDepartmentsOptions, CreateDepartmentData, 
 import { Department } from "@/modules/departments/domain/entities/Department";
 import { DepartmentNotFoundError } from "@/modules/departments/domain/errors/DepartmentNotFoundError";
 import { DepartmentCodeAlreadyInUseError } from "@/modules/departments/domain/errors/DepartmentCodeAlreadyInUseError";
+import { isPrismaUniqueError, isPrismaNotFoundError } from "@/shared/infrastructure/prisma/errors";
 
 const INCLUDE_PROVIDER = { provider: { select: { id: true, name: true } } } as const;
 
@@ -25,8 +26,6 @@ function toDomain(row: PrismaDepartment): Department {
   });
 }
 
-function isPrismaUniqueError(err: unknown): boolean { return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002"; }
-function isPrismaNotFoundError(err: unknown): boolean { return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2025"; }
 
 export class PrismaDepartmentRepository implements DepartmentRepository {
   constructor(private readonly prisma: PrismaClient) {}

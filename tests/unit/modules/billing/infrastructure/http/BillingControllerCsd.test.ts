@@ -24,11 +24,6 @@ jest.mock("@/modules/rbac/infrastructure/di/container", () => ({
   },
 }));
 
-jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
-  upsertEmitterFiscalSettings: jest.fn(),
-  getEmitterFiscalSettings: jest.fn().mockResolvedValue(null),
-}));
-
 import { NextRequest } from "next/server";
 import { BillingController } from "@/modules/billing/infrastructure/http/BillingController";
 import { InMemoryInvoiceRepository } from "@/modules/billing/infrastructure/repositories/InMemoryInvoiceRepository";
@@ -49,15 +44,19 @@ import { SearchSatCodesUseCase } from "@/modules/sat-codes/application/use-cases
 import { InMemorySatTaxRegimeRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatTaxRegimeRepository";
 import { InMemorySatCfdiUseRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatCfdiUseRepository";
 import { InMemorySatCodeRepository } from "@/modules/sat-codes/infrastructure/repositories/InMemorySatCodeRepository";
-import { upsertEmitterFiscalSettings, getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
 import type { AuthorizationService } from "@/modules/rbac/application/ports/AuthorizationService";
 import type { BillingLookupService } from "@/modules/billing/application/ports/BillingLookupService";
+import type { EmitterFiscalSettingsStore } from "@/modules/billing/application/ports/EmitterFiscalSettingsStore";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 import { InMemoryTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/InMemoryTicketSettingsRepository";
 
 const USER_ID = "00000000-0000-0000-0000-000000000001";
-const mockedUpsert = upsertEmitterFiscalSettings as jest.Mock;
-const mockedGetEmitter = getEmitterFiscalSettings as jest.Mock;
+const store: EmitterFiscalSettingsStore = {
+  get: jest.fn().mockResolvedValue(null),
+  upsert: jest.fn(),
+};
+const mockedUpsert = store.upsert as jest.Mock;
+const mockedGetEmitter = store.get as jest.Mock;
 const mockRenderToBuffer = renderToBuffer as jest.MockedFunction<typeof renderToBuffer>;
 
 function makeAuthz(overrides: Partial<AuthorizationService> = {}): AuthorizationService {
@@ -94,17 +93,18 @@ function buildController(authzOverride?: AuthorizationService, ticketSettingsRep
     new ListInvoicesUseCase(repo),
     new GetInvoiceUseCase(repo),
     new ListInvoicesBySaleUseCase(repo),
-    new UploadCsdUseCase(gateway),
-    new GetCsdStatusUseCase(gateway),
+    new UploadCsdUseCase(gateway, store),
+    new GetCsdStatusUseCase(gateway, store),
     authz,
     lookup,
     new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer),
     getTicketSettingsUseCase,
-    new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase),
+    new GetEmitterFiscalSettingsUseCase(gateway, getTicketSettingsUseCase, store),
     new SearchSatTaxRegimesUseCase(new InMemorySatTaxRegimeRepository()),
     new SearchSatCfdiUsesUseCase(new InMemorySatCfdiUseRepository()),
     new SearchSatCodesUseCase(new InMemorySatCodeRepository()),
     gateway,
+    store,
   );
 }
 
@@ -487,8 +487,8 @@ describe("BillingController — getById resolves SAT catalog descriptions", () =
       new ListInvoicesUseCase(repo),
       new GetInvoiceUseCase(repo),
       new ListInvoicesBySaleUseCase(repo),
-      new UploadCsdUseCase(gateway),
-      new GetCsdStatusUseCase(gateway),
+      new UploadCsdUseCase(gateway, store),
+      new GetCsdStatusUseCase(gateway, store),
       authz,
       lookup,
       new SendInvoiceEmailUseCase(repo, lookup, downloadUseCase, mailer),

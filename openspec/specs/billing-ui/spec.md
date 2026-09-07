@@ -48,13 +48,13 @@ Empty result → `<EmptyState icon="receipt_long" title="No hay facturas" />`.
 ---
 
 ### Requirement: `/billing/[id]` invoice detail
-The system SHALL expose a private route `/billing/[id]` gated by `billing:read` that fetches `GET /api/v1/admin/invoices/:id` via `getInvoice`. It SHALL render a header (folio fiscal `uuid`, `InvoiceStatusBadge`, link a `/sales/[saleId]` cuando `saleId` no es null), `InvoiceItemsTable` (snapshots por línea con `lineSubtotal/lineIva/lineIeps/lineTotal` y totales `subtotal/taxTotal/total`), `InvoiceMetaPanel` (una sección "Datos del emisor": `issuerRfc/issuerLegalName/issuerFiscalRegime/issuerZipCode/issuerAddress`, mostrando el régimen fiscal como "código - descripción" (resuelto vía `SatTaxRegimeRepository`, ver `billing-api`) y "—" para cualquier campo `null`; una sección "Datos del receptor": `receiverRfc/receiverName/receiverCfdiUse/receiverFiscalRegime/receiverTaxZipCode`, con `receiverFiscalRegime` y `receiverCfdiUse` también como "código - descripción"; `paymentForm`/`paymentMethod` como "código - descripción" vía el catálogo compartido `SAT_PAYMENT_FORMS`/`SAT_PAYMENT_METHODS`; banner de cancelación con `cancellationMotive`+`cancelledAt` si `status='cancelled'`), y `InvoiceActionsBar`.
+The system SHALL expose a private route `/billing/[id]` gated by `billing:read` that fetches `GET /api/v1/admin/invoices/:id` via `getInvoice`. It SHALL render a header con: la fila de título/estado (folio fiscal `uuid` o, si aún no existe, una etiqueta interna `Factura #<últimos 8 de invoice.id>`, `InvoiceStatusBadge`, y "Total facturado"), el `issuerEmail` del emisor directamente debajo del título cuando no sea `null` (nunca dentro de `InvoiceMetaPanel`), y una grilla de dos columnas debajo: columna A muestra "Emitida: `<fecha y hora>`" (derivada de `invoice.createdAt`, formateada como fecha larga + hora) más el link a `/sales/[saleId]` cuando `saleId` no es null; columna B muestra "Folio: Factura #`<últimos 8 de invoice.id>`" y "UUID: `<invoice.uuid o "—">`" como campos etiquetados explícitos. Debajo del header: `InvoiceItemsTable` (snapshots por línea con `lineSubtotal/lineIva/lineIeps/lineTotal` y totales `subtotal/taxTotal/total`), `InvoiceMetaPanel` (una sección "Datos del emisor": `issuerRfc/issuerLegalName/issuerFiscalRegime/issuerZipCode/issuerAddress` — NO `issuerEmail`, que vive únicamente en el header de la página —, mostrando el régimen fiscal como "código - descripción" (resuelto vía `SatTaxRegimeRepository`, ver `billing-api`) y "—" para cualquier campo `null`; una sección "Datos del receptor": `receiverRfc/receiverName/receiverCfdiUse/receiverFiscalRegime/receiverTaxZipCode`, con `receiverFiscalRegime` y `receiverCfdiUse` también como "código - descripción"; `paymentForm`/`paymentMethod` como "código - descripción" vía el catálogo compartido `SAT_PAYMENT_FORMS`/`SAT_PAYMENT_METHODS`; banner de cancelación con `cancellationMotive`+`cancelledAt` si `status='cancelled'`), y `InvoiceActionsBar`.
 
 `InvoiceActionsBar` SHALL render "Descargar PDF" (molecule compartido `DownloadPdfButton`, `app/_components/molecules/PdfDownloadButton.tsx`, icono `picture_as_pdf`) y "Descargar XML" siempre, y "Cancelar" sólo cuando `status='stamped'` y `can("billing:cancel")`.
 
 #### Scenario: Render stamped invoice
 - **WHEN** a user with `billing:read` opens `/billing/[id]` of a `stamped` invoice
-- **THEN** items, totales, emisor, receptor y los botones de descarga SHALL render; "Cancelar" SHALL render only if the user has `billing:cancel`
+- **THEN** items, totales, emisor (incluyendo correo en la cabecera), receptor, la cabecera de 2 columnas (fecha/hora + link a la venta | Folio + UUID), y los botones de descarga SHALL render; "Cancelar" SHALL render only if the user has `billing:cancel`
 
 #### Scenario: Cancelled invoice shows banner, no cancel
 - **WHEN** the invoice `status='cancelled'`
@@ -74,11 +74,19 @@ The system SHALL expose a private route `/billing/[id]` gated by `billing:read` 
 
 #### Scenario: Issuer section shows dashes for a pre-migration invoice
 - **WHEN** the invoice was stamped before the issuer snapshot existed and its `issuerRfc`/`issuerLegalName`/`issuerFiscalRegime`/`issuerZipCode`/`issuerAddress` are all `null`
-- **THEN** the "Datos del emisor" section SHALL render with "—" in each field instead of a blank space or a crash
+- **THEN** the "Datos del emisor" section SHALL render with "—" in each of those 5 fields instead of a blank space or a crash; a `null` `issuerEmail` simply means the header's correo line is omitted (it is conditional, not rendered as "—")
 
 #### Scenario: Fiscal regime and CFDI use show their description, not just the code
 - **WHEN** a stamped invoice has `receiverFiscalRegime="601"` and `receiverCfdiUse="G03"`
 - **THEN** the detail page SHALL show "601 - General de Ley Personas Morales" and "G03 - Gastos en general" (or their current catalog descriptions), not the raw codes alone — same treatment for the issuer's fiscal regime
+
+#### Scenario: Issuer section shows the company's correo
+- **WHEN** a stamped invoice has `issuerEmail = "contacto@agrisas.mx"`
+- **THEN** the page header SHALL show "contacto@agrisas.mx" directly below the invoice title — NOT inside the "Datos del emisor" section, which no longer has a "Correo" field
+
+#### Scenario: Header shows the emission date and time, folio and UUID in two columns
+- **WHEN** a stamped invoice has `createdAt = "2026-09-01T14:32:00.000Z"` and `uuid = "5C37017F-217F-45B4-AB8A-6C1013237446"`
+- **THEN** the header's left column SHALL show a formatted long date + time (e.g. "Emitida: 1 de septiembre de 2026, 08:32 a.m." in the browser's local time), derived from `createdAt`, and the right column SHALL show "Folio: Factura #`<últimos 8 de invoice.id>`" and "UUID: 5C37017F-217F-45B4-AB8A-6C1013237446" as separate labeled lines
 
 ---
 
@@ -146,13 +154,27 @@ The system SHALL expose a private route `/billing/new` gated by `billing:write` 
 ---
 
 ### Requirement: Stamp from sale ("Facturar venta")
-`StampSaleForm` SHALL let the user pick an existing `completed` sale via `SalePickerField` (server-side search `GET /api/v1/admin/sales?search=&status=completed`, debounce 300 ms, min 2 chars, showing folio + cliente + total), optionally set `paymentForm`, `paymentMethod`, `cfdiUse` (editable selects with sensible defaults), and submit `POST /api/v1/admin/invoices { saleId, paymentForm?, paymentMethod?, cfdiUse? }` via `stampInvoice`. On success it SHALL navigate to `/billing/[id]`.
+`StampSaleForm` SHALL let the user pick an existing `completed` sale via `SalePickerField` (server-side search `GET /api/v1/admin/sales?search=&status=completed`, debounce 300 ms, min 2 chars, showing folio + cliente + total), optionally set `paymentForm`, `paymentMethod`, `cfdiUse` (editable selects with sensible defaults), and choose the CFDI receiver via `CustomerPicker` (the same molecule used in `PartialInvoiceForm`/POS/Cotizaciones). Once a sale is selected, the picker SHALL preload with the sale's own customer (or remain empty if the sale has no linked customer); the user MAY replace it with a different customer before stamping. Selecting a different sale SHALL reset the picker back to that new sale's own customer (or empty) — it SHALL NOT carry over the previously selected override.
+
+On submit, the form SHALL call `POST /api/v1/admin/invoices { saleId, customerId?, paymentForm?, paymentMethod?, cfdiUse? }` via `stampInvoice`, where `customerId` is included only when the operator's picker selection differs from doing nothing (i.e. whenever a customer is resolved in the picker, sale's own or replaced) — the backend treats an explicit `customerId` equal to the sale's own customer as a no-op override. On success it SHALL navigate to `/billing/[id]`. Nothing about the underlying `Sale` (its own `customerId`, items, or any other field) is ever modified by this form.
 
 The service SHALL map 409 `SaleAlreadyInvoiced{invoiceId}` → `SaleAlreadyInvoicedError(invoiceId)`, 409 `SaleNotInvoiceable` → `SaleNotInvoiceableError`, 400 `ReceiverFiscalDataIncomplete{missingFields}` → `ReceiverFiscalDataIncompleteError(missingFields)`, 422 `FacturamaStampError{detail}` → `FacturamaStampError(detail)`.
 
-#### Scenario: Stamp a completed sale
-- **WHEN** the user selects a `completed` sale and confirms
-- **THEN** `POST /invoices { saleId }` SHALL be sent and on 201 the app SHALL navigate to `/billing/[id]`
+#### Scenario: Stamp a completed sale with its own customer
+- **WHEN** the user selects a `completed` sale (whose customer is preloaded in the picker, unchanged) and confirms
+- **THEN** `POST /invoices { saleId, customerId: <sale's own customer id> }` SHALL be sent and on 201 the app SHALL navigate to `/billing/[id]`
+
+#### Scenario: Stamp a completed sale with a different receiver
+- **WHEN** the user selects a `completed` sale, then replaces the preloaded customer in `CustomerPicker` with a different one, and confirms
+- **THEN** `POST /invoices { saleId, customerId: <the replaced customer's id> }` SHALL be sent, the resulting invoice SHALL be linked to the replaced customer, and the sale itself SHALL remain unmodified (verifiable via `GET /sales/:id` still showing its original `customerId`)
+
+#### Scenario: Changing the selected sale resets the customer override
+- **WHEN** the user has replaced the customer for sale A, then selects a different sale B via `SalePickerField`
+- **THEN** the picker SHALL reset to sale B's own customer (or empty, if B has no customer) — it SHALL NOT keep the customer chosen for sale A
+
+#### Scenario: Sale without a customer requires picking one
+- **WHEN** the selected sale has no linked customer (`customerId=null`)
+- **THEN** the picker SHALL render empty and the form SHALL require the user to select a customer before "Vista previa"/submit are enabled
 
 #### Scenario: Sale already invoiced
 - **WHEN** the backend responds 409 `SaleAlreadyInvoiced{invoiceId}`
@@ -167,32 +189,33 @@ The service SHALL map 409 `SaleAlreadyInvoiced{invoiceId}` → `SaleAlreadyInvoi
 ### Requirement: Partial standalone invoice ("Factura parcial") does not affect inventory
 `PartialInvoiceForm` SHALL build a standalone CFDI **without `saleId`**. It SHALL collect:
 - A receiver via `CustomerPicker` (reading `rfc`, `name`, `cfdiUse`, `taxRegime`→`fiscalRegime`, `taxZipCode`). When fiscal data is incomplete the form SHALL block submit and list the missing fields inline.
-- When the session user has `branches:access_all`, the form SHALL render a branch selector (`<select>`), populated from `GET /admin/branches?pageSize=100&includeInactive=false` (same endpoint and criterion as `pos-ui`'s `PosPage` branch selector), with no branch preselected. When the session user does NOT have `branches:access_all`, the selector SHALL NOT render — the form uses the user's own `branchId` silently, unchanged from today.
-- One or more lines added either from the product catalog (`ProductCatalogPanel`/`ProductCatalogTable`) or as **free lines** ("Agregar línea libre", no `productId`, manual `description` + `satProductCode`). A catalog line SHALL be added with its default price preselected: `unitPrice` SHALL be initialized from `prices.find(p => p.isDefault) ?? prices[0]` (same fallback criterion as `pos-ui`'s `PriceTierPicker`) fetched via `getProductPrices(productId, effectiveBranchId)` — where `effectiveBranchId` resolves to the session's own `branchId` for users without `branches:access_all`, or to the branch explicitly chosen in the selector for users with `branches:access_all` (`null` if nothing has been chosen yet), falling back to `null` when neither resolves — the same `effectiveBranchId` and the same criterion the price-tier selector below already uses, so both call sites see the same effective set of prices (global + the effective branch's overrides). Result is `0` if the resolved query returns no prices at all. Each catalog line (`PartialInvoiceLineRow`) SHALL render a price-tier selector (reusing `PriceTierPicker`) letting the user switch among the product's available `ProductPrice` entries fetched via the same `getProductPrices(productId, effectiveBranchId)` call — selecting a different tier SHALL update the line's `unitPrice` to that tier's price. Free lines SHALL NOT render a price-tier selector — they keep manual `unitPrice` entry, unchanged. Every line SHALL allow editing `quantity`, `unitPrice` (manually, in addition to the tier selector for catalog lines), `discountPct`, `ivaRate`, `iepsRate`, and each of these 5 numeric fields SHALL support being fully cleared while editing (no forced `0` reappearing on each keystroke) — normalization to a numeric value SHALL occur only on blur. For free lines, `satProductCode` SHALL be validated to be either empty or exactly 8 digits (`^\d{8}$`) — a partially-typed value (non-empty, not matching the full pattern) SHALL block submit with an inline error identifying the line, preventing the equivalent backend Zod rejection from ever being reached.
+- The branch used to resolve catalog prices and filter the product catalog SHALL always be the branch marked `isHeadquarters=true` (resolved via `useHeadquarters()`), for every user regardless of permissions. No branch selector (`<select>`) SHALL be rendered under any circumstance — this replaces the previous behavior where users with `branches:access_all` saw a selector. While `useHeadquarters()` is loading, the form SHALL show a loading state and defer catalog/price resolution. If no branch is marked as headquarters, the form SHALL render a blocking message ("No hay sucursal matriz configurada. Contacta a un administrador.") instead of allowing the user to add lines or submit.
+- The product catalog (`ProductCatalogPanel`/`ProductCatalogTable`) SHALL be filtered to show only products with inventory/pricing in the headquarters branch — the same `branchId` used for price resolution is passed through to the catalog component.
+- One or more lines added either from the product catalog or as **free lines** ("Agregar línea libre", no `productId`, manual `description` + `satProductCode`). A catalog line SHALL be added with its default price preselected: `unitPrice` SHALL be initialized from `prices.find(p => p.isDefault) ?? prices[0]` (same fallback criterion as `pos-ui`'s `PriceTierPicker`) fetched via `getProductPrices(productId, hqBranchId)` — where `hqBranchId` is the headquarters branch's id, resolved once per form session and fixed for its duration. Result is `0` if the resolved query returns no prices at all. Each catalog line (`PartialInvoiceLineRow`) SHALL render a price-tier selector (reusing `PriceTierPicker`) letting the user switch among the product's available `ProductPrice` entries fetched via the same `getProductPrices(productId, hqBranchId)` call — selecting a different tier SHALL update the line's `unitPrice` to that tier's price. Free lines SHALL NOT render a price-tier selector — they keep manual `unitPrice` entry, unchanged. Every line SHALL allow editing `quantity`, `unitPrice` (manually, in addition to the tier selector for catalog lines), `discountPct`, `ivaRate`, `iepsRate`, and each of these 5 numeric fields SHALL support being fully cleared while editing (no forced `0` reappearing on each keystroke) — normalization to a numeric value SHALL occur only on blur. For free lines, `satProductCode` SHALL be validated to be either empty or exactly 8 digits (`^\d{8}$`) — a partially-typed value (non-empty, not matching the full pattern) SHALL block submit with an inline error identifying the line, preventing the equivalent backend Zod rejection from ever being reached.
 
-It SHALL show live totals computed by the shared `computeTotalsClient` (banker's rounding) and a visible note **"La factura parcial no afecta inventario"**. Before submit, the form SHALL block and show an inline error if any line with a non-null `productId` has `unitPrice <= 0` (empty treated as `0` for this check) — free lines are exempt from this check. On submit it SHALL call `POST /api/v1/admin/invoices { customer, items[], paymentForm?, paymentMethod? }` via `stampInvoice` and navigate to `/billing/[id]`. The branch selector's value SHALL NOT be sent in this payload — it is a UI-only concern for resolving catalog prices, mirroring that `Invoice` does not persist `branchId`.
+It SHALL show live totals computed by the shared `computeTotalsClient` (banker's rounding) and a visible note **"La factura parcial no afecta inventario"**. Before submit, the form SHALL block and show an inline error if any line with a non-null `productId` has `unitPrice <= 0` (empty treated as `0` for this check) — free lines are exempt from this check. On submit it SHALL call `POST /api/v1/admin/invoices { customer, items[], branchId: hqBranchId, paymentForm?, paymentMethod? }` via `stampInvoice` and navigate to `/billing/[id]` — `branchId` SHALL always be sent explicitly as the headquarters branch's id, matching the branch already used to resolve catalog prices, so the emitted invoice's branch is never left to an implicit backend fallback.
 
 Because the payload carries no `saleId`, the request SHALL reach the backend standalone path, which performs no inventory movement.
 
 #### Scenario: Build and stamp a partial invoice
 - **WHEN** the user picks a fiscally-complete customer, adds two catalog lines (each keeping its preselected default price), and confirms
-- **THEN** `POST /invoices` SHALL be sent with `{ customer, items: [...] }` and **without** `saleId`, and on 201 navigate to `/billing/[id]`
+- **THEN** `POST /invoices` SHALL be sent with `{ customer, items: [...], branchId: <headquarters branch id> }` and **without** `saleId`, and on 201 navigate to `/billing/[id]`
 
-#### Scenario: Branch selector visible for users with branches:access_all
-- **WHEN** the session user has `branches:access_all` and opens "Factura parcial"
-- **THEN** a branch selector renders, populated with all active branches, with no branch preselected
+#### Scenario: No branch selector renders regardless of permissions
+- **WHEN** any user — including one with `branches:access_all` — opens "Factura parcial"
+- **THEN** no branch `<select>` renders anywhere in the form; the branch used is always the headquarters branch, resolved silently via `useHeadquarters()`
 
-#### Scenario: Branch selector hidden for users scoped to their own branch
-- **WHEN** the session user does NOT have `branches:access_all` and has an own `branchId`
-- **THEN** no branch selector renders, and `effectiveBranchId` resolves silently to the user's own `branchId` — unchanged from before this change
+#### Scenario: Product catalog filtered to headquarters inventory
+- **WHEN** the headquarters branch has resolved and the user opens the product catalog to add a line
+- **THEN** `ProductCatalogPanel` SHALL only list products with inventory/pricing in that branch, using the same `branchId` passed to price resolution
+
+#### Scenario: Headquarters not configured blocks the form
+- **WHEN** `useHeadquarters()` resolves with `hq === null` (no branch is marked `isHeadquarters=true`)
+- **THEN** the form SHALL render a blocking message ("No hay sucursal matriz configurada...") and SHALL NOT allow adding lines, previewing, or submitting
 
 #### Scenario: Catalog line preselects the default price
 - **WHEN** the user adds a product that has a `ProductPrice` marked `isDefault: true`
 - **THEN** the line is added with `unitPrice` equal to that default price's value, not `0`
-
-#### Scenario: Catalog line whose only price is branch-scoped loads once the matching branch is selected
-- **WHEN** a user with `branches:access_all` selects a branch in the selector, then adds a product whose only `ProductPrice` row is scoped to that same branch (no accompanying global `branchId: null` row)
-- **THEN** `getProductPrices` is called with that branch as `effectiveBranchId`, the branch-scoped price resolves as the line's default, and the form does NOT show "Este producto no tiene precios configurados."
 
 #### Scenario: Catalog line without any price falls back to zero, still overridable
 - **WHEN** the user adds a product with no `ProductPrice` records at all (global or branch-scoped)
@@ -200,15 +223,7 @@ Because the payload carries no `saleId`, the request SHALL reach the backend sta
 
 #### Scenario: Switching price tier updates unitPrice
 - **WHEN** the user changes the price-tier selector on a catalog line from "Precio público" to "10"
-- **THEN** the line's `unitPrice` updates to the "10" tier's price, and the footer totals recompute live, using the same `effectiveBranchId`-scoped price list the catalog "add" step used — no divergence between the two entry points
-
-#### Scenario: No branch resolves (bypass user has not picked one, or non-bypass user has no own branchId)
-- **WHEN** `effectiveBranchId` resolves to `null` — either because a `branches:access_all` user has not yet chosen a branch in the selector, or because a non-bypass user's session has no `branchId`
-- **THEN** `getProductPrices` is called without a `branchId`, returning only global (`branchId: null`) prices — same behavior as before this change for this edge case, with no crash
-
-#### Scenario: Changing the selected branch does not retroactively re-price existing lines
-- **WHEN** a `branches:access_all` user has already added a line whose price resolved under a first selected branch, then changes the selector to a different branch
-- **THEN** the already-added line's `unitPrice` SHALL NOT change — only subsequent catalog additions or tier changes use the newly selected branch
+- **THEN** the line's `unitPrice` updates to the "10" tier's price, and the footer totals recompute live, using the same headquarters-scoped price list the catalog "add" step used — no divergence between the two entry points
 
 #### Scenario: Manual price reflected in totals
 - **WHEN** the user changes a line `unitPrice` manually
@@ -251,26 +266,30 @@ Because the payload carries no `saleId`, the request SHALL reach the backend sta
 - **THEN** the form blocks submission, shows an inline error on that line, and does NOT call `POST /invoices`
 
 ### Requirement: Invoice preview before stamping
-Both emission forms (`StampSaleForm` and `PartialInvoiceForm`, under `/billing/new`) SHALL render a "Vista previa" button. Clicking it SHALL open `InvoicePreviewModal` (a native `<dialog>`, following the same open/close pattern as `CancelInvoiceModal`) showing: the logo and the fixed title "Factura" (NOT the company name — the company's identity lives only in the "Datos del emisor" section below), a folio placeholder "PENDIENTE DE TIMBRAR", a visible badge "BORRADOR — no válido fiscalmente", a "Datos del emisor" section (RFC, razón social, régimen fiscal as "code - description", código postal, dirección — resolved as described below), the receiver's fiscal data including its zip code (`taxZipCode`) and its `fiscalRegime`/`cfdiUse` as "code - description", the line items with per-line and aggregate totals computed client-side via `computeInvoiceTotalsClient`, and three actions: "Volver a editar" (closes the modal without side effects), "Descargar PDF" (molecule compartido `DownloadPdfButton`, icono `picture_as_pdf` — downloads the currently-displayed preview as a PDF via `POST /api/v1/admin/invoices/preview/pdf`, sending the same `InvoicePreviewData` already rendered on screen — no side effects, no Facturama call), and "Timbrar ahora" (invokes the same existing `submit()` used by the form's real "Emitir factura" action — it SHALL NOT call Facturama or persist anything on its own).
+Both emission forms (`StampSaleForm` and `PartialInvoiceForm`, under `/billing/new`) SHALL render a "Vista previa" button. Clicking it SHALL open `InvoicePreviewModal` (a native `<dialog>`, following the same open/close pattern as `CancelInvoiceModal`) showing: the logo, the fixed title "Factura", the branch name when present, and the issuer's correo when present — all in the modal's header block (NOT the company legal name — that identity lives only in the "Datos del emisor" section below), a folio placeholder "PENDIENTE DE TIMBRAR", a visible badge "BORRADOR — no válido fiscalmente", a "Datos del emisor" section (RFC, razón social, régimen fiscal as "code - description", código postal, dirección — resolved as described below; NOT correo, which renders in the header instead), the receiver's fiscal data including its zip code (`taxZipCode`) and its `fiscalRegime`/`cfdiUse` as "code - description", the line items with per-line and aggregate totals computed client-side via `computeInvoiceTotalsClient`, and three actions: "Volver a editar" (closes the modal without side effects), "Descargar PDF" (molecule compartido `DownloadPdfButton`, icono `picture_as_pdf` — downloads the currently-displayed preview as a PDF via `POST /api/v1/admin/invoices/preview/pdf`, sending the same `InvoicePreviewData` already rendered on screen — no side effects, no Facturama call), and "Timbrar ahora" (invokes the same existing `submit()` used by the form's real "Emitir factura" action — it SHALL NOT call Facturama or persist anything on its own). Because this preview represents a borrador, it SHALL NOT show an emission date/time — that only exists once the invoice is actually stamped (see `/billing/[id]`).
 
-The issuer's fiscal identity (`rfc`, `legalName`, `fiscalRegime`, `zipCode`, `address`) SHALL be resolved by calling `GET /api/v1/admin/billing/emitter-fiscal-settings` (requires only `billing:write`, already held by whoever can open this form — NOT `billing:manage_csd`) when the preview is opened, for BOTH forms. That endpoint's cascade (CSD en vivo → `EmitterFiscalSettings` → `TicketSettings`, ver `billing-api`) draws only from real data the admin has actually captured — it SHALL NEVER return a hardcoded/invented placeholder. A field with no value in any of the three sources renders as "—" in the UI; the same "—" also covers the case where the network call itself fails (see below) — the UI cannot distinguish "nothing captured" from "the lookup failed", and SHALL NOT need to. The receiver's `fiscalRegime`/`cfdiUse` descriptions SHALL be resolved client-side by querying the existing search endpoints `GET /api/v1/admin/sat-codes/regimen-fiscal?search=<code>` and `.../uso-cfdi?search=<code>` with the exact code, reusing them as an exact-match lookup. This resolution SHALL happen once per modal open and SHALL NOT block rendering the rest of the preview if any of it fails — a failure to resolve issuer data or a catalog description SHALL NOT prevent "Descargar PDF" or "Timbrar ahora" (the backend independently re-resolves everything server-side for the actual PDF render).
+The issuer's fiscal identity (`rfc`, `legalName`, `fiscalRegime`, `zipCode`, `address`, `email`) SHALL be resolved by calling `GET /api/v1/admin/billing/emitter-fiscal-settings` (requires only `billing:write`, already held by whoever can open this form — NOT `billing:manage_csd`) when the preview is opened, for BOTH forms. That endpoint's cascade (CSD en vivo → `EmitterFiscalSettings` → `TicketSettings`, ver `billing-api`) draws only from real data the admin has actually captured — it SHALL NEVER return a hardcoded/invented placeholder. A field with no value in any of the sources renders as "—" in the UI; the same "—" also covers the case where the network call itself fails (see below) — the UI cannot distinguish "nothing captured" from "the lookup failed", and SHALL NOT need to. The receiver's `fiscalRegime`/`cfdiUse` descriptions SHALL be resolved client-side by querying the existing search endpoints `GET /api/v1/admin/sat-codes/regimen-fiscal?search=<code>` and `.../uso-cfdi?search=<code>` with the exact code, reusing them as an exact-match lookup. This resolution SHALL happen once per modal open and SHALL NOT block rendering the rest of the preview if any of it fails — a failure to resolve issuer data or a catalog description SHALL NOT prevent "Descargar PDF" or "Timbrar ahora" (the backend independently re-resolves everything server-side for the actual PDF render).
 
 For `PartialInvoiceForm`, the receiver/lines preview data SHALL be built entirely from data already present in the form's local state (customer, lines, payment form/method) — no network request beyond the issuer fiscal lookup above SHALL be made to open the preview.
 
-For `StampSaleForm`, which does not hold line items or the receiver's fiscal data in its local state, opening the preview SHALL resolve that data by reading `GET /api/v1/admin/sales/:id` and (when the sale has a `customerId`) `GET /api/v1/admin/customers/:id` — both already-existing read endpoints, reused unmodified. When mapping the sale's items to preview lines, any `discountPct`, `ivaRate`, or `iepsRate` that is `null` on the source sale item (e.g. a line without a discount, or an IEPS-exempt product) SHALL be normalized to `0` — the preview payload SHALL NEVER carry a `null` for these fields, since the preview PDF endpoint's contract requires non-nullable numbers (see `billing-api`'s "Invoice preview PDF endpoint"). While resolving, the modal SHALL show a loading state. If the selected sale has no `customerId`, the modal SHALL show the message "Esta venta no tiene cliente asociado, no se puede facturar" and SHALL disable "Timbrar ahora" AND "Descargar PDF".
+For `StampSaleForm`, which does not hold line items in its local state, opening the preview SHALL resolve the sale's items by reading `GET /api/v1/admin/sales/:id` (already-existing read endpoint, reused unmodified). The receiver's fiscal data SHALL come from whichever customer is currently resolved in the form's `CustomerPicker` — the sale's own customer by default, or the operator's chosen override — fetched via `GET /api/v1/admin/customers/:id` for that customer's id; it SHALL NEVER silently fall back to the sale's own customer once an override has been made. When mapping the sale's items to preview lines, any `discountPct`, `ivaRate`, or `iepsRate` that is `null` on the source sale item (e.g. a line without a discount, or an IEPS-exempt product) SHALL be normalized to `0` — the preview payload SHALL NEVER carry a `null` for these fields, since the preview PDF endpoint's contract requires non-nullable numbers (see `billing-api`'s "Invoice preview PDF endpoint"). While resolving, the modal SHALL show a loading state. If neither the sale nor the picker resolves to a customer (sale has `customerId=null` and no override has been picked), the modal SHALL show the message "Esta venta no tiene cliente asociado, no se puede facturar" and SHALL disable "Timbrar ahora" AND "Descargar PDF".
 
 The preview SHALL never introduce a persisted draft state: `Invoice.status` remains only `"stamped" | "cancelled"`, and closing the modal without confirming SHALL leave the form's state untouched. Downloading the PDF SHALL NOT close the modal or alter the form's state.
 
 #### Scenario: Preview from partial invoice form (no network)
 - **WHEN** the user has picked a fiscally-complete customer and added at least one line in `PartialInvoiceForm`, then clicks "Vista previa"
-- **THEN** the modal SHALL open showing the logo, the "Factura" title, "BORRADOR" badge, "PENDIENTE DE TIMBRAR" folio, issuer data (resolved via the emitter fiscal settings lookup, including address), receiver data (including zip code and fiscal-regime/CFDI-use descriptions), lines and totals matching the form's live totals
+- **THEN** the modal SHALL open showing the logo, the "Factura" title, the issuer's correo in the header (when resolved), "BORRADOR" badge, "PENDIENTE DE TIMBRAR" folio, "Datos del emisor" data (resolved via the emitter fiscal settings lookup, including address — NOT correo, which is in the header), receiver data (including zip code and fiscal-regime/CFDI-use descriptions), lines and totals matching the form's live totals, with no emission date/time shown
 
 #### Scenario: Preview from stamp-sale form (resolves sale + customer)
-- **WHEN** the user has selected a `completed` sale with an associated customer in `StampSaleForm`, then clicks "Vista previa"
-- **THEN** the modal SHALL show a brief loading state, then render the sale's lines, the customer's real fiscal data, and the issuer's fiscal data
+- **WHEN** the user has selected a `completed` sale (customer preloaded, unchanged) in `StampSaleForm`, then clicks "Vista previa"
+- **THEN** the modal SHALL show a brief loading state, then render the sale's lines, the sale's own customer's real fiscal data, and the issuer's fiscal data
+
+#### Scenario: Preview reflects the overridden customer, not the sale's original customer
+- **WHEN** the user has replaced the sale's own customer with a different one in `CustomerPicker`, then clicks "Vista previa"
+- **THEN** the modal SHALL render the replaced customer's fiscal data as the receiver — never the sale's original customer's data
 
 #### Scenario: Sale without customer blocks preview confirmation and download
-- **WHEN** the user clicks "Vista previa" in `StampSaleForm` for a sale with no `customerId`
+- **WHEN** the user clicks "Vista previa" in `StampSaleForm` for a sale with no `customerId` and no customer has been picked in `CustomerPicker`
 - **THEN** the modal SHALL show "Esta venta no tiene cliente asociado, no se puede facturar" and SHALL disable both "Timbrar ahora" and "Descargar PDF", without throwing an unhandled error
 
 #### Scenario: Confirm stamps for real
@@ -287,7 +306,7 @@ The preview SHALL never introduce a persisted draft state: `Invoice.status` rema
 
 #### Scenario: Download PDF from stamp-sale preview
 - **WHEN** the user, with a stamp-sale preview open (customer resolved), clicks "Descargar PDF"
-- **THEN** the browser downloads a PDF matching the sale's lines and the customer's fiscal data, same watermark
+- **THEN** the browser downloads a PDF matching the sale's lines and the currently resolved customer's fiscal data (sale's own or overridden), same watermark
 
 #### Scenario: Download PDF succeeds when the sale has null discount/tax fields
 - **WHEN** the user opens a stamp-sale preview for a sale whose items include `discountPct`, `ivaRate`, or `iepsRate` equal to `null`, and clicks "Descargar PDF"
@@ -307,11 +326,11 @@ The preview SHALL never introduce a persisted draft state: `Invoice.status` rema
 
 #### Scenario: Issuer lookup failure does not block the preview
 - **WHEN** `GET /api/v1/admin/billing/emitter-fiscal-settings` fails (network error) while opening the preview
-- **THEN** the modal SHALL still open showing "—" for the issuer's RFC/razón social/régimen fiscal/CP/dirección, and "Descargar PDF"/"Timbrar ahora" SHALL remain enabled (the actual PDF resolves the issuer server-side regardless, via the same cascade, so it will not be blank there even if it was in the modal)
+- **THEN** the modal SHALL still open showing "—" for the issuer's RFC/razón social/régimen fiscal/CP/dirección in "Datos del emisor", the header simply omits the correo line (no "—" there, it is conditional), and "Descargar PDF"/"Timbrar ahora" SHALL remain enabled (the actual PDF resolves the issuer server-side regardless, via the same cascade, so it will not be blank there even if it was in the modal)
 
 #### Scenario: Modal header shows "Factura", not the company name
 - **WHEN** the preview modal renders (either form)
-- **THEN** its header SHALL show the logo and the text "Factura" — it SHALL NOT show the issuer's name or "Agrisas" as a title; the issuer's identity is shown only inside the "Datos del emisor" section below
+- **THEN** its header SHALL show the logo, the text "Factura", the branch name and correo when present — it SHALL NOT show the issuer's legal name or "Agrisas" as a title; the issuer's fiscal identity (RFC, razón social, etc.) is shown only inside the "Datos del emisor" section below
 
 #### Scenario: Catalog description lookup failure falls back to raw code
 - **WHEN** a search call to `/api/v1/admin/sat-codes/regimen-fiscal` or `.../uso-cfdi` fails or returns no match for the exact code

@@ -5,6 +5,7 @@ import { FolioScope } from "@/shared/domain/types/FolioScope";
 import { FolioNotFoundError } from "@/modules/folios/domain/errors/FolioNotFoundError";
 import { FolioCodeAlreadyInUseError } from "@/modules/folios/domain/errors/FolioCodeAlreadyInUseError";
 import { AuditSequenceRaw } from "@/modules/folios/application/dto/FolioAuditDto";
+import { isPrismaUniqueError, isPrismaNotFoundError } from "@/shared/infrastructure/prisma/errors";
 
 type PrismaFolio = {
   id: string;
@@ -29,14 +30,6 @@ function toDomain(row: PrismaFolio): Folio {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });
-}
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
-}
-
-function isPrismaNotFoundError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2025";
 }
 
 export class PrismaFolioRepository implements FolioRepository {

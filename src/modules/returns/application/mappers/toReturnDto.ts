@@ -1,3 +1,4 @@
+import { roundHalfToEven } from "@/shared/domain/services/roundHalfToEven";
 import { Return } from "../../domain/entities/Return";
 import { ReturnItem } from "../../domain/entities/ReturnItem";
 import { ReturnDto, ReturnDetailDto, ReturnItemDto } from "../dto/ReturnDto";
@@ -19,8 +20,8 @@ export function toReturnItemDto(item: ReturnItem): ReturnItemDto {
     ivaRate: item.ivaRate,
     iepsRate: item.iepsRate,
     lineSubtotal: item.lineSubtotal,
-    lineIva:  Math.round(item.lineSubtotal * (item.ivaRate  ?? 0) * 10_000) / 10_000,
-    lineIeps: Math.round(item.lineSubtotal * (item.iepsRate ?? 0) * 10_000) / 10_000,
+    lineIva: roundHalfToEven(item.lineSubtotal * (item.ivaRate ?? 0), 4),
+    lineIeps: roundHalfToEven(item.lineSubtotal * (item.iepsRate ?? 0), 4),
     lineTax: item.lineTax,
     lineTotal: item.lineTotal,
   };

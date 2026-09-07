@@ -296,6 +296,62 @@ describe("ProductsController — Zod validation", () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it("accepts a real Supabase bucket imageUrl on PATCH", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const createRes = await ctrl.create(makeCreateReq({ code: "P12", name: "Producto", unit: "kg", departmentId }));
+    const { id } = await createRes.json();
+
+    const res = await ctrl.update(
+      new NextRequest(`http://localhost/api/v1/admin/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          imageUrl: "https://example.supabase.co/storage/v1/object/public/product-images/foo.jpg",
+        }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      id,
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).imageUrl).toBe(
+      "https://example.supabase.co/storage/v1/object/public/product-images/foo.jpg"
+    );
+  });
+
+  it("rejects an imageUrl on a foreign host that merely embeds the expected path as a substring", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const createRes = await ctrl.create(makeCreateReq({ code: "P13", name: "Producto", unit: "kg", departmentId }));
+    const { id } = await createRes.json();
+
+    const res = await ctrl.update(
+      new NextRequest(`http://localhost/api/v1/admin/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          imageUrl:
+            "https://attacker.com/x?y=example.supabase.co/storage/v1/object/public/product-images/foo.jpg",
+        }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      id,
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects an imageUrl on the right host but the wrong path", async () => {
+    const { ctrl, departmentId } = await buildController();
+    const createRes = await ctrl.create(makeCreateReq({ code: "P14", name: "Producto", unit: "kg", departmentId }));
+    const { id } = await createRes.json();
+
+    const res = await ctrl.update(
+      new NextRequest(`http://localhost/api/v1/admin/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ imageUrl: "https://example.supabase.co/some/other/path/foo.jpg" }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      id,
+    );
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("ProductsController.list — branch scope mode", () => {

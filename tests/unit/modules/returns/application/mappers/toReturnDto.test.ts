@@ -42,4 +42,13 @@ describe("toReturnItemDto", () => {
     expect(dto.lineIva).toBe(0);
     expect(dto.lineIeps).toBe(0);
   });
+
+  it("uses banker's rounding (half-to-even), matching the persisted lineTax at the exact .5 tie", () => {
+    const dto = toReturnItemDto(
+      buildItem({ lineSubtotal: 100.0002, ivaRate: 0, iepsRate: 0.25, lineTax: 25, lineTotal: 125.0002 })
+    );
+
+    expect(dto.lineIeps).toBe(25);
+    expect(dto.lineIva + dto.lineIeps).toBe(dto.lineTax);
+  });
 });

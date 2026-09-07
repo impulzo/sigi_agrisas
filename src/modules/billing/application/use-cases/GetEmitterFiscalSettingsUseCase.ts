@@ -1,5 +1,6 @@
 import { resolveIssuerFiscalData, IssuerFiscalData } from "../services/resolveIssuerFiscalData";
 import { FacturamaGateway } from "../ports/FacturamaGateway";
+import { EmitterFiscalSettingsStore } from "../ports/EmitterFiscalSettingsStore";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
 
 export type EmitterFiscalSettingsDto = IssuerFiscalData;
@@ -7,10 +8,11 @@ export type EmitterFiscalSettingsDto = IssuerFiscalData;
 export class GetEmitterFiscalSettingsUseCase {
   constructor(
     private readonly gateway: FacturamaGateway,
-    private readonly getTicketSettingsUseCase?: GetTicketSettingsUseCase
+    private readonly getTicketSettingsUseCase?: GetTicketSettingsUseCase,
+    private readonly store?: EmitterFiscalSettingsStore
   ) {}
 
   async execute(): Promise<EmitterFiscalSettingsDto> {
-    return resolveIssuerFiscalData(this.gateway, this.getTicketSettingsUseCase);
+    return resolveIssuerFiscalData(this.gateway, this.getTicketSettingsUseCase, this.store);
   }
 }

@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
+import { entityCodeSchema, uuidSchema } from "@/shared/infrastructure/http/validators";
 import { ListVehiclesUseCase } from "../../application/use-cases/ListVehiclesUseCase";
 import { GetVehicleUseCase } from "../../application/use-cases/GetVehicleUseCase";
 import { CreateVehicleUseCase } from "../../application/use-cases/CreateVehicleUseCase";
 import { UpdateVehicleUseCase } from "../../application/use-cases/UpdateVehicleUseCase";
 import { VehicleNotFoundError } from "../../domain/errors/VehicleNotFoundError";
 import { VehicleCodeAlreadyInUseError } from "../../domain/errors/VehicleCodeAlreadyInUseError";
+import { mapDomainError } from "@/shared/infrastructure/http/mapDomainError";
 
-const CODE_REGEX = /^[A-Z0-9_]{1,32}$/;
-
-const uuidParamSchema = z.string().uuid("Invalid vehicle ID format");
+const uuidParamSchema = uuidSchema;
 
 const listQueryFiltersSchema = z.object({
   search: z
@@ -26,7 +26,7 @@ const createBodySchema = z.object({
     .min(1)
     .max(32)
     .transform((v) => v.trim().toUpperCase())
-    .pipe(z.string().regex(CODE_REGEX, "code must match ^[A-Z0-9_]{1,32}$")),
+    .pipe(entityCodeSchema),
   plate: z.string().min(1).max(20),
   vehicleConfig: z.string().min(1).max(10),
   permitType: z.string().min(1).max(10),
@@ -93,7 +93,8 @@ export class VehiclesController {
       const vehicle = await this.getUseCase.execute(parsed.data);
       return NextResponse.json(vehicle);
     } catch (err) {
-      if (err instanceof VehicleNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[VehicleNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -108,7 +109,8 @@ export class VehiclesController {
       const vehicle = await this.createUseCase.execute(parsed.data);
       return NextResponse.json(vehicle, { status: 201 });
     } catch (err) {
-      if (err instanceof VehicleCodeAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
+      const mapped = mapDomainError(err, [[VehicleCodeAlreadyInUseError, 409]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -127,7 +129,8 @@ export class VehiclesController {
       const vehicle = await this.updateUseCase.execute(idParsed.data, parsed.data);
       return NextResponse.json(vehicle);
     } catch (err) {
-      if (err instanceof VehicleNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[VehicleNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }

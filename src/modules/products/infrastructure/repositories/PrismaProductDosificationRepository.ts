@@ -7,6 +7,10 @@ import {
 import { ProductDosification } from "../../domain/entities/ProductDosification";
 import { ProductDosificationNotFoundError } from "../../domain/errors/ProductDosificationNotFoundError";
 import { DuplicateDosificationNameError } from "../../domain/errors/DuplicateDosificationNameError";
+import {
+  isPrismaUniqueError as isUniqueError,
+  isPrismaNotFoundError as isNotFoundError,
+} from "@/shared/infrastructure/prisma/errors";
 
 function toProductDosification(row: PrismaProductDosification): ProductDosification {
   return ProductDosification.create({
@@ -18,14 +22,6 @@ function toProductDosification(row: PrismaProductDosification): ProductDosificat
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });
-}
-
-function isUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
-}
-
-function isNotFoundError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2025";
 }
 
 export class PrismaProductDosificationRepository implements ProductDosificationRepository {

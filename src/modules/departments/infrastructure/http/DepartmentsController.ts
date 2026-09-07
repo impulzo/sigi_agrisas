@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
-import { entityCodeSchema } from "@/shared/infrastructure/http/validators";
+import { entityCodeSchema, uuidSchema } from "@/shared/infrastructure/http/validators";
 import { ListDepartmentsUseCase } from "@/modules/departments/application/use-cases/ListDepartmentsUseCase";
 import { GetDepartmentUseCase } from "@/modules/departments/application/use-cases/GetDepartmentUseCase";
 import { CreateDepartmentUseCase } from "@/modules/departments/application/use-cases/CreateDepartmentUseCase";
@@ -10,8 +10,11 @@ import { SoftDeleteDepartmentUseCase } from "@/modules/departments/application/u
 import { DepartmentNotFoundError } from "@/modules/departments/domain/errors/DepartmentNotFoundError";
 import { DepartmentCodeAlreadyInUseError } from "@/modules/departments/domain/errors/DepartmentCodeAlreadyInUseError";
 import { ProviderNotFoundOrInactiveError } from "@/modules/departments/domain/errors/ProviderNotFoundOrInactiveError";
+import { mapDomainError } from "@/shared/infrastructure/http/mapDomainError";
 
-const uuidSchema = z.string().uuid("Invalid ID format");
+const listQueryFiltersSchema = z.object({
+  providerId: z.string().uuid("providerId must be a valid UUID").optional(),
+});
 
 const createBodySchema = z.object({
   code: entityCodeSchema,
@@ -45,8 +48,15 @@ export class DepartmentsController {
     const { searchParams } = new URL(req.url);
     const parsed = parseListQuery(searchParams);
     if (!parsed.success) return NextResponse.json({ error: parsed.error }, { status: 400 });
-    const providerId = searchParams.get("providerId") ?? undefined;
-    return NextResponse.json(await this.listUseCase.execute({ ...parsed.data, providerId }));
+    const filtersParsed = listQueryFiltersSchema.safeParse({
+      providerId: searchParams.get("providerId") ?? undefined,
+    });
+    if (!filtersParsed.success) {
+      return NextResponse.json({ error: filtersParsed.error.errors[0].message }, { status: 400 });
+    }
+    return NextResponse.json(
+      await this.listUseCase.execute({ ...parsed.data, providerId: filtersParsed.data.providerId })
+    );
   }
 
   async getById(_req: NextRequest, id: string): Promise<NextResponse> {
@@ -55,7 +65,8 @@ export class DepartmentsController {
     try {
       return NextResponse.json(await this.getUseCase.execute(idParsed.data));
     } catch (err) {
-      if (err instanceof DepartmentNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[DepartmentNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -67,8 +78,11 @@ export class DepartmentsController {
     try {
       return NextResponse.json(await this.createUseCase.execute(parsed.data), { status: 201 });
     } catch (err) {
-      if (err instanceof DepartmentCodeAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
-      if (err instanceof ProviderNotFoundOrInactiveError) return NextResponse.json({ error: err.message }, { status: 400 });
+      const mapped = mapDomainError(err, [
+        [DepartmentCodeAlreadyInUseError, 409],
+        [ProviderNotFoundOrInactiveError, 400],
+      ]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -82,8 +96,11 @@ export class DepartmentsController {
     try {
       return NextResponse.json(await this.updateUseCase.execute({ id: idParsed.data, ...parsed.data }));
     } catch (err) {
-      if (err instanceof DepartmentNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
-      if (err instanceof ProviderNotFoundOrInactiveError) return NextResponse.json({ error: err.message }, { status: 400 });
+      const mapped = mapDomainError(err, [
+        [DepartmentNotFoundError, 404],
+        [ProviderNotFoundOrInactiveError, 400],
+      ]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -95,7 +112,8 @@ export class DepartmentsController {
       await this.softDeleteUseCase.execute(idParsed.data);
       return new NextResponse(null, { status: 204 });
     } catch (err) {
-      if (err instanceof DepartmentNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[DepartmentNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }

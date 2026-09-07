@@ -57,17 +57,6 @@ exports[`LoginForm renders initial state 1`] = `
       Ingresar
     </button>
   </form>
-  <p
-    class="mt-4 text-center text-sm text-gray-600"
-  >
-    ¿No tienes cuenta?
-     
-    <a
-      href="/auth/register"
-    >
-      Regístrate aquí
-    </a>
-  </p>
 </div>
 `;
 
@@ -134,16 +123,5 @@ exports[`LoginForm renders with formError 1`] = `
       Ingresar
     </button>
   </form>
-  <p
-    class="mt-4 text-center text-sm text-gray-600"
-  >
-    ¿No tienes cuenta?
-     
-    <a
-      href="/auth/register"
-    >
-      Regístrate aquí
-    </a>
-  </p>
 </div>
 `;

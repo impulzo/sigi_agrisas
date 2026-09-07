@@ -19,6 +19,7 @@ import { SearchSatCfdiUsesUseCase } from "@/modules/sat-codes/application/use-ca
 import { SearchSatCodesUseCase } from "@/modules/sat-codes/application/use-cases/SearchSatCodesUseCase";
 import { resolveSatDescription } from "../../application/services/resolveSatDescription";
 import { resolveIssuerFiscalData } from "../../application/services/resolveIssuerFiscalData";
+import { EmitterFiscalSettingsStore } from "../../application/ports/EmitterFiscalSettingsStore";
 import { BillingLookupService } from "../../application/ports/BillingLookupService";
 import type { FacturamaGateway } from "../../application/ports/FacturamaGateway";
 import { toInvoiceDto } from "../../application/mappers/toInvoiceDto";
@@ -165,7 +166,8 @@ export class BillingController {
     private readonly searchSatTaxRegimesUseCase: SearchSatTaxRegimesUseCase,
     private readonly searchSatCfdiUsesUseCase: SearchSatCfdiUsesUseCase,
     private readonly searchSatCodesUseCase: SearchSatCodesUseCase,
-    private readonly gateway: FacturamaGateway
+    private readonly gateway: FacturamaGateway,
+    private readonly store?: EmitterFiscalSettingsStore
   ) {}
 
   async list(req: NextRequest): Promise<NextResponse> {
@@ -292,7 +294,7 @@ export class BillingController {
       const scopeError = await enforceBranchScope(req, invoice.branchId, this.authz);
       if (scopeError) return scopeError;
 
-      const resolvedIssuer = await resolveIssuerFiscalData(this.gateway, this.getTicketSettingsUseCase);
+      const resolvedIssuer = await resolveIssuerFiscalData(this.gateway, this.getTicketSettingsUseCase, this.store);
 
       const effectiveIssuerFiscalRegime = resolvedIssuer.fiscalRegime ?? invoice.issuerFiscalRegime;
 

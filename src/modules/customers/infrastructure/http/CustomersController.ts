@@ -9,13 +9,14 @@ import { SoftDeleteCustomerUseCase } from "../../application/use-cases/SoftDelet
 import { CustomerNotFoundError } from "../../domain/errors/CustomerNotFoundError";
 import { CustomerCodeAlreadyInUseError } from "../../domain/errors/CustomerCodeAlreadyInUseError";
 import { CustomerRfcAlreadyInUseError } from "../../domain/errors/CustomerRfcAlreadyInUseError";
-import { optionalRfcSchema, taxRegimeSchema } from "@/shared/infrastructure/http/validators";
+import { optionalRfcSchema, taxRegimeSchema, uuidSchema } from "@/shared/infrastructure/http/validators";
+import { mapDomainError } from "@/shared/infrastructure/http/mapDomainError";
 
 const CFDI_USE_REGEX = /^[A-Z]{1,2}\d{2}$/;
 const TAX_ZIP_CODE_REGEX = /^\d{5}$/;
 const CODE_REGEX = /^[A-Z0-9_]{1,32}$/;
 
-const uuidParamSchema = z.string().uuid("Invalid customer ID format");
+const uuidParamSchema = uuidSchema;
 
 const addressFieldsSchema = {
   addressStreet: z.string().max(150).nullable().optional(),
@@ -154,7 +155,8 @@ export class CustomersController {
       const customer = await this.getUseCase.execute(parsed.data);
       return NextResponse.json(customer);
     } catch (err) {
-      if (err instanceof CustomerNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[CustomerNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -169,8 +171,11 @@ export class CustomersController {
       const customer = await this.createUseCase.execute(parsed.data);
       return NextResponse.json(customer, { status: 201 });
     } catch (err) {
-      if (err instanceof CustomerCodeAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
-      if (err instanceof CustomerRfcAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
+      const mapped = mapDomainError(err, [
+        [CustomerCodeAlreadyInUseError, 409],
+        [CustomerRfcAlreadyInUseError, 409],
+      ]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -189,8 +194,11 @@ export class CustomersController {
       const customer = await this.updateUseCase.execute(idParsed.data, parsed.data);
       return NextResponse.json(customer);
     } catch (err) {
-      if (err instanceof CustomerNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
-      if (err instanceof CustomerRfcAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
+      const mapped = mapDomainError(err, [
+        [CustomerNotFoundError, 404],
+        [CustomerRfcAlreadyInUseError, 409],
+      ]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -204,7 +212,8 @@ export class CustomersController {
       await this.softDeleteUseCase.execute(parsed.data);
       return new NextResponse(null, { status: 204 });
     } catch (err) {
-      if (err instanceof CustomerNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[CustomerNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }

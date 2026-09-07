@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useDebounce } from "../../../_hooks/useDebounce";
-import { authFetch } from "../../../_lib/authFetch";
-
-interface ProductOption {
-  id: string;
-  code: string;
-  name: string;
-}
+import { useProductSearch } from "../_logic/hooks/useProductSearch";
 
 interface InventoryAssignModalProps {
   open: boolean;
@@ -22,8 +15,7 @@ interface InventoryAssignModalProps {
 export function InventoryAssignModal({ open, branchId, isSaving, assignError, onAssign, onClose }: InventoryAssignModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 300);
-  const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
+  const { productOptions, setProductOptions } = useProductSearch(search);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [quantity, setQuantity] = useState("0");
   const [reorderPoint, setReorderPoint] = useState("0");
@@ -46,16 +38,6 @@ export function InventoryAssignModal({ open, branchId, isSaving, assignError, on
   useEffect(() => {
     if (!open) { setSearch(""); setSelectedProductId(""); setQuantity("0"); setReorderPoint("0"); setErrors({}); }
   }, [open]);
-
-  useEffect(() => {
-    if (!debouncedSearch.trim() || debouncedSearch.trim().length < 2) { setProductOptions([]); return; }
-    authFetch(`/api/v1/admin/products?pageSize=20&search=${encodeURIComponent(debouncedSearch.trim())}`)
-      .then((res) => res.json())
-      .then((body: { items: { id: string; code: string; name: string }[] }) => {
-        setProductOptions(body.items.map((p) => ({ id: p.id, code: p.code, name: p.name })));
-      })
-      .catch(() => setProductOptions([]));
-  }, [debouncedSearch]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

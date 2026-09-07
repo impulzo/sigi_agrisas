@@ -2,6 +2,8 @@ import { PrismaClient } from "@prisma/client";
 import { Role } from "@/modules/rbac/domain/entities/Role";
 import { RoleRepository } from "@/modules/rbac/application/ports/RoleRepository";
 import { RoleMapper } from "@/modules/rbac/application/mappers/RoleMapper";
+import { RoleAlreadyExistsError } from "@/modules/rbac/domain/errors/RoleAlreadyExistsError";
+import { isPrismaUniqueError } from "@/shared/infrastructure/prisma/errors";
 
 export class RolePrismaRepository implements RoleRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -22,10 +24,15 @@ export class RolePrismaRepository implements RoleRepository {
   }
 
   async save(role: Role): Promise<void> {
-    await this.prisma.role.upsert({
-      where: { id: role.id },
-      update: { name: role.name, description: role.description ?? null },
-      create: { id: role.id, name: role.name, description: role.description ?? null },
-    });
+    try {
+      await this.prisma.role.upsert({
+        where: { id: role.id },
+        update: { name: role.name, description: role.description ?? null },
+        create: { id: role.id, name: role.name, description: role.description ?? null },
+      });
+    } catch (err) {
+      if (isPrismaUniqueError(err)) throw new RoleAlreadyExistsError(role.name);
+      throw err;
+    }
   }
 }

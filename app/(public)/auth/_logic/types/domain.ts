@@ -23,13 +23,6 @@ export class InvalidCredentialsError extends AuthError {
   }
 }
 
-export class EmailAlreadyExistsError extends AuthError {
-  constructor() {
-    super("Este correo ya está registrado");
-    this.name = "EmailAlreadyExistsError";
-  }
-}
-
 export class NetworkError extends AuthError {
   constructor(message = "Error de red") {
     super(message);

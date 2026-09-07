@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
-import { entityCodeSchema } from "@/shared/infrastructure/http/validators";
+import { entityCodeSchema, uuidSchema } from "@/shared/infrastructure/http/validators";
+import { mapDomainError } from "@/shared/infrastructure/http/mapDomainError";
 import { ListBranchesUseCase } from "@/modules/branches/application/use-cases/ListBranchesUseCase";
 import { GetBranchUseCase } from "@/modules/branches/application/use-cases/GetBranchUseCase";
 import { CreateBranchUseCase } from "@/modules/branches/application/use-cases/CreateBranchUseCase";
@@ -10,8 +11,6 @@ import { SoftDeleteBranchUseCase } from "@/modules/branches/application/use-case
 import { BranchNotFoundError } from "@/modules/branches/domain/errors/BranchNotFoundError";
 import { BranchCodeAlreadyInUseError } from "@/modules/branches/domain/errors/BranchCodeAlreadyInUseError";
 import { AnotherBranchIsHeadquartersError } from "@/modules/branches/domain/errors/AnotherBranchIsHeadquartersError";
-
-const uuidSchema = z.string().uuid("Invalid ID format");
 
 const addressFieldsSchema = {
   addressStreet: z.string().max(150).nullable().optional(),
@@ -96,7 +95,8 @@ export class BranchesController {
     try {
       return NextResponse.json(await this.getUseCase.execute(idParsed.data));
     } catch (err) {
-      if (err instanceof BranchNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[BranchNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -108,8 +108,11 @@ export class BranchesController {
     try {
       return NextResponse.json(await this.createUseCase.execute(parsed.data), { status: 201 });
     } catch (err) {
-      if (err instanceof BranchCodeAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
-      if (err instanceof AnotherBranchIsHeadquartersError) return NextResponse.json({ error: err.message }, { status: 409 });
+      const mapped = mapDomainError(err, [
+        [BranchCodeAlreadyInUseError, 409],
+        [AnotherBranchIsHeadquartersError, 409],
+      ]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -123,8 +126,11 @@ export class BranchesController {
     try {
       return NextResponse.json(await this.updateUseCase.execute({ id: idParsed.data, ...parsed.data }));
     } catch (err) {
-      if (err instanceof BranchNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
-      if (err instanceof AnotherBranchIsHeadquartersError) return NextResponse.json({ error: err.message }, { status: 409 });
+      const mapped = mapDomainError(err, [
+        [BranchNotFoundError, 404],
+        [AnotherBranchIsHeadquartersError, 409],
+      ]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -136,7 +142,8 @@ export class BranchesController {
       await this.softDeleteUseCase.execute(idParsed.data);
       return new NextResponse(null, { status: 204 });
     } catch (err) {
-      if (err instanceof BranchNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[BranchNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }

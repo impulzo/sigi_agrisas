@@ -24,7 +24,7 @@ export class PrismaPaymentReportRepository implements PaymentReportRepository {
         sale: true,
         customer: true,
         branch: true,
-        user: true,
+        user: { select: { email: true } },
       },
       orderBy: { createdAt: "desc" },
     });

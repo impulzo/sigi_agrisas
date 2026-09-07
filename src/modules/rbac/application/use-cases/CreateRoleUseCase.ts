@@ -9,8 +9,6 @@ interface CreateRoleInput {
   description?: string;
 }
 
-const PRISMA_UNIQUE_CONSTRAINT_CODE = "P2002";
-
 export class CreateRoleUseCase {
   constructor(private readonly roleRepo: RoleRepository) {}
 
@@ -28,24 +26,8 @@ export class CreateRoleUseCase {
       updatedAt: now,
     });
 
-    try {
-      await this.roleRepo.save(role);
-    } catch (err) {
-      if (this.isUniqueConstraintError(err)) {
-        throw new RoleAlreadyExistsError(roleName.value);
-      }
-      throw err;
-    }
+    await this.roleRepo.save(role);
 
     return role;
-  }
-
-  private isUniqueConstraintError(err: unknown): boolean {
-    return (
-      typeof err === "object" &&
-      err !== null &&
-      "code" in err &&
-      (err as { code: unknown }).code === PRISMA_UNIQUE_CONSTRAINT_CODE
-    );
   }
 }

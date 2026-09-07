@@ -12,12 +12,12 @@ import { CreateProductDosificationUseCase } from "@/modules/products/application
 import { ListProductDosificationsUseCase } from "@/modules/products/application/use-cases/ListProductDosificationsUseCase";
 import { PrismaPricingSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaPricingSettingsRepository";
 
-const PCODE = "INVTEST_PROD_1";
-const DCODE = "INVTEST_DEPT_1";
+const PCODE = "PRODTEST_PROD_1";
+const DCODE = "PRODTEST_DEPT_1";
 
 async function cleanup() {
-  await prisma.product.deleteMany({ where: { code: { startsWith: "INVTEST_" } } });
-  await prisma.department.deleteMany({ where: { code: { startsWith: "INVTEST_" } } });
+  await prisma.product.deleteMany({ where: { code: { startsWith: "PRODTEST_" } } });
+  await prisma.department.deleteMany({ where: { code: { startsWith: "PRODTEST_" } } });
 }
 
 afterAll(async () => {

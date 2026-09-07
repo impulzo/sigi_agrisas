@@ -3,6 +3,7 @@ import { Role } from "@/modules/rbac/domain/entities/Role";
 import { UserRoleRepository } from "@/modules/rbac/application/ports/UserRoleRepository";
 import { RoleMapper } from "@/modules/rbac/application/mappers/RoleMapper";
 import { RoleAlreadyAssignedError } from "@/modules/rbac/domain/errors/RoleAlreadyAssignedError";
+import { isPrismaUniqueError } from "@/shared/infrastructure/prisma/errors";
 
 export class UserRolePrismaRepository implements UserRoleRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -34,12 +35,4 @@ export class UserRolePrismaRepository implements UserRoleRepository {
     const rows = await this.prisma.userRole.findMany({ where: { roleId } });
     return rows.map((r) => r.userId);
   }
-}
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    (err as { code?: string }).code === "P2002"
-  );
 }

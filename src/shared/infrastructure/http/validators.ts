@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const uuidSchema = z.string().uuid("Invalid ID format");
+
 export const entityCodeSchema = z
   .string()
   .regex(/^[A-Z0-9_]{1,32}$/, "code must be uppercase letters, digits, or underscores (1–32 chars)");

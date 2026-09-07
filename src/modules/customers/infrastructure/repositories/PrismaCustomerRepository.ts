@@ -9,6 +9,7 @@ import { Customer } from "../../domain/entities/Customer";
 import { CustomerNotFoundError } from "../../domain/errors/CustomerNotFoundError";
 import { CustomerCodeAlreadyInUseError } from "../../domain/errors/CustomerCodeAlreadyInUseError";
 import { CustomerRfcAlreadyInUseError } from "../../domain/errors/CustomerRfcAlreadyInUseError";
+import { isPrismaUniqueError, isPrismaNotFoundError } from "@/shared/infrastructure/prisma/errors";
 
 function toCustomer(row: PrismaCustomer): Customer {
   return Customer.create({
@@ -43,20 +44,6 @@ function toCustomer(row: PrismaCustomer): Customer {
   });
 }
 
-function isPrismaUniqueError(err: unknown, target?: string): boolean {
-  if (typeof err !== "object" || err === null) return false;
-  const e = err as { code?: string; meta?: { target?: string[] | string } };
-  if (e.code !== "P2002") return false;
-  if (!target) return true;
-  const t = e.meta?.target;
-  if (Array.isArray(t)) return t.some((f) => f.includes(target));
-  if (typeof t === "string") return t.includes(target);
-  return false;
-}
-
-function isPrismaNotFoundError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2025";
-}
 
 export class PrismaCustomerRepository implements CustomerRepository {
   constructor(private readonly prisma: PrismaClient) {}

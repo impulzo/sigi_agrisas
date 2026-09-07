@@ -3,6 +3,7 @@ import { Permission } from "@/modules/rbac/domain/entities/Permission";
 import { RolePermissionRepository } from "@/modules/rbac/application/ports/RolePermissionRepository";
 import { PermissionMapper } from "@/modules/rbac/application/mappers/PermissionMapper";
 import { PermissionAlreadyGrantedError } from "@/modules/rbac/domain/errors/PermissionAlreadyGrantedError";
+import { isPrismaUniqueError } from "@/shared/infrastructure/prisma/errors";
 
 export class RolePermissionPrismaRepository implements RolePermissionRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -29,12 +30,4 @@ export class RolePermissionPrismaRepository implements RolePermissionRepository 
     });
     return rows.map((r) => PermissionMapper.toDomain(r.permission));
   }
-}
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    (err as { code?: string }).code === "P2002"
-  );
 }

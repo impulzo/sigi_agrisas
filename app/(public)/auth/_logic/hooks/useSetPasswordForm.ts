@@ -62,7 +62,7 @@ export function useSetPasswordForm(token: string | null): UseSetPasswordFormRetu
     try {
       const { accessToken } = await setPassword({ token, password: result.data.password });
       setAccessToken(accessToken);
-      router.replace("/dashboard");
+      router.replace("/pos");
     } catch (err) {
       if (err instanceof PasswordSetupTokenExpiredError || err instanceof PasswordSetupTokenInvalidError) {
         setFormError(err.message);

@@ -1,12 +1,6 @@
 import { UploadCsdUseCase } from "../../../../src/modules/billing/application/use-cases/UploadCsdUseCase";
-import { upsertEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
 import type { FacturamaGateway, FacturamaCsdInput, FacturamaCsdStatus } from "../../../../src/modules/billing/application/ports/FacturamaGateway";
-
-jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
-  upsertEmitterFiscalSettings: jest.fn(),
-}));
-
-const mockedUpsert = upsertEmitterFiscalSettings as jest.Mock;
+import type { EmitterFiscalSettingsStore } from "../../../../src/modules/billing/application/ports/EmitterFiscalSettingsStore";
 
 function makeGateway(uploadCsdImpl: (input: FacturamaCsdInput) => Promise<FacturamaCsdStatus>): FacturamaGateway {
   return {
@@ -18,6 +12,13 @@ function makeGateway(uploadCsdImpl: (input: FacturamaCsdInput) => Promise<Factur
   };
 }
 
+function makeStore(): EmitterFiscalSettingsStore {
+  return {
+    get: jest.fn(),
+    upsert: jest.fn(),
+  };
+}
+
 const BASE_INPUT = {
   rfc: "XAXX010101000",
   certificateBase64: "cert",
@@ -26,13 +27,10 @@ const BASE_INPUT = {
 };
 
 describe("UploadCsdUseCase", () => {
-  beforeEach(() => {
-    mockedUpsert.mockReset();
-  });
-
   it("persists fiscal data when the 4 optional fields are provided and Facturama accepts the CSD", async () => {
     const gateway = makeGateway(async () => ({ rfc: BASE_INPUT.rfc, isValid: true }));
-    const useCase = new UploadCsdUseCase(gateway);
+    const store = makeStore();
+    const useCase = new UploadCsdUseCase(gateway, store);
 
     await useCase.execute({
       ...BASE_INPUT,
@@ -42,7 +40,7 @@ describe("UploadCsdUseCase", () => {
       address: "Calle Falsa 123, CDMX",
     });
 
-    expect(mockedUpsert).toHaveBeenCalledWith({
+    expect(store.upsert).toHaveBeenCalledWith({
       rfc: BASE_INPUT.rfc,
       legalName: "Agrisas",
       fiscalRegime: "601",
@@ -53,11 +51,12 @@ describe("UploadCsdUseCase", () => {
 
   it("does not overwrite previous fiscal fields when the 4 optional fields are omitted", async () => {
     const gateway = makeGateway(async () => ({ rfc: BASE_INPUT.rfc, isValid: true }));
-    const useCase = new UploadCsdUseCase(gateway);
+    const store = makeStore();
+    const useCase = new UploadCsdUseCase(gateway, store);
 
     await useCase.execute(BASE_INPUT);
 
-    expect(mockedUpsert).toHaveBeenCalledWith({
+    expect(store.upsert).toHaveBeenCalledWith({
       rfc: BASE_INPUT.rfc,
       legalName: undefined,
       fiscalRegime: undefined,
@@ -70,11 +69,12 @@ describe("UploadCsdUseCase", () => {
     const gateway = makeGateway(async () => {
       throw new Error("invalid certificate");
     });
-    const useCase = new UploadCsdUseCase(gateway);
+    const store = makeStore();
+    const useCase = new UploadCsdUseCase(gateway, store);
 
     await expect(
       useCase.execute({ ...BASE_INPUT, legalName: "Agrisas", fiscalRegime: "601", zipCode: "83000" })
     ).rejects.toThrow("invalid certificate");
-    expect(mockedUpsert).not.toHaveBeenCalled();
+    expect(store.upsert).not.toHaveBeenCalled();
   });
 });

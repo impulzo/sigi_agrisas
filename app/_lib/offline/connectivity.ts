@@ -66,7 +66,11 @@ export function subscribeConnectivity(listener: Listener): () => void {
 }
 
 export function useOnlineStatus(): boolean {
-  const [online, setOnline] = useState<boolean>(() => isOnline());
+  // Sembrar `true` (mismo default que SSR, donde `navigator` no existe) evita
+  // un mismatch de hidratación si el `navigator.onLine` real del cliente es
+  // `false` en el primer render — se corrige de inmediato en el efecto,
+  // ya en una pasada exclusivamente cliente.
+  const [online, setOnline] = useState<boolean>(true);
 
   useEffect(() => {
     setOnline(isOnline());

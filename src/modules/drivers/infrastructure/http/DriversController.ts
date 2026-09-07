@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
-import { optionalRfcSchema } from "@/shared/infrastructure/http/validators";
+import { optionalRfcSchema, entityCodeSchema, uuidSchema } from "@/shared/infrastructure/http/validators";
 import { ListDriversUseCase } from "../../application/use-cases/ListDriversUseCase";
 import { GetDriverUseCase } from "../../application/use-cases/GetDriverUseCase";
 import { CreateDriverUseCase } from "../../application/use-cases/CreateDriverUseCase";
 import { UpdateDriverUseCase } from "../../application/use-cases/UpdateDriverUseCase";
 import { DriverNotFoundError } from "../../domain/errors/DriverNotFoundError";
 import { DriverCodeAlreadyInUseError } from "../../domain/errors/DriverCodeAlreadyInUseError";
+import { mapDomainError } from "@/shared/infrastructure/http/mapDomainError";
 
-const CODE_REGEX = /^[A-Z0-9_]{1,32}$/;
-
-const uuidParamSchema = z.string().uuid("Invalid driver ID format");
+const uuidParamSchema = uuidSchema;
 
 const listQueryFiltersSchema = z.object({
   search: z
@@ -27,7 +26,7 @@ const createBodySchema = z.object({
     .min(1)
     .max(32)
     .transform((v) => v.trim().toUpperCase())
-    .pipe(z.string().regex(CODE_REGEX, "code must match ^[A-Z0-9_]{1,32}$")),
+    .pipe(entityCodeSchema),
   name: z.string().min(1).max(150),
   rfc: optionalRfcSchema,
   licenseNumber: z.string().min(1).max(50),
@@ -85,7 +84,8 @@ export class DriversController {
       const driver = await this.getUseCase.execute(parsed.data);
       return NextResponse.json(driver);
     } catch (err) {
-      if (err instanceof DriverNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[DriverNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -100,7 +100,8 @@ export class DriversController {
       const driver = await this.createUseCase.execute(parsed.data);
       return NextResponse.json(driver, { status: 201 });
     } catch (err) {
-      if (err instanceof DriverCodeAlreadyInUseError) return NextResponse.json({ error: err.message }, { status: 409 });
+      const mapped = mapDomainError(err, [[DriverCodeAlreadyInUseError, 409]]);
+      if (mapped) return mapped;
       throw err;
     }
   }
@@ -119,7 +120,8 @@ export class DriversController {
       const driver = await this.updateUseCase.execute(idParsed.data, parsed.data);
       return NextResponse.json(driver);
     } catch (err) {
-      if (err instanceof DriverNotFoundError) return NextResponse.json({ error: err.message }, { status: 404 });
+      const mapped = mapDomainError(err, [[DriverNotFoundError, 404]]);
+      if (mapped) return mapped;
       throw err;
     }
   }

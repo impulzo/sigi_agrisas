@@ -9,6 +9,7 @@ import { UserNotFoundError } from "@/modules/users/domain/errors/UserNotFoundErr
 import { EmailAlreadyInUseError } from "@/modules/users/domain/errors/EmailAlreadyInUseError";
 import { RoleNotFoundError } from "@/modules/rbac/domain/errors/RoleNotFoundError";
 import { resolveAvatarUrl } from "@/modules/users/domain/utils/avatarUrl";
+import { isPrismaUniqueError, isPrismaNotFoundError } from "@/shared/infrastructure/prisma/errors";
 
 type PrismaUserWithRoles = {
   id: string;
@@ -33,14 +34,6 @@ function toAdminUser(u: PrismaUserWithRoles): AdminUser {
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
   });
-}
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
-}
-
-function isPrismaNotFoundError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2025";
 }
 
 function isPrismaFkConstraintError(err: unknown): boolean {

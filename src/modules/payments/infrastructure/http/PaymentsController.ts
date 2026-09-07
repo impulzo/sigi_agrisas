@@ -34,6 +34,7 @@ import { PaymentHistoryItem } from "../../application/ports/PaymentRepository";
 import { BranchScopeViolationError } from "../../domain/errors/BranchScopeViolationError";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
+import { SaleNotFoundError } from "@/modules/pos/domain/errors/SaleNotFoundError";
 
 const uuidSchema = z.string().uuid("Invalid ID format");
 
@@ -162,7 +163,7 @@ export class PaymentsController {
       if (err instanceof InactiveResourceError) {
         return NextResponse.json({ error: err.message }, { status: 400 });
       }
-      if (err instanceof Error && err.message.includes("not found")) {
+      if (err instanceof SaleNotFoundError) {
         return NextResponse.json({ error: err.message }, { status: 404 });
       }
       throw err;
@@ -368,7 +369,7 @@ export class PaymentsController {
         lineBalances: result.lineBalances,
       });
     } catch (err) {
-      if (err instanceof Error && err.message.includes("not found")) {
+      if (err instanceof SaleNotFoundError) {
         return NextResponse.json({ error: err.message }, { status: 404 });
       }
       throw err;

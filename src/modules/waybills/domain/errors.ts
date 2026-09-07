@@ -46,30 +46,11 @@ export class WaybillNotStampedError extends Error {
   }
 }
 
-export class FacturamaStampError extends Error {
-  readonly detail: string;
-  constructor(detail: string) {
-    super(`Facturama stamp error: ${detail}`);
-    this.name = "FacturamaStampError";
-    this.detail = detail;
-  }
-}
-
-export class FacturamaCancelError extends Error {
-  readonly detail: string;
-  constructor(detail: string) {
-    super(`Facturama cancel error: ${detail}`);
-    this.name = "FacturamaCancelError";
-    this.detail = detail;
-  }
-}
-
-export class BranchScopeViolationError extends Error {
-  constructor() {
-    super("Branch scope violation");
-    this.name = "BranchScopeViolationError";
-  }
-}
+export {
+  FacturamaStampError,
+  FacturamaCancelError,
+  BranchScopeViolationError,
+} from "@/shared/domain/errors/facturama";
 
 export class ProductRequiredForSimpleTransferError extends Error {
   readonly itemIndex: number;

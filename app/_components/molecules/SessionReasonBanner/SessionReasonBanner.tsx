@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Icon } from "../../atoms/Icon/Icon";
 
 interface Props {
   reason: "inactivity" | "session_lost";
+  onDismiss: () => void;
 }
 
 const COPY: Record<Props["reason"], string> = {
@@ -17,9 +17,7 @@ const STYLE: Record<Props["reason"], string> = {
   session_lost: "bg-error-container text-on-error-container",
 };
 
-export function SessionReasonBanner({ reason }: Props) {
-  const router = useRouter();
-
+export function SessionReasonBanner({ reason, onDismiss }: Props) {
   return (
     <div role="alert" className={`flex items-center justify-between gap-3 rounded-md px-4 py-3 mb-4 text-sm ${STYLE[reason]}`}>
       <Icon name={reason === "inactivity" ? "info" : "warning"} className="text-base" />
@@ -28,7 +26,7 @@ export function SessionReasonBanner({ reason }: Props) {
         type="button"
         aria-label="Cerrar aviso"
         className="flex-shrink-0"
-        onClick={() => router.replace("/auth/login")}
+        onClick={onDismiss}
       >
         <Icon name="close" className="text-base" />
       </button>

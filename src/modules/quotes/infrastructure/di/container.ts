@@ -4,6 +4,7 @@ import { PrismaSaleRepository } from "@/modules/pos/infrastructure/repositories/
 import { PrismaPosLookupService } from "@/modules/pos/infrastructure/repositories/PrismaPosLookupService";
 import { PrismaTicketSettingsRepository } from "@/modules/settings/infrastructure/repositories/PrismaTicketSettingsRepository";
 import { GetTicketSettingsUseCase } from "@/modules/settings/application/use-cases/GetTicketSettingsUseCase";
+import { adminNotificationService } from "@/shared/infrastructure/di/adminNotificationContainer";
 import { ListQuotesUseCase } from "@/modules/quotes/application/use-cases/ListQuotesUseCase";
 import { GetQuoteUseCase } from "@/modules/quotes/application/use-cases/GetQuoteUseCase";
 import { CreateQuoteUseCase } from "@/modules/quotes/application/use-cases/CreateQuoteUseCase";
@@ -21,7 +22,7 @@ import { isBranchScopedInventory } from "@/shared/infrastructure/config/inventor
 // instantiate their own thin wrappers around the shared `prisma` singleton;
 // the resulting state is identical because they all delegate to the same DB.
 export const quoteRepo = new PrismaQuoteRepository(prisma);
-const saleRepo = new PrismaSaleRepository(prisma);
+const saleRepo = new PrismaSaleRepository(prisma, adminNotificationService);
 const lookups = new PrismaPosLookupService(prisma);
 const ticketSettingsRepo = new PrismaTicketSettingsRepository(prisma);
 const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketSettingsRepo);

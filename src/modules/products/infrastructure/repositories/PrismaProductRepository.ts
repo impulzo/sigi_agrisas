@@ -10,6 +10,7 @@ import { Product } from "../../domain/entities/Product";
 import { ProductNotFoundError } from "../../domain/errors/ProductNotFoundError";
 import { ProductCodeAlreadyInUseError } from "../../domain/errors/ProductCodeAlreadyInUseError";
 import { resolveUnitDescriptions } from "@/shared/infrastructure/sat-codes/resolveUnitDescriptions";
+import { isPrismaUniqueError, isPrismaNotFoundError } from "@/shared/infrastructure/prisma/errors";
 
 const INCLUDE_WITH_RELATIONS = {
   department: { select: { name: true, providerId: true, provider: { select: { id: true, name: true } } } },
@@ -58,20 +59,6 @@ function toProductWithDepartment(
   };
 }
 
-function isPrismaUniqueError(err: unknown, target?: string): boolean {
-  if (typeof err !== "object" || err === null) return false;
-  const e = err as { code?: string; meta?: { target?: string[] | string } };
-  if (e.code !== "P2002") return false;
-  if (!target) return true;
-  const t = e.meta?.target;
-  if (Array.isArray(t)) return t.some((f) => f.includes(target));
-  if (typeof t === "string") return t.includes(target);
-  return false;
-}
-
-function isPrismaNotFoundError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2025";
-}
 
 
 export class PrismaProductRepository implements ProductRepository {

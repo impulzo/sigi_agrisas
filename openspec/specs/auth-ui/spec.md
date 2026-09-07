@@ -21,28 +21,15 @@ La ruta `/auth/login` SHALL ser pública y accesible sin access token. El `AuthM
 
 ---
 
-### Requirement: Página de registro accesible sin autenticación
-La ruta `/auth/register` SHALL ser pública y accesible sin access token. El `AuthMiddlewareAdapter` MUST incluir `/auth/register` en su lista `exactPublicPaths`.
-
-#### Scenario: Usuario no autenticado accede a /auth/register
-- **WHEN** un usuario sin token válido navega a `/auth/register`
-- **THEN** el sistema muestra la página de registro sin redirigir
-
-#### Scenario: Usuario autenticado accede a /auth/register
-- **WHEN** un usuario con cookie `refreshToken` válida navega a `/auth/register`
-- **THEN** el sistema redirige a `/pos` server-side antes de renderizar
-
----
-
 ### Requirement: Layout split-panel compartido entre login y registro
-Ambas páginas SHALL usar el mismo `app/(public)/auth/layout.tsx` — panel izquierdo únicamente con el logo `logo.png` (reemplazando la ilustración SVG agrícola, el título "Agrisas" y el subtítulo "Gestión agrícola inteligente" previos, ninguno de los tres se renderiza) sobre un fondo en gradiente verde claro que permite distinguir el logo, panel derecho con el slot `children` para el formulario. El layout SHALL ser un Server Component.
+Las páginas públicas de autenticación restantes (`/auth/login`, `/auth/set-password`) SHALL usar el mismo `app/(public)/auth/layout.tsx` — panel izquierdo únicamente con el logo `logo.png` sobre un fondo en gradiente verde claro que permite distinguir el logo, panel derecho con el slot `children` para el formulario. El layout SHALL ser un Server Component.
 
 #### Scenario: Vista en pantalla ancha (≥1024px)
-- **WHEN** el usuario visualiza `/auth/login` o `/auth/register` en pantalla ≥1024px
+- **WHEN** el usuario visualiza `/auth/login` o `/auth/set-password` en pantalla ≥1024px
 - **THEN** el layout muestra dos columnas de 50% cada una (logo izquierda, formulario derecha)
 
 #### Scenario: Vista en pantalla pequeña (<1024px)
-- **WHEN** el usuario visualiza `/auth/login` o `/auth/register` en pantalla <1024px
+- **WHEN** el usuario visualiza `/auth/login` o `/auth/set-password` en pantalla <1024px
 - **THEN** el layout apila los paneles verticalmente (logo arriba, formulario abajo)
 
 #### Scenario: Layout es Server Component
@@ -50,7 +37,7 @@ Ambas páginas SHALL usar el mismo `app/(public)/auth/layout.tsx` — panel izqu
 - **THEN** no contiene la directiva `"use client"`
 
 #### Scenario: Logo reemplaza ilustración, título y subtítulo en el panel izquierdo
-- **WHEN** un visitante no autenticado visualiza `/auth/login` o `/auth/register`
+- **WHEN** un visitante no autenticado visualiza `/auth/login` o `/auth/set-password`
 - **THEN** el panel izquierdo muestra únicamente la imagen `logo.png` (servida desde `/public/logo.png`); ni el `<svg>` agrícola, ni el `<h1>Agrisas</h1>`, ni el texto "Gestión agrícola inteligente" se renderizan
 
 #### Scenario: Fondo del panel izquierdo permite distinguir el logo
@@ -80,27 +67,6 @@ El `LoginForm` SHALL incluir campos de correo electrónico y contraseña con val
 
 ---
 
-### Requirement: Formulario de registro con validación Zod
-El `RegisterForm` SHALL incluir campos de nombre, correo electrónico y contraseña con validación en tiempo real basada en `registerSchema` de Zod.
-
-#### Scenario: Campo nombre vacío al perder foco
-- **WHEN** el usuario abandona el campo nombre sin escribir nada
-- **THEN** se muestra el mensaje "El nombre es requerido"
-
-#### Scenario: Email inválido en registro
-- **WHEN** el usuario escribe un email con formato inválido
-- **THEN** se muestra el mensaje "Correo inválido"
-
-#### Scenario: Contraseña menor a 8 caracteres en registro
-- **WHEN** el usuario escribe una contraseña con menos de 8 caracteres
-- **THEN** se muestra el mensaje "Mínimo 8 caracteres"
-
-#### Scenario: Submit válido del formulario de registro
-- **WHEN** todos los campos son válidos y el usuario hace clic en "Crear Cuenta"
-- **THEN** el botón se deshabilita, aparece un spinner y se llama a `POST /api/v1/auth/register`
-
----
-
 ### Requirement: Integración del formulario de login con el endpoint versionado
 El service `login` SHALL llamar a `POST /api/v1/auth/login` con `{ email, password }` y manejar la respuesta vía `useLoginForm`.
 
@@ -115,36 +81,6 @@ El service `login` SHALL llamar a `POST /api/v1/auth/login` con `{ email, passwo
 #### Scenario: Error de servidor en login
 - **WHEN** el endpoint devuelve 5xx o la red falla
 - **THEN** el service lanza `NetworkError` y el hook muestra "Error al iniciar sesión. Intenta de nuevo." con el botón rehabilitado
-
----
-
-### Requirement: Integración del formulario de registro con el endpoint versionado
-El service `register` SHALL llamar a `POST /api/v1/auth/register` con `{ name, email, password }` y manejar la respuesta vía `useRegisterForm`. El endpoint SHALL devolver `{ accessToken, user: { id, name, email } }` y el hook SHALL almacenar el `accessToken` en `sessionStorage`.
-
-#### Scenario: Registro exitoso
-- **WHEN** el endpoint devuelve 201 con `{ accessToken, user: { id, name, email } }`
-- **THEN** el token se guarda en `sessionStorage['accessToken']` y el usuario es redirigido a `/`
-
-#### Scenario: Email ya registrado
-- **WHEN** el endpoint devuelve 409
-- **THEN** el service lanza `EmailAlreadyExistsError` y el hook muestra "Este correo ya está registrado"; el botón se rehabilita
-
-#### Scenario: Error de servidor en registro
-- **WHEN** el endpoint devuelve 5xx o la red falla
-- **THEN** el service lanza `NetworkError` y el hook muestra "Error al crear la cuenta. Intenta de nuevo."
-
----
-
-### Requirement: Navegación entre login y registro
-Ambos bloques SHALL incluir un enlace funcional con `next/link` para navegar entre las pantallas de autenticación.
-
-#### Scenario: Ir a registro desde login
-- **WHEN** el usuario hace clic en "Regístrate aquí" en `/auth/login`
-- **THEN** el usuario navega a `/auth/register` usando `<Link href="/auth/register">`
-
-#### Scenario: Ir a login desde registro
-- **WHEN** el usuario hace clic en "Inicia sesión" en `/auth/register`
-- **THEN** el usuario navega a `/auth/login` usando `<Link href="/auth/login">`
 
 ---
 

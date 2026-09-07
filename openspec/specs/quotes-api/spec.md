@@ -101,7 +101,9 @@ If the caller HAS `branches:access_all`: `?branchId=` is honored as a filter; ab
 ### Requirement: Get quote detail
 The system SHALL expose `GET /api/v1/admin/quotes/:id` that returns a single quote with its items. Requires `quotes:read`. Returns HTTP 404 if not found. Branch scoping applies (callers without `branches:access_all` can only fetch quotes whose `branchId === x-user-branch-id`).
 
-`QuoteDetailDto` extends `QuoteDto` with `items: QuoteItemDto[]`. Each `QuoteItemDto` includes `id`, `productId`, `productPriceId` (or `null`), `productCodeSnapshot`, `productNameSnapshot`, `priceNameSnapshot`, `quantity`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`, `lineSubtotal`, `lineTax`, `lineTotal`.
+`QuoteDetailDto` extends `QuoteDto` with `items: QuoteItemDto[]`. Each `QuoteItemDto` includes `id`, `productId`, `productPriceId` (or `null`), `productCodeSnapshot`, `productNameSnapshot`, `priceNameSnapshot`, `quantity`, `unitPrice`, `discountPct`, `ivaRate`, `iepsRate`, `lineSubtotal`, `lineIva`, `lineIeps`, `lineTax`, `lineTotal`.
+
+`lineIva` and `lineIeps` are derived fields — `QuoteItem` only persists `lineSubtotal`, `lineTax`, and `lineTotal`. The mapper SHALL compute `lineIva = roundHalfToEven(lineSubtotal * (ivaRate ?? 0), 4)` and `lineIeps = roundHalfToEven(lineSubtotal * (iepsRate ?? 0), 4)`, using the same banker's-rounding function (`roundHalfToEven`, half-to-even at 4 decimals) that `QuoteTotalsCalculator` uses when the line was first computed — never `Math.round` or any other rounding mode — so that `lineIva + lineIeps` always equals the persisted `lineTax` for that line.
 
 The detail SHALL include `isExpired: boolean` (true if `status='authorized' AND expires_at < NOW()`) as a computed convenience flag for the UI.
 
@@ -164,6 +166,10 @@ The endpoint SHALL accept an optional query parameter `format` with allowed valu
 #### Scenario: PDF uses brand color palette
 - **WHEN** `format=pdf` is requested
 - **THEN** the table header, alternating row, and totals band backgrounds in the generated PDF match the shared `pdfTheme` brand colors, not the previous arbitrary grays
+
+#### Scenario: lineIva and lineIeps use the same rounding as lineTax
+- **WHEN** a quote item has `lineSubtotal = 100.0002` and `iepsRate = 0.25` (a value where half-up and half-to-even rounding disagree at the 4th decimal)
+- **THEN** the returned `lineIeps` SHALL equal `roundHalfToEven(100.0002 * 0.25, 4) = 25.0000`, and `lineIva + lineIeps` SHALL equal the persisted `lineTax` for that item — never the half-up result `25.0001`
 
 ### Requirement: Create quote
 The system SHALL expose `POST /api/v1/admin/quotes` that emits a new quote in `draft` status. Requires `quotes:create`. Required body:

@@ -1,12 +1,6 @@
 import { GetCsdStatusUseCase } from "../../../../src/modules/billing/application/use-cases/GetCsdStatusUseCase";
-import { getEmitterFiscalSettings } from "@/shared/infrastructure/emitter/emitterFiscalSettingsStore";
 import type { FacturamaGateway, FacturamaCsdStatus } from "../../../../src/modules/billing/application/ports/FacturamaGateway";
-
-jest.mock("@/shared/infrastructure/emitter/emitterFiscalSettingsStore", () => ({
-  getEmitterFiscalSettings: jest.fn(),
-}));
-
-const mockedGet = getEmitterFiscalSettings as jest.Mock;
+import type { EmitterFiscalSettingsStore } from "../../../../src/modules/billing/application/ports/EmitterFiscalSettingsStore";
 
 function makeGateway(status: FacturamaCsdStatus): FacturamaGateway {
   return {
@@ -18,15 +12,18 @@ function makeGateway(status: FacturamaCsdStatus): FacturamaGateway {
   };
 }
 
-describe("GetCsdStatusUseCase", () => {
-  beforeEach(() => {
-    mockedGet.mockReset();
-  });
+function makeStore(getResult: Awaited<ReturnType<EmitterFiscalSettingsStore["get"]>>): EmitterFiscalSettingsStore {
+  return {
+    get: jest.fn().mockResolvedValue(getResult),
+    upsert: jest.fn(),
+  };
+}
 
+describe("GetCsdStatusUseCase", () => {
   it("merges Facturama status with persisted fiscal settings", async () => {
-    mockedGet.mockResolvedValue({ legalName: "Agrisas", fiscalRegime: "601", zipCode: "83000", address: "Calle Falsa 123" });
+    const store = makeStore({ legalName: "Agrisas", fiscalRegime: "601", zipCode: "83000", address: "Calle Falsa 123" });
     const gateway = makeGateway({ rfc: "XAXX010101000", expiresAt: "2027-01-01", isValid: true });
-    const useCase = new GetCsdStatusUseCase(gateway);
+    const useCase = new GetCsdStatusUseCase(gateway, store);
 
     const result = await useCase.execute();
 
@@ -42,9 +39,9 @@ describe("GetCsdStatusUseCase", () => {
   });
 
   it("returns null fiscal fields when never captured", async () => {
-    mockedGet.mockResolvedValue(null);
+    const store = makeStore(null);
     const gateway = makeGateway({ rfc: "XAXX010101000", isValid: true });
-    const useCase = new GetCsdStatusUseCase(gateway);
+    const useCase = new GetCsdStatusUseCase(gateway, store);
 
     const result = await useCase.execute();
 
