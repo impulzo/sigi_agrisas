@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { useCurrentUser } from "../../../../app/_hooks/useCurrentUser";
 
 function makeToken(payload: object): string {
@@ -10,12 +10,12 @@ function makeToken(payload: object): string {
   return `${header}.${body}.sig`;
 }
 
-function makeResponse(body: unknown) {
+function makeResponse(body: unknown, opts?: { ok?: boolean; status?: number }) {
   return {
-    ok: true,
-    status: 200,
+    ok: opts?.ok ?? true,
+    status: opts?.status ?? 200,
     json: () => Promise.resolve(body),
-    clone: () => makeResponse(body),
+    clone: () => makeResponse(body, opts),
   };
 }
 
@@ -96,5 +96,27 @@ describe("useCurrentUser", () => {
     expect(result.current.can("roles:read")).toBe("loading");
     resolve({ permissions: ["roles:read"] });
     await waitFor(() => expect(result.current.can("roles:read")).toBe(true));
+  });
+
+  it("no cachea el resultado cuando la respuesta HTTP no es ok (ej. 403 por guard mal configurado)", async () => {
+    sessionStorage.setItem(
+      "accessToken",
+      makeToken({ sub: "uc-test-403-01", email: "e@b.com", roles: ["tienda_zarioz"], exp: 9999999999 })
+    );
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(makeResponse({ error: "Forbidden", required: "users:read" }, { ok: false, status: 403 }))
+      .mockResolvedValueOnce(makeResponse({ permissions: ["sales:read"] }));
+    global.fetch = fetchMock as jest.Mock;
+
+    const { result } = renderHook(() => useCurrentUser());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.can("sales:read")).toBe(false));
+
+    act(() => {
+      result.current.refresh();
+    });
+    await waitFor(() => expect(result.current.can("sales:read")).toBe(true));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
