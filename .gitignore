@@ -103,3 +103,4 @@ lerna-debug.log*
 
 # local MCP server config (may reference production project refs / credentials)
 .mcp.json
+.env*

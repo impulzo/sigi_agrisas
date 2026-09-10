@@ -29,14 +29,19 @@ async function fetchPermissions(userId: string): Promise<Set<string>> {
   if (cached?.promise) return cached.promise;
 
   const promise = authFetch(`/api/v1/admin/users/${userId}/permissions`)
-    .then((res) => res.json())
-    .then((body: { permissions: string[] }) => {
-      const permissions = new Set(body.permissions ?? []);
-      permissionsCache.set(userId, {
-        permissions,
-        expiresAt: Date.now() + CACHE_TTL_MS,
+    .then((res) => {
+      if (!res.ok) {
+        permissionsCache.delete(userId);
+        return new Set<string>();
+      }
+      return res.json().then((body: { permissions: string[] }) => {
+        const permissions = new Set(body.permissions ?? []);
+        permissionsCache.set(userId, {
+          permissions,
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        });
+        return permissions;
       });
-      return permissions;
     })
     .catch(() => {
       permissionsCache.delete(userId);
