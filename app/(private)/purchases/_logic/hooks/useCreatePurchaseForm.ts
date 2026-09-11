@@ -220,8 +220,15 @@ export function useCreatePurchaseForm(branchId: string, isCreditByPaymentMethod:
     [lines, totals]
   );
 
+  const linesValid = lines.every((l) => Boolean(l.lotNumber) === Boolean(l.expirationDate));
+
   const canSubmit =
-    Boolean(providerId || newProvider) && Boolean(paymentMethodId) && lines.length > 0 && !isSubmitting;
+    Boolean(branchId) &&
+    Boolean(providerId || newProvider) &&
+    Boolean(paymentMethodId) &&
+    lines.length > 0 &&
+    linesValid &&
+    !isSubmitting;
 
   const clearSubmitError = useCallback(() => setSubmitError(null), []);
 

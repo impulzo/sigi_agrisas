@@ -30,6 +30,7 @@ export function PurchaseLineRow({
   onUpdateManufactureDate,
   onRemove,
 }: PurchaseLineRowProps) {
+  const lotExpirationMismatch = Boolean(line.lotNumber) !== Boolean(line.expirationDate);
   const [quantityDraft, setQuantityDraft] = useState(String(line.quantity));
   const [unitCostDraft, setUnitCostDraft] = useState(String(line.unitCost));
   const quantityFocusedRef = useRef(false);
@@ -129,8 +130,12 @@ export function PurchaseLineRow({
             type="text"
             value={line.lotNumber}
             onChange={(e) => onUpdateLot(line.id, e.target.value)}
-            placeholder="Opcional"
-            className="w-28 rounded-sm border border-outline px-2 py-1 text-body-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            placeholder="Opcional (junto con caducidad)"
+            className={`w-28 rounded-sm border px-2 py-1 text-body-sm focus:outline-none focus:ring-1 ${
+              lotExpirationMismatch
+                ? "border-error focus:border-error focus:ring-error"
+                : "border-outline focus:border-primary focus:ring-primary"
+            }`}
           />
         </div>
 
@@ -140,7 +145,11 @@ export function PurchaseLineRow({
             type="date"
             value={line.expirationDate}
             onChange={(e) => onUpdateExpiration(line.id, e.target.value)}
-            className="rounded-sm border border-outline px-2 py-1 text-body-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className={`rounded-sm border px-2 py-1 text-body-sm tabular-nums focus:outline-none focus:ring-1 ${
+              lotExpirationMismatch
+                ? "border-error focus:border-error focus:ring-error"
+                : "border-outline focus:border-primary focus:ring-primary"
+            }`}
           />
         </div>
 
@@ -158,6 +167,10 @@ export function PurchaseLineRow({
           {fmt(line.lineTotal)}
         </span>
       </div>
+
+      {lotExpirationMismatch && (
+        <p className="text-label-sm text-error">Captura lote y caducidad juntos, o deja ambos vacíos.</p>
+      )}
     </div>
   );
 }

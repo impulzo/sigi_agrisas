@@ -23,6 +23,7 @@ import {
   PurchasePayForbiddenError,
   PurchasePayCancelForbiddenError,
   PurchaseScopingForbiddenError,
+  PurchaseValidationError,
 } from "../../../../../../../app/(private)/purchases/_logic/errors";
 import { NetworkError } from "../../../../../../../app/_lib/authFetch";
 
@@ -176,6 +177,14 @@ describe("createPurchase", () => {
     const { ForbiddenError } = await import("../../../../../../../app/_lib/authFetch");
     const fetch = mockFetchThrow(new ForbiddenError("purchases:create"));
     await expect(createPurchase(body, fetch as never)).rejects.toBeInstanceOf(PurchaseCreateForbiddenError);
+  });
+
+  it("lanza PurchaseValidationError con el mensaje real del servidor en 400 no mapeado", async () => {
+    const fetch = mockFetch(400, { error: "lotNumber and expirationDate must be provided together" });
+    await expect(createPurchase(body, fetch as never)).rejects.toBeInstanceOf(PurchaseValidationError);
+    await expect(createPurchase(body, fetch as never)).rejects.toMatchObject({
+      message: "lotNumber and expirationDate must be provided together",
+    });
   });
 });
 
