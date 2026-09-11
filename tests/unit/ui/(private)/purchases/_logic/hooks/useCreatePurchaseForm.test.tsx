@@ -80,6 +80,42 @@ describe("useCreatePurchaseForm", () => {
     expect(result.current.canSubmit).toBe(true);
   });
 
+  it("canSubmit false cuando branchId está vacío", () => {
+    const { result } = renderHook(() => useCreatePurchaseForm("", isCreditByPaymentMethod));
+    act(() => result.current.setProvider("prov1", null));
+    act(() => result.current.setPaymentMethodId("pm-cash"));
+    act(() => result.current.addLine(PRODUCT));
+    expect(result.current.canSubmit).toBe(false);
+  });
+
+  it("canSubmit false cuando una línea tiene caducidad sin lote", () => {
+    const { result } = renderHook(() => useCreatePurchaseForm("branch-1", isCreditByPaymentMethod));
+    act(() => result.current.setProvider("prov1", null));
+    act(() => result.current.setPaymentMethodId("pm-cash"));
+    act(() => result.current.addLine(PRODUCT));
+    act(() => result.current.updateExpiration(PRODUCT.id, "2026-12-31"));
+    expect(result.current.canSubmit).toBe(false);
+  });
+
+  it("canSubmit false cuando una línea tiene lote sin caducidad", () => {
+    const { result } = renderHook(() => useCreatePurchaseForm("branch-1", isCreditByPaymentMethod));
+    act(() => result.current.setProvider("prov1", null));
+    act(() => result.current.setPaymentMethodId("pm-cash"));
+    act(() => result.current.addLine(PRODUCT));
+    act(() => result.current.updateLot(PRODUCT.id, "LOTE-1"));
+    expect(result.current.canSubmit).toBe(false);
+  });
+
+  it("canSubmit true cuando lote y caducidad se capturan juntos", () => {
+    const { result } = renderHook(() => useCreatePurchaseForm("branch-1", isCreditByPaymentMethod));
+    act(() => result.current.setProvider("prov1", null));
+    act(() => result.current.setPaymentMethodId("pm-cash"));
+    act(() => result.current.addLine(PRODUCT));
+    act(() => result.current.updateLot(PRODUCT.id, "LOTE-1"));
+    act(() => result.current.updateExpiration(PRODUCT.id, "2026-12-31"));
+    expect(result.current.canSubmit).toBe(true);
+  });
+
   it("submit() llama createPurchase y redirige al detalle en éxito", async () => {
     const created = { id: "new-purchase" } as never;
     jest.spyOn(servicesModule, "createPurchase").mockResolvedValue(created);

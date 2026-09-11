@@ -22,6 +22,7 @@ import {
   ProductNotFoundOrInactiveError,
   PurchaseItemsEmptyError,
   SatUuidAlreadyExistsError,
+  PurchaseValidationError,
 } from "../_logic/errors";
 
 const MX = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 });
@@ -314,10 +315,12 @@ export function CreatePurchasePage() {
             {form.submitError instanceof ProductNotFoundOrInactiveError && "Uno de los productos agregados no existe o está inactivo."}
             {form.submitError instanceof PurchaseItemsEmptyError && "Agrega al menos un producto."}
             {form.submitError instanceof SatUuidAlreadyExistsError && form.submitError.message}
+            {form.submitError instanceof PurchaseValidationError && form.submitError.message}
             {!(form.submitError instanceof ProviderNotFoundOrInactiveError) &&
               !(form.submitError instanceof ProductNotFoundOrInactiveError) &&
               !(form.submitError instanceof PurchaseItemsEmptyError) &&
               !(form.submitError instanceof SatUuidAlreadyExistsError) &&
+              !(form.submitError instanceof PurchaseValidationError) &&
               "Error al registrar la compra. Inténtalo de nuevo."}
           </p>
         )}
