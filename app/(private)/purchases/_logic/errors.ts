@@ -83,3 +83,7 @@ export class PurchasePayCancelForbiddenError extends Error {
 export class PurchaseScopingForbiddenError extends Error {
   constructor() { super("Sin acceso a esa sucursal"); this.name = "PurchaseScopingForbiddenError"; }
 }
+
+export class PurchaseValidationError extends Error {
+  constructor(message: string) { super(message); this.name = "PurchaseValidationError"; }
+}

@@ -57,7 +57,7 @@ const purchaseItemSchema = z
 
 const newProviderSchema = z
   .object({
-    rfc: z.string().trim().regex(/^([A-ZÑ&]{3,4}\d{6}[A-Z\d]{3})$/, "RFC inválido").toUpperCase(),
+    rfc: z.string().trim().toUpperCase().regex(/^([A-ZÑ&]{3,4}\d{6}[A-Z\d]{3})$/, "RFC inválido"),
     name: z.string().trim().min(2).max(255),
     legalName: z.string().trim().max(255).nullable().optional(),
     taxRegime: z.string().trim().regex(/^\d{3}$/, "taxRegime debe ser 3 dígitos").nullable().optional(),

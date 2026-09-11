@@ -8,6 +8,7 @@ import {
   SatUuidAlreadyExistsError,
   PurchaseCreateForbiddenError,
   PurchaseScopingForbiddenError,
+  PurchaseValidationError,
 } from "../errors";
 import { mapPurchaseDetailDto } from "../_mappers";
 
@@ -39,7 +40,7 @@ export async function createPurchase(body: CreatePurchaseRequest, fetchImpl = au
     if (errorBody.error === "Provider not found or inactive") throw new ProviderNotFoundOrInactiveError();
     if (errorBody.error === "Product not found or inactive") throw new ProductNotFoundOrInactiveError();
     if (errorBody.error === "Purchase must include at least one item") throw new PurchaseItemsEmptyError();
-    throw new NetworkError();
+    throw new PurchaseValidationError(errorBody.error || "Error al registrar la compra. Inténtalo de nuevo.");
   }
 
   if (!res.ok) throw new NetworkError();
