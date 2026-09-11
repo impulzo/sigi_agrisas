@@ -37,7 +37,7 @@ La página `/purchases` SHALL mostrar un listado paginado de compras con filtros
 
 ### Requirement: Registro de una compra desde la interfaz
 
-La página `/purchases/new` SHALL permitir capturar una compra completa: selección de proveedor (con búsqueda server-side y creación rápida), líneas de producto (producto, cantidad, costo unitario, descuento % opcional), forma de pago (contado/crédito desde el catálogo de formas de pago activas) y notas opcionales. Los totales SHALL calcularse en el cliente con la misma fórmula de redondeo half-to-even a 4 decimales que usa el backend. SHALL estar gateada por el permiso `purchases:create`.
+La página `/purchases/new` SHALL permitir capturar una compra completa: selección de proveedor (con búsqueda server-side y creación rápida), líneas de producto (producto, cantidad, costo unitario, descuento % opcional, lote y caducidad opcionales como par completo o ninguno), forma de pago (contado/crédito desde el catálogo de formas de pago activas), sucursal (sólo seleccionable cuando el usuario tiene `branches:access_all`; en cualquier otro caso viene fija de la sesión) y notas opcionales. Los totales SHALL calcularse en el cliente con la misma fórmula de redondeo half-to-even a 4 decimales que usa el backend. SHALL estar gateada por el permiso `purchases:create`.
 
 #### Scenario: Selector de proveedor con búsqueda y creación rápida
 - **WHEN** el usuario escribe en el selector de proveedor
@@ -62,6 +62,18 @@ La página `/purchases/new` SHALL permitir capturar una compra completa: selecci
 #### Scenario: Error de proveedor o producto inactivo mostrado inline
 - **WHEN** el backend responde 400 por proveedor o producto inactivo
 - **THEN** el formulario muestra un mensaje inline específico (no un error genérico) sin perder los datos capturados
+
+#### Scenario: Envío bloqueado por lote o caducidad incompletos en una línea
+- **WHEN** alguna línea de la compra tiene `lotNumber` capturado sin `expirationDate`, o `expirationDate` capturado sin `lotNumber`
+- **THEN** el botón de confirmar compra permanece deshabilitado y esa línea muestra un aviso indicando que lote y caducidad deben capturarse juntos o dejarse ambos vacíos
+
+#### Scenario: Envío bloqueado por sucursal sin elegir
+- **WHEN** el usuario tiene `branches:access_all` y no ha seleccionado ninguna sucursal en el formulario
+- **THEN** el botón de confirmar compra permanece deshabilitado
+
+#### Scenario: Cualquier error 400 no contemplado se muestra con el mensaje real del servidor
+- **WHEN** el backend responde 400 al confirmar la compra con un mensaje distinto a los casos ya mapeados de proveedor/producto inactivo o líneas vacías
+- **THEN** el formulario muestra el mensaje de error tal como lo devolvió el servidor, en vez de un mensaje genérico, sin perder los datos capturados
 
 ---
 
