@@ -18,7 +18,7 @@ export function buildPaymentHistoryWorkbook(data: PaymentHistoryReportResponseDt
   for (const p of data.payments) {
     rows.push([
       p.folioNumber,
-      p.saleFolioNumber,
+      p.saleFolioNumber ?? "Sin venta",
       p.customerName,
       p.branchCode,
       p.amount,

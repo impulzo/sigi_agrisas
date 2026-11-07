@@ -621,7 +621,7 @@ model Sale {
 
 model CustomerPayment {
   id                 String    @id @default(uuid())
-  saleId             String    @map("sale_id")
+  saleId             String?   @map("sale_id")
   customerId         String    @map("customer_id")
   userId             String    @map("user_id") @db.Uuid
   branchId           String    @map("branch_id")
@@ -636,7 +636,7 @@ model CustomerPayment {
   cancelledAt        DateTime? @map("cancelled_at")
   cancellationReason String?   @map("cancellation_reason") @db.Text
 
-  sale          Sale                  @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  sale          Sale?                 @relation(fields: [saleId], references: [id], onDelete: Restrict)
   customer      Customer              @relation(fields: [customerId], references: [id], onDelete: Restrict)
   user          User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
   branch        Branch                @relation(fields: [branchId], references: [id], onDelete: Restrict)

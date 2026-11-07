@@ -30,6 +30,8 @@ import * as XLSX from "xlsx";
 import { PaymentsController } from "@/modules/payments/infrastructure/http/PaymentsController";
 import { InMemoryPaymentRepository } from "@/modules/payments/infrastructure/repositories/InMemoryPaymentRepository";
 import { RegisterPaymentUseCase } from "@/modules/payments/application/use-cases/RegisterPaymentUseCase";
+import { RegisterAccountPaymentUseCase } from "@/modules/payments/application/use-cases/RegisterAccountPaymentUseCase";
+import { GetCustomerAccountDebtUseCase } from "@/modules/payments/application/use-cases/GetCustomerAccountDebtUseCase";
 import { CancelPaymentUseCase } from "@/modules/payments/application/use-cases/CancelPaymentUseCase";
 import { ListPaymentsUseCase } from "@/modules/payments/application/use-cases/ListPaymentsUseCase";
 import { GetPaymentUseCase } from "@/modules/payments/application/use-cases/GetPaymentUseCase";
@@ -85,7 +87,9 @@ function buildController(opts: { bypass?: boolean; repo?: InMemoryPaymentReposit
     new ListPaymentsBySaleUseCase(repo),
     new GetPaymentHistoryReportUseCase(repo),
     authz,
-    new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
+    new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()),
+    new RegisterAccountPaymentUseCase(repo),
+    new GetCustomerAccountDebtUseCase(repo)
   );
 }
 
@@ -233,7 +237,9 @@ describe("PaymentsController — register (POST /payments)", () => {
       new ListPaymentsBySaleUseCase(repo),
       new GetPaymentHistoryReportUseCase(repo),
       authz,
-      new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
+      new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()),
+      new RegisterAccountPaymentUseCase(repo),
+      new GetCustomerAccountDebtUseCase(repo)
     );
 
     // The sale is on BRANCH_ID, but user is on "other-branch"
@@ -402,7 +408,9 @@ describe("PaymentsController — cancel (POST /payments/:id/cancel)", () => {
       new ListPaymentsBySaleUseCase(repo),
       new GetPaymentHistoryReportUseCase(repo),
       restrictedAuthz,
-      new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
+      new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()),
+      new RegisterAccountPaymentUseCase(repo),
+      new GetCustomerAccountDebtUseCase(repo)
     );
 
     const res = await restrictedCtl.cancel(
@@ -462,7 +470,9 @@ describe("PaymentsController — list (GET /payments)", () => {
       new ListPaymentsBySaleUseCase(repo),
       new GetPaymentHistoryReportUseCase(repo),
       authz,
-      new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository())
+      new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()),
+      new RegisterAccountPaymentUseCase(repo),
+      new GetCustomerAccountDebtUseCase(repo)
     );
     const res = await controller.list(getReq("/payments", { "x-user-branch-id": "" }));
     expect(res.status).toBe(403);
@@ -577,6 +587,25 @@ describe("PaymentsController — history (GET /payments/history)", () => {
     expect(body.items[0].salePaymentStatus).toBe("partial");
   });
 
+  it("includes account payments (saleId=null) in history with null sale fields", async () => {
+    const repo = makeRepoWithAccountDebt();
+    const controller = buildController({ bypass: true, repo });
+    await controller.registerAccount(
+      postReq(`/customers/${CUSTOMER_ID}/payments`, { ...validAccountPaymentBody, branchId: BRANCH_ID }),
+      CUSTOMER_ID
+    );
+
+    const res = await controller.history(getReq("/payments/history", { "x-user-branch-id": "", "x-user-email": "admin@test.com" }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].saleId).toBeNull();
+    expect(body.items[0].saleFolioCode).toBeNull();
+    expect(body.items[0].saleTotal).toBeNull();
+    expect(body.items[0].salePaymentStatus).toBeNull();
+    expect(body.totals.totalAmountCompleted).toBe("200.0000");
+  });
+
   it("returns 200 with a valid xlsx workbook grouped by ticket (Historia #2)", async () => {
     const repo = makeRepo();
     const controller = buildController({ bypass: true, repo });
@@ -666,6 +695,156 @@ describe("PaymentsController — history (GET /payments/history)", () => {
   it("returns 400 on invalid pageSize param", async () => {
     const res = await buildController({ bypass: true }).history(
       getReq("/payments/history?pageSize=999", { "x-user-branch-id": "" })
+    );
+    expect(res.status).toBe(400);
+  });
+});
+
+function makeRepoWithAccountDebt() {
+  const repo = new InMemoryPaymentRepository();
+  repo.seedSale({
+    id: SALE_ID,
+    folioCode: "VNT-000001",
+    folioNumber: 1,
+    branchId: BRANCH_ID,
+    customerId: CUSTOMER_ID,
+    total: 300,
+    paidAmount: 0,
+    paymentStatus: "pending",
+    isCredit: true,
+    status: "completed",
+  });
+  // currentBalance=500: $300 de la venta pendiente + $200 sin ticket (accountDebt=200)
+  repo.seedCustomer({ id: CUSTOMER_ID, currentBalance: 500, creditLimit: 5000 });
+  return repo;
+}
+
+const validAccountPaymentBody = {
+  paymentMethodId: PM_ID,
+  folioId: FOLIO_ID,
+  amount: 200,
+  notes: null,
+};
+
+describe("PaymentsController — getAccountDebt (GET /customers/:id/payments)", () => {
+  it("returns currentBalance, pendingSales and accountDebt", async () => {
+    const repo = makeRepoWithAccountDebt();
+    const res = await buildController({ bypass: true, repo }).getAccountDebt(
+      getReq(`/customers/${CUSTOMER_ID}/payments`),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.currentBalance).toBe("500.0000");
+    expect(body.accountDebt).toBe("200.0000");
+    expect(body.pendingSales).toHaveLength(1);
+    expect(body.pendingSales[0].due).toBe("300.0000");
+  });
+
+  it("returns 403 when caller lacks payments:read", async () => {
+    const repo = makeRepoWithAccountDebt();
+    const res = await buildController({ bypass: false, repo }).getAccountDebt(
+      getReq(`/customers/${CUSTOMER_ID}/payments`, { "x-user-branch-id": "" }),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("PaymentsController — registerAccount (POST /customers/:id/payments)", () => {
+  it("returns 201 and decrements currentBalance without touching the pending sale", async () => {
+    const repo = makeRepoWithAccountDebt();
+    const res = await buildController({ bypass: true, repo }).registerAccount(
+      postReq(`/customers/${CUSTOMER_ID}/payments`, { ...validAccountPaymentBody, branchId: BRANCH_ID }),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.saleId).toBeNull();
+    expect(body.sale).toBeNull();
+    expect(body.amount).toBe("200.0000");
+  });
+
+  it("returns 409 PaymentExceedsAccountDebt when amount exceeds accountDebt", async () => {
+    const repo = makeRepoWithAccountDebt();
+    const res = await buildController({ bypass: true, repo }).registerAccount(
+      postReq(`/customers/${CUSTOMER_ID}/payments`, { ...validAccountPaymentBody, amount: 250, branchId: BRANCH_ID }),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("PaymentExceedsAccountDebt");
+    expect(body.due).toBe("200.0000");
+  });
+
+  it("returns 404 CustomerNotFound for an unknown customer", async () => {
+    const repo = makeRepoWithAccountDebt();
+    const ghostId = "99999999-9999-9999-9999-999999999999";
+    const res = await buildController({ bypass: true, repo }).registerAccount(
+      postReq(`/customers/${ghostId}/payments`, { ...validAccountPaymentBody, branchId: BRANCH_ID }),
+      ghostId
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 403 when user lacks payments:create", async () => {
+    const repo = makeRepoWithAccountDebt();
+    const res = await buildController({ bypass: false, repo }).registerAccount(
+      postReq(`/customers/${CUSTOMER_ID}/payments`, validAccountPaymentBody),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(403);
+  });
+
+  function makeCreateOnlyAuthz(): AuthorizationService {
+    return {
+      userCan: jest.fn((_userId: string, perm: string) => Promise.resolve(perm === "payments:create")),
+      listUserPermissions: jest.fn().mockResolvedValue([]),
+      invalidate: jest.fn(),
+      invalidateByRole: jest.fn().mockResolvedValue(undefined),
+    };
+  }
+
+  function buildCreateOnlyController(repo: InMemoryPaymentRepository): PaymentsController {
+    return new PaymentsController(
+      new RegisterPaymentUseCase(repo),
+      new CancelPaymentUseCase(repo),
+      new ListPaymentsUseCase(repo),
+      new GetPaymentUseCase(repo),
+      new ListPaymentsBySaleUseCase(repo),
+      new GetPaymentHistoryReportUseCase(repo),
+      makeCreateOnlyAuthz(),
+      new GetTicketSettingsUseCase(new InMemoryTicketSettingsRepository()),
+      new RegisterAccountPaymentUseCase(repo),
+      new GetCustomerAccountDebtUseCase(repo)
+    );
+  }
+
+  it("forces x-user-branch-id when the caller has no bypass and omits branchId in the body", async () => {
+    const repo = makeRepoWithAccountDebt();
+    const { branchId: _omit, ...bodyWithoutBranch } = validAccountPaymentBody as typeof validAccountPaymentBody & { branchId?: string };
+    const res = await buildCreateOnlyController(repo).registerAccount(
+      postReq(`/customers/${CUSTOMER_ID}/payments`, bodyWithoutBranch),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it("rejects a branchId in the body that does not match x-user-branch-id when the caller has no bypass", async () => {
+    const repo = makeRepoWithAccountDebt();
+    const otherBranchId = "88888888-8888-8888-8888-888888888888";
+    const res = await buildCreateOnlyController(repo).registerAccount(
+      postReq(`/customers/${CUSTOMER_ID}/payments`, { ...validAccountPaymentBody, branchId: otherBranchId }),
+      CUSTOMER_ID
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("requires branchId in the body when the caller has bypass and none is provided", async () => {
+    const repo = makeRepoWithAccountDebt();
+    const res = await buildController({ bypass: true, repo }).registerAccount(
+      postReq(`/customers/${CUSTOMER_ID}/payments`, validAccountPaymentBody),
+      CUSTOMER_ID
     );
     expect(res.status).toBe(400);
   });

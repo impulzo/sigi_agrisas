@@ -10,6 +10,7 @@ import { CatalogPagination } from "../../catalogs/_blocks/CatalogPagination";
 import { PaymentsToolbar } from "./PaymentsToolbar";
 import { PaymentsTable } from "./PaymentsTable";
 import { PaymentsEmpty } from "./PaymentsEmpty";
+import { RegisterGlobalPaymentModal } from "./RegisterGlobalPaymentModal";
 import { GroupedPaymentsTable } from "./GroupedPaymentsTable";
 import { PaymentStatusBadge } from "./PaymentStatusBadge";
 import { EmptyState } from "../../../_components/molecules/EmptyState/EmptyState";
@@ -45,7 +46,9 @@ export function PaymentsListPage() {
   const [to, setTo] = useState("");
   const [view, setView] = useState<"flat" | "grouped">("flat");
 
-  const { items, total, isLoading, error } = usePaymentsList({
+  const [showRegisterGlobal, setShowRegisterGlobal] = useState(false);
+
+  const { items, total, isLoading, error, refresh } = usePaymentsList({
     page,
     pageSize,
     status: status || undefined,
@@ -93,6 +96,7 @@ export function PaymentsListPage() {
   }
 
   return (
+    <>
     <PageShell
       title="Abonos"
       description="Historial de abonos registrados"
@@ -111,6 +115,7 @@ export function PaymentsListPage() {
           onFromChange={(v) => { setFrom(v); setPage(1); }}
           onToChange={(v) => { setTo(v); setPage(1); }}
           onReset={handleReset}
+          onOpenRegisterGlobal={() => setShowRegisterGlobal(true)}
         />
       }
     >
@@ -192,5 +197,12 @@ export function PaymentsListPage() {
         </>
       )}
     </PageShell>
+    {showRegisterGlobal && (
+      <RegisterGlobalPaymentModal
+        onSuccess={refresh}
+        onClose={() => setShowRegisterGlobal(false)}
+      />
+    )}
+    </>
   );
 }

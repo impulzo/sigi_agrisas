@@ -59,9 +59,24 @@ describe("groupPaymentsBySale", () => {
     expect(groups[0].salePaymentStatus).toBe("partial");
   });
 
-  it("falls back to empty strings when saleFolioCode/customerName are null", () => {
+  it("keeps saleFolioCode as null (missing join data) and falls back customerName to an empty string", () => {
     const groups = groupPaymentsBySale([makeItem({ saleFolioCode: null, customerName: null })]);
-    expect(groups[0].saleFolioCode).toBe("");
+    expect(groups[0].saleFolioCode).toBeNull();
     expect(groups[0].customerName).toBe("");
+  });
+
+  it("gives each account payment (saleId=null) its own group, never collapsed under a shared key", () => {
+    const items = [
+      makeItem({ id: "pay-acc-1", saleId: null, saleFolioCode: null, saleTotal: null, saleDueAmount: null, salePaymentStatus: null }),
+      makeItem({ id: "pay-acc-2", saleId: null, saleFolioCode: null, saleTotal: null, saleDueAmount: null, salePaymentStatus: null }),
+    ];
+    const groups = groupPaymentsBySale(items);
+
+    expect(groups).toHaveLength(2);
+    expect(groups[0].saleId).toBeNull();
+    expect(groups[0].payments).toHaveLength(1);
+    expect(groups[1].saleId).toBeNull();
+    expect(groups[1].payments).toHaveLength(1);
+    expect(groups[0].groupKey).not.toBe(groups[1].groupKey);
   });
 });

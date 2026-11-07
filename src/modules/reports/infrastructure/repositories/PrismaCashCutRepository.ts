@@ -14,6 +14,13 @@ export class PrismaCashCutRepository implements CashCutRepository {
   async findRows(filters: CashCutFilters): Promise<CashCutRawRow[]> {
     const where: Prisma.CustomerPaymentWhereInput = {
       status: "completed",
+      // Account payments (saleId=null, "abono a saldo general") have no
+      // invoice to prorate IVA against — this report's shape is inherently
+      // sale-centric (factura, saleTaxTotal/Subtotal/Total), so they are
+      // excluded here. They still appear in /payments and reduce
+      // customer.currentBalance normally; this is a known, deliberate gap
+      // in this specific report, not a data-loss bug.
+      saleId: { not: null },
       createdAt: { gte: filters.from, lte: endOfDay(filters.to) },
       ...(filters.branchId ? { branchId: filters.branchId } : {}),
       ...(filters.customerId ? { customerId: filters.customerId } : {}),
@@ -28,22 +35,22 @@ export class PrismaCashCutRepository implements CashCutRepository {
 
     return payments.map((p) => ({
       paymentId: p.id,
-      saleId: p.saleId,
+      saleId: p.saleId!,
       customerId: p.customerId,
       customerCode: p.customer.code,
       docto: p.folioCode,
-      factura: p.sale.folioCode,
+      factura: p.sale!.folioCode,
       customerName: p.customer.name,
-      facturaDate: p.sale.createdAt,
+      facturaDate: p.sale!.createdAt,
       amount: Number(p.amount),
       paymentMethodId: p.paymentMethodId,
       paymentMethodCode: p.paymentMethod.code,
       paymentMethodName: p.paymentMethod.name,
       reference: p.notes,
       collectedAt: p.createdAt,
-      saleTaxTotal: Number(p.sale.taxTotal),
-      saleSubtotal: Number(p.sale.subtotal),
-      saleTotal: Number(p.sale.total),
+      saleTaxTotal: Number(p.sale!.taxTotal),
+      saleSubtotal: Number(p.sale!.subtotal),
+      saleTotal: Number(p.sale!.total),
     }));
   }
 }

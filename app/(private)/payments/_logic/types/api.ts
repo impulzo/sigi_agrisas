@@ -19,7 +19,7 @@ export interface ProductSearchResultDto {
 
 export interface PaymentDto {
   id: string;
-  saleId: string;
+  saleId: string | null;
   saleFolioCode?: string | null;
   customerId?: string | null;
   customerName?: string | null;
@@ -39,10 +39,10 @@ export interface PaymentDto {
   createdAt: string;
   updatedAt: string;
   items?: PaymentItemDto[];
-  saleTotal: string;
-  salePaidAmount: string;
-  salePaymentStatus: "paid" | "partial" | "pending";
-  saleDueAmount: string;
+  saleTotal: string | null;
+  salePaidAmount: string | null;
+  salePaymentStatus: "paid" | "partial" | "pending" | null;
+  saleDueAmount: string | null;
 }
 
 export interface PaymentDetailDto extends PaymentDto {
@@ -69,6 +69,29 @@ export interface ListPaymentsResponse {
   pageSize: number;
 }
 
+export interface PendingSaleDto {
+  saleId: string;
+  folioCode: string;
+  total: string;
+  paidAmount: string;
+  due: string;
+  createdAt: string;
+}
+
+export interface AccountDebtDto {
+  currentBalance: string;
+  pendingSales: PendingSaleDto[];
+  accountDebt: string;
+}
+
+export interface RegisterAccountPaymentBody {
+  paymentMethodId: string;
+  folioId: string;
+  amount: number;
+  notes?: string | null;
+  branchId?: string | null;
+}
+
 export interface LineBalanceDto {
   saleItemId: string;
   productNameSnapshot: string;
@@ -89,7 +112,7 @@ export interface ListSalePaymentsResponse {
 
 export interface PaymentHistoryRowDto {
   id: string;
-  saleId: string;
+  saleId: string | null;
   saleFolioCode?: string | null;
   customerId?: string | null;
   customerName?: string | null;
@@ -102,10 +125,10 @@ export interface PaymentHistoryRowDto {
   amount: number;
   status: "completed" | "cancelled";
   createdAt: string;
-  saleTotal: string;
-  salePaidAmount: string;
-  salePaymentStatus: "paid" | "partial" | "pending";
-  saleDueAmount: string;
+  saleTotal: string | null;
+  salePaidAmount: string | null;
+  salePaymentStatus: "paid" | "partial" | "pending" | null;
+  saleDueAmount: string | null;
 }
 
 export interface PaymentHistoryReportDto {

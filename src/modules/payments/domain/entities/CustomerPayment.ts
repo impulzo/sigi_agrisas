@@ -7,7 +7,7 @@ export interface CustomerPaymentItemSnapshot {
 }
 
 export interface CustomerPaymentProps {
-  saleId: string;
+  saleId: string | null;
   customerId: string;
   userId: string;
   branchId: string;
@@ -26,7 +26,7 @@ export interface CustomerPaymentProps {
 
 export class CustomerPayment {
   readonly id: string;
-  readonly saleId: string;
+  readonly saleId: string | null;
   readonly customerId: string;
   readonly userId: string;
   readonly branchId: string;

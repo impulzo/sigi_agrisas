@@ -62,8 +62,8 @@ export interface AnticipoReceiptData {
     name: string;
     address: string | null;
   };
-  /** Comprobante fiscal al que se aplica el abono. */
-  sale: { folioCode: string; folioNumber: number };
+  /** Comprobante fiscal al que se aplica el abono; `null` si es un abono a saldo general (sin venta asociada). */
+  sale: { folioCode: string; folioNumber: number } | null;
 }
 
 export interface AccountStatementRepository {

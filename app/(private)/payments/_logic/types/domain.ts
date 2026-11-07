@@ -17,7 +17,7 @@ export interface LineBalance {
 
 export interface Payment {
   id: string;
-  saleId: string;
+  saleId: string | null;
   saleFolioCode?: string | null;
   customerId?: string | null;
   customerName?: string | null;
@@ -37,10 +37,10 @@ export interface Payment {
   createdAt: Date;
   updatedAt: Date;
   items?: PaymentItem[];
-  saleTotal: number;
-  salePaidAmount: number;
-  salePaymentStatus: SalePaymentStatus;
-  saleDueAmount: number;
+  saleTotal: number | null;
+  salePaidAmount: number | null;
+  salePaymentStatus: SalePaymentStatus | null;
+  saleDueAmount: number | null;
 }
 
 export interface PaymentDetail extends Payment {
@@ -56,6 +56,21 @@ export interface SalePaymentsData {
   total: number;
   paymentStatus: SalePaymentStatus;
   lineBalances: LineBalance[];
+}
+
+export interface PendingSale {
+  saleId: string;
+  folioCode: string;
+  total: number;
+  paidAmount: number;
+  due: number;
+  createdAt: Date;
+}
+
+export interface AccountDebt {
+  currentBalance: number;
+  pendingSales: PendingSale[];
+  accountDebt: number;
 }
 
 export interface PaymentFilters {

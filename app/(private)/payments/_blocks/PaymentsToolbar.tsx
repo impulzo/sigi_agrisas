@@ -20,6 +20,7 @@ interface PaymentsToolbarProps {
   onFromChange: (v: string) => void;
   onToChange: (v: string) => void;
   onReset: () => void;
+  onOpenRegisterGlobal: () => void;
 }
 
 export function PaymentsToolbar({
@@ -36,9 +37,11 @@ export function PaymentsToolbar({
   onFromChange,
   onToChange,
   onReset,
+  onOpenRegisterGlobal,
 }: PaymentsToolbarProps) {
   const { can } = useCurrentUser();
   const canReport = can("payments:report_read");
+  const canCreate = can("payments:create");
 
   const hasFilters = !!search || !!branchId || !!status || !!from || !!to;
 
@@ -120,6 +123,17 @@ export function PaymentsToolbar({
         >
           Historial
         </Link>
+      )}
+
+      {(canCreate === true || canCreate === "loading") && (
+        <Button
+          type="button"
+          variant="filled"
+          onClick={onOpenRegisterGlobal}
+          className="px-4 py-2 text-label-sm"
+        >
+          + Registrar abono
+        </Button>
       )}
     </div>
   );

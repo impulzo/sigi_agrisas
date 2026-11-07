@@ -29,4 +29,12 @@ describe("CustomerPayment.create", () => {
     expect(() => CustomerPayment.create("id-2", { ...base, amount: 0 })).toThrow("amount must be > 0");
     expect(() => CustomerPayment.create("id-3", { ...base, amount: -1 })).toThrow("amount must be > 0");
   });
+
+  it("creates a valid account payment (saleId=null, abono a saldo general)", () => {
+    const p = CustomerPayment.create("id-4", { ...base, saleId: null });
+    expect(p.saleId).toBeNull();
+    expect(p.customerId).toBe("cust-1");
+    expect(p.amount).toBe(300);
+    expect(p.status).toBe("completed");
+  });
 });

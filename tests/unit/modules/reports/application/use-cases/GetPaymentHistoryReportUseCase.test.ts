@@ -90,6 +90,22 @@ describe("GetPaymentHistoryReportUseCase", () => {
     expect(dto.payments[0].paymentId).toBe("p1");
   });
 
+  it("incluye abonos a saldo general (saleId=null) con saleFolioNumber null", async () => {
+    const rows = [
+      makeRow({ paymentId: "p1" }),
+      { ...makeRow({ paymentId: "p2" }), saleId: null, saleFolioNumber: null },
+    ];
+    const repo = new InMemoryPaymentReportRepository(rows);
+    const uc = new GetPaymentHistoryReportUseCase(repo);
+
+    const dto = await uc.execute({ generatedBy: GENERATED_BY });
+
+    expect(dto.payments).toHaveLength(2);
+    const accountRow = dto.payments.find((p) => p.paymentId === "p2")!;
+    expect(accountRow.saleId).toBeNull();
+    expect(accountRow.saleFolioNumber).toBeNull();
+  });
+
   it("payments: [] con summary en cero cuando no hay filas", async () => {
     const repo = new InMemoryPaymentReportRepository([]);
     const uc = new GetPaymentHistoryReportUseCase(repo);

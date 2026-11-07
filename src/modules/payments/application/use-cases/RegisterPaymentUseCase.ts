@@ -43,15 +43,18 @@ export class RegisterPaymentUseCase {
 
     const result = await this.repo.createCompleted(input);
 
+    // createCompleted always ties the payment to a real sale (saleId is
+    // required by RegisterPaymentRequest/CreatePaymentInput), so result.sale
+    // is always present here — unlike the account-payment path.
     const joined = {
-      saleFolioCode: result.joins?.saleFolioCode ?? result.sale.folioCode,
+      saleFolioCode: result.joins?.saleFolioCode ?? result.sale!.folioCode,
       customerName: result.joins?.customerName ?? "",
       userName: result.joins?.userName ?? "",
       branchName: result.joins?.branchName ?? "",
       paymentMethodCode: result.joins?.paymentMethodCode ?? "",
-      saleTotal: result.joins?.saleTotal ?? result.sale.total,
-      salePaidAmount: result.joins?.salePaidAmount ?? result.sale.paidAmount,
-      salePaymentStatus: result.joins?.salePaymentStatus ?? result.sale.paymentStatus,
+      saleTotal: result.joins?.saleTotal ?? result.sale!.total,
+      salePaidAmount: result.joins?.salePaidAmount ?? result.sale!.paidAmount,
+      salePaymentStatus: result.joins?.salePaymentStatus ?? result.sale!.paymentStatus,
     };
 
     return {

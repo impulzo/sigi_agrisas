@@ -2,6 +2,8 @@ import { randomUUID } from "crypto";
 import {
   PaymentRepository,
   CreatePaymentInput,
+  CreateAccountPaymentInput,
+  AccountDebtSummary,
   ListPaymentsFilters,
   ListPaymentsPagination,
   PaymentWithSale,
@@ -19,6 +21,7 @@ import { PaymentNotFoundError } from "../../domain/errors/PaymentNotFoundError";
 import { PaymentAlreadyCancelledError } from "../../domain/errors/PaymentAlreadyCancelledError";
 import { PaymentExceedsDueAmountError } from "../../domain/errors/PaymentExceedsDueAmountError";
 import { PaymentExceedsLineDueAmountError } from "../../domain/errors/PaymentExceedsLineDueAmountError";
+import { PaymentExceedsAccountDebtError } from "../../domain/errors/PaymentExceedsAccountDebtError";
 import { PaymentItemsAmountMismatchError } from "../../domain/errors/PaymentItemsAmountMismatchError";
 import { SaleItemNotFoundError } from "../../domain/errors/SaleItemNotFoundError";
 import { SaleNotPayableError } from "../../domain/errors/SaleNotPayableError";
@@ -27,6 +30,7 @@ import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismat
 import { FolioScope } from "@/shared/domain/types/FolioScope";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 import { SaleNotFoundError } from "@/modules/pos/domain/errors/SaleNotFoundError";
+import { CustomerNotFoundError } from "@/modules/customers/domain/errors/CustomerNotFoundError";
 
 const AMOUNT_TOLERANCE = 0.0001;
 
@@ -41,6 +45,7 @@ interface SaleMock {
   paymentStatus: SalePaymentStatus;
   isCredit: boolean;
   status: string;
+  createdAt?: Date;
 }
 
 interface SaleItemMock {
@@ -62,6 +67,12 @@ interface FolioMock {
   isActive: boolean;
 }
 
+interface PaymentMethodMock {
+  id: string;
+  code: string;
+  isActive: boolean;
+}
+
 interface PaymentItemMock {
   customerPaymentId: string;
   saleItemId: string;
@@ -74,6 +85,7 @@ export class InMemoryPaymentRepository implements PaymentRepository {
   private saleItems = new Map<string, SaleItemMock>();
   private customers = new Map<string, CustomerMock>();
   private folios = new Map<string, FolioMock>();
+  private paymentMethods = new Map<string, PaymentMethodMock>();
   private paymentItems: PaymentItemMock[] = [];
   private folioCounter = 0;
 
@@ -91,6 +103,10 @@ export class InMemoryPaymentRepository implements PaymentRepository {
 
   seedFolio(folio: FolioMock): void {
     this.folios.set(folio.id, { ...folio });
+  }
+
+  seedPaymentMethod(paymentMethod: PaymentMethodMock): void {
+    this.paymentMethods.set(paymentMethod.id, { ...paymentMethod });
   }
 
   private paidAmountForLine(saleItemId: string): number {
@@ -210,6 +226,113 @@ export class InMemoryPaymentRepository implements PaymentRepository {
     };
   }
 
+  async createAccountCompleted(input: CreateAccountPaymentInput): Promise<PaymentWithSale> {
+    const customer = this.customers.get(input.customerId);
+    if (!customer) throw new CustomerNotFoundError(input.customerId);
+
+    const pmMock = this.paymentMethods.get(input.paymentMethodId);
+    if (pmMock && !pmMock.isActive) throw new InactiveResourceError("PaymentMethod");
+
+    const folioMock = this.folios.get(input.folioId);
+    if (folioMock) {
+      if (!folioMock.isActive) throw new InactiveResourceError("Folio");
+      if (folioMock.scope !== "OPERATIONS") throw new FolioScopeMismatchError("OPERATIONS", folioMock.scope);
+    }
+
+    const accountDebt = this.computeAccountDebt(input.customerId, input.branchId);
+    if (input.amount > accountDebt + AMOUNT_TOLERANCE) {
+      throw new PaymentExceedsAccountDebtError(accountDebt);
+    }
+
+    customer.currentBalance = Math.max(0, customer.currentBalance - input.amount);
+
+    this.folioCounter++;
+    const folioNumber = this.folioCounter;
+    const folioCode = `RB-${String(folioNumber).padStart(6, "0")}`;
+
+    const payment = CustomerPayment.create(randomUUID(), {
+      saleId: null,
+      customerId: input.customerId,
+      userId: input.userId,
+      branchId: input.branchId,
+      paymentMethodId: input.paymentMethodId,
+      folioId: input.folioId,
+      folioNumber,
+      folioCode,
+      amount: input.amount,
+      status: "completed",
+      notes: input.notes,
+      createdAt: new Date(),
+      cancelledAt: null,
+      cancellationReason: null,
+    });
+
+    this.payments.set(payment.id, payment);
+
+    return {
+      payment,
+      sale: null,
+      joins: {
+        saleFolioCode: null,
+        customerName: "",
+        userName: "",
+        branchName: "",
+        paymentMethodCode: pmMock?.code ?? "",
+        saleTotal: null,
+        salePaidAmount: null,
+        salePaymentStatus: null,
+      },
+    };
+  }
+
+  private computeAccountDebt(customerId: string, effectiveBranchId: string | null): number {
+    const customer = this.customers.get(customerId);
+    if (!customer) throw new CustomerNotFoundError(customerId);
+
+    const pendingDue = Array.from(this.sales.values())
+      .filter(
+        (s) =>
+          s.customerId === customerId &&
+          s.status === "completed" &&
+          s.isCredit &&
+          (effectiveBranchId === null || s.branchId === effectiveBranchId)
+      )
+      .map((s) => s.total - s.paidAmount)
+      .filter((due) => due > AMOUNT_TOLERANCE)
+      .reduce((acc, due) => acc + due, 0);
+
+    return Math.max(0, customer.currentBalance - pendingDue);
+  }
+
+  async getAccountDebt(customerId: string, branchId: string | null): Promise<AccountDebtSummary> {
+    const customer = this.customers.get(customerId);
+    if (!customer) throw new CustomerNotFoundError(customerId);
+
+    const pendingSales = Array.from(this.sales.values())
+      .filter(
+        (s) =>
+          s.customerId === customerId &&
+          s.status === "completed" &&
+          s.isCredit &&
+          (branchId === null || s.branchId === branchId)
+      )
+      .map((s) => ({
+        saleId: s.id,
+        folioCode: s.folioCode,
+        total: s.total,
+        paidAmount: s.paidAmount,
+        due: s.total - s.paidAmount,
+        createdAt: s.createdAt ?? new Date(0),
+      }))
+      .filter((s) => s.due > AMOUNT_TOLERANCE)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+    const pendingDue = pendingSales.reduce((acc, s) => acc + s.due, 0);
+    const accountDebt = Math.max(0, customer.currentBalance - pendingDue);
+
+    return { currentBalance: customer.currentBalance, pendingSales, accountDebt };
+  }
+
   async markCancelled(id: string, reason: string | null, _userId: string): Promise<PaymentWithSale> {
     const payment = this.payments.get(id);
     if (!payment) throw new PaymentNotFoundError(id);
@@ -232,6 +355,28 @@ export class InMemoryPaymentRepository implements PaymentRepository {
       cancellationReason: reason,
     });
     this.payments.set(id, cancelled);
+
+    if (payment.saleId === null) {
+      const customer = this.customers.get(payment.customerId);
+      if (customer) {
+        customer.currentBalance += payment.amount;
+      }
+
+      return {
+        payment: cancelled,
+        sale: null,
+        joins: {
+          saleFolioCode: null,
+          customerName: "",
+          userName: "",
+          branchName: "",
+          paymentMethodCode: "",
+          saleTotal: null,
+          salePaidAmount: null,
+          salePaymentStatus: null,
+        },
+      };
+    }
 
     const sale = this.sales.get(payment.saleId)!;
     const newPaidAmount = Math.max(0, sale.paidAmount - payment.amount);
@@ -273,6 +418,22 @@ export class InMemoryPaymentRepository implements PaymentRepository {
   async findById(id: string): Promise<PaymentWithSale | null> {
     const payment = this.payments.get(id);
     if (!payment) return null;
+    if (payment.saleId === null) {
+      return {
+        payment,
+        sale: null,
+        joins: {
+          saleFolioCode: null,
+          customerName: "",
+          userName: "",
+          branchName: "",
+          paymentMethodCode: "",
+          saleTotal: null,
+          salePaidAmount: null,
+          salePaymentStatus: null,
+        },
+      };
+    }
     const sale = this.sales.get(payment.saleId);
     if (!sale) return null;
     return {
@@ -323,18 +484,18 @@ export class InMemoryPaymentRepository implements PaymentRepository {
     const page = payments.slice(skip, skip + pagination.pageSize);
 
     const items: PaymentListRow[] = page.map((p) => {
-      const sale = this.sales.get(p.saleId);
+      const sale = p.saleId ? this.sales.get(p.saleId) : undefined;
       return {
         payment: p,
         joins: {
-          saleFolioCode: sale?.folioCode ?? "",
+          saleFolioCode: sale?.folioCode ?? null,
           customerName: "",
           userName: "",
           branchName: "",
           paymentMethodCode: "",
-          saleTotal: sale?.total ?? 0,
-          salePaidAmount: sale?.paidAmount ?? 0,
-          salePaymentStatus: sale?.paymentStatus ?? "pending",
+          saleTotal: sale?.total ?? null,
+          salePaidAmount: sale?.paidAmount ?? null,
+          salePaymentStatus: sale?.paymentStatus ?? null,
         },
       };
     });
@@ -432,13 +593,13 @@ export class InMemoryPaymentRepository implements PaymentRepository {
     }
 
     const historyItems: PaymentHistoryItem[] = items.map((p) => {
-      const sale = this.sales.get(p.saleId);
+      const sale = p.saleId ? this.sales.get(p.saleId) : undefined;
       return {
         id: p.id,
         createdAt: p.createdAt,
         folioCode: p.folioCode,
         saleId: p.saleId,
-        saleFolioCode: sale?.folioCode ?? "",
+        saleFolioCode: sale?.folioCode ?? null,
         customerId: p.customerId,
         customerName: "",
         userId: p.userId,
@@ -449,9 +610,9 @@ export class InMemoryPaymentRepository implements PaymentRepository {
         amount: p.amount,
         status: p.status,
         cancelledAt: p.cancelledAt,
-        saleTotal: sale?.total ?? 0,
-        salePaidAmount: sale?.paidAmount ?? 0,
-        salePaymentStatus: sale?.paymentStatus ?? "pending",
+        saleTotal: sale?.total ?? null,
+        salePaidAmount: sale?.paidAmount ?? null,
+        salePaymentStatus: sale?.paymentStatus ?? null,
       };
     });
 

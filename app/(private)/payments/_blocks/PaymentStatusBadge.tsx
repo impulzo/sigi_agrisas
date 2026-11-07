@@ -21,15 +21,21 @@ const statusConfig: Record<PaymentBadgeState, { label: string; dotClass: string;
   },
 };
 
-/** "Completado" solo cuando la venta llega a salePaymentStatus="paid"; abono activo con venta parcial/pendiente muestra "Activo". */
-function computeBadgeState(status: PaymentStatus, salePaymentStatus: SalePaymentStatus): PaymentBadgeState {
+/**
+ * "Completado" cuando la venta llega a salePaymentStatus="paid", o cuando el
+ * abono es a saldo general (`salePaymentStatus=null`, sin venta que esperar
+ * — el abono mismo es la operación completa). Abono con venta parcial/
+ * pendiente muestra "Activo".
+ */
+function computeBadgeState(status: PaymentStatus, salePaymentStatus: SalePaymentStatus | null): PaymentBadgeState {
   if (status === "cancelled") return "cancelled";
+  if (salePaymentStatus === null) return "completed";
   return salePaymentStatus === "paid" ? "completed" : "active";
 }
 
 interface PaymentStatusBadgeProps {
   status: PaymentStatus;
-  salePaymentStatus: SalePaymentStatus;
+  salePaymentStatus: SalePaymentStatus | null;
   className?: string;
 }
 

@@ -267,10 +267,12 @@ export class PrismaAccountStatementRepository implements AccountStatementReposit
         name: payment.customer.name,
         address: payment.customer.address,
       },
-      sale: {
-        folioCode: payment.sale.folioCode,
-        folioNumber: payment.sale.folioNumber,
-      },
+      sale: payment.sale
+        ? {
+            folioCode: payment.sale.folioCode,
+            folioNumber: payment.sale.folioNumber,
+          }
+        : null,
     };
   }
 }

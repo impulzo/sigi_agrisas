@@ -57,8 +57,8 @@ describe("RegisterPaymentUseCase", () => {
 
     expect(result.dto.status).toBe("completed");
     expect(result.dto.amount).toBe("300.0000");
-    expect(result.dto.sale.paidAmount).toBe("300.0000");
-    expect(result.dto.sale.paymentStatus).toBe("partial");
+    expect(result.dto.sale!.paidAmount).toBe("300.0000");
+    expect(result.dto.sale!.paymentStatus).toBe("partial");
     expect(result.branchId).toBe(BRANCH_ID);
     // Desglose plano (Historia #1): mismo dato que result.dto.sale, expuesto también a nivel de PaymentDto
     expect(result.dto.saleTotal).toBe("1000.0000");
@@ -81,8 +81,8 @@ describe("RegisterPaymentUseCase", () => {
       callerBranchId: null,
     });
 
-    expect(result.dto.sale.paymentStatus).toBe("paid");
-    expect(result.dto.sale.paidAmount).toBe("1000.0000");
+    expect(result.dto.sale!.paymentStatus).toBe("paid");
+    expect(result.dto.sale!.paidAmount).toBe("1000.0000");
     // Badge (Historia #3): venta liquidada al 100% -> salePaymentStatus="paid", saleDueAmount=0
     expect(result.dto.salePaymentStatus).toBe("paid");
     expect(result.dto.saleDueAmount).toBe("0.0000");
@@ -189,8 +189,8 @@ describe("RegisterPaymentUseCase", () => {
       callerBranchId: null,
     });
 
-    expect(final.dto.sale.paymentStatus).toBe("paid");
-    expect(final.dto.sale.paidAmount).toBe("1000.0000");
+    expect(final.dto.sale!.paymentStatus).toBe("paid");
+    expect(final.dto.sale!.paidAmount).toBe("1000.0000");
   });
 });
 
@@ -218,8 +218,8 @@ describe("CancelPaymentUseCase", () => {
 
     expect(result.dto.status).toBe("cancelled");
     expect(result.dto.cancellationReason).toBe("Cliente arrepentido");
-    expect(result.dto.sale.paidAmount).toBe("0.0000");
-    expect(result.dto.sale.paymentStatus).toBe("pending");
+    expect(result.dto.sale!.paidAmount).toBe("0.0000");
+    expect(result.dto.sale!.paymentStatus).toBe("pending");
     // Badge (Historia #3): abono cancelado -> "Cancelado" sin importar salePaymentStatus
     expect(result.dto.status).toBe("cancelled");
     expect(result.dto.salePaymentStatus).toBe("pending");
@@ -257,8 +257,8 @@ describe("CancelPaymentUseCase", () => {
     const cancelUC = new CancelPaymentUseCase(repo);
     const result = await cancelUC.execute(secondResult.dto.id, null, USER_ID);
 
-    expect(result.dto.sale.paidAmount).toBe("400.0000");
-    expect(result.dto.sale.paymentStatus).toBe("partial");
+    expect(result.dto.sale!.paidAmount).toBe("400.0000");
+    expect(result.dto.sale!.paymentStatus).toBe("partial");
   });
 });
 

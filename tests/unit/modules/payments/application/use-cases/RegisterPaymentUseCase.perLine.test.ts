@@ -72,7 +72,7 @@ describe("RegisterPaymentUseCase — abono por línea", () => {
       ],
     });
 
-    expect(result.dto.sale.paidAmount).toBe("110.0000");
+    expect(result.dto.sale!.paidAmount).toBe("110.0000");
     expect(result.dto.items).toHaveLength(2);
 
     const { result: bySale } = await new (
