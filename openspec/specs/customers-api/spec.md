@@ -275,12 +275,14 @@ The system SHALL expose `DELETE /api/v1/admin/customers/:id` that marks the cust
 ---
 
 ### Requirement: Customer credit balance is read-only via this API
-The `currentBalance` field SHALL be readable through `GET` endpoints but SHALL NOT be independently settable through `POST` or `PATCH` of `customers-api`. The mutation of `currentBalance` is OWNED by the `payments-api` module, by the credit branch of the POS API (`POST /sales` with `isCredit=true`), and by the `initialBalance` field of this very module (`customers-api`) at creation and update time — the only three owners.
+
+The `currentBalance` field SHALL be readable through `GET` endpoints but SHALL NOT be independently settable through `POST` or `PATCH` of `customers-api`. The mutation of `currentBalance` is OWNED by the `payments-api` module — whether the payment is tied to a specific sale (`saleId` not null, decremented/incremented via the sale-scoped flow) or registered as an **account payment with no ticket** (`saleId` null, decremented/incremented via `POST /api/v1/admin/customers/:id/payments`, bounded by `accountDebt` so it can never settle a ticket's debt) — by the credit branch of the POS API (`POST /sales` with `isCredit=true`), and by the `initialBalance` field of this very module (`customers-api`) at creation and update time — **the only three owners**. The account-payment path does not introduce a fourth owner: it is still `payments-api` mutating `currentBalance`, just without an associated `Sale`.
 
 - `customers-api` SHALL silently ignore any `currentBalance` field in `POST /customers` and `PATCH /customers/:id` bodies (consistent with prior behavior); it SHALL instead derive `currentBalance` from `initialBalance` as described in the Create/Update requirements above.
-- `payments-api` SHALL mutate `currentBalance` atomically when registering or cancelling a `CustomerPayment` (decrement on register, increment on cancel).
+- `payments-api` SHALL mutate `currentBalance` atomically when registering or cancelling a `CustomerPayment` (decrement on register, increment on cancel), regardless of whether that `CustomerPayment` is tied to a `Sale` (`saleId` not null) or is an account payment (`saleId` null).
 - `pos-api` SHALL mutate `currentBalance` atomically when creating a sale whose `paymentMethod.isCredit=true` (increment by `sale.total`), when cancelling such a credit sale that has no active payments (decrement by remaining due), and when editing a sale (delta computed from old/new `paymentMethod.isCredit` and totals — see `pos-api` for the precise formula).
 - `currentBalance` SHALL NEVER be negative; the application enforces the invariant in the payments and POS use cases. (`initialBalance` itself is bounded `>= 0`, so it cannot introduce a negative `currentBalance`.)
+- The portion of `currentBalance` that does NOT correspond to any pending credit sale (e.g. `initialBalance` set at customer creation, with no associated ticket) SHALL only be payable through the account-payment path (`saleId` null); it is structurally unreachable through the sale-scoped payment path, which always requires a real, pending credit `Sale`.
 
 #### Scenario: Read shows currentBalance
 - **WHEN** an authorized user gets a customer that has `current_balance = 1500`
@@ -317,6 +319,14 @@ The `currentBalance` field SHALL be readable through `GET` endpoints but SHALL N
 #### Scenario: currentBalance invariant: never negative
 - **WHEN** any operation would result in `current_balance < 0` (defensive check)
 - **THEN** the operation aborts with HTTP 409 `{"error":"PaymentWouldOverpay"}` and the transaction does not commit
+
+#### Scenario: Account payment settles debt with no associated ticket
+- **WHEN** a customer has `current_balance = 500` consisting of `300` from a pending credit sale and `200` with no associated ticket (e.g. from `initialBalance`), and an account payment (`saleId=null`) of `200` is registered
+- **THEN** the customer's `current_balance` is `300` after the payment commits, and the pending credit sale's `paidAmount`/`paymentStatus` are unchanged
+
+#### Scenario: Account payment cannot settle ticketed debt
+- **WHEN** a customer's entire `current_balance` corresponds to pending credit sales (`accountDebt = 0`)
+- **THEN** any attempt to register an account payment (`saleId=null`) with `amount > 0` is rejected by `payments-api` with HTTP 409 `PaymentExceedsAccountDebt` — that debt can only be settled through the sale-scoped payment path
 
 ### Requirement: Structured address for Carta Porte
 `POST /api/v1/admin/customers` and `PATCH /api/v1/admin/customers/:id` SHALL accept 8 additional optional fields, mirroring the structured address already present on `Branch` (see `admin-branches` spec), used exclusively to build the destination `Ubicacion` node when generating a Carta Porte from a sale of this customer (see `waybills-api`): `addressStreet` (max 150), `addressExteriorNumber` (max 20), `addressInteriorNumber` (max 20, nullable), `addressNeighborhood` (max 100), `addressMunicipality` (max 100), `addressState` (max 3, SAT `c_Estado` key), `addressCountry` (max 3, SAT `c_Pais` key, defaults to `"MEX"` when omitted on create), `addressZipCode` (max 5). All are independent of, and do NOT replace or sync with, the existing free-text `address` field (still used for tickets/invoices display). All 8 fields are `null` by default for customers created before this change and for new customers that omit them.

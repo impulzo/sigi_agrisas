@@ -366,6 +366,8 @@ El endpoint SHALL aceptar los siguientes filtros opcionales, validados por Zod e
 
 La respuesta JSON SHALL tener exactamente la siguiente forma. `summary.totalPayments` cuenta solo los abonos `completed`; `summary.cancelledPayments` cuenta los `cancelled`. `summary.netAmount = totalAmount - cancelledAmount`. Los `Decimal` se serializan como `string` (4 decimales).
 
+**`payments[].saleId` y `payments[].saleFolioNumber` SHALL ser `string | null`** — `null` cuando el abono es "a saldo general" (`CustomerPayment.saleId = null`, sin venta asociada). Este reporte, a diferencia del corte de caja (`cash-cut-api`), NO excluye estos abonos: los incluye con esos dos campos en `null`, ya que no depende de prorratear IVA ni de ningún otro cálculo derivado de la venta.
+
 ```json
 {
   "generatedAt": "2026-06-07T18:00:00.000Z",
@@ -416,13 +418,18 @@ La respuesta JSON SHALL tener exactamente la siguiente forma. `summary.totalPaym
 - **WHEN** los filtros no producen ningún abono
 - **THEN** `payments: []`, `summary.totalPayments===0`, `summary.totalAmount==="0.0000"`, `summary.netAmount==="0.0000"`
 
+#### Scenario: Abono a saldo general incluido con saleId y saleFolioNumber null
+
+- **WHEN** el rango filtrado incluye un abono a saldo general (`saleId=null`) además de abonos por venta
+- **THEN** `payments` incluye esa fila con `saleId: null` y `saleFolioNumber: null`, y SIGUE contando en `summary.totalPayments`/`totalAmount`
+
 ---
 
 ### Requirement: Payment history report PDF artifact
 
 Cuando `?format=pdf`, el sistema SHALL generar el PDF con `renderToBuffer(<PaymentHistoryReportPdf data={dto}/>)` y devolverlo con `Content-Type: application/pdf` y `Content-Disposition: attachment; filename="payments-YYYY-MM-DD.pdf"`. El PDF SHALL contener:
 - Header: título "Reporte de Historial de Abonos", `generatedAt` formateado, email de `generatedBy`, filtros activos.
-- Tabla de abonos con columnas: Folio Recibo, Folio Venta, Cliente, Sucursal, Monto, Fecha, Estado.
+- Tabla de abonos con columnas: Folio Recibo, Folio Venta, Cliente, Sucursal, Monto, Fecha, Estado. **La columna "Folio Venta" SHALL mostrar el literal "Sin venta" cuando `saleFolioNumber` es `null`** (abono a saldo general), en vez de una celda vacía o el texto `null`.
 - Sección de totales: Total abonos, Monto bruto, Monto cancelado, Monto neto.
 - Footer con número de página (`Página X de Y`).
 - Si `payments.length === 0`: header normal + texto "Sin abonos para los filtros aplicados".
@@ -448,6 +455,11 @@ El header SHALL incluir el logo del negocio (tamaño reducido), la razón social
 
 - **WHEN** el endpoint devuelve `application/pdf` y `TicketSettings.businessAddress`/`businessRfc` tienen valor
 - **THEN** el header muestra ambos datos junto al logo, sin desplazar la tabla de abonos ni la sección de totales
+
+#### Scenario: PDF muestra "Sin venta" para un abono a saldo general
+
+- **WHEN** el PDF incluye un abono con `saleFolioNumber=null`
+- **THEN** la columna "Folio Venta" de esa fila muestra el literal "Sin venta"
 
 ### Requirement: Department price list report endpoint
 
@@ -667,7 +679,7 @@ Cuando `?format=xlsx`, el sistema SHALL generar el workbook con `buildInventoryS
 
 ### Requirement: Payment history report XLSX artifact
 
-Cuando `?format=xlsx`, el sistema SHALL generar el workbook con `buildPaymentHistoryWorkbook` y devolverlo con `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment; filename="payments-YYYY-MM-DD.xlsx"`. El workbook SHALL contener una fila por abono con columnas Folio Recibo, Folio Venta, Cliente, Sucursal, Monto, Fecha, Estado, más un bloque de totales (`summary`: abonos completados, monto bruto, abonos cancelados, monto cancelado, monto neto) al final.
+Cuando `?format=xlsx`, el sistema SHALL generar el workbook con `buildPaymentHistoryWorkbook` y devolverlo con `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment; filename="payments-YYYY-MM-DD.xlsx"`. El workbook SHALL contener una fila por abono con columnas Folio Recibo, Folio Venta, Cliente, Sucursal, Monto, Fecha, Estado, más un bloque de totales (`summary`: abonos completados, monto bruto, abonos cancelados, monto cancelado, monto neto) al final. **La columna "Folio Venta" SHALL mostrar el literal "Sin venta" cuando `saleFolioNumber` es `null`** (abono a saldo general), igual que el PDF.
 
 #### Scenario: XLSX con metadatos correctos
 
@@ -678,4 +690,9 @@ Cuando `?format=xlsx`, el sistema SHALL generar el workbook con `buildPaymentHis
 
 - **WHEN** `payments: []`
 - **THEN** el workbook se genera con encabezados y el bloque `summary` en cero, sin lanzar error; status `200`
+
+#### Scenario: XLSX muestra "Sin venta" para un abono a saldo general
+
+- **WHEN** el workbook incluye un abono con `saleFolioNumber=null`
+- **THEN** la celda de "Folio Venta" de esa fila contiene el literal "Sin venta"
 
