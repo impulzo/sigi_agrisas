@@ -18,14 +18,14 @@ export class CancelPaymentUseCase {
     const result = await this.repo.markCancelled(id, reason, userId);
 
     const joined = {
-      saleFolioCode: result.joins?.saleFolioCode ?? result.sale.folioCode,
+      saleFolioCode: result.joins?.saleFolioCode ?? result.sale?.folioCode ?? null,
       customerName: result.joins?.customerName ?? "",
       userName: result.joins?.userName ?? "",
       branchName: result.joins?.branchName ?? "",
       paymentMethodCode: result.joins?.paymentMethodCode ?? "",
-      saleTotal: result.joins?.saleTotal ?? result.sale.total,
-      salePaidAmount: result.joins?.salePaidAmount ?? result.sale.paidAmount,
-      salePaymentStatus: result.joins?.salePaymentStatus ?? result.sale.paymentStatus,
+      saleTotal: result.joins?.saleTotal ?? result.sale?.total ?? null,
+      salePaidAmount: result.joins?.salePaidAmount ?? result.sale?.paidAmount ?? null,
+      salePaymentStatus: result.joins?.salePaymentStatus ?? result.sale?.paymentStatus ?? null,
     };
 
     return {

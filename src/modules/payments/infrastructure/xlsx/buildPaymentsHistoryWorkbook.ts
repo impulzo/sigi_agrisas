@@ -16,19 +16,26 @@ export function buildPaymentsHistoryWorkbook(data: PaymentHistoryReportDto): Buf
 
   const groups = new Map<string, PaymentHistoryRowDto[]>();
   for (const item of data.items) {
-    const bucket = groups.get(item.saleId);
+    // Account payments (saleId=null) each get their own group keyed by
+    // their own id — never collapsed together under a shared "null" key.
+    const key = item.saleId ?? `account:${item.id}`;
+    const bucket = groups.get(key);
     if (bucket) bucket.push(item);
-    else groups.set(item.saleId, [item]);
+    else groups.set(key, [item]);
   }
 
   for (const items of groups.values()) {
     const first = items[0];
-    rows.push([
-      `Ticket: ${first.saleFolioCode}`,
-      `Cliente: ${first.customerName}`,
-      `Monto total: ${first.saleTotal}`,
-      `Saldo: ${first.saleDueAmount}`,
-    ]);
+    rows.push(
+      first.saleId
+        ? [
+            `Ticket: ${first.saleFolioCode}`,
+            `Cliente: ${first.customerName}`,
+            `Monto total: ${first.saleTotal}`,
+            `Saldo: ${first.saleDueAmount}`,
+          ]
+        : [`Abono a saldo general (sin ticket)`, `Cliente: ${first.customerName}`]
+    );
     rows.push(["Fecha", "Folio recibo", "Cobrador", "Método", "Monto", "Estado"]);
     for (const item of items) {
       rows.push([

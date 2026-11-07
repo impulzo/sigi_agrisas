@@ -1,8 +1,8 @@
 export interface PaymentItemDto {
   paymentId: string;
   folioNumber: string;
-  saleId: string;
-  saleFolioNumber: string;
+  saleId: string | null;
+  saleFolioNumber: string | null;
   customerId: string;
   customerCode: string;
   customerName: string;

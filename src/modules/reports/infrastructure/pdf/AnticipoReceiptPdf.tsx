@@ -58,7 +58,7 @@ export function AnticipoReceiptPdf({ data, issuer }: Props) {
           </View>
           <View style={s.tableRow}>
             <Text style={s.cellWide}>Aplicado a</Text>
-            <Text style={s.cell}>{sale.folio}</Text>
+            <Text style={s.cell}>{sale ? sale.folio : "Saldo general (sin venta asociada)"}</Text>
           </View>
           <View style={s.tableRow}>
             <Text style={s.cellWide}>Estado</Text>

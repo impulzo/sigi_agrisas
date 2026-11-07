@@ -1,0 +1,14 @@
+schema_version: "1.1"
+name: qa-verify-real-diff-review
+expected_outcome: |
+  The response resolves the scope via git (status/diff against develop, not a guess), identifies the
+  touched areas (inventory kardex product search, payments history product search, reports repository
+  for department price lists, plus the pre-existing test files), and maps them to the right CLAUDE.md
+  sections (Arquitectura Frontend / _logic layering for the two _logic/hooks+services pairs, and
+  Prisma/reports for the repository change). It looks up and cites the matching openspec capability/ies
+  (inventory-kardex-ui and/or payments-ui for the frontend pieces, reports-api or reports-collections-api
+  for the backend repository) rather than skipping spec lookup. The report is a checklist with
+  pass/fail/warning markers and file:line evidence, not prose. It runs at least one real verification
+  command (build, targeted test, or lint) and reports its actual pass/fail outcome instead of assuming
+  success. It ends with a clear summary distinguishing blocking issues from warnings, and does not
+  silently approve the diff without having actually inspected it.

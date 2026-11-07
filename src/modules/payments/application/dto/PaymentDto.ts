@@ -8,8 +8,8 @@ export interface PaymentItemDto {
 
 export interface PaymentDto {
   id: string;
-  saleId: string;
-  saleFolioCode: string;
+  saleId: string | null;
+  saleFolioCode: string | null;
   customerId: string;
   customerName: string;
   userId: string;
@@ -28,10 +28,10 @@ export interface PaymentDto {
   cancelledAt: string | null;
   cancellationReason: string | null;
   items?: PaymentItemDto[];
-  saleTotal: string;
-  salePaidAmount: string;
-  salePaymentStatus: SalePaymentStatus;
-  saleDueAmount: string;
+  saleTotal: string | null;
+  salePaidAmount: string | null;
+  salePaymentStatus: SalePaymentStatus | null;
+  saleDueAmount: string | null;
 }
 
 export interface PaymentDetailDto extends PaymentDto {
@@ -42,15 +42,15 @@ export interface PaymentDetailDto extends PaymentDto {
     total: string;
     paidAmount: string;
     paymentStatus: SalePaymentStatus;
-  };
+  } | null;
 }
 
 export interface PaymentHistoryRowDto {
   id: string;
   createdAt: string;
   folioCode: string;
-  saleId: string;
-  saleFolioCode: string;
+  saleId: string | null;
+  saleFolioCode: string | null;
   customerId: string;
   customerName: string;
   userId: string;
@@ -61,10 +61,25 @@ export interface PaymentHistoryRowDto {
   amount: string;
   status: string;
   cancelledAt: string | null;
-  saleTotal: string;
-  salePaidAmount: string;
-  salePaymentStatus: SalePaymentStatus;
-  saleDueAmount: string;
+  saleTotal: string | null;
+  salePaidAmount: string | null;
+  salePaymentStatus: SalePaymentStatus | null;
+  saleDueAmount: string | null;
+}
+
+export interface PendingSaleDto {
+  saleId: string;
+  folioCode: string;
+  total: string;
+  paidAmount: string;
+  due: string;
+  createdAt: string;
+}
+
+export interface AccountDebtDto {
+  currentBalance: string;
+  pendingSales: PendingSaleDto[];
+  accountDebt: string;
 }
 
 export interface PaymentHistoryReportDto {

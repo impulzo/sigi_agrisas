@@ -69,11 +69,13 @@ export function PaymentsTable({ items, isLoading, showBranch, onEnter }: Payment
               >
                 <Td className="font-mono text-on-surface-variant">{folioLabel}</Td>
                 <Td>
-                  {p.saleFolioCode ? (
+                  {p.saleId && p.saleFolioCode ? (
                     <Link href={`/sales/${p.saleId}`} className="text-primary hover:underline">
                       {p.saleFolioCode}
                     </Link>
-                  ) : "—"}
+                  ) : (
+                    <span className="text-on-surface-variant">Sin venta asociada</span>
+                  )}
                 </Td>
                 <Td className="max-w-[140px] truncate text-on-surface-variant">
                   {p.customerName ?? "—"}
@@ -86,8 +88,8 @@ export function PaymentsTable({ items, isLoading, showBranch, onEnter }: Payment
                   <Td className="text-on-surface-variant">{p.branchName ?? "—"}</Td>
                 )}
                 <Td align="right" className="font-medium">{fmt(p.amount)}</Td>
-                <Td align="right" className="text-on-surface-variant">{fmt(p.saleTotal)}</Td>
-                <Td align="right" className="text-on-surface-variant">{fmt(p.saleDueAmount)}</Td>
+                <Td align="right" className="text-on-surface-variant">{p.saleTotal !== null ? fmt(p.saleTotal) : "—"}</Td>
+                <Td align="right" className="text-on-surface-variant">{p.saleDueAmount !== null ? fmt(p.saleDueAmount) : "—"}</Td>
                 <Td className="text-on-surface-variant tabular-nums">{fmtDate(p.createdAt)}</Td>
                 <Td>
                   <PaymentStatusBadge status={p.status} salePaymentStatus={p.salePaymentStatus} />

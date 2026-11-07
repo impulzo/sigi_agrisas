@@ -22,14 +22,14 @@ export interface CreatePaymentInput {
 }
 
 export interface PaymentDisplayJoins {
-  saleFolioCode: string;
+  saleFolioCode: string | null;
   customerName: string;
   userName: string;
   branchName: string;
   paymentMethodCode: string;
-  saleTotal: number;
-  salePaidAmount: number;
-  salePaymentStatus: SalePaymentStatus;
+  saleTotal: number | null;
+  salePaidAmount: number | null;
+  salePaymentStatus: SalePaymentStatus | null;
 }
 
 export interface PaymentListRow {
@@ -64,7 +64,7 @@ export interface PaymentWithSale {
     paymentStatus: SalePaymentStatus;
     branchId: string;
     customerId: string | null;
-  };
+  } | null;
   joins?: PaymentDisplayJoins;
 }
 
@@ -102,8 +102,8 @@ export interface PaymentHistoryItem {
   id: string;
   createdAt: Date;
   folioCode: string;
-  saleId: string;
-  saleFolioCode: string;
+  saleId: string | null;
+  saleFolioCode: string | null;
   customerId: string;
   customerName: string;
   userId: string;
@@ -114,13 +114,42 @@ export interface PaymentHistoryItem {
   amount: number;
   status: string;
   cancelledAt: Date | null;
-  saleTotal: number;
-  salePaidAmount: number;
-  salePaymentStatus: SalePaymentStatus;
+  saleTotal: number | null;
+  salePaidAmount: number | null;
+  salePaymentStatus: SalePaymentStatus | null;
+}
+
+export interface PendingSaleSummary {
+  saleId: string;
+  folioCode: string;
+  total: number;
+  paidAmount: number;
+  due: number;
+  createdAt: Date;
+}
+
+export interface AccountDebtSummary {
+  currentBalance: number;
+  pendingSales: PendingSaleSummary[];
+  accountDebt: number;
+}
+
+export interface CreateAccountPaymentInput {
+  customerId: string;
+  userId: string;
+  paymentMethodId: string;
+  folioId: string;
+  amount: number;
+  notes: string | null;
+  /** Resolved effective branchId (via resolveScopedBranchId at the controller); always non-null — the account-payment row needs a concrete branch. */
+  branchId: string;
 }
 
 export interface PaymentRepository {
   createCompleted(input: CreatePaymentInput): Promise<PaymentWithSale>;
+  createAccountCompleted(input: CreateAccountPaymentInput): Promise<PaymentWithSale>;
+  /** branchId: null = resolved as "all branches" (bypass, no explicit branchId); otherwise scoped to that branch. */
+  getAccountDebt(customerId: string, branchId: string | null): Promise<AccountDebtSummary>;
   markCancelled(id: string, reason: string | null, userId: string): Promise<PaymentWithSale>;
   findById(id: string): Promise<PaymentWithSale | null>;
   list(

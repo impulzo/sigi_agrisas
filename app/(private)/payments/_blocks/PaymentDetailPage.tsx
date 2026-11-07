@@ -82,17 +82,23 @@ export function PaymentDetailPage({ id }: PaymentDetailPageProps) {
               {fmt(payment.amount)}
             </span>
           </div>
-          {payment.saleFolioCode && (
+          {payment.saleId && payment.saleFolioCode ? (
+            <>
+              <p className="text-body-sm text-on-surface-variant pl-9">
+                Venta ·{" "}
+                <Link href={`/sales/${payment.saleId}`} className="text-primary hover:underline">
+                  {payment.saleFolioCode}
+                </Link>
+              </p>
+              <p className="text-body-sm text-on-surface-variant pl-9">
+                Monto total: {fmt(payment.saleTotal ?? 0)} · Saldo pendiente: {fmt(payment.saleDueAmount ?? 0)}
+              </p>
+            </>
+          ) : (
             <p className="text-body-sm text-on-surface-variant pl-9">
-              Venta ·{" "}
-              <Link href={`/sales/${payment.saleId}`} className="text-primary hover:underline">
-                {payment.saleFolioCode}
-              </Link>
+              Abono a saldo general (sin venta asociada)
             </p>
           )}
-          <p className="text-body-sm text-on-surface-variant pl-9">
-            Monto total: {fmt(payment.saleTotal)} · Saldo pendiente: {fmt(payment.saleDueAmount)}
-          </p>
         </div>
 
         <PaymentActionsBar payment={payment} onCancelled={refresh} />

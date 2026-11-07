@@ -1,0 +1,354 @@
+{
+  "metadata": {
+    "skill_name": "qa-verify",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-10-28T23:44:36Z",
+    "evals_run": [
+      "qa-verify-frontend-design-violation",
+      "qa-verify-missing-rbac-guard",
+      "qa-verify-real-diff-review"
+    ],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": "qa-verify-frontend-design-violation",
+      "eval_name": "qa-verify-frontend-design-violation",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 160.2,
+        "tokens": 115448,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Flags the _blocks component calling fetch and reading sessionStorage directly as a layering violation",
+          "passed": true,
+          "evidence": "Checklist: '\u274c _blocks/ son presentational: NO fetch/sessionStorage \u2014 l\u00ednea ~16 lee sessionStorage... fetch(...) crudo'."
+        },
+        {
+          "text": "Flags the raw hex color #4CAF50 via inline style as a design-system token violation",
+          "passed": true,
+          "evidence": "Checklist: '\u274c Hex crudo style={{ backgroundColor: \"#4CAF50\" }} \u2014 prohibido'."
+        },
+        {
+          "text": "Flags the rounded-3xl class as explicitly banned by the design tokens guardrail",
+          "passed": true,
+          "evidence": "Checklist: '\u274c rounded-3xl \u2014 expl\u00edcitamente prohibido por fuera de escala'."
+        },
+        {
+          "text": "Flags the raw <button> instead of the Button atom from _components/atoms",
+          "passed": true,
+          "evidence": "Checklist: '\u274c <button> nativo nuevo... en vez del \u00e1tomo Button... no est\u00e1 en RAW_ELEMENT_ALLOWLIST'."
+        },
+        {
+          "text": "Cites CLAUDE.md's Sistema de dise\u00f1o / design-system spec and Arquitectura Frontend rules rather than generic code-quality complaints",
+          "passed": true,
+          "evidence": "Section headers explicitly name 'Arquitectura Frontend \u2014 capas' and 'Sistema de dise\u00f1o (designer.md + tests/unit/ui/design-system/tokens.test.ts)', citing the guardrail test by name."
+        },
+        {
+          "text": "Does not approve the diff as merge-ready",
+          "passed": true,
+          "evidence": "Closing line: 'No abrir el PR as\u00ed.'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "qa-verify-missing-rbac-guard",
+      "eval_name": "qa-verify-missing-rbac-guard",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 134.8,
+        "tokens": 110906,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Flags the missing requirePermission RBAC guard as a blocking issue, noting every other route under app/api/v1/admin/** calls it",
+          "passed": true,
+          "evidence": "Checklist item: '\u274c todo endpoint nuevo bajo app/api/v1/admin/** llama requirePermission... el diff NO llama requirePermission en ning\u00fan punto', with comparable route examples cited."
+        },
+        {
+          "text": "Flags the route handler containing full business logic instead of delegating to a controller, citing the Arquitectura Hexagonal rule",
+          "passed": true,
+          "evidence": "Checklist item quotes the exact CLAUDE.md rule and cites that no controller/use-case/port exists for this flow, contrasting with src/modules/vehicles/."
+        },
+        {
+          "text": "Notices there is no Zod validation of params/body before touching Prisma",
+          "passed": true,
+          "evidence": "Checklist item: 'params.id nunca se valida como UUID' and 'Sin validaci\u00f3n de tipo MIME ni tama\u00f1o m\u00e1ximo del archivo'."
+        },
+        {
+          "text": "Does not approve this diff as merge-ready",
+          "passed": true,
+          "evidence": "Veredicto: 'No apto para abrir PR contra develop en su estado actual.'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "qa-verify-real-diff-review",
+      "eval_name": "qa-verify-real-diff-review",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 278.3,
+        "tokens": 159370,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Resolves scope via git (status/diff against develop), not a guess at what changed",
+          "passed": true,
+          "evidence": "Report lists exact files with precise paths (9 modified + untracked), consistent with running git status/diff rather than guessing."
+        },
+        {
+          "text": "Identifies the touched areas: inventory kardex product search, payments history product search, and the reports department price list repository",
+          "passed": true,
+          "evidence": "Report explicitly lists all three areas with file paths."
+        },
+        {
+          "text": "Maps the frontend changes to the Arquitectura Frontend / _logic layering rules in CLAUDE.md",
+          "passed": true,
+          "evidence": "Checklist section 'Capas frontend (_logic/services, _logic/hooks, _blocks)' cites the exact CLAUDE.md layering rule and verifies each layer."
+        },
+        {
+          "text": "Looks up and cites a matching openspec capability instead of skipping spec lookup",
+          "passed": true,
+          "evidence": "Cites products-api, inventory-api, reports-api specs plus the active openspec/changes/fix-inventory-branch-scoping-leaks/ change, with line references."
+        },
+        {
+          "text": "Produces a checklist with pass/fail/warning markers and file:line evidence, not unstructured prose",
+          "passed": true,
+          "evidence": "Report uses \u2705/\u26a0\ufe0f markers per bullet under '### Checklist' with file:line citations throughout."
+        },
+        {
+          "text": "Runs at least one real verification command and reports its actual outcome",
+          "passed": true,
+          "evidence": "Hand-back states build, lint, design guardrail, and 27 relevant tests were run and passed."
+        },
+        {
+          "text": "Ends with a clear summary distinguishing blocking issues from warnings",
+          "passed": true,
+          "evidence": "Hand-back/report conclude with 'Sin bloqueantes' plus 2 non-blocking coverage gaps and 1 process note, clearly separated."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "qa-verify-frontend-design-violation",
+      "eval_name": "qa-verify-frontend-design-violation",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 134.6,
+        "tokens": 108718,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Flags the _blocks component calling fetch and reading sessionStorage directly as a layering violation",
+          "passed": true,
+          "evidence": "Section 3 '_blocks' quotes the CLAUDE.md rule directly and shows the offending fetch+sessionStorage lines."
+        },
+        {
+          "text": "Flags the raw hex color #4CAF50 via inline style as a design-system token violation",
+          "passed": true,
+          "evidence": "Section 4 bullet: 'Hex crudo style={{ backgroundColor: \"#4CAF50\" }}: viola color exclusivamente por token sem\u00e1ntico'."
+        },
+        {
+          "text": "Flags the rounded-3xl class as explicitly banned by the design tokens guardrail",
+          "passed": true,
+          "evidence": "Section 4 bullet: 'rounded-3xl: prohibido expl\u00edcitamente'."
+        },
+        {
+          "text": "Flags the raw <button> instead of the Button atom from _components/atoms",
+          "passed": true,
+          "evidence": "Section 4 bullet names RAW_ELEMENT_ALLOWLIST and recommends the Button atom explicitly."
+        },
+        {
+          "text": "Cites CLAUDE.md's Sistema de dise\u00f1o / design-system spec and Arquitectura Frontend rules rather than generic code-quality complaints",
+          "passed": true,
+          "evidence": "Section 4 explicitly references tests/unit/ui/design-system/tokens.test.ts and designer.md; section 3 quotes CLAUDE.md verbatim."
+        },
+        {
+          "text": "Does not approve the diff as merge-ready",
+          "passed": true,
+          "evidence": "Recommendation: 'no abrir el PR as\u00ed.'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "qa-verify-missing-rbac-guard",
+      "eval_name": "qa-verify-missing-rbac-guard",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 132.6,
+        "tokens": 103966,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Flags the missing requirePermission RBAC guard as a blocking issue, noting every other route under app/api/v1/admin/** calls it",
+          "passed": true,
+          "evidence": "Section 3 'RBAC \u2014 falta guard de permiso (hallazgo central)' with side-by-side comparable route examples and marked Cr\u00edtico \u2014 seguridad."
+        },
+        {
+          "text": "Flags the route handler containing full business logic instead of delegating to a controller, citing the Arquitectura Hexagonal rule",
+          "passed": true,
+          "evidence": "Section 2 'Violaciones de arquitectura hexagonal (CLAUDE.md: Reglas de capas (backend))' lists the three violated rules with evidence."
+        },
+        {
+          "text": "Notices there is no Zod validation of params/body before touching Prisma",
+          "passed": true,
+          "evidence": "Section 2 bullet 'Sin Zod: no valida label ni el archivo (tipo/tama\u00f1o)'."
+        },
+        {
+          "text": "Does not approve this diff as merge-ready",
+          "passed": true,
+          "evidence": "Opens with 'Veredicto: BLOQUEANTE. No abrir PR contra develop en este estado.'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "qa-verify-real-diff-review",
+      "eval_name": "qa-verify-real-diff-review",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.857,
+        "passed": 6,
+        "failed": 1,
+        "total": 7,
+        "time_seconds": 330.0,
+        "tokens": 142062,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Resolves scope via git (status/diff against develop), not a guess at what changed",
+          "passed": true,
+          "evidence": "Report lists exact modified and untracked file paths, consistent with git status/diff."
+        },
+        {
+          "text": "Identifies the touched areas: inventory kardex product search, payments history product search, and the reports department price list repository",
+          "passed": true,
+          "evidence": "'Alcance revisado' lists all touched files across the three areas."
+        },
+        {
+          "text": "Maps the frontend changes to the Arquitectura Frontend / _logic layering rules in CLAUDE.md",
+          "passed": true,
+          "evidence": "'Verificaci\u00f3n contra reglas del proyecto' bullet describes _logic/services, _logic/hooks and _blocks responsibilities correctly."
+        },
+        {
+          "text": "Looks up and cites a matching openspec capability instead of skipping spec lookup",
+          "passed": true,
+          "evidence": "Cites inventory-api, products-api and reports-api specs by Requirement name."
+        },
+        {
+          "text": "Produces a checklist with pass/fail/warning markers and file:line evidence, not unstructured prose",
+          "passed": false,
+          "evidence": "Report is well-organized prose under narrative headers (Alcance/Contexto/Verificaci\u00f3n/Hallazgo/Conclusi\u00f3n) with file:line citations, but does not use a per-item pass/fail/warning checklist format \u2014 no \u2705/\u274c/\u26a0\ufe0f markers per criterion."
+        },
+        {
+          "text": "Runs at least one real verification command and reports its actual outcome",
+          "passed": true,
+          "evidence": "Reports npm test (585/587 suites, 4370/4384 tests), npm run lint, and npm run build all run and passing."
+        },
+        {
+          "text": "Ends with a clear summary distinguishing blocking issues from warnings",
+          "passed": true,
+          "evidence": "'Conclusi\u00f3n' states no blockers plus separate non-blocking documentation debt and housekeeping notes."
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 191.1,
+        "stddev": 76.5779,
+        "min": 134.8,
+        "max": 278.3
+      },
+      "tokens": {
+        "mean": 128574.6667,
+        "stddev": 26766.0579,
+        "min": 110906,
+        "max": 159370
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.9523,
+        "stddev": 0.0826,
+        "min": 0.857,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 199.0667,
+        "stddev": 113.396,
+        "min": 132.6,
+        "max": 330.0
+      },
+      "tokens": {
+        "mean": 118248.6667,
+        "stddev": 20759.3716,
+        "min": 103966,
+        "max": 142062
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.05",
+      "time_seconds": "-8.0",
+      "tokens": "+10326"
+    }
+  },
+  "notes": [
+    "On the two synthetic violation-hunting cases (missing-rbac-guard, frontend-design-violation) without_skill matched with_skill at 100% pass rate — the planted violations are blatant enough that a capable model finds them unprompted once told to consult CLAUDE.md, so these assertions don't discriminate much between configurations. The real differentiator shows up on qa-verify-real-diff-review, where without_skill lost its only point for not using a per-item pass/fail/warning checklist format, even though its substantive analysis was just as thorough as with_skill's.",
+    "Both configurations independently surfaced real bugs beyond what the assertions asked for (missing-rbac-guard: prisma.vehicleDocument model doesn't exist in schema.prisma, broken dynamic import path; frontend-design-violation: the PATCH request always returns 400 because the backend schema silently strips isActive). This is a good sign for the underlying model's code comprehension, but it also means the synthetic cases are too easy to discriminate the skill's value — a future iteration should plant more subtle violations (e.g. a correct-looking RBAC guard that checks the wrong permission string, or a design token violation hidden in a conditional branch) to see whether the skill's systematic area-mapping actually catches what ad-hoc reading misses.",
+    "Time and token deltas are not consistent in direction (with_skill faster/cheaper on missing-rbac-guard and real-diff-review, slower/pricier on frontend-design-violation) with only 1 run per configuration — not enough signal to claim an efficiency effect either way.",
+    "The skill's clearest demonstrated value so far is procedural discipline: in real-diff-review, with_skill explicitly named the openspec capability per touched area and produced the exact report template from SKILL.md Step 6, while without_skill produced equally correct but free-form prose. Whether that format difference matters depends on how the user intends to consume these reports (e.g. scanning for ❌ markers vs. reading prose)."
+  ]
+}

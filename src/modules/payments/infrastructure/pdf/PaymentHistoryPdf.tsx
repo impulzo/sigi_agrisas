@@ -8,9 +8,12 @@ import type { PdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
 function groupBySale(items: PaymentHistoryRowDto[]): PaymentHistoryRowDto[][] {
   const groups = new Map<string, PaymentHistoryRowDto[]>();
   for (const item of items) {
-    const bucket = groups.get(item.saleId);
+    // Account payments (saleId=null) each get their own group keyed by
+    // their own id — never collapsed together under a shared "null" key.
+    const key = item.saleId ?? `account:${item.id}`;
+    const bucket = groups.get(key);
     if (bucket) bucket.push(item);
-    else groups.set(item.saleId, [item]);
+    else groups.set(key, [item]);
   }
   return Array.from(groups.values());
 }
@@ -79,12 +82,21 @@ export function PaymentHistoryPdf({ data, issuer }: Props) {
           groupBySale(items).map((group) => {
             const first = group[0];
             return (
-              <View key={first.saleId} style={styles.table}>
+              <View key={first.saleId ?? first.id} style={styles.table}>
                 <View style={styles.ticketHeader}>
-                  <Text>Ticket: {first.saleFolioCode}</Text>
-                  <Text>Cliente: {first.customerName}</Text>
-                  <Text>Monto total: ${first.saleTotal}</Text>
-                  <Text>Saldo: ${first.saleDueAmount}</Text>
+                  {first.saleId ? (
+                    <>
+                      <Text>Ticket: {first.saleFolioCode}</Text>
+                      <Text>Cliente: {first.customerName}</Text>
+                      <Text>Monto total: ${first.saleTotal}</Text>
+                      <Text>Saldo: ${first.saleDueAmount}</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text>Abono a saldo general (sin ticket)</Text>
+                      <Text>Cliente: {first.customerName}</Text>
+                    </>
+                  )}
                 </View>
                 <View style={styles.tableHeader}>
                   <Text style={[styles.colDate, styles.headerCol]}>Fecha</Text>

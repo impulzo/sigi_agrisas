@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Flags the _blocks component calling fetch and reading sessionStorage directly as a layering violation", "passed": true, "evidence": "Section 3 '_blocks' quotes the CLAUDE.md rule directly and shows the offending fetch+sessionStorage lines."},
+    {"text": "Flags the raw hex color #4CAF50 via inline style as a design-system token violation", "passed": true, "evidence": "Section 4 bullet: 'Hex crudo style={{ backgroundColor: \"#4CAF50\" }}: viola color exclusivamente por token semántico'."},
+    {"text": "Flags the rounded-3xl class as explicitly banned by the design tokens guardrail", "passed": true, "evidence": "Section 4 bullet: 'rounded-3xl: prohibido explícitamente'."},
+    {"text": "Flags the raw <button> instead of the Button atom from _components/atoms", "passed": true, "evidence": "Section 4 bullet names RAW_ELEMENT_ALLOWLIST and recommends the Button atom explicitly."},
+    {"text": "Cites CLAUDE.md's Sistema de diseño / design-system spec and Arquitectura Frontend rules rather than generic code-quality complaints", "passed": true, "evidence": "Section 4 explicitly references tests/unit/ui/design-system/tokens.test.ts and designer.md; section 3 quotes CLAUDE.md verbatim."},
+    {"text": "Does not approve the diff as merge-ready", "passed": true, "evidence": "Recommendation: 'no abrir el PR así.'"}
+  ],
+  "summary": {"passed": 6, "failed": 0, "total": 6, "pass_rate": 1.0}
+}

@@ -1,18 +1,8 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
-import { useFoliosOptions } from "../../../_hooks/useFoliosOptions";
-import { usePaymentMethodsOptions } from "../../../_hooks/usePaymentMethodsOptions";
-import { registerPayment } from "../_logic/services/registerPayment";
+import { useRef, useEffect } from "react";
+import { useRegisterPaymentForm } from "../_logic/hooks/useRegisterPaymentForm";
 import { formatMxCurrency } from "../../../_lib/formatMxCurrency";
-import {
-  PaymentExceedsDueAmountError,
-  PaymentExceedsLineDueAmountError,
-  PaymentItemsAmountMismatchError,
-  SaleItemNotFoundError,
-  SaleNotPayableError,
-  FolioScopeMismatchError,
-} from "../_logic/errors";
 import { Button } from "../../../_components/atoms/Button/Button";
 import { Select } from "../../../_components/atoms/Select/Select";
 import type { LineBalance } from "../_logic/types/domain";
@@ -29,19 +19,7 @@ interface RegisterPaymentModalProps {
 
 export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSuccess, onClose }: RegisterPaymentModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const { options: folioOptions, isLoading: foliosLoading } = useFoliosOptions({ scope: "OPERATIONS" });
-  const { options: methodOptions, isLoading: methodsLoading } = usePaymentMethodsOptions();
-
-  const [byLine, setByLine] = useState(false);
-  const [amount, setAmount] = useState("");
-  const [lineAmounts, setLineAmounts] = useState<Record<string, string>>({});
-  const [lineErrors, setLineErrors] = useState<Record<string, string>>({});
-  const [paymentMethodId, setPaymentMethodId] = useState("");
-  const [folioId, setFolioId] = useState("");
-  const [notes, setNotes] = useState("");
-  const [amountError, setAmountError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const form = useRegisterPaymentForm({ saleId, lineBalances, onSuccess });
 
   useEffect(() => {
     dialogRef.current?.showModal();
@@ -58,99 +36,6 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
     return () => dialog.removeEventListener("cancel", handleCancel);
   }, [onClose]);
 
-  useEffect(() => {
-    if (!foliosLoading && folioOptions.length > 0 && !folioId) {
-      const rb = folioOptions.find((f) => f.code === "RB");
-      setFolioId(rb?.id ?? folioOptions[0].id);
-    }
-  }, [foliosLoading, folioOptions, folioId]);
-
-  useEffect(() => {
-    if (!methodsLoading && methodOptions.length > 0 && !paymentMethodId) {
-      setPaymentMethodId(methodOptions[0].id);
-    }
-  }, [methodsLoading, methodOptions, paymentMethodId]);
-
-  function lineAmountsToItems(): { items: { saleItemId: string; amount: number }[]; sum: number } {
-    const items: { saleItemId: string; amount: number }[] = [];
-    let sum = 0;
-    for (const lb of lineBalances) {
-      const raw = lineAmounts[lb.saleItemId];
-      const n = raw ? parseFloat(raw) : 0;
-      if (n > 0) {
-        items.push({ saleItemId: lb.saleItemId, amount: n });
-        sum += n;
-      }
-    }
-    return { items, sum };
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setAmountError(null);
-    setFormError(null);
-    setLineErrors({});
-
-    let numAmount: number;
-    let items: { saleItemId: string; amount: number }[] | undefined;
-
-    if (byLine) {
-      const { items: lineItems, sum } = lineAmountsToItems();
-      if (lineItems.length === 0) {
-        setFormError("Captura al menos un monto por línea");
-        return;
-      }
-      numAmount = sum;
-      items = lineItems;
-    } else {
-      numAmount = parseFloat(amount);
-      if (!amount || isNaN(numAmount) || numAmount <= 0) {
-        setAmountError("El monto debe ser mayor a 0");
-        return;
-      }
-    }
-
-    if (!paymentMethodId) {
-      setFormError("Selecciona un método de pago");
-      return;
-    }
-    if (!folioId) {
-      setFormError("Selecciona un folio");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await registerPayment({
-        saleId,
-        amount: numAmount,
-        paymentMethodId,
-        folioId,
-        notes: notes || undefined,
-        items,
-      });
-      onSuccess();
-    } catch (err) {
-      if (err instanceof PaymentExceedsLineDueAmountError) {
-        setLineErrors({ [err.saleItemId]: err.message });
-      } else if (err instanceof PaymentExceedsDueAmountError) {
-        setAmountError(err.message);
-      } else if (err instanceof PaymentItemsAmountMismatchError) {
-        setFormError(err.message);
-      } else if (err instanceof SaleItemNotFoundError) {
-        setFormError(err.message);
-      } else if (err instanceof SaleNotPayableError) {
-        setFormError(err.message);
-      } else if (err instanceof FolioScopeMismatchError) {
-        setFormError(err.message);
-      } else if (err instanceof Error) {
-        setFormError(err.message);
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   return (
     <dialog
       ref={dialogRef}
@@ -161,20 +46,20 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
         <h2 className="text-title-md font-semibold text-on-surface">Registrar abono</h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-6">
+      <form onSubmit={form.handleSubmit} className="flex flex-col gap-4 p-6">
         {lineBalances.length > 0 && (
           <label className="flex items-center gap-2 text-body-sm text-on-surface-variant">
             <input
               type="checkbox"
-              checked={byLine}
-              onChange={(e) => { setByLine(e.target.checked); setAmountError(null); setLineErrors({}); }}
+              checked={form.byLine}
+              onChange={(e) => form.setByLine(e.target.checked)}
               className="rounded-sm border-outline"
             />
             Repartir por producto
           </label>
         )}
 
-        {!byLine ? (
+        {!form.byLine ? (
           <div className="flex flex-col gap-1">
             <label className="text-label-md text-on-surface-variant" htmlFor="reg-amount">
               Monto
@@ -187,19 +72,19 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
               type="number"
               step="0.01"
               min="0.01"
-              value={amount}
-              onChange={(e) => { setAmount(e.target.value); setAmountError(null); }}
+              value={form.amount}
+              onChange={(e) => form.setAmount(e.target.value)}
               className="rounded-md border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary"
               placeholder="0.00"
             />
-            {amountError && <p className="text-body-sm text-error">{amountError}</p>}
+            {form.amountError && <p className="text-body-sm text-error">{form.amountError}</p>}
           </div>
         ) : (
           <div className="flex flex-col gap-2">
             <p className="text-label-md text-on-surface-variant">Monto por producto</p>
             {lineBalances.map((lb) => {
               const disabled = lb.dueAmount <= 0;
-              const err = lineErrors[lb.saleItemId];
+              const err = form.lineErrors[lb.saleItemId];
               return (
                 <div key={lb.saleItemId} className="flex flex-col gap-1">
                   <div className="flex items-center justify-between gap-2">
@@ -214,11 +99,8 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
                     min="0"
                     max={lb.dueAmount > 0 ? lb.dueAmount : undefined}
                     disabled={disabled}
-                    value={lineAmounts[lb.saleItemId] ?? ""}
-                    onChange={(e) => {
-                      setLineAmounts((prev) => ({ ...prev, [lb.saleItemId]: e.target.value }));
-                      setLineErrors((prev) => { const next = { ...prev }; delete next[lb.saleItemId]; return next; });
-                    }}
+                    value={form.lineAmounts[lb.saleItemId] ?? ""}
+                    onChange={(e) => form.setLineAmount(lb.saleItemId, e.target.value)}
                     placeholder="0.00"
                     className="rounded-md border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary disabled:opacity-50 disabled:bg-surface-container-low"
                   />
@@ -234,8 +116,8 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
           <label className="text-label-md text-on-surface-variant" htmlFor="reg-method">
             Método de pago
           </label>
-          <Select id="reg-method" value={paymentMethodId} onChange={(e) => setPaymentMethodId(e.target.value)} disabled={methodsLoading}>
-            {methodOptions.map((m) => (
+          <Select id="reg-method" value={form.paymentMethodId} onChange={(e) => form.setPaymentMethodId(e.target.value)} disabled={form.methodsLoading}>
+            {form.methodOptions.map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}
           </Select>
@@ -246,8 +128,8 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
           <label className="text-label-md text-on-surface-variant" htmlFor="reg-folio">
             Folio de recibo
           </label>
-          <Select id="reg-folio" value={folioId} onChange={(e) => setFolioId(e.target.value)} disabled={foliosLoading}>
-            {folioOptions.map((f) => (
+          <Select id="reg-folio" value={form.folioId} onChange={(e) => form.setFolioId(e.target.value)} disabled={form.foliosLoading}>
+            {form.folioOptions.map((f) => (
               <option key={f.id} value={f.id}>{f.name} ({f.code})</option>
             ))}
           </Select>
@@ -262,15 +144,15 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
             id="reg-notes"
             rows={2}
             maxLength={1000}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            value={form.notes}
+            onChange={(e) => form.setNotes(e.target.value)}
             className="rounded-md border border-outline bg-surface px-3 py-2 text-body-md text-on-surface focus:outline-none focus:border-primary resize-none"
             placeholder="Comentarios adicionales..."
           />
         </div>
 
-        {formError && (
-          <p className="text-body-sm text-error bg-error-container/20 rounded px-3 py-2">{formError}</p>
+        {form.formError && (
+          <p className="text-body-sm text-error bg-error-container/20 rounded px-3 py-2">{form.formError}</p>
         )}
 
         <div className="flex justify-end gap-3 pt-2">
@@ -282,7 +164,7 @@ export function RegisterPaymentModal({ saleId, dueAmount, lineBalances, onSucces
           >
             Cancelar
           </Button>
-          <Button type="submit" variant="filled" loading={isSaving} className="px-5 py-2 text-body-sm">
+          <Button type="submit" variant="filled" loading={form.isSaving} className="px-5 py-2 text-body-sm">
             Registrar abono
           </Button>
         </div>

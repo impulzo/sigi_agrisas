@@ -35,6 +35,13 @@ jest.mock("../../../../../../app/_components/organisms/PageShell", () => ({
 jest.mock("../../../../../../app/(private)/catalogs/_blocks/CatalogPagination", () => ({
   CatalogPagination: () => <div data-testid="pagination" />,
 }));
+jest.mock("../../../../../../app/(private)/payments/_blocks/RegisterGlobalPaymentModal", () => ({
+  RegisterGlobalPaymentModal: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="register-global-modal">
+      <button type="button" onClick={onClose}>Cerrar</button>
+    </div>
+  ),
+}));
 
 import { useCurrentUser } from "../../../../../../app/_hooks/useCurrentUser";
 import { usePaymentsList } from "../../../../../../app/(private)/payments/_logic/hooks/usePaymentsList";
@@ -43,7 +50,7 @@ import { PaymentsListPage } from "../../../../../../app/(private)/payments/_bloc
 const mockUseCurrentUser = useCurrentUser as jest.MockedFunction<typeof useCurrentUser>;
 const mockUsePaymentsList = usePaymentsList as jest.MockedFunction<typeof usePaymentsList>;
 
-function setupUser(canRead: boolean | "loading", isBypass = false) {
+function setupUser(canRead: boolean | "loading", isBypass = false, canCreate = false) {
   mockUseCurrentUser.mockReturnValue({
     userId: "u1",
     email: "test@test.com",
@@ -53,6 +60,7 @@ function setupUser(canRead: boolean | "loading", isBypass = false) {
     can: jest.fn((perm: string) => {
       if (perm === "payments:read") return canRead;
       if (perm === "branches:access_all") return isBypass;
+      if (perm === "payments:create") return canCreate;
       return false;
     }),
     refresh: jest.fn(),
@@ -132,5 +140,26 @@ describe("PaymentsListPage", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Vista agrupada" }));
     expect(screen.getByText("VNT-000001")).toBeInTheDocument();
     expect(screen.getByText("1 abono")).toBeInTheDocument();
+  });
+
+  it("muestra el botón '+ Registrar abono' solo con permiso payments:create, y abre el modal al hacer click", () => {
+    setupUser(true, false, true);
+    setupList([]);
+    render(<PaymentsListPage />);
+
+    const button = screen.getByRole("button", { name: "+ Registrar abono" });
+    expect(button).toBeInTheDocument();
+    expect(screen.queryByTestId("register-global-modal")).not.toBeInTheDocument();
+
+    fireEvent.click(button);
+    expect(screen.getByTestId("register-global-modal")).toBeInTheDocument();
+  });
+
+  it("no muestra el botón '+ Registrar abono' sin permiso payments:create", () => {
+    setupUser(true, false, false);
+    setupList([]);
+    render(<PaymentsListPage />);
+
+    expect(screen.queryByRole("button", { name: "+ Registrar abono" })).not.toBeInTheDocument();
   });
 });
