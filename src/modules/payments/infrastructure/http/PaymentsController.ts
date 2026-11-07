@@ -6,6 +6,8 @@ import { toPdfIssuer } from "@/shared/infrastructure/pdf/pdfIssuer";
 import React from "react";
 import { parseListQuery } from "@/shared/infrastructure/http/parseListQuery";
 import { RegisterPaymentUseCase } from "../../application/use-cases/RegisterPaymentUseCase";
+import { RegisterAccountPaymentUseCase } from "../../application/use-cases/RegisterAccountPaymentUseCase";
+import { GetCustomerAccountDebtUseCase } from "../../application/use-cases/GetCustomerAccountDebtUseCase";
 import { CancelPaymentUseCase } from "../../application/use-cases/CancelPaymentUseCase";
 import { ListPaymentsUseCase } from "../../application/use-cases/ListPaymentsUseCase";
 import { GetPaymentUseCase } from "../../application/use-cases/GetPaymentUseCase";
@@ -18,6 +20,7 @@ import { PaymentNotFoundError } from "../../domain/errors/PaymentNotFoundError";
 import { PaymentAlreadyCancelledError } from "../../domain/errors/PaymentAlreadyCancelledError";
 import { PaymentExceedsDueAmountError } from "../../domain/errors/PaymentExceedsDueAmountError";
 import { PaymentExceedsLineDueAmountError } from "../../domain/errors/PaymentExceedsLineDueAmountError";
+import { PaymentExceedsAccountDebtError } from "../../domain/errors/PaymentExceedsAccountDebtError";
 import { PaymentItemsAmountMismatchError } from "../../domain/errors/PaymentItemsAmountMismatchError";
 import { SaleItemNotFoundError } from "../../domain/errors/SaleItemNotFoundError";
 import { SaleNotPayableError } from "../../domain/errors/SaleNotPayableError";
@@ -35,6 +38,7 @@ import { BranchScopeViolationError } from "../../domain/errors/BranchScopeViolat
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 import { SaleNotFoundError } from "@/modules/pos/domain/errors/SaleNotFoundError";
+import { CustomerNotFoundError } from "@/modules/customers/domain/errors/CustomerNotFoundError";
 
 const uuidSchema = z.string().uuid("Invalid ID format");
 
@@ -47,6 +51,18 @@ const registerSchema = z.object({
   items: z
     .array(z.object({ saleItemId: z.string().uuid(), amount: z.number().positive("item amount must be > 0") }))
     .optional(),
+});
+
+const registerAccountSchema = z.object({
+  paymentMethodId: z.string().uuid(),
+  folioId: z.string().uuid(),
+  amount: z.number().positive("amount must be > 0"),
+  notes: z.string().max(1000).nullable().optional(),
+  branchId: z.string().uuid().nullable().optional(),
+});
+
+const accountDebtQuerySchema = z.object({
+  branchId: z.string().uuid().optional(),
 });
 
 const cancelSchema = z.object({
@@ -88,8 +104,102 @@ export class PaymentsController {
     private readonly listBySaleUseCase: ListPaymentsBySaleUseCase,
     private readonly historyUseCase: GetPaymentHistoryReportUseCase,
     private readonly authzService: AuthorizationService,
-    private readonly getTicketSettingsUseCase: GetTicketSettingsUseCase
+    private readonly getTicketSettingsUseCase: GetTicketSettingsUseCase,
+    private readonly registerAccountUseCase: RegisterAccountPaymentUseCase,
+    private readonly getAccountDebtUseCase: GetCustomerAccountDebtUseCase
   ) {}
+
+  async registerAccount(req: NextRequest, customerId: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(customerId);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const guard = await requirePermission(req, "payments:create", this.authzService);
+    if (guard) return guard;
+
+    const body = await req.json().catch(() => ({}));
+    const parsed = registerAccountSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const scoped = await resolveScopedBranchId(req, parsed.data.branchId ?? undefined, this.authzService);
+    if (scoped instanceof NextResponse) return scoped;
+    if (!scoped.branchId) {
+      return NextResponse.json(
+        { error: "branchId is required when registering an account payment without a scoped branch" },
+        { status: 400 }
+      );
+    }
+
+    const userId = req.headers.get("x-user-id") ?? "";
+
+    try {
+      const { dto } = await this.registerAccountUseCase.execute({
+        customerId: idParsed.data,
+        paymentMethodId: parsed.data.paymentMethodId,
+        folioId: parsed.data.folioId,
+        amount: parsed.data.amount,
+        notes: parsed.data.notes,
+        userId,
+        branchId: scoped.branchId,
+      });
+
+      return NextResponse.json(dto, { status: 201 });
+    } catch (err) {
+      if (err instanceof CustomerNotFoundError) {
+        return NextResponse.json({ error: "CustomerNotFound" }, { status: 404 });
+      }
+      if (err instanceof PaymentExceedsAccountDebtError) {
+        return NextResponse.json({ error: "PaymentExceedsAccountDebt", due: err.due }, { status: 409 });
+      }
+      if (err instanceof FolioScopeMismatchError) {
+        return NextResponse.json(
+          { error: "FolioScopeMismatch", expected: err.expected, actual: err.actual },
+          { status: 400 }
+        );
+      }
+      if (err instanceof InactiveResourceError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      throw err;
+    }
+  }
+
+  async getAccountDebt(req: NextRequest, customerId: string): Promise<NextResponse> {
+    const idParsed = uuidSchema.safeParse(customerId);
+    if (!idParsed.success) {
+      return NextResponse.json({ error: idParsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const guard = await requirePermission(req, "payments:read", this.authzService);
+    if (guard) return guard;
+
+    const { searchParams } = new URL(req.url);
+    const parsed = accountDebtQuerySchema.safeParse({
+      branchId: searchParams.get("branchId") ?? undefined,
+    });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const scoped = await resolveScopedBranchId(req, parsed.data.branchId, this.authzService);
+    if (scoped instanceof NextResponse) return scoped;
+
+    try {
+      const dto = await this.getAccountDebtUseCase.execute({
+        customerId: idParsed.data,
+        branchId: scoped.branchId ?? null,
+      });
+      return NextResponse.json(dto);
+    } catch (err) {
+      if (err instanceof CustomerNotFoundError) {
+        return NextResponse.json({ error: "CustomerNotFound" }, { status: 404 });
+      }
+      throw err;
+    }
+  }
 
   async register(req: NextRequest): Promise<NextResponse> {
     const guard = await requirePermission(req, "payments:create", this.authzService);
@@ -270,10 +380,13 @@ export class PaymentsController {
       createdAt: p.createdAt.toISOString(),
       cancelledAt: p.cancelledAt ? p.cancelledAt.toISOString() : null,
       cancellationReason: p.cancellationReason,
-      saleTotal: joins.saleTotal.toFixed(4),
-      salePaidAmount: joins.salePaidAmount.toFixed(4),
+      saleTotal: joins.saleTotal !== null ? joins.saleTotal.toFixed(4) : null,
+      salePaidAmount: joins.salePaidAmount !== null ? joins.salePaidAmount.toFixed(4) : null,
       salePaymentStatus: joins.salePaymentStatus,
-      saleDueAmount: (joins.saleTotal - joins.salePaidAmount).toFixed(4),
+      saleDueAmount:
+        joins.saleTotal !== null && joins.salePaidAmount !== null
+          ? (joins.saleTotal - joins.salePaidAmount).toFixed(4)
+          : null,
     }));
 
     return NextResponse.json({ items, total: result.total, page: result.page, pageSize: result.pageSize });
@@ -294,14 +407,14 @@ export class PaymentsController {
       if (scope) return scope;
 
       const joined = {
-        saleFolioCode: data.joins?.saleFolioCode ?? data.sale.folioCode,
+        saleFolioCode: data.joins?.saleFolioCode ?? data.sale?.folioCode ?? null,
         customerName: data.joins?.customerName ?? "",
         userName: data.joins?.userName ?? "",
         branchName: data.joins?.branchName ?? "",
         paymentMethodCode: data.joins?.paymentMethodCode ?? "",
-        saleTotal: data.joins?.saleTotal ?? data.sale.total,
-        salePaidAmount: data.joins?.salePaidAmount ?? data.sale.paidAmount,
-        salePaymentStatus: data.joins?.salePaymentStatus ?? data.sale.paymentStatus,
+        saleTotal: data.joins?.saleTotal ?? data.sale?.total ?? null,
+        salePaidAmount: data.joins?.salePaidAmount ?? data.sale?.paidAmount ?? null,
+        salePaymentStatus: data.joins?.salePaymentStatus ?? data.sale?.paymentStatus ?? null,
       };
 
       return NextResponse.json(toPaymentDetailDto(data, joined));
@@ -356,10 +469,13 @@ export class PaymentsController {
                 amount: item.amount.toFixed(4),
               }))
             : undefined,
-          saleTotal: joins.saleTotal.toFixed(4),
-          salePaidAmount: joins.salePaidAmount.toFixed(4),
+          saleTotal: joins.saleTotal !== null ? joins.saleTotal.toFixed(4) : null,
+          salePaidAmount: joins.salePaidAmount !== null ? joins.salePaidAmount.toFixed(4) : null,
           salePaymentStatus: joins.salePaymentStatus,
-          saleDueAmount: (joins.saleTotal - joins.salePaidAmount).toFixed(4),
+          saleDueAmount:
+            joins.saleTotal !== null && joins.salePaidAmount !== null
+              ? (joins.saleTotal - joins.salePaidAmount).toFixed(4)
+              : null,
         })),
         saleId: result.saleId,
         saleTotal: result.saleTotal,

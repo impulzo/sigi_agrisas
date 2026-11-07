@@ -1,6 +1,8 @@
 import { prisma } from "@/shared/infrastructure/prisma/client";
 import { PrismaPaymentRepository } from "../repositories/PrismaPaymentRepository";
 import { RegisterPaymentUseCase } from "../../application/use-cases/RegisterPaymentUseCase";
+import { RegisterAccountPaymentUseCase } from "../../application/use-cases/RegisterAccountPaymentUseCase";
+import { GetCustomerAccountDebtUseCase } from "../../application/use-cases/GetCustomerAccountDebtUseCase";
 import { CancelPaymentUseCase } from "../../application/use-cases/CancelPaymentUseCase";
 import { ListPaymentsUseCase } from "../../application/use-cases/ListPaymentsUseCase";
 import { GetPaymentUseCase } from "../../application/use-cases/GetPaymentUseCase";
@@ -21,6 +23,8 @@ const getUseCase = new GetPaymentUseCase(paymentRepo);
 const listBySaleUseCase = new ListPaymentsBySaleUseCase(paymentRepo);
 const historyUseCase = new GetPaymentHistoryReportUseCase(paymentRepo);
 const getTicketSettingsUseCase = new GetTicketSettingsUseCase(ticketSettingsRepo);
+const registerAccountUseCase = new RegisterAccountPaymentUseCase(paymentRepo);
+const getAccountDebtUseCase = new GetCustomerAccountDebtUseCase(paymentRepo);
 
 export const paymentsController = new PaymentsController(
   registerUseCase,
@@ -30,5 +34,7 @@ export const paymentsController = new PaymentsController(
   listBySaleUseCase,
   historyUseCase,
   rbacContainer.authorizationService,
-  getTicketSettingsUseCase
+  getTicketSettingsUseCase,
+  registerAccountUseCase,
+  getAccountDebtUseCase
 );

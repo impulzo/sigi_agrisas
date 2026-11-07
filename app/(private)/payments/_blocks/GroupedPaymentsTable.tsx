@@ -38,11 +38,11 @@ export function GroupedPaymentsTable<T extends GroupablePayment>({
 
   if (groups.length === 0) return null;
 
-  function toggle(saleId: string) {
+  function toggle(groupKey: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(saleId)) next.delete(saleId);
-      else next.add(saleId);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
       return next;
     });
   }
@@ -53,12 +53,13 @@ export function GroupedPaymentsTable<T extends GroupablePayment>({
         <THead>{headerRow}</THead>
         <TBody>
           {groups.map((group) => {
-            const isOpen = expanded.has(group.saleId);
+            const isOpen = expanded.has(group.groupKey);
+            const hasSale = group.saleId !== null;
             return (
-              <Fragment key={group.saleId}>
+              <Fragment key={group.groupKey}>
                 <Tr
                   className="border-b border-outline-variant bg-surface-container-low/60 cursor-pointer"
-                  onClick={() => toggle(group.saleId)}
+                  onClick={() => toggle(group.groupKey)}
                 >
                   <Td colSpan={columnCount}>
                     <div className="flex items-center gap-3">
@@ -67,17 +68,23 @@ export function GroupedPaymentsTable<T extends GroupablePayment>({
                         size={18}
                         className={isOpen ? "rotate-90 transition-transform" : "transition-transform"}
                       />
-                      <span className="font-mono text-on-surface">{group.saleFolioCode || "—"}</span>
+                      <span className="font-mono text-on-surface">
+                        {hasSale ? group.saleFolioCode || "—" : "Abono a saldo general (sin ticket)"}
+                      </span>
                       <span className="text-on-surface-variant max-w-[200px] truncate">{group.customerName || "—"}</span>
                       <span className="text-label-sm text-on-surface-variant ml-auto">
                         {group.payments.length} abono{group.payments.length !== 1 ? "s" : ""}
                       </span>
-                      <span className="tabular-nums font-medium">
-                        Monto total: {fmt(group.saleTotal)}
-                      </span>
-                      <span className="tabular-nums font-medium">
-                        Saldo: {fmt(group.saleDueAmount)}
-                      </span>
+                      {hasSale && (
+                        <>
+                          <span className="tabular-nums font-medium">
+                            Monto total: {fmt(group.saleTotal ?? 0)}
+                          </span>
+                          <span className="tabular-nums font-medium">
+                            Saldo: {fmt(group.saleDueAmount ?? 0)}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </Td>
                 </Tr>

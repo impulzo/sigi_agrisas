@@ -1,0 +1,12 @@
+{
+  "expectations": [
+    {"text": "Resolves scope via git (status/diff against develop), not a guess at what changed", "passed": true, "evidence": "Report lists exact files with precise paths (9 modified + untracked), consistent with running git status/diff rather than guessing."},
+    {"text": "Identifies the touched areas: inventory kardex product search, payments history product search, and the reports department price list repository", "passed": true, "evidence": "Report explicitly lists all three areas with file paths."},
+    {"text": "Maps the frontend changes to the Arquitectura Frontend / _logic layering rules in CLAUDE.md", "passed": true, "evidence": "Checklist section 'Capas frontend (_logic/services, _logic/hooks, _blocks)' cites the exact CLAUDE.md layering rule and verifies each layer."},
+    {"text": "Looks up and cites a matching openspec capability instead of skipping spec lookup", "passed": true, "evidence": "Cites products-api, inventory-api, reports-api specs plus the active openspec/changes/fix-inventory-branch-scoping-leaks/ change, with line references."},
+    {"text": "Produces a checklist with pass/fail/warning markers and file:line evidence, not unstructured prose", "passed": true, "evidence": "Report uses ✅/⚠️ markers per bullet under '### Checklist' with file:line citations throughout."},
+    {"text": "Runs at least one real verification command and reports its actual outcome", "passed": true, "evidence": "Hand-back states build, lint, design guardrail, and 27 relevant tests were run and passed."},
+    {"text": "Ends with a clear summary distinguishing blocking issues from warnings", "passed": true, "evidence": "Hand-back/report conclude with 'Sin bloqueantes' plus 2 non-blocking coverage gaps and 1 process note, clearly separated."}
+  ],
+  "summary": {"passed": 7, "failed": 0, "total": 7, "pass_rate": 1.0}
+}

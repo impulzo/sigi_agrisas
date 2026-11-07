@@ -1,20 +1,21 @@
 import { CustomerPayment } from "../../domain/entities/CustomerPayment";
-import { PaymentDto, PaymentDetailDto, PaymentHistoryRowDto } from "../dto/PaymentDto";
-import { PaymentWithSale, PaymentHistoryItem } from "../ports/PaymentRepository";
+import { PaymentDto, PaymentDetailDto, PaymentHistoryRowDto, AccountDebtDto } from "../dto/PaymentDto";
+import { PaymentWithSale, PaymentHistoryItem, AccountDebtSummary } from "../ports/PaymentRepository";
 import { SalePaymentStatus } from "../../domain/value-objects/SalePaymentStatus";
 
 interface JoinedFields {
-  saleFolioCode: string;
+  saleFolioCode: string | null;
   customerName: string;
   userName: string;
   branchName: string;
   paymentMethodCode: string;
-  saleTotal: number;
-  salePaidAmount: number;
-  salePaymentStatus: SalePaymentStatus;
+  saleTotal: number | null;
+  salePaidAmount: number | null;
+  salePaymentStatus: SalePaymentStatus | null;
 }
 
-function saleDueAmount(saleTotal: number, salePaidAmount: number): string {
+function saleDueAmount(saleTotal: number | null, salePaidAmount: number | null): string | null {
+  if (saleTotal === null || salePaidAmount === null) return null;
   return (saleTotal - salePaidAmount).toFixed(4);
 }
 
@@ -47,8 +48,8 @@ export function toPaymentDto(p: CustomerPayment, joined: JoinedFields): PaymentD
           amount: item.amount.toFixed(4),
         }))
       : undefined,
-    saleTotal: joined.saleTotal.toFixed(4),
-    salePaidAmount: joined.salePaidAmount.toFixed(4),
+    saleTotal: joined.saleTotal !== null ? joined.saleTotal.toFixed(4) : null,
+    salePaidAmount: joined.salePaidAmount !== null ? joined.salePaidAmount.toFixed(4) : null,
     salePaymentStatus: joined.salePaymentStatus,
     saleDueAmount: saleDueAmount(joined.saleTotal, joined.salePaidAmount),
   };
@@ -71,8 +72,8 @@ export function toPaymentHistoryRowDto(item: PaymentHistoryItem): PaymentHistory
     amount: item.amount.toFixed(4),
     status: item.status,
     cancelledAt: item.cancelledAt ? item.cancelledAt.toISOString() : null,
-    saleTotal: item.saleTotal.toFixed(4),
-    salePaidAmount: item.salePaidAmount.toFixed(4),
+    saleTotal: item.saleTotal !== null ? item.saleTotal.toFixed(4) : null,
+    salePaidAmount: item.salePaidAmount !== null ? item.salePaidAmount.toFixed(4) : null,
     salePaymentStatus: item.salePaymentStatus,
     saleDueAmount: saleDueAmount(item.saleTotal, item.salePaidAmount),
   };
@@ -81,13 +82,30 @@ export function toPaymentHistoryRowDto(item: PaymentHistoryItem): PaymentHistory
 export function toPaymentDetailDto(data: PaymentWithSale, joined: JoinedFields): PaymentDetailDto {
   return {
     ...toPaymentDto(data.payment, joined),
-    sale: {
-      id: data.sale.id,
-      folioCode: data.sale.folioCode,
-      folioNumber: data.sale.folioNumber,
-      total: data.sale.total.toFixed(4),
-      paidAmount: data.sale.paidAmount.toFixed(4),
-      paymentStatus: data.sale.paymentStatus,
-    },
+    sale: data.sale
+      ? {
+          id: data.sale.id,
+          folioCode: data.sale.folioCode,
+          folioNumber: data.sale.folioNumber,
+          total: data.sale.total.toFixed(4),
+          paidAmount: data.sale.paidAmount.toFixed(4),
+          paymentStatus: data.sale.paymentStatus,
+        }
+      : null,
+  };
+}
+
+export function toAccountDebtDto(data: AccountDebtSummary): AccountDebtDto {
+  return {
+    currentBalance: data.currentBalance.toFixed(4),
+    pendingSales: data.pendingSales.map((s) => ({
+      saleId: s.saleId,
+      folioCode: s.folioCode,
+      total: s.total.toFixed(4),
+      paidAmount: s.paidAmount.toFixed(4),
+      due: s.due.toFixed(4),
+      createdAt: s.createdAt.toISOString(),
+    })),
+    accountDebt: data.accountDebt.toFixed(4),
   };
 }

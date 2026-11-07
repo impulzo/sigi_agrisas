@@ -1,0 +1,13 @@
+{
+  "eval_name": "qa-verify-real-diff-review",
+  "prompt": "Antes de armar el PR hacia develop, revisa el diff que tengo sin commitear ahorita en agrisas-panel (kardex, historial de pagos y el repo de reportes de lista de precios por departamento) contra las reglas del proyecto y las specs de openspec que apliquen. Dime si está listo para mergear o si hay algo bloqueante.",
+  "assertions": [
+    "Resolves scope via git (status/diff against develop), not a guess at what changed",
+    "Identifies the touched areas: inventory kardex product search, payments history product search, and the reports department price list repository",
+    "Maps the frontend changes to the Arquitectura Frontend / _logic layering rules in CLAUDE.md",
+    "Looks up and cites a matching openspec capability (e.g. inventory-kardex-ui, payments-ui, or reports-api/reports-collections-api) instead of skipping spec lookup",
+    "Produces a checklist with pass/fail/warning markers and file:line evidence, not unstructured prose",
+    "Runs at least one real verification command (build, targeted test, or lint) and reports its actual outcome",
+    "Ends with a clear summary distinguishing blocking issues from warnings"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "expectations": [
+    {"text": "Resolves scope via git (status/diff against develop), not a guess at what changed", "passed": true, "evidence": "Report lists exact modified and untracked file paths, consistent with git status/diff."},
+    {"text": "Identifies the touched areas: inventory kardex product search, payments history product search, and the reports department price list repository", "passed": true, "evidence": "'Alcance revisado' lists all touched files across the three areas."},
+    {"text": "Maps the frontend changes to the Arquitectura Frontend / _logic layering rules in CLAUDE.md", "passed": true, "evidence": "'Verificación contra reglas del proyecto' bullet describes _logic/services, _logic/hooks and _blocks responsibilities correctly."},
+    {"text": "Looks up and cites a matching openspec capability instead of skipping spec lookup", "passed": true, "evidence": "Cites inventory-api, products-api and reports-api specs by Requirement name."},
+    {"text": "Produces a checklist with pass/fail/warning markers and file:line evidence, not unstructured prose", "passed": false, "evidence": "Report is well-organized prose under narrative headers (Alcance/Contexto/Verificación/Hallazgo/Conclusión) with file:line citations, but does not use a per-item pass/fail/warning checklist format — no ✅/❌/⚠️ markers per criterion."},
+    {"text": "Runs at least one real verification command and reports its actual outcome", "passed": true, "evidence": "Reports npm test (585/587 suites, 4370/4384 tests), npm run lint, and npm run build all run and passing."},
+    {"text": "Ends with a clear summary distinguishing blocking issues from warnings", "passed": true, "evidence": "'Conclusión' states no blockers plus separate non-blocking documentation debt and housekeeping notes."}
+  ],
+  "summary": {"passed": 6, "failed": 1, "total": 7, "pass_rate": 0.857}
+}

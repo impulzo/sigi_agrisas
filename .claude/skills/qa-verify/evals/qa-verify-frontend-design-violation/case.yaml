@@ -1,0 +1,12 @@
+schema_version: "1.1"
+name: qa-verify-frontend-design-violation
+expected_outcome: |
+  The response flags multiple concrete violations as blocking: (1) a `_blocks` component calling `fetch`
+  and reading `sessionStorage` directly, violating the "Arquitectura Frontend" rule that _components/
+  _blocks are presentational only and this logic belongs in a _logic/hooks + _logic/services pair
+  (probably via authFetch, not raw fetch+sessionStorage); (2) raw hex color `#4CAF50` via inline style
+  instead of a design-system color token; (3) `rounded-3xl`, which is explicitly banned by the design
+  tokens guardrail; (4) a raw `<button>` instead of the Button atom from `_components/atoms`. The report
+  should cite CLAUDE.md's "Sistema de diseño" / design-system spec and the "Arquitectura Frontend" layer
+  rules, not just generic code-quality complaints, and should treat this as not ready to merge. It should
+  not approve the diff or just offer generic praise.

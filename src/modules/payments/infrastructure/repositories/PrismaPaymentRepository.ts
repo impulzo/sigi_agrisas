@@ -3,6 +3,8 @@ import { randomUUID } from "crypto";
 import {
   PaymentRepository,
   CreatePaymentInput,
+  CreateAccountPaymentInput,
+  AccountDebtSummary,
   ListPaymentsFilters,
   ListPaymentsPagination,
   PaymentWithSale,
@@ -20,12 +22,14 @@ import { PaymentNotFoundError } from "../../domain/errors/PaymentNotFoundError";
 import { PaymentAlreadyCancelledError } from "../../domain/errors/PaymentAlreadyCancelledError";
 import { PaymentExceedsDueAmountError } from "../../domain/errors/PaymentExceedsDueAmountError";
 import { PaymentExceedsLineDueAmountError } from "../../domain/errors/PaymentExceedsLineDueAmountError";
+import { PaymentExceedsAccountDebtError } from "../../domain/errors/PaymentExceedsAccountDebtError";
 import { PaymentItemsAmountMismatchError } from "../../domain/errors/PaymentItemsAmountMismatchError";
 import { SaleItemNotFoundError } from "../../domain/errors/SaleItemNotFoundError";
 import { SaleNotPayableError } from "../../domain/errors/SaleNotPayableError";
 import { BranchScopeViolationError } from "../../domain/errors/BranchScopeViolationError";
 import { InactiveResourceError } from "@/modules/pos/domain/errors/InactiveResourceError";
 import { SaleNotFoundError } from "@/modules/pos/domain/errors/SaleNotFoundError";
+import { CustomerNotFoundError } from "@/modules/customers/domain/errors/CustomerNotFoundError";
 import { allocateFolio } from "@/shared/infrastructure/folios/allocateFolio";
 import { FolioScopeMismatchError } from "@/shared/domain/errors/FolioScopeMismatchError";
 import { FolioScope } from "@/shared/domain/types/FolioScope";
@@ -42,7 +46,7 @@ function computePaymentStatus(paidAmount: number, total: number): SalePaymentSta
 
 function toPayment(row: {
   id: string;
-  saleId: string;
+  saleId: string | null;
   customerId: string;
   userId: string;
   branchId: string;
@@ -247,6 +251,146 @@ export class PrismaPaymentRepository implements PaymentRepository {
     });
   }
 
+  async createAccountCompleted(input: CreateAccountPaymentInput): Promise<PaymentWithSale> {
+    const paymentId = randomUUID();
+
+    return await this.prisma.$transaction(async (tx) => {
+      const customerRow = await tx.customer.findUnique({ where: { id: input.customerId } });
+      if (!customerRow) throw new CustomerNotFoundError(input.customerId);
+
+      // Validate paymentMethod + folio active, and folio scope OPERATIONS
+      const pmRow = await tx.paymentMethod.findUnique({ where: { id: input.paymentMethodId } });
+      if (!pmRow || !pmRow.isActive) throw new InactiveResourceError("PaymentMethod");
+
+      const folioRow = await tx.folio.findUnique({ where: { id: input.folioId } });
+      if (!folioRow || !folioRow.isActive) throw new InactiveResourceError("Folio");
+      if (folioRow.scope !== "OPERATIONS")
+        throw new FolioScopeMismatchError("OPERATIONS", folioRow.scope as FolioScope);
+
+      // Atomic guard: current_balance must not dip below the sum of pending
+      // credit sales' due amount (accountDebt), scoped to input.branchId —
+      // prevents this path from settling ticketed debt.
+      const updated = await tx.$executeRaw`
+        UPDATE customers
+        SET current_balance = current_balance - ${input.amount}::numeric,
+            updated_at = NOW()
+        WHERE id = ${input.customerId}
+          AND current_balance - ${input.amount}::numeric >= (
+            SELECT COALESCE(SUM(s.total - s.paid_amount), 0)
+            FROM sales s
+            JOIN payment_methods pm ON pm.id = s.payment_method_id
+            WHERE s.customer_id = ${input.customerId}
+              AND s.status = 'completed'
+              AND pm.is_credit = true
+              AND s.total > s.paid_amount
+              AND s.branch_id = ${input.branchId}
+          )
+      `;
+
+      if (updated === 0) {
+        const accountDebt = await this.computeAccountDebt(tx, input.customerId, input.branchId);
+        throw new PaymentExceedsAccountDebtError(accountDebt);
+      }
+
+      // Allocate folio
+      const { folioNumber, folioCode } = await allocateFolio(tx, input.folioId);
+
+      await tx.customerPayment.create({
+        data: {
+          id: paymentId,
+          saleId: null,
+          customerId: input.customerId,
+          userId: input.userId,
+          branchId: input.branchId,
+          paymentMethodId: input.paymentMethodId,
+          folioId: input.folioId,
+          folioNumber,
+          folioCode,
+          amount: new Prisma.Decimal(input.amount),
+          status: "completed",
+          notes: input.notes,
+        },
+      });
+
+      const paymentRow = await tx.customerPayment.findUnique({
+        where: { id: paymentId },
+        include: includePaymentJoins,
+      });
+
+      return {
+        payment: toPayment(paymentRow!),
+        sale: null,
+        joins: {
+          saleFolioCode: null,
+          customerName: paymentRow!.customer?.name ?? "",
+          userName: paymentRow!.user ? (paymentRow!.user.name || paymentRow!.user.email) : "",
+          branchName: paymentRow!.branch?.name ?? "",
+          paymentMethodCode: pmRow.code,
+          saleTotal: null,
+          salePaidAmount: null,
+          salePaymentStatus: null,
+        },
+      };
+    });
+  }
+
+  private async computeAccountDebt(
+    tx: TxClient,
+    customerId: string,
+    effectiveBranchId: string | null
+  ): Promise<number> {
+    const customerRow = await tx.customer.findUnique({ where: { id: customerId } });
+    if (!customerRow) throw new CustomerNotFoundError(customerId);
+
+    const pendingSales = await tx.sale.findMany({
+      where: {
+        customerId,
+        status: "completed",
+        paymentMethod: { isCredit: true },
+        ...(effectiveBranchId !== null ? { branchId: effectiveBranchId } : {}),
+      },
+      select: { total: true, paidAmount: true },
+    });
+    const pendingDue = pendingSales
+      .map((s) => Number(s.total) - Number(s.paidAmount))
+      .filter((due) => due > AMOUNT_TOLERANCE)
+      .reduce((acc, due) => acc + due, 0);
+
+    return Math.max(0, Number(customerRow.currentBalance) - pendingDue);
+  }
+
+  async getAccountDebt(customerId: string, branchId: string | null): Promise<AccountDebtSummary> {
+    const customerRow = await this.prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customerRow) throw new CustomerNotFoundError(customerId);
+
+    const salesRows = await this.prisma.sale.findMany({
+      where: {
+        customerId,
+        status: "completed",
+        paymentMethod: { isCredit: true },
+        ...(branchId !== null ? { branchId } : {}),
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const pendingSales = salesRows
+      .map((s) => ({
+        saleId: s.id,
+        folioCode: s.folioCode,
+        total: Number(s.total),
+        paidAmount: Number(s.paidAmount),
+        due: Number(s.total) - Number(s.paidAmount),
+        createdAt: s.createdAt,
+      }))
+      .filter((s) => s.due > AMOUNT_TOLERANCE);
+
+    const pendingDue = pendingSales.reduce((acc, s) => acc + s.due, 0);
+    const currentBalance = Number(customerRow.currentBalance);
+    const accountDebt = Math.max(0, currentBalance - pendingDue);
+
+    return { currentBalance, pendingSales, accountDebt };
+  }
+
   async markCancelled(id: string, reason: string | null, _userId: string): Promise<PaymentWithSale> {
     return await this.prisma.$transaction(async (tx) => {
       // Update status atomically — fail if already cancelled
@@ -270,6 +414,32 @@ export class PrismaPaymentRepository implements PaymentRepository {
       });
       const amount = Number(paymentRow!.amount);
       const saleId = paymentRow!.saleId;
+      const customerId = paymentRow!.customerId;
+
+      if (saleId === null) {
+        // Account payment (no sale): only restore the customer's balance.
+        await tx.$executeRaw`
+          UPDATE customers
+          SET current_balance = current_balance + ${amount}::numeric,
+              updated_at = NOW()
+          WHERE id = ${customerId}
+        `;
+
+        return {
+          payment: toPayment(paymentRow!),
+          sale: null,
+          joins: {
+            saleFolioCode: null,
+            customerName: paymentRow!.customer?.name ?? "",
+            userName: paymentRow!.user ? (paymentRow!.user.name || paymentRow!.user.email) : "",
+            branchName: paymentRow!.branch?.name ?? "",
+            paymentMethodCode: paymentRow!.paymentMethod?.code ?? "",
+            saleTotal: null,
+            salePaidAmount: null,
+            salePaymentStatus: null,
+          },
+        };
+      }
 
       // Load sale to recalculate
       const saleRow = await tx.sale.findUnique({ where: { id: saleId } });
@@ -292,7 +462,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
         UPDATE customers
         SET current_balance = current_balance + ${amount}::numeric,
             updated_at = NOW()
-        WHERE id = ${saleRow!.customerId!}
+        WHERE id = ${customerId}
       `;
 
       return {
@@ -330,28 +500,30 @@ export class PrismaPaymentRepository implements PaymentRepository {
     });
     if (!row) return null;
 
-    const sale = row.sale!;
+    const sale = row.sale;
     return {
       payment: toPayment(row),
-      sale: {
-        id: row.saleId,
-        folioCode: sale.folioCode,
-        folioNumber: sale.folioNumber,
-        total: Number(sale.total),
-        paidAmount: Number(sale.paidAmount),
-        paymentStatus: sale.paymentStatus as SalePaymentStatus,
-        branchId: sale.branchId,
-        customerId: sale.customerId,
-      },
+      sale: sale
+        ? {
+            id: row.saleId!,
+            folioCode: sale.folioCode,
+            folioNumber: sale.folioNumber,
+            total: Number(sale.total),
+            paidAmount: Number(sale.paidAmount),
+            paymentStatus: sale.paymentStatus as SalePaymentStatus,
+            branchId: sale.branchId,
+            customerId: sale.customerId,
+          }
+        : null,
       joins: {
-        saleFolioCode: sale.folioCode,
+        saleFolioCode: sale?.folioCode ?? null,
         customerName: row.customer?.name ?? "",
         userName: row.user ? (row.user.name || row.user.email) : "",
         branchName: row.branch?.name ?? "",
         paymentMethodCode: row.paymentMethod?.code ?? "",
-        saleTotal: Number(sale.total),
-        salePaidAmount: Number(sale.paidAmount),
-        salePaymentStatus: sale.paymentStatus as SalePaymentStatus,
+        saleTotal: sale ? Number(sale.total) : null,
+        salePaidAmount: sale ? Number(sale.paidAmount) : null,
+        salePaymentStatus: sale ? (sale.paymentStatus as SalePaymentStatus) : null,
       },
     };
   }
@@ -393,14 +565,14 @@ export class PrismaPaymentRepository implements PaymentRepository {
     const items: PaymentListRow[] = rows.map((row) => ({
       payment: toPayment(row),
       joins: {
-        saleFolioCode: row.sale?.folioCode ?? "",
+        saleFolioCode: row.sale?.folioCode ?? null,
         customerName: row.customer?.name ?? "",
         userName: row.user ? (row.user.name || row.user.email) : "",
         branchName: row.branch?.name ?? "",
         paymentMethodCode: row.paymentMethod?.code ?? "",
-        saleTotal: Number(row.sale?.total ?? 0),
-        salePaidAmount: Number(row.sale?.paidAmount ?? 0),
-        salePaymentStatus: (row.sale?.paymentStatus as SalePaymentStatus) ?? "pending",
+        saleTotal: row.sale ? Number(row.sale.total) : null,
+        salePaidAmount: row.sale ? Number(row.sale.paidAmount) : null,
+        salePaymentStatus: row.sale ? (row.sale.paymentStatus as SalePaymentStatus) : null,
       },
     }));
 
@@ -550,8 +722,8 @@ export class PrismaPaymentRepository implements PaymentRepository {
       id: string;
       created_at: Date;
       folio_code: string;
-      sale_id: string;
-      sale_folio_code: string;
+      sale_id: string | null;
+      sale_folio_code: string | null;
       customer_id: string;
       customer_name: string;
       user_id: string;
@@ -562,9 +734,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
       amount: string;
       status: string;
       cancelled_at: Date | null;
-      sale_total: string;
-      sale_paid_amount: string;
-      sale_payment_status: string;
+      sale_total: string | null;
+      sale_paid_amount: string | null;
+      sale_payment_status: string | null;
     };
 
     const itemRows = await this.prisma.$queryRawUnsafe<ItemRow[]>(
@@ -588,7 +760,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
         s.paid_amount::text AS sale_paid_amount,
         s.payment_status AS sale_payment_status
        FROM customer_payments cp
-       JOIN sales s ON s.id = cp.sale_id
+       LEFT JOIN sales s ON s.id = cp.sale_id
        JOIN customers c ON c.id = cp.customer_id
        JOIN users u ON u.id = cp.user_id
        JOIN branches b ON b.id = cp.branch_id
@@ -616,9 +788,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
       amount: parseFloat(row.amount),
       status: row.status,
       cancelledAt: row.cancelled_at,
-      saleTotal: parseFloat(row.sale_total),
-      salePaidAmount: parseFloat(row.sale_paid_amount),
-      salePaymentStatus: row.sale_payment_status as SalePaymentStatus,
+      saleTotal: row.sale_total !== null ? parseFloat(row.sale_total) : null,
+      salePaidAmount: row.sale_paid_amount !== null ? parseFloat(row.sale_paid_amount) : null,
+      salePaymentStatus: row.sale_payment_status as SalePaymentStatus | null,
     }));
 
     return { items, total, totalAmountCompleted, totalAmountCancelled, completedCount, cancelledCount };

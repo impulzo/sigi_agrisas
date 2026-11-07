@@ -244,11 +244,13 @@ export function PaymentsHistoryPage() {
                     <Tr key={p.id} className="border-b border-outline-variant/40 hover:bg-surface-container-low/60">
                       <Td className="font-mono text-on-surface-variant">{folioLabel}</Td>
                       <Td>
-                        {p.saleFolioCode ? (
+                        {p.saleId && p.saleFolioCode ? (
                           <Link href={`/sales/${p.saleId}`} className="text-primary hover:underline">
                             {p.saleFolioCode}
                           </Link>
-                        ) : "—"}
+                        ) : (
+                          <span className="text-on-surface-variant">Sin venta asociada</span>
+                        )}
                       </Td>
                       <Td className="max-w-[140px] truncate text-on-surface-variant">{p.customerName ?? "—"}</Td>
                       <Td className="max-w-[140px] truncate text-on-surface-variant">{p.userName ?? "—"}</Td>
@@ -257,8 +259,12 @@ export function PaymentsHistoryPage() {
                         <Td className="text-on-surface-variant">{p.branchName ?? "—"}</Td>
                       )}
                       <Td align="right" className="font-medium">{fmt(Number(p.amount))}</Td>
-                      <Td align="right" className="text-on-surface-variant">{fmt(Number(p.saleTotal))}</Td>
-                      <Td align="right" className="text-on-surface-variant">{fmt(Number(p.saleDueAmount))}</Td>
+                      <Td align="right" className="text-on-surface-variant">
+                        {p.saleTotal !== null ? fmt(Number(p.saleTotal)) : "—"}
+                      </Td>
+                      <Td align="right" className="text-on-surface-variant">
+                        {p.saleDueAmount !== null ? fmt(Number(p.saleDueAmount)) : "—"}
+                      </Td>
                       <Td className="text-on-surface-variant tabular-nums">{fmtDate(p.createdAt)}</Td>
                       <Td>
                         <PaymentStatusBadge status={p.status} salePaymentStatus={p.salePaymentStatus} />

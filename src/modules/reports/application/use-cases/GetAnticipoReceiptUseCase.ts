@@ -41,7 +41,7 @@ export class GetAnticipoReceiptUseCase {
         name: data.customer.name,
         address: data.customer.address,
       },
-      sale: { folio: `${data.sale.folioCode}-${data.sale.folioNumber}` },
+      sale: data.sale ? { folio: `${data.sale.folioCode}-${data.sale.folioNumber}` } : null,
     };
   }
 }

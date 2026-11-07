@@ -42,7 +42,7 @@ export function PaymentHistoryReportPdf({ data, issuer }: Props) {
             {data.payments.map((p, i) => (
               <View key={p.paymentId} style={rowStyle(i, s.tableRow, s.tableRowAlt)}>
                 <Text style={s.cell}>{p.folioNumber}</Text>
-                <Text style={s.cell}>{p.saleFolioNumber}</Text>
+                <Text style={s.cell}>{p.saleFolioNumber ?? "Sin venta"}</Text>
                 <Text style={s.cellWide}>{p.customerName}</Text>
                 <Text style={s.cell}>{p.branchCode}</Text>
                 <Text style={s.cellNarrow}>{p.amount}</Text>

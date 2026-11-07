@@ -1,0 +1,13 @@
+schema_version: "1.1"
+name: qa-verify-missing-rbac-guard
+expected_outcome: |
+  The response flags this as blocking (not just a nitpick): the route handler never calls
+  requirePermission (no RBAC guard at all, unlike every sibling route under app/api/v1/admin/**), and
+  it contains full business logic (Prisma calls, Supabase Storage upload, 404/500 handling) directly in
+  the route handler instead of delegating to a controller in src/modules/vehicles/infrastructure/http/ —
+  both are explicit violations of the "Arquitectura Hexagonal" rules in CLAUDE.md ("route handlers no
+  contienen lógica; delegan al controller" and the requirePermission pattern used by every other admin
+  route). It also notices there is no Zod validation of the body/params before touching Prisma. Bonus:
+  it may note the module has no corresponding use case / port for this operation. The report should mark
+  these as checklist items with a clear fail state and cite the route file, and should NOT approve this
+  diff as ready to merge.

@@ -54,3 +54,19 @@ export class FolioScopeMismatchError extends Error {
     this.name = "FolioScopeMismatchError";
   }
 }
+
+export class PaymentExceedsAccountDebtError extends Error {
+  readonly due: string;
+  constructor(due: string) {
+    super(`El monto supera la deuda sin ticket de este cliente ($${due})`);
+    this.name = "PaymentExceedsAccountDebtError";
+    this.due = due;
+  }
+}
+
+export class CustomerNotFoundError extends Error {
+  constructor() {
+    super("El cliente no existe");
+    this.name = "CustomerNotFoundError";
+  }
+}

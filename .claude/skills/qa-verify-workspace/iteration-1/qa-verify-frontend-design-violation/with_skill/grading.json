@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Flags the _blocks component calling fetch and reading sessionStorage directly as a layering violation", "passed": true, "evidence": "Checklist: '❌ _blocks/ son presentational: NO fetch/sessionStorage — línea ~16 lee sessionStorage... fetch(...) crudo'."},
+    {"text": "Flags the raw hex color #4CAF50 via inline style as a design-system token violation", "passed": true, "evidence": "Checklist: '❌ Hex crudo style={{ backgroundColor: \"#4CAF50\" }} — prohibido'."},
+    {"text": "Flags the rounded-3xl class as explicitly banned by the design tokens guardrail", "passed": true, "evidence": "Checklist: '❌ rounded-3xl — explícitamente prohibido por fuera de escala'."},
+    {"text": "Flags the raw <button> instead of the Button atom from _components/atoms", "passed": true, "evidence": "Checklist: '❌ <button> nativo nuevo... en vez del átomo Button... no está en RAW_ELEMENT_ALLOWLIST'."},
+    {"text": "Cites CLAUDE.md's Sistema de diseño / design-system spec and Arquitectura Frontend rules rather than generic code-quality complaints", "passed": true, "evidence": "Section headers explicitly name 'Arquitectura Frontend — capas' and 'Sistema de diseño (designer.md + tests/unit/ui/design-system/tokens.test.ts)', citing the guardrail test by name."},
+    {"text": "Does not approve the diff as merge-ready", "passed": true, "evidence": "Closing line: 'No abrir el PR así.'"}
+  ],
+  "summary": {"passed": 6, "failed": 0, "total": 6, "pass_rate": 1.0}
+}

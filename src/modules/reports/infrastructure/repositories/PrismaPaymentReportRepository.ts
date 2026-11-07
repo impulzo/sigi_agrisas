@@ -33,7 +33,7 @@ export class PrismaPaymentReportRepository implements PaymentReportRepository {
       paymentId: row.id,
       folioNumber: `${row.folioCode}-${row.folioNumber}`,
       saleId: row.saleId,
-      saleFolioNumber: `${row.sale.folioCode}-${row.sale.folioNumber}`,
+      saleFolioNumber: row.sale ? `${row.sale.folioCode}-${row.sale.folioNumber}` : null,
       customerId: row.customerId,
       customerCode: row.customer.code,
       customerName: row.customer.name,

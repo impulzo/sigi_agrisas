@@ -14,9 +14,9 @@ function mapPaymentDto(dto: ListSalePaymentsResponse["items"][number]): Payment 
       productNameSnapshot: item.productNameSnapshot,
       amount: parseFloat(item.amount),
     })),
-    saleTotal: parseFloat(dto.saleTotal),
-    salePaidAmount: parseFloat(dto.salePaidAmount),
-    saleDueAmount: parseFloat(dto.saleDueAmount),
+    saleTotal: dto.saleTotal !== null ? parseFloat(dto.saleTotal) : null,
+    salePaidAmount: dto.salePaidAmount !== null ? parseFloat(dto.salePaidAmount) : null,
+    saleDueAmount: dto.saleDueAmount !== null ? parseFloat(dto.saleDueAmount) : null,
   };
 }
 
