@@ -130,6 +130,8 @@ El sistema SHALL exponer `GET /api/v1/admin/reports/account-statements/:customer
 
 El recibo SHALL incluir el logo del negocio en el encabezado (tamaño normal, al ser un documento entregado al cliente), junto con la razón social (si está configurada), la dirección y el RFC del negocio, resueltos vía `toPdfIssuer` — mismo mecanismo de resolución y fallback que el logo. Cuando dirección o RFC sean `null`, el encabezado SHALL omitir esa línea sin renderizar texto vacío. El folio del abono y el bloque de cliente ya existentes en el cuerpo del recibo SHALL conservarse sin cambio. Los colores del recibo SHALL provenir de la paleta de marca compartida (`pdfTheme`).
 
+**El bloque `sale` del recibo (`{ folio: string }`) SHALL ser `null` cuando el abono es "a saldo general" (sin venta asociada, `CustomerPayment.saleId = null`)**. En ese caso, la línea "Aplicado a" del recibo SHALL mostrar el literal "Saldo general (sin venta asociada)" en vez de un folio de venta.
+
 #### Scenario: Recibo de anticipo
 - **WHEN** un usuario con permiso pide el recibo de un abono existente del cliente con `?format=pdf`
 - **THEN** responde `200 application/pdf` con `Content-Disposition: attachment` y el recibo del abono
@@ -145,6 +147,10 @@ El recibo SHALL incluir el logo del negocio en el encabezado (tamaño normal, al
 #### Scenario: Recibo incluye dirección y RFC del negocio, y conserva el folio y el cliente
 - **WHEN** un usuario con permiso pide el recibo con `?format=pdf` y `TicketSettings.businessAddress`/`businessRfc` tienen valor
 - **THEN** el encabezado muestra ambos datos junto al logo, y el recibo sigue mostrando el folio del abono y los datos del cliente exactamente como antes de este cambio
+
+#### Scenario: Recibo de un abono a saldo general (sin venta)
+- **WHEN** un usuario con permiso pide el recibo de un abono cuyo `saleId` es `null`
+- **THEN** responde `200 application/pdf`, el bloque `sale` del DTO es `null`, y la línea "Aplicado a" del PDF muestra "Saldo general (sin venta asociada)" en vez de un folio
 
 ### Requirement: Opening balance and date range
 El endpoint de desglose SHALL aceptar `?from` y `?to`. Con `from` presente, el sistema SHALL calcular `openingBalance` como `customer.initialBalance` más la suma de ventas a crédito vigentes menos abonos `completed` con fecha anterior a `from`, y el `runningBalance` SHALL arrancar en ese `openingBalance` listando solo los movimientos del rango. Sin `from`, `openingBalance` SHALL ser igual a `customer.initialBalance` (no `0` fijo) y se listan todos los movimientos desde el inicio.
